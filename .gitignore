@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+# generated data + model artifacts (anchored to repo root so source pkgs aren't ignored)
+/data/
+/runs/
+/artifacts/
+/checkpoints/
+*.pt
+*.ckpt
+*.log
+.DS_Store
+
+# local agent/runtime state
+.claude/
+feedback.txt

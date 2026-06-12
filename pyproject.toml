@@ -1,0 +1,24 @@
+[project]
+name = "factworld"
+version = "0.0.1"
+description = "A controlled instrument for parametric vs in-context knowledge over static vs stateful facts under known edit histories"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+# The data/oracle/eval layer is pure-stdlib. These are only for the training matrix
+# on the local RTX 3090 (Ampere). flash-linear-attention provides Mamba-2, GatedDeltaNet AND
+# GatedDeltaProduct (Triton kernels), so no mamba-ssm source build is needed. Install (CUDA
+# auto-detected from the driver):
+#   uv venv && uv pip install "torch==2.12.*" --torch-backend=auto
+#   uv pip install "flash-linear-attention==0.5.0" numpy pytest
+# Verified working: torch 2.12.0+cu130, triton 3.7.0, fla 0.5.0 on RTX 3090 (sm_86).
+train = ["torch>=2.12", "flash-linear-attention>=0.5.0", "numpy"]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["factworld"]
