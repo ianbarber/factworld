@@ -1,0 +1,91 @@
+"""Run a FactWorld benchmark task end-to-end: train from scratch, evaluate with the canonical metric.
+
+This is the single entry point that makes the frozen task suite (`factworld.tasks`) *runnable*: pick a
+canonical task (or a scaled variant), train a model on its `train` split, and score its `test` splits at
+each OOD length with the one canonical metric (position-strict exact match of the final answer).
+
+  .venv/bin/python scripts/run_benchmark.py composite_v1 --arch gdp_hybrid --d_model 256 --steps 4000
+  # programmatic:
+  from run_benchmark import run_task
+  acc = run_task("composite_copy_v1", arch="gdp_hybrid", d_model=512, n_layers=8, steps=25000)
+"""
+import argparse
+import os
+import sys
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+from factworld import tasks as TK  # noqa: E402
+
+
+def build_docs(examples, use_trace):
+    """Training strings: prompt + (optional oracle worked-trace) + final answer."""
+    docs = []
+    for e in examples:
+        trace = f"{e.meta['trace']} " if (use_trace and "trace" in e.meta) else ""
+        docs.append(f"{e.prompt}{trace}{e.answer}")
+    return docs
+
+
+def greedy_continuation(model, tok, prompt, max_new, device="cuda"):
+    import torch
+    ids = tok.encode(prompt); start = len(ids); dot = tok.token_to_id["."]
+    model.eval()
+    with torch.no_grad():
+        for _ in range(max_new):
+            with torch.autocast(device, dtype=torch.bfloat16):
+                nx = int(model(torch.tensor([ids], device=device))[0, -1].float().argmax())
+            ids.append(nx)
+            if nx == dot:
+                break
+    return tok.decode(ids[start:])
+
+
+def run_task(name, *, spec=None, arch="gdp_hybrid", d_model=256, n_layers=4, d_ff=None, steps=4000,
+             batch=32, train_n=8000, eval_n=200, seed=0, use_trace=False, device="cuda"):
+    """Train on the task's `train` split; return {eval_length: canonical position-strict accuracy}."""
+    import torch
+    from factworld import train as T
+    spec = spec or TK.CANONICAL[name]
+    d_ff = d_ff or 4 * d_model
+    w, r = TK.build_world(spec)
+    train = TK.generate(spec, "train", n=train_n)
+    tok, docs, _ = T.prepare(build_docs(train, use_trace), [], [w])
+    run = T.run(arch, tok, docs, [], steps=steps, batch=batch, d_model=d_model, n_layers=n_layers,
+                d_ff=d_ff, seed=seed, return_model=True, device=device)
+    model = run["model"]
+    out = {}
+    for L in spec.eval_lengths:
+        test = TK.generate(spec, "test", n=eval_n, length=L)
+        c = 0
+        for e in test:
+            cont = greedy_continuation(model, tok, e.prompt, max_new=len(e.answer.split()) + 2, device=device)
+            c += TK.score_exact(cont, e.answer)
+        out[L] = c / eval_n
+    del model; torch.cuda.empty_cache()
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("task", choices=list(TK.CANONICAL))
+    ap.add_argument("--arch", default="gdp_hybrid")
+    ap.add_argument("--d_model", type=int, default=256)
+    ap.add_argument("--n_layers", type=int, default=4)
+    ap.add_argument("--steps", type=int, default=4000)
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--use_trace", action="store_true", help="train on the oracle worked-trace (if any)")
+    a = ap.parse_args()
+    acc = run_task(a.task, arch=a.arch, d_model=a.d_model, n_layers=a.n_layers, steps=a.steps,
+                   seed=a.seed, use_trace=a.use_trace)
+    spec = TK.CANONICAL[a.task]
+    print(f"\n{a.task} [{a.arch} d{a.d_model} x{a.n_layers}, {a.steps} steps] — position-strict exact match:")
+    for L, v in acc.items():
+        print(f"  test@L{L}: {v:.3f}")
+
+
+if __name__ == "__main__":
+    main()
