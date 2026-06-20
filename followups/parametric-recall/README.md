@@ -4,7 +4,7 @@ A post-publication, **segregated** follow-on to the FactWorld paper (nothing her
 `docs/`). It started from "where does the parametric composite actually break?" and grew into a learnability
 study of non-abelian state-tracking, with a 4-thread rigor program.
 
-- **`paper-followon.md`** — the draft write-up (twice advisor-reviewed, writing-guide-edited). Start here.
+- **`non-abelian-state.md`** — the draft write-up (twice advisor-reviewed, writing-guide-edited). Start here.
 - **`FINDINGS.md`** — the full evidence trail; every claim maps to a script + result table below.
 
 Each script writes a `<name>.md` table next to it. All reuse the repo's `factworld/` package (and a couple of
