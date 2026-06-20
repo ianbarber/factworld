@@ -18,12 +18,14 @@ checkpoint at ~every other step (K≤2), collapses to chance by K=4, and needs *
 extrapolate in horizon. Weaning (curriculum/mixed) can **internalise** the circuit (run with no scratchpad) but
 only at the trained length — a clean dissociation: externalised/scratchpad tracking extrapolates in horizon but
 keeps the crutch; internalised tracking works at trained length but is brittle to horizon (length-gen **or**
-no-scratchpad, not both). A scale check (5.7M→44.8M) shows the horizon wall is **flat across 8× capacity** — so
-it is a **learnability/structural** limit, not a capacity one. Net: the composition gap is a state-supervision
-problem throughout, and the open frontier is *length-robust internalised* state-tracking (scale is ruled out;
-horizon-extension curriculum or a compressed recurrent state-summary are the live candidates). This sits in the
-*learnability* dimension that Mozer, Siddiqui & Liu (arXiv 2604.17121) explicitly bracket out of their
-expressivity-focused state-tracking thesis — see Related Work.
+no-scratchpad, not both). A scale check shows the horizon wall is **flat at floor up to 44.8M** (nearly 8×, even
+LR-tuned); at a 70M control point a **weak, LR-sensitive lift** appears (0.41 at lr 1e-3, floor at 5e-4), so the
+wall is largely a **learnability/structural** limit rather than a capacity one within reach — though capacity is
+not irrelevant at the ceiling. Net: the composition gap is a state-supervision problem throughout, and the open
+frontier is *length-robust internalised* state-tracking (pure scale is not the lever; horizon-extension
+curriculum or a compressed recurrent state-summary are the live candidates). This sits in the *learnability*
+dimension that Mozer, Siddiqui & Liu (arXiv 2604.17121) explicitly bracket out of their expressivity-focused
+state-tracking thesis — see Related Work.
 
 ## Evidence
 
@@ -167,10 +169,12 @@ reliable (L16 0.67 → 0.99/0.95, 2/3 → 3/3); (b) externalised (scratchpad) ex
 (dense L64 0.45 → ~0.70); (c) **the internalised horizon wall does not move at all** — answer-only L64 is flat
 at floor across an 8× parameter increase (0.23 / 0.20 / 0.22, 0/3 everywhere).
 
-**Verdict: the horizon wall is NOT a capacity limit.** Internalised state-tracking past the trained horizon is a
-**learnability/structural** failure, not a model-size one — more parameters buy reliability *at length seen*,
-nothing *beyond* it. So of the three candidate fixes above, "just scale" is ruled out; the live ones are
-horizon-extension curriculum and the compressed recurrent state-summary.
+**Verdict (refined below): up to 44.8M on this fixed recipe the horizon wall is NOT a capacity limit.**
+Internalised state-tracking past the trained horizon is a **learnability/structural** failure here, not a
+model-size one — more parameters buy reliability *at length seen*, nothing *beyond* it. So "just scale" is not
+the lever at these scales; the live fixes are horizon-extension curriculum and the compressed recurrent
+state-summary. (The LR-tuned + 70M control below refines this: a *weak* lift appears at 70M, so capacity is not
+strictly irrelevant — but it is far from solving and not the lever.)
 
 ## Moving the wall — horizon curriculum works, token re-anchoring doesn't (`horizon.py`, `coarse.py`, 3 seeds, 18.5M)
 
@@ -226,9 +230,9 @@ How our follow-on relates:
   `gdp_hybrid` (K=4 → chance, all seeds). The coupling does not, on its own, dissolve the credit-assignment
   problem; supervision density does.
 - **Our failure is not their mechanism.** Depth-exhaustion is their diagnosis for *feedforward* models; our
-  hybrid is the *recurrent* class they advocate. The scale check confirms the horizon wall is flat across 8×
-  capacity — so it is *not* an expressivity/depth limit (which scale would relax), but the learnability limit
-  they set aside. This is the cleanest statement of where our contribution sits relative to theirs.
+  hybrid is the *recurrent* class they advocate. The scale check shows the horizon wall flat to 44.8M (only a
+  weak lift at 70M) — so it is largely *not* an expressivity/depth limit (which scale would relax), but the
+  learnability limit they set aside. This is the cleanest statement of where our contribution sits relative to theirs.
 - **Convergent fix.** Their "coarse-grained recurrence" direction is the same compressed recurrent state-summary
   we independently propose for the horizon wall — they motivate it, we provide the testbed.
 
@@ -294,10 +298,10 @@ orthogonal levers**: density gates whether the circuit *forms* (fixed threshold 
 *extrapolates* once formed. This unifies the two findings — density = the §4 cliff, horizon = the §6 curriculum
 — under one frame, and they don't trade off.
 
-## Scale-done-right — LR-tuned + 70M ceiling (`scale_tuned.py`, 2 seeds, 8000 steps)
+## Scale-done-right — LR-tuned + 70M control point (`scale_tuned.py`, 2 seeds, 8000 steps)
 
 The scale check (scale.py) held lr=1e-3 fixed and topped at 44.8M — so "flat at floor" could be under-training.
-Re-run the largest scales LR-tuned ({1e-3,5e-4}) + a 70M ceiling point + more steps. Headline = answer-only L64.
+Re-run the largest scales LR-tuned ({1e-3,5e-4}) + a 70M control point + more steps. Headline = answer-only L64.
 
 | scale | lr=1e-3 | lr=5e-4 |
 |---|---|---|

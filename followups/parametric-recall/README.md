@@ -20,7 +20,7 @@ Each script writes a `<name>.md` table next to it. All reuse the repo's `factwor
 | Supervision density is a **cliff** (forms only ~every other step) | `supervision_sweep.py` |
 | Reconcile R1 vs the companion paper (scoring axis) | `recon_b1.py` |
 | **Internalization / horizon dissociation** (weaning; order isn't the lever) | `curriculum.py` |
-| **Scale** doesn't relieve the horizon wall (5.7M→44.8M); LR-tuned + 70M ceiling | `scale.py`, `scale_tuned.py` |
+| **Scale** largely doesn't relieve the horizon wall (flat to 44.8M even LR-tuned; weak lift at a 70M control point) | `scale.py`, `scale_tuned.py` |
 | **Horizon-extension curriculum** moves the wall; token re-anchoring doesn't | `horizon.py`, `coarse.py` |
 | The internalized cap **tracks max training length** | `horizon_mech.py` |
 | Supervision density × horizon are **orthogonal** levers | `sup_horizon.py` |
