@@ -490,8 +490,31 @@ optimization, and the deep-B examples destabilize even the in-range B=0 case. So
 coverage does not build a length-general non-abelian circuit** — §3.1's "no length-general escape" reading
 **stands**. Honest caveat: Buitrago Ruiz & Gu apply coverage as a *cheap POST-training intervention* (Gaussian
 state-init / state-passing on an already-trained model, ~500 steps), not as from-scratch training. This is a null
-for the **from-scratch** variant only; the **post-training** state-passing version is untested here and remains
-the open lever (it also needs threading recurrent state through the model, which the gdp_hybrid's attention
-layer complicates). Net: across capacity (to 357M), length-distribution, horizon curriculum, and now deep-state
-coverage, **no tested lever builds a length-general non-abelian circuit** at this scale — the wall is robust,
-and the post-training state-passing route is the most promising untried direction.
+for the **from-scratch** variant only — and the post-training variant tells a different story (next).
+
+**Post-training deep-state coverage DOES extend the circuit — seed-fragile existence proof (`post_state.py`, 18.5M, 3 seeds).**
+The from-scratch null conflated two things: maybe burn-in just blocks circuit *formation*. So we test coverage as
+a POST-training intervention (the actual Buitrago Ruiz & Gu setup): train a clean in-distribution circuit first
+(short {4,8,16}, the model that solves L16), then post-train 1500 steps at lr 3e-4 on the unlabeled burn-in.
+
+| arm | L16 | L32 | L64 | L128 | L256 |
+|---|---|---|---|---|---|
+| base (in-dist circuit) | 0.82±0.14 | 0.31±0.13 | 0.20 (floor) | 0.20 (floor) | 0.23 |
+| post (+ coverage) | 0.88±0.08 | 0.60±0.28 | **0.47±0.37** | **0.44±0.30** | 0.22 |
+
+**It works — on a minority of seeds.** post s0: L16 **1.00** → L32 **1.00** → L64 **0.99** → L128 **0.86** → L256 0.30
+— a genuine length-general circuit, graceful decay out to **8× trained length, with no labels at length**, from a
+base that floored past L32. post s1 lifts nothing; post s2 is marginal (L128 0.29). So 1/3 seeds is spectacular,
+2/3 lift little (hence the huge ±0.37 variance) — but s0 is a clean, unambiguous existence proof (not floor
+noise). This separates the hypotheses: from-scratch coverage floors because burn-in blocks *formation*;
+post-training coverage on an *already-formed* circuit *extends* it — exactly the unexplored-states mechanism,
+confirmed for non-abelian, and the strongest extrapolation seen (L128 0.86, where even length_mix's labeled-long
+examples floored at L128).
+
+**So §3.1's "no length-general path" is softened, positively:** non-abelian's only path is online-carry, which
+*by default* cliffs (uncalibrated deep states) — but that path *can be calibrated post-hoc to extrapolate*. The
+wall is **movable** (post-training state coverage is the first lever to move it without labels at length); making
+it **reliable** (not 1/3 seeds) is the open problem — plausibly the same seed-fragility that dogs internalization
+throughout. Net across all levers: capacity (to 357M) and from-scratch coverage do nothing; length-distribution
+labels move it to the trained length; **post-training state coverage moves it furthest (8×) and label-free, but
+only sometimes.**

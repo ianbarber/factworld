@@ -23,7 +23,8 @@ Each script writes a `<name>.md` table next to it. All reuse the repo's `factwor
 | **Scale is not the lever**: the horizon wall is flat across the ladder to 357M — the largest fully-converged model still floors | `scale.py`, `scale_tuned.py`, `scale_big.py` |
 | **The training-length distribution is the lever**: a threshold density of target-length examples (~20%) unlocks extrapolation; soft cap on max-len; concentration beats uniform coverage | `length_mix.py` |
 | **Real circuit vs shortcut**: abelian is a length-general register (read-then-lookup, holds to 16×); non-abelian has no scan shortcut, so its only path is online state-carry — which cliffs past trained depth | `decay_curve.py`, `reeval_endquery.py` |
-| **From-scratch deep-state coverage doesn't build the circuit** (null; hurts in-distribution); post-training state-passing (Buitrago Ruiz & Gu 2025) untested/open | `carried_state.py` |
+| **From-scratch deep-state coverage doesn't build the circuit** (null; hurts in-distribution) | `carried_state.py` |
+| **Post-training deep-state coverage DOES extend it** — seed-fragile (1/3) existence proof: floor→0.99 at 4×, 0.86 at 8×, no labels at length (confirms Buitrago Ruiz & Gu 2025) | `post_state.py` |
 | **Horizon-extension curriculum** moves the wall; token re-anchoring doesn't | `horizon.py`, `coarse.py` |
 | The internalized cap **tracks max training length** | `horizon_mech.py` |
 | Supervision density × horizon are **orthogonal** levers | `sup_horizon.py` |
