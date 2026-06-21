@@ -24,7 +24,8 @@ Each script writes a `<name>.md` table next to it. All reuse the repo's `factwor
 | **The training-length distribution is the lever**: a threshold density of target-length examples (~20%) unlocks extrapolation; soft cap on max-len; concentration beats uniform coverage | `length_mix.py` |
 | **Real circuit vs shortcut**: abelian is a length-general register (read-then-lookup, holds to 16×); non-abelian has no scan shortcut, so its only path is online state-carry — which cliffs past trained depth | `decay_curve.py`, `reeval_endquery.py` |
 | **From-scratch deep-state coverage doesn't build the circuit** (null; hurts in-distribution) | `carried_state.py` |
-| **Post-training deep-state coverage DOES extend it** — seed-fragile (1/3) existence proof: floor→0.99 at 4×, 0.86 at 8×, no labels at length (confirms Buitrago Ruiz & Gu 2025) | `post_state.py` |
+| **Post-training deep-state coverage DOES extend it** — floor→0.99 at 4×, 0.86 at 8×, no labels at length (confirms Buitrago Ruiz & Gu 2025) | `post_state.py` |
+| **The lever is reliable; fragility is base-side**: variance is between-base (~300×), predictor = free-running L16; select the clean base (≈1/7 of seeds) then post → reliable length-general extrapolation | `post_reliability.py`, `base_select.py` |
 | **Horizon-extension curriculum** moves the wall; token re-anchoring doesn't | `horizon.py`, `coarse.py` |
 | The internalized cap **tracks max training length** | `horizon_mech.py` |
 | Supervision density × horizon are **orthogonal** levers | `sup_horizon.py` |

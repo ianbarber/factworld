@@ -518,3 +518,23 @@ it **reliable** (not 1/3 seeds) is the open problem — plausibly the same seed-
 throughout. Net across all levers: capacity (to 357M) and from-scratch coverage do nothing; length-distribution
 labels move it to the trained length; **post-training state coverage moves it furthest (8×) and label-free, but
 only sometimes.**
+
+**The "only sometimes" is base-selection, not the lever (`post_reliability.py`, `base_select.py`).** The 1/3
+looked like lever fragility; it isn't. A base × post-restart matrix (6 bases × 3 restarts) decomposes the L128
+variance: **between-base 0.064 vs within-base 0.0002 (~300×)**. So the post-training lever is *reliable given a
+base* — each base's three restarts cluster tightly (s0 all ~0.88 success; every other base all ~0.19 floor); the
+lottery is the BASE. The predictor is **free-running L16 e2e**: a base whose in-distribution circuit is clean
+(L16 ≈ 0.97) reliably posts length-general; ≤ 0.86 floors. The teacher-forced `dense_h16` probe is **saturated at
+1.00 for every base** (useless), and the L24/L32 base-decay is inverted/misleading. Crucially, **post-training
+REPAIRS in-distribution accuracy but cannot INSTALL length-generality on a base that wasn't already clean**
+(s4: post lifted L16 0.77→0.99 yet L64+ stayed at floor) — the clean recurrence must pre-exist; coverage
+calibrates it, it doesn't build it.
+
+`base_select.py` validates the recipe prospectively: train K=8 bases, rank by L16, post-train the top & bottom.
+**TOP (s0, L16 0.97) posts length-general on both restarts (L128 0.93 / 0.89); BOTTOM (s7, L16 0.26) floors
+(0.22 / 0.21).** So **select the base by free-running L16, then post → reliable length-general non-abelian
+extrapolation.** The cost: clean bases (L16 ≥ 0.95) are rare — ~1/7 of seeds (1/8 here, 1/6 in post_reliability)
+— so the recipe needs K ≈ 10–20 base seeds. The reliability bottleneck has therefore **moved from the
+post-training lever (solved: reliable given base-selection) to BASE-TRAINING reliability** (why only ~1/7 of
+seeds reach a clean in-distribution circuit) — a recurrence-side seed-fragility problem and the natural next
+lever.
