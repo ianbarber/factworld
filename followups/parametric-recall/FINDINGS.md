@@ -18,14 +18,18 @@ checkpoint at ~every other step (K≤2), collapses to chance by K=4, and needs *
 extrapolate in horizon. Weaning (curriculum/mixed) can **internalise** the circuit (run with no scratchpad) but
 only at the trained length — a clean dissociation: externalised/scratchpad tracking extrapolates in horizon but
 keeps the crutch; internalised tracking works at trained length but is brittle to horizon (length-gen **or**
-no-scratchpad, not both). A scale check shows the horizon wall is **flat at floor up to 44.8M** (nearly 8×, even
-LR-tuned); at a 70M control point a **weak, LR-sensitive lift** appears (0.41 at lr 1e-3, floor at 5e-4), so the
-wall is largely a **learnability/structural** limit rather than a capacity one within reach — though capacity is
-not irrelevant at the ceiling. Net: the composition gap is a state-supervision problem throughout, and the open
-frontier is *length-robust internalised* state-tracking (pure scale is not the lever; horizon-extension
-curriculum or a compressed recurrent state-summary are the live candidates). This sits in the *learnability*
-dimension that Mozer, Siddiqui & Liu (arXiv 2604.17121) explicitly bracket out of their expressivity-focused
-state-tracking thesis — see Related Work.
+no-scratchpad, not both). A scale check shows the horizon wall is **flat at floor up to 357M** — pushed
+7.9× past the original 44.8M ceiling (`scale_big`), the largest **fully-converged** model (357M, L16 = 1.00)
+still floors at L64 (0.20); the only blip is a weak, LR-sensitive 70M/140M bump (~0.42) that does not grow. So
+**capacity is definitively not the extrapolation lever.** What *is* the lever is the **training-length
+distribution** (`length_mix`): at fixed 18.5M capacity, a sufficient density of target-length examples unlocks
+L64 extrapolation (threshold in (5%,20%], saturating ~0.67), the reachable horizon is a *soft* cap on
+max-trained-length, and concentration at the target beats uniform coverage. Net: the composition gap is a
+state-supervision problem throughout; the circuit is **learnable in-distribution at any scale**, and
+extrapolation is gated by **what lengths you train on, not by width** — the open frontier is the threshold/
+capacity×length law (see the synthesis section). This sits in the *learnability* dimension that Mozer, Siddiqui &
+Liu (arXiv 2604.17121) explicitly bracket out of their expressivity-focused state-tracking thesis — see Related
+Work.
 
 ## Evidence
 
@@ -334,3 +338,160 @@ high-variance across Lmax** (0.37–0.82, std up to 0.29, no clean monotone tren
 bimodal outlier). So "train longer to extend the cap" holds in that the solvable region grows with Lmax and
 floors at ~2×, but internalizing long non-abelian chains stays noisy/fragile at this scale — consistent with the
 state circuit being length-sensitive and internalized > externalized in difficulty.
+
+## Scale push — capacity is NOT the lever, even at 357M converged (`scale_big.py`, 2 seeds, 8000 steps, bs32)
+
+scale_tuned topped at 70M (in <5 GB of the 24 GB card). Push the ladder to the bs32 memory ceiling —
+140M / 268M / 357M, same mixed-density recipe, lr 1e-3 — to see whether the weak 70M lift (0.41) becomes a
+real capacity trend or a bounded bump. Headline = answer-only L64 (the internalized horizon wall).
+
+| parameters | L16 (in-dist) | **L64 (the wall)** |
+|---|---|---|
+| 44.8M (scale_tuned) | — | 0.24 |
+| 70M (scale_tuned) | — | 0.41 |
+| 140M | 1.00±0.00 | 0.42±0.02 |
+| 268M | 0.81±0.18 | 0.21±0.03 |
+| 357M | **1.00±0.00** | **0.20±0.03** |
+
+**The 70M lift does not become a trend — it is a bounded bump.** L64 across the full 44.8M→357M ladder (7.9×
+past the original ceiling): 0.24 → 0.41 → 0.42 → 0.21 → 0.20. The decisive point is **357M**: it **fully
+converges in-distribution (L16 = 1.00, both seeds)** yet answer-only L64 sits **exactly at the 0.20 floor**. So
+the largest model, with no under-training excuse, cannot extrapolate at all — capacity is not the lever. Honest
+caveat: at a fixed 8000-step budget the ≥268M models sit at the edge of convergence (268M s1 L16 = 0.63,
+undertrained — its low L64 is compute-confounded, not a clean capacity read), so the middle of the ladder is
+compute- as well as capacity-bounded; but 357M *did* converge and *still* floored, which is the clean read. The
+in-distribution circuit is always solved once trained; the wall is purely OOD horizon, and width does not move
+it. This firms the §5/scale_tuned "weak 70M lift" into "no scaling trend — capacity is not the extrapolation
+lever."
+
+## What training-length distribution unlocks extrapolation? — length-mix (`length_mix.py`, 18.5M, 3 seeds)
+
+If capacity isn't the lever, the training-length *distribution* is the candidate. Fix capacity (18.5M), vary the
+mix of training lengths, eval internalized answer-only at L32/L64/L128. `longN` = {4,8,16} + N% examples at L64;
+`{16,32}` and `uniform` describe the lengths trained on. Floor = 0.20.
+
+| training lengths | L32 | L64 | L128 |
+|---|---|---|---|
+| {4,8,16} only | 0.27±0.07 | 0.21 (floor) | 0.20 (floor) |
+| + 5% L64 | 0.32±0.07 | 0.20 (floor) | 0.20 (floor) |
+| + 20% L64 | 0.88±0.06 | **0.66±0.19** | 0.23 |
+| + 50% L64 | 0.85±0.18 | **0.67±0.22** | 0.32 |
+| {16,32} only | 0.92±0.01 | 0.37±0.10 | 0.20 |
+| uniform {4..64} | 0.78±0.18 | 0.49±0.15 | 0.23 |
+
+Four findings:
+1. **Threshold, then plateau.** A 5% long-fraction does nothing (L64 at floor, indistinguishable from
+   short-only); 20% unlocks L64 (0.66); 50% gives no further gain (0.67). The critical long-fraction is in
+   **(5%, 20%]**, and above it L64 *saturates at ~0.67 at this capacity* — not at 1.0. It is a threshold, not
+   "any long example unlocks it," and not graded smoothly in the fraction above threshold.
+2. **The cap is soft, not a wall.** Training only to length 32 (`{16,32}`) still reaches L64 = 0.37 — partial
+   extrapolation 2× past the max trained length, above floor. Max-trained-length sets where accuracy is
+   *strong*; there is graceful decay past it, not a cliff. (Refines horizon_mech's "cap tracks max-len.")
+3. **Concentration beats coverage.** Uniform `{4..64}` (sees L64 directly, but only ~1/6 of the time) reaches
+   L64 = 0.49 — *below* the concentrated `{short}+20%-L64` recipe (0.66). Target-length density is more
+   sample-efficient than spreading the budget across many lengths. The lever is density *at the target*, not
+   mere presence of long examples.
+4. **L128 floors everywhere.** Nothing trained at/near 128 reaches it (0.20–0.32) — the reachable horizon is
+   anchored to the trained-length envelope; the soft cap decays to floor by ~2× the longest trained length.
+
+**Net:** at fixed 18.5M capacity, the training-length distribution moves the wall that 7.9× capacity could not
+(scale_big) — confirming from the other direction that extrapolation is gated by *what lengths you train on*,
+not by width. The residual gap to 1.0 (plateau ~0.67 even at 50% long) is the open question: capacity and length
+may need to rise *together* past this frontier (scale_big short-trained never lifts; length_mix at fixed
+capacity saturates below 1.0).
+
+## What is established, and what is open (synthesis)
+
+**Established on this instrument.**
+1. *The non-abelian circuit is learnable in-distribution.* Whenever a model is trained to convergence it solves
+   the composite at the trained length — L16 ≈ 1.0 from 18.5M through 357M. The in-distribution circuit is never
+   the obstacle; the entire difficulty is out-of-distribution *horizon*.
+2. *Capacity is not the extrapolation lever* (now to 357M). The internalized horizon wall (answer-only L64) does
+   not climb with width: 0.24 → 0.41 → 0.42 → 0.21 → 0.20 over 44.8M→357M, and the largest fully-converged model
+   floors. Extrapolation failure is not a width/lookup-parallelism deficit.
+3. *The training-length distribution IS the lever, with a threshold and a soft cap.* At fixed capacity, a
+   sufficient density of target-length examples unlocks extrapolation (threshold in (5%,20%], saturating ~0.67);
+   the reachable horizon is a soft cap on max-trained-length; concentration at the target beats uniform coverage.
+4. *Density and horizon are orthogonal* (sup_horizon): supervision density gates whether the circuit *forms*
+   (fixed cliff ~K=2); the training-length distribution gates how far it *extrapolates* once formed.
+
+**Open (the frontier).**
+1. *The threshold law.* We bracket the critical long-fraction to (5%,20%] at 18.5M/L64 but not its shape, its
+   dependence on the target length, or whether it shifts with capacity. "How much coverage, at what
+   concentration, for a target horizon H" is unmeasured.
+2. *The capacity×length interaction.* The two levers are measured separately. We do not know whether more
+   capacity lowers the long-fraction threshold (cheaper extrapolation) or raises the reachable horizon for a
+   fixed budget — the 0.67 plateau at 18.5M hints they must rise together past some frontier.
+3. *A predictive law.* No law yet predicts, given a target horizon, the (capacity, length-distribution) that
+   reaches it — the practical question for long agentic sessions.
+4. *Transfer off the instrument* (carry from §8): all of this uses the oracle's exact latent state and one world;
+   whether the length-distribution lever survives on natural workloads without an oracle to grow the horizon
+   against is untested.
+
+## Real circuit vs shortcut — decay curve + end-query reconciliation (`decay_curve.py`, `reeval_endquery.py`, 3 seeds)
+
+Is the internalized circuit a true length-general automaton or a length-bounded shortcut (Liu et al. 2023)?
+Train at the short envelope (Lmax=16), eval internalized to L256 (16x). **Which eval regime you use turns out to
+decide the answer**, and that is itself the finding.
+
+**Front-query (online state-carry; `decay_curve.py`, 18.5M).** The queried entity is stated *up front*, so the
+model must carry the running answer through the whole sequence in recurrent state.
+
+| arm | L16 | L24 | L32 | L48 | L64 | L128 | L256 |
+|---|---|---|---|---|---|---|---|
+| abelian_native | 0.57±0.30 | 0.30 | 0.24 | 0.29 | 0.25 | 0.25 | 0.23 |
+| abelian_mixed | 1.00±0.00 | 0.36 | 0.24 | 0.22 | 0.24 | 0.20 | 0.23 |
+| nonabelian_mixed | 0.86±0.05 | 0.51 | 0.32 | 0.23 | 0.23 | 0.22 | 0.21 |
+
+**ALL arms — abelian included — cliff at ~1.5xLmax and floor by L48.** The cliff is a recurrent-state-calibration
+effect: the state-distribution past trained depth is never visited in training (the diagnosis of arXiv:2507.02782),
+so it hits both algebras equally (the three curves are within noise).
+
+**End-query (read-then-lookup; `reeval_endquery.py`, exact ladder recipe, d256x4).** The query is stated at the
+*end*, so the model reads the whole history, then answers.
+
+| rung | L16 | L24 | L32 | L64 | L128 | L192 | L256 |
+|---|---|---|---|---|---|---|---|
+| R1 abelian, no-CoT | 0.83±0.14 | 0.59 | 0.58 | 0.57 | 0.52 | 0.50 | **0.52** |
+| R2 abelian, CoT | 0.82±0.19 | 0.65 | 0.61 | 0.57 | 0.55 | 0.55 | **0.52** |
+| R3a non-abelian, no-CoT | 0.19±0.04 | 0.21 | 0.23 | 0.21 | 0.22 | 0.21 | **0.20 (floor)** |
+
+**Abelian R1/R2 drop from ~0.83 to a STABLE PLATEAU ~0.52-0.57 all the way to L256 (16x)** — a genuinely
+length-general register circuit (best seed R2 s2 holds 1.00->0.84). Holder-emission doesn't hurt (R2 ~ R1).
+Non-abelian R3a sits at floor everywhere including L16 (no per-step supervision -> no circuit forms).
+
+**The mechanism (the synthesis).** The front-vs-end-query axis *maps onto* abelian-vs-non-abelian, and that is
+why non-abelian is the wall:
+- **Abelian** (last-write-wins) admits a **read-then-lookup** solution — scan the history, find the last write
+  to the queried object, look it up — which is length-invariant (R1/R2 hold to 16x). Abelian only cliffs when
+  *denied* that path (front-query forces online-carry -> decay_curve abelian cliffs like everything else).
+- **Non-abelian** (S5 composition) is NC^1, not TC^0: it admits **no scan-and-lookup shortcut** — the answer
+  depends on composing every step in order. So it *must* be solved by online state-carry, which is exactly the
+  length-bounded path. There is no length-general solution path available to the model.
+
+So "is the gdp_hybrid forming a real circuit?" — **abelian yes** (via read-then-lookup, generalizes to 16x);
+**non-abelian no** (its only path is online-carry, which cliffs past trained depth). This localizes the
+non-abelian wall precisely: not merely *harder*, but with *no length-general escape*.
+
+**Can deep-state coverage build the missing circuit? — not from scratch (`carried_state.py`, 18.5M, 3 seeds).**
+The unexplored-states hypothesis (Buitrago Ruiz & Gu, 2025, arXiv:2507.02782) says the online-carry cliff is a
+state-coverage failure, so we tested coverage directly: prepend an UNLABELED random burn-in (B in {0..192}
+events) before a 16-event labelled window, so full BPTT drives the recurrent state to depth ~208 with no labels
+at length. Eval internalized (answer-only, no burn-in) to L256:
+
+| arm | L16 | L32 | L64 | L128 | L256 |
+|---|---|---|---|---|---|
+| short_only (baseline) | 0.82±0.14 | 0.31±0.13 | 0.20 (floor) | 0.20 (floor) | 0.23 |
+| burnin (deep-state coverage) | 0.38±0.08 | 0.22 | 0.20 (floor) | 0.23 | 0.20 |
+
+**Null — and worse than baseline.** The burn-in floors at every length and actually *hurts in-distribution*
+(L16 0.38 vs short_only 0.82, all 3 seeds): a 16-event window floating after a 0–192-event prefix is a harder
+optimization, and the deep-B examples destabilize even the in-range B=0 case. So **from-scratch deep-state
+coverage does not build a length-general non-abelian circuit** — §3.1's "no length-general escape" reading
+**stands**. Honest caveat: Buitrago Ruiz & Gu apply coverage as a *cheap POST-training intervention* (Gaussian
+state-init / state-passing on an already-trained model, ~500 steps), not as from-scratch training. This is a null
+for the **from-scratch** variant only; the **post-training** state-passing version is untested here and remains
+the open lever (it also needs threading recurrent state through the model, which the gdp_hybrid's attention
+layer complicates). Net: across capacity (to 357M), length-distribution, horizon curriculum, and now deep-state
+coverage, **no tested lever builds a length-general non-abelian circuit** at this scale — the wall is robust,
+and the post-training state-passing route is the most promising untried direction.

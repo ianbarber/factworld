@@ -20,11 +20,14 @@ Each script writes a `<name>.md` table next to it. All reuse the repo's `factwor
 | Supervision density is a **cliff** (forms only ~every other step) | `supervision_sweep.py` |
 | Reconcile R1 vs the companion paper (scoring axis) | `recon_b1.py` |
 | **Internalization / horizon dissociation** (weaning; order isn't the lever) | `curriculum.py` |
-| **Scale** largely doesn't relieve the horizon wall (flat to 44.8M even LR-tuned; weak lift at a 70M control point) | `scale.py`, `scale_tuned.py` |
+| **Scale is not the lever**: the horizon wall is flat across the ladder to 357M — the largest fully-converged model still floors | `scale.py`, `scale_tuned.py`, `scale_big.py` |
+| **The training-length distribution is the lever**: a threshold density of target-length examples (~20%) unlocks extrapolation; soft cap on max-len; concentration beats uniform coverage | `length_mix.py` |
+| **Real circuit vs shortcut**: abelian is a length-general register (read-then-lookup, holds to 16×); non-abelian has no scan shortcut, so its only path is online state-carry — which cliffs past trained depth | `decay_curve.py`, `reeval_endquery.py` |
+| **From-scratch deep-state coverage doesn't build the circuit** (null; hurts in-distribution); post-training state-passing (Buitrago Ruiz & Gu 2025) untested/open | `carried_state.py` |
 | **Horizon-extension curriculum** moves the wall; token re-anchoring doesn't | `horizon.py`, `coarse.py` |
 | The internalized cap **tracks max training length** | `horizon_mech.py` |
 | Supervision density × horizon are **orthogonal** levers | `sup_horizon.py` |
 | **RL vs static**: outcome-reward GRPO doesn't climb the cliff either | `rl_grpo.py`, `rl_flicker.py` |
 | **Construct-validity bridge**: the cliff reproduces in code-execution-trace (CWM) clothing | `code_trace.py` |
 
-All numbers are small-scale (≤70M, single RTX 3090) and scoped accordingly in the write-up.
+All numbers are small-scale (≤357M, single RTX 3090) and scoped accordingly in the write-up.
