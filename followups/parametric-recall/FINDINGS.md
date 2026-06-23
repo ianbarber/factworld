@@ -538,3 +538,18 @@ extrapolation.** The cost: clean bases (L16 ≥ 0.95) are rare — ~1/7 of seeds
 post-training lever (solved: reliable given base-selection) to BASE-TRAINING reliability** (why only ~1/7 of
 seeds reach a clean in-distribution circuit) — a recurrence-side seed-fragility problem and the natural next
 lever.
+
+**First attack on base-training reliability — modest (`base_reliability.py`, 4 arms × 8 seeds).** A key clue:
+`dense_h16` (teacher-forced per-step holder) is **saturated at 1.00 for every base**, clean or not — so every
+base *learns the map*; the failure is **free-running autoregressive stability**, not local credit. Three levers
+tested against the 1/8 default clean rate. (i) **Short convolution** (`use_short_conv=True`; flagged "crucial" by
+fla and the headline state-tracking lever in FPRM, Movahedi et al. 2026) — a **clean NEGATIVE as a drop-in**:
+0/8, it *floors in-distribution learning* entirely (the causal-conv primitive is architecture-coupled and does
+not transfer to our gated-delta recurrence without retuning). (ii) **EMA** over the cosine tail — marginal alone
+(nudges mid-seeds +0.05–0.10, converts none). (iii) **GDP forget-gate retention-init** (bias `dt_bias`/`A_log`
+toward a norm-preserving recurrence) **+ EMA** — a *modest* positive: lifts the middle of the L16 distribution
+(four seeds into 0.82–0.92) and EMA crosses two over → **2/8 clean vs 1/8 default** (~2× the clean rate, small-n;
+notably it produces no top-0.97 seed, so it broadens rather than sharpens). No arm shows native length-gen (L128
+floors everywhere — post-training is still required). Net: **base-selection remains the reliability recipe**;
+gate-init + EMA can roughly halve the K needed; short-conv is a documented non-transfer. **Raising the ~1/7
+clean-base rate substantially is still open.**
