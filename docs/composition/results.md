@@ -53,7 +53,7 @@ tops out at ≈0.30, so gdp's ≈0.95 on the memorized composite is genuine comp
 
 At the frozen-benchmark baseline (`docs/results.md`), the genuine in-context-copy composite
 (`composite_copy_v1`) floors for **all four** architectures (≤0.02). The scale step that lifts it is in
-`docs/scale-results.md`.
+`docs/state-tracking/scale.md`.
 
 ## Decomposition — the composite is a resolve-then-recall pipeline, not two legs (`scripts/decompose.py`)
 
@@ -85,7 +85,7 @@ The 2/5 floored seeds never form the recall circuit (`value` ≈ chance, `route`
 binding works** (s3: holder 0.47, value 0.02), locating the bottleneck at recall-under-composition, not
 binding. At 4× the pipeline degrades gracefully with the binding (converged-seed `route` 0.53 / 0.62 / 0.91;
 P(v|h✓) 0.50 / 0.56 / 0.89) but keeps its structure (`none` ≈ 0). This is all-or-nothing **optimization** —
-the circuit forms or it does not, matching the scale-run bimodality (`docs/scale-results.md`) — so we
+the circuit forms or it does not, matching the scale-run bimodality (`docs/state-tracking/scale.md`) — so we
 characterize how the composite is *learned*, not claim the architecture forces it. (The earlier
 `P(both)/P(state)·P(recall)` "coupling" ratio is dropped: within a converged seed both = holder = value, so
 the ratio is mechanically 1/p and is not independent evidence.)

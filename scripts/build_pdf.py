@@ -1,4 +1,4 @@
-"""Build paper.pdf from paper.md — markdown -> styled HTML -> weasyprint PDF.
+"""Build reports/factworld.pdf from reports/factworld.md — markdown -> styled HTML -> weasyprint PDF.
 
 Pure-Python (no LaTeX). Single-column academic/preprint styling: Times-like serif
 (Nimbus Roman) with Noto/DejaVu fallback for math glyphs, booktabs tables, first-line
@@ -11,8 +11,8 @@ import os
 import re
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = os.path.join(REPO, "paper.md")
-OUT = os.path.join(REPO, "paper.pdf")
+SRC = os.path.join(REPO, "reports", "factworld.md")
+OUT = os.path.join(REPO, "reports", "factworld.pdf")
 
 import markdown  # noqa: E402
 from weasyprint import HTML  # noqa: E402

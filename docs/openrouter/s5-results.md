@@ -49,7 +49,7 @@ because the canonical answer is already a single token plus a period.
   *shape*, but they cannot track the running S₅ permutation.
 - **This matches the custom-trained learnability map.** The same `s5_v1` task is solvable by a
   small recurrent model when trained with dense per-step process supervision (see
-  `docs/state-tracking-results.md` and `followups/non-abelian-state/non-abelian-state.md`). The
+  `docs/state-tracking/dense-supervised.md` and `reports/non-abelian-state.md`). The
   pretrained models are not failing because the task is unexpressible; they are failing because
   they were trained on sparse outcome-level text and have no reliable latent state-update circuit
   for this computation.

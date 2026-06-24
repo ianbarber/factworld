@@ -1,9 +1,10 @@
 # Reproducing the non-abelian state-tracking results
 
-Reproduction guide for **[`non-abelian-state.md`](non-abelian-state.md)** (the report). This is a
-post-publication, **segregated** follow-up — nothing here changes the shipped `paper.md` / `docs/`. Every claim
-maps to one script below; each writes a `<name>.md` table next to it on completion (crash-safe). The
-data/oracle layer is pure-stdlib; training needs a CUDA GPU (validated on a single RTX 3090, ≤ 357M params).
+Reproduction guide for **[`reports/non-abelian-state.md`](../../reports/non-abelian-state.md)** (the report).
+This is a **segregated** phase-2 study — nothing here changes the shipped `reports/factworld.md` /
+`docs/`. Every claim maps to one script below; each writes a `<name>.md` table next to it on completion
+(crash-safe). The data/oracle layer is pure-stdlib; training needs a CUDA GPU (validated on a single
+RTX 3090, ≤ 357M params).
 
 ```bash
 .venv/bin/python followups/non-abelian-state/<script>.py

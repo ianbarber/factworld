@@ -267,7 +267,7 @@ def main():
                     help="Generation budget per example (default: 16).")
     ap.add_argument("--no_reasoning", action="store_true",
                     help="Pass reasoning={\"effort\":\"none\"} to disable chain-of-thought (OpenRouter).")
-    ap.add_argument("--out", default="docs/openrouter-results.md",
+    ap.add_argument("--out", default="docs/openrouter/results.md",
                     help="Markdown output path.")
     ap.add_argument("--json_out", default=None,
                     help="Optional separate JSON output path.")
