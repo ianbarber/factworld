@@ -46,10 +46,15 @@ def evaluate_task(
     examples = generate(spec, split, n=n, length=length)
 
     if max_new_tokens is None:
-        max_new_tokens = max(len(e.answer.split()) + 2 for e in examples)
+        max_new_tokens = max((len(e.answer.split()) + 2 for e in examples), default=4)
 
     prompts = [e.prompt for e in examples]
     preds = backend.generate(prompts, max_new_tokens=max_new_tokens, stop_at=".")
+    if len(preds) != len(prompts):
+        raise RuntimeError(
+            f"backend {backend.name!r} returned {len(preds)} predictions "
+            f"for {len(prompts)} prompts"
+        )
 
     inspected: list[tuple[str, str, str, bool]] = []
     by_length: dict[int, list[int]] = {}

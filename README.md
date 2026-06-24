@@ -41,18 +41,23 @@ pip install -e .
 pip install -e ".[train]"     # local from-scratch training (torch + flash-linear-attention)
 pip install -e ".[hf]"        # HuggingFace transformers
 pip install -e ".[api]"       # OpenAI-compatible APIs
-pip install -e ".[dev]"       # pytest + all backend deps
+pip install -e ".[dev]"       # pytest + hf/api/train backend deps
 ```
 
 ## Quickstart
 
 ```python
-from factworld.tasks import CANONICAL, generate, score_exact
+from factworld.backends import FunctionBackend
+from factworld.runner import evaluate_task
+from factworld.tasks import CANONICAL
 
-spec  = CANONICAL["composite_copy_v1"]      # binding × in-context-copy recall, in one query
-train = generate(spec, "train", n=8000)     # deterministic; gold from the oracle (never parsed from text)
-test  = generate(spec, "test", length=64)   # held-out OOD-length split, fixed seed
-acc   = sum(score_exact(p, e.answer) for p, e in zip(preds, test)) / len(test)
+spec    = CANONICAL["composite_copy_v1"]    # binding × in-context-copy recall, in one query
+backend = FunctionBackend(
+    lambda prompts, n, stop: ["g0 ."] * len(prompts),
+    name="always-g0",
+)
+result  = evaluate_task(backend, spec, n=50)  # deterministic; gold from the oracle
+print(result["overall"])
 ```
 
 ```bash
@@ -98,11 +103,15 @@ Or use a one-liner with ``FunctionBackend``:
 
 ```python
 from factworld.backends import FunctionBackend
+from factworld.runner import evaluate_task
+from factworld.tasks import CANONICAL
 
 backend = FunctionBackend(
     lambda prompts, n, stop: ["g0 ."] * len(prompts),
     name="always-g0",
 )
+result = evaluate_task(backend, CANONICAL["composite_copy_v1"], n=50)
+print(result["overall"])
 ```
 
 See [`docs/USAGE.md`](docs/USAGE.md) for the full backend API reference, API
@@ -167,6 +176,7 @@ The hybrid configuration (`[recurrent, recurrent, attn, recurrent]`, n_h=4, neg-
 
 ```bash
 python tests/test_world_oracle.py     # zero-dependency runner
+python tests/test_backends.py         # backend / runner smoke tests
 uv run --with pytest pytest -q        # full suite
 ```
 
@@ -208,7 +218,7 @@ python scripts/transformer_lr_sweep.py    # transformer 45M, 5 LRs x 2 seeds  (n
 python scripts/gdn_lr_sweep.py            # gdn_hybrid 45M, 5 LRs x 2 seeds    (Layer 2: capable-but-LR-fragile, 1/10)
 python scripts/gdp_lr_sweep.py            # gdp_hybrid 45M, 5 LRs x 2 seeds    (Layer 2: broad band, 7/10)
 python scripts/gdp_confirm_5e4.py         # gdp 45M @ tuned lr 5e-4, 5 seeds   (pins the L16 5/5, L64 3/5 point estimate)
-python scripts/gdn_confirm_3e4.py         # gdn 45M @ lr 3e-4, 3 seeds         (W2: 4/5 converge, 1/5 extrapolate)
+python scripts/gdn_confirm_3e4.py         # gdn 45M @ lr 3e-4, 5 seeds         (W2: 4/5 converge, 1/5 extrapolate)
 python scripts/fair_config.py             # W3: transformer n_heads=8+resid (floor survives 0/10) + recurrent short-conv
 ```
 

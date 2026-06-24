@@ -8,7 +8,7 @@ Run with pytest: python3 -m pytest tests/test_backends.py
 """
 from __future__ import annotations
 
-import importlib
+import builtins
 import os
 import sys
 import types
@@ -91,15 +91,55 @@ def test_evaluate_task_with_function_backend():
         assert correct is True
 
 
+def test_evaluate_task_groups_by_length():
+    """Per-length accuracy is reported under ``by_length``."""
+    spec = CANONICAL["recall_copy_v1"]
+    gold = {ex.prompt: ex.answer for ex in generate(spec, "test", n=10, length=6)}
+
+    def oracle(prompts, max_new_tokens, stop_at):
+        return [gold.get(p, "v0 .") for p in prompts]
+
+    backend = FunctionBackend(oracle, name="oracle")
+    result = evaluate_task(backend, spec, split="test", n=10, length=6, max_new_tokens=4)
+
+    assert 6 in result["by_length"]
+    assert result["by_length"][6] == result["overall"]
+    assert result["overall"] == 1.0
+
+
+def test_evaluate_task_rejects_wrong_prediction_count():
+    def short_backend(prompts, max_new_tokens, stop_at):
+        return ["v0 ."]  # one answer for many prompts
+
+    backend = FunctionBackend(short_backend, name="short")
+    try:
+        evaluate_task(backend, CANONICAL["recall_v1"], split="test", n=5, length=4)
+    except RuntimeError as exc:
+        assert "returned 1 predictions" in str(exc)
+    else:
+        raise AssertionError("evaluate_task should raise when backend returns wrong count")
+
+
 # --- Optional backend import guards ------------------------------------------
 
-def test_hf_backend_import_error():
-    import factworld.backends as B
+def _block_import(name: str):
+    """Return a context manager that makes ``builtins.__import__`` raise for ``name``."""
+    real_import = builtins.__import__
 
-    with patch.dict(sys.modules, {"transformers": None, "torch": None}):
-        reloaded = importlib.reload(B)
+    def fake_import(import_name, *args, **kwargs):
+        if import_name == name or import_name.startswith(f"{name}."):
+            raise ModuleNotFoundError(f"No module named '{name}'")
+        return real_import(import_name, *args, **kwargs)
+
+    return patch.object(builtins, "__import__", fake_import)
+
+
+def test_hf_backend_import_error():
+    from factworld.backends import HFBackend
+
+    with _block_import("transformers"):
         try:
-            reloaded.HFBackend("gpt2")
+            HFBackend("gpt2")
         except ImportError as exc:
             assert "transformers" in str(exc).lower()
         else:
@@ -107,12 +147,11 @@ def test_hf_backend_import_error():
 
 
 def test_api_backend_import_error():
-    import factworld.backends as B
+    from factworld.backends import APIBackend
 
-    with patch.dict(sys.modules, {"openai": None}):
-        reloaded = importlib.reload(B)
+    with _block_import("openai"):
         try:
-            reloaded.APIBackend("test-model")
+            APIBackend("test-model")
         except ImportError as exc:
             assert "openai" in str(exc).lower()
         else:
@@ -153,8 +192,12 @@ def test_local_backend_builds_tokenizer_if_torch_available():
     try:
         import torch  # noqa: F401
     except Exception as exc:
-        print(f"  skip test_local_backend_builds_tokenizer_if_torch_available (no torch: {exc})")
-        return
+        # Use pytest.skip when running under pytest, otherwise just return.
+        try:
+            import pytest
+            pytest.skip(f"torch not installed: {exc}")
+        except ImportError:
+            return
 
     import factworld.backends as B
 

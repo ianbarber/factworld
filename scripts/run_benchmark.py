@@ -48,7 +48,7 @@ def run_task(name, *, spec=None, arch="gdp_hybrid", d_model=256, n_layers=4, d_f
                 d_ff=d_ff, seed=seed, return_model=True, device=device)
     model = run["model"]
 
-    backend = LocalBackend([w], arch=arch, model=model, device=device)
+    backend = LocalBackend([w], arch=arch, model=model, tokenizer=tok, device=device)
 
     out = {}
     for L in spec.eval_lengths:

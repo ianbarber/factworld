@@ -17,7 +17,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .world import World
 
 
 class ModelBackend(ABC):
@@ -50,12 +53,13 @@ class LocalBackend(ModelBackend):
 
     def __init__(
         self,
-        worlds,
-        arch: str,
+        worlds: list[World],
+        arch: str | None = None,
         d_model: int = 256,
         n_layers: int = 4,
         d_ff: int | None = None,
         model: Any | None = None,
+        tokenizer: Any | None = None,
         n_heads: int = 4,
         use_forget_gate: bool = True,
         num_householder: int = 4,
@@ -70,11 +74,13 @@ class LocalBackend(ModelBackend):
 
         self.device = device
         self.arch = arch
-        self.tokenizer = Tokenizer.build(worlds, Renderer())
+        self.tokenizer = tokenizer if tokenizer is not None else Tokenizer.build(worlds, Renderer())
 
         if model is not None:
             self.model = model
         else:
+            if arch is None:
+                raise ValueError("LocalBackend requires `arch` when `model` is not supplied")
             import torch
             from .models import build_model
 
@@ -116,17 +122,25 @@ class LocalBackend(ModelBackend):
 
     @property
     def name(self) -> str:
-        return f"local-{self.arch}"
+        label = self.arch if self.arch is not None else type(self.model).__name__
+        return f"local-{label}"
 
 
 class HFBackend(ModelBackend):
-    """Greedy-decoding backend wrapping a Hugging Face ``transformers`` model."""
+    """Greedy-decoding backend wrapping a Hugging Face ``transformers`` model.
+
+    Note: this backend uses the model's own tokenizer, which will generally not
+    align token-by-token with FactWorld's atomic whitespace tokenizer. It is
+    intended for evaluating external pre-trained models on the *text* of the
+    benchmark, not for fair comparison with ``LocalBackend``.
+    """
 
     def __init__(
         self,
         model_name_or_path: str,
         device: str | None = None,
         dtype: Any | None = None,
+        tokenizer_kwargs: dict[str, Any] | None = None,
         **model_kwargs,
     ):
         try:
@@ -139,7 +153,8 @@ class HFBackend(ModelBackend):
             ) from exc
 
         self.model_name_or_path = model_name_or_path
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, **model_kwargs)
+        tokenizer_kwargs = tokenizer_kwargs or {}
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, **tokenizer_kwargs)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
@@ -157,6 +172,12 @@ class HFBackend(ModelBackend):
         self.model.eval()
 
     def generate(self, prompts: list[str], max_new_tokens: int, stop_at: str | None = None) -> list[str]:
+        """Generate greedily and, if ``stop_at`` is given, truncate at its first occurrence.
+
+        Because ``transformers.generate`` does not accept arbitrary string stop
+        sequences, generation runs to ``max_new_tokens`` and is truncated
+        post-hoc. Set ``max_new_tokens`` just above the expected answer length.
+        """
         import torch
 
         inputs = self.tokenizer(prompts, return_tensors="pt", padding=True).to(self.device)
@@ -181,7 +202,11 @@ class HFBackend(ModelBackend):
 
 
 class APIBackend(ModelBackend):
-    """Backend wrapping an OpenAI-compatible chat-completion endpoint."""
+    """Backend wrapping an OpenAI-compatible chat-completion endpoint.
+
+    Calls are made sequentially (one request per prompt). For large ``n``,
+    prefer a local endpoint or batch via a vLLM/ollama server.
+    """
 
     def __init__(
         self,

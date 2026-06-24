@@ -121,7 +121,7 @@ class MyBackend(ModelBackend):
         return "my-backend"
 
     def generate(self, prompts, max_new_tokens, stop_at=None):
-        return [my_model.complete(p, max_tokens=max_new_tokens) for p in prompts]
+        return [my_model.complete(p, max_tokens=max_new_tokens, stop=stop_at) for p in prompts]
 
 spec = CANONICAL["composite_copy_v1"]
 result = evaluate_task(MyBackend(), spec, n=50)

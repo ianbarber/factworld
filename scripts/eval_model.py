@@ -28,18 +28,29 @@ def _mock_model(prompts, max_new_tokens, stop_at=None):
     return ["g0 ."] * len(prompts)
 
 
-def build_local_backend(spec, arch, d_model, n_layers, steps, seed, device):
+def build_docs(examples, use_trace):
+    """Training strings: prompt + (optional oracle worked-trace) + final answer."""
+    docs = []
+    for e in examples:
+        trace = f"{e.meta['trace']} " if (use_trace and "trace" in e.meta) else ""
+        docs.append(f"{e.prompt}{trace}{e.answer}")
+    return docs
+
+
+def build_local_backend(spec, arch, d_model, n_layers, steps, train_n, batch,
+                        use_trace, seed, device):
     """Train a tiny local model on ``spec`` and wrap it for evaluation."""
     from factworld import train as T
 
     d_ff = 4 * d_model
     w, _ = TK.build_world(spec)
-    train = TK.generate(spec, "train", n=8000)
-    tok, docs, _ = T.prepare([f"{e.prompt}{e.answer}" for e in train], [], [w])
-    run = T.run(arch, tok, docs, [], steps=steps, batch=32, d_model=d_model,
+    train = TK.generate(spec, "train", n=train_n)
+    tok, docs, _ = T.prepare(build_docs(train, use_trace), [], [w])
+    run = T.run(arch, tok, docs, [], steps=steps, batch=batch, d_model=d_model,
                 n_layers=n_layers, d_ff=d_ff, seed=seed, return_model=True,
                 device=device)
-    backend = LocalBackend([w], arch=arch, model=run["model"], device=device)
+    backend = LocalBackend([w], arch=arch, model=run["model"], tokenizer=tok,
+                           device=device)
     return backend
 
 
@@ -49,17 +60,24 @@ def main():
     ap.add_argument("--backend", choices=["local", "hf", "api", "function"], required=True,
                     help="Which backend to use for generation.")
     ap.add_argument("--model", default=None,
-                    help="Model name or path (used by hf/api; for local defaults to --arch).")
+                    help="Model name or path (used by hf/api; ignored for local).")
     ap.add_argument("--arch", default="gdp_hybrid",
                     help="Architecture for the local backend (default: gdp_hybrid).")
     ap.add_argument("--d_model", type=int, default=256, help="Model width for local backend.")
     ap.add_argument("--n_layers", type=int, default=4, help="Model depth for local backend.")
     ap.add_argument("--steps", type=int, default=4000, help="Training steps for local backend.")
+    ap.add_argument("--train_n", type=int, default=8000,
+                    help="Number of training examples for local backend.")
+    ap.add_argument("--batch", type=int, default=32, help="Training batch size for local backend.")
+    ap.add_argument("--use_trace", action="store_true",
+                    help="Train on the oracle worked-trace (if any) for local backend.")
     ap.add_argument("--device", default="cuda", help="Device for local/hf backends.")
     ap.add_argument("--base_url", default=None, help="API base URL (for api backend).")
     ap.add_argument("--api_key", default=None,
                     help="API key (for api backend; falls back to OPENAI_API_KEY).")
     ap.add_argument("--n", type=int, default=50, help="Number of eval examples per length.")
+    ap.add_argument("--split", default="test", choices=["train", "test"],
+                    help="Which split to evaluate.")
     ap.add_argument("--length", type=int, default=None, help="Override the eval length.")
     ap.add_argument("--max_new_tokens", type=int, default=16,
                     help="Generation budget per example.")
@@ -70,7 +88,8 @@ def main():
 
     if a.backend == "local":
         backend = build_local_backend(
-            spec, a.arch, a.d_model, a.n_layers, a.steps, a.seed, a.device
+            spec, a.arch, a.d_model, a.n_layers, a.steps, a.train_n, a.batch,
+            a.use_trace, a.seed, a.device
         )
         label = f"local/{a.arch} d{a.d_model} x{a.n_layers}"
     elif a.backend == "hf":
@@ -89,7 +108,7 @@ def main():
 
     lengths = [a.length] if a.length is not None else list(spec.eval_lengths)
     results = {
-        L: evaluate_task(backend, spec, split="test", n=a.n, length=L,
+        L: evaluate_task(backend, spec, split=a.split, n=a.n, length=L,
                          max_new_tokens=a.max_new_tokens)
         for L in lengths
     }
