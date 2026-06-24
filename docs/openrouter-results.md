@@ -37,7 +37,10 @@ System prompt:
 
 ## Notes
 
-- Relaxed scoring strips spaces and trailing periods. It is provided because external chat models often emit `v56.` instead of the canonical `v56 .`.
+- `APIBackend` normalizes a trailing period that is glued to the preceding
+  token (e.g. `v56.` → `v56 .`), so the canonical exact-match metric is
+  meaningful for chat-model output. In this run exact and relaxed scores
+  coincide.
 - Exact match remains the canonical FactWorld metric.
 
 
