@@ -45,13 +45,6 @@ def _mock_model(prompts, max_new_tokens, stop_at=None):
     return ["g0 ."] * len(prompts)
 
 
-def _relaxed_score(pred: str, gold: str) -> int:
-    """Tokenization-agnostic score: ignore whitespace and trailing periods."""
-    pred_norm = pred.replace(".", "").replace(" ", "").strip()
-    gold_norm = gold.replace(".", "").replace(" ", "").strip()
-    return int(pred_norm == gold_norm)
-
-
 def build_docs(examples, use_trace):
     """Training strings: prompt + (optional oracle worked-trace) + final answer."""
     docs = []
@@ -153,26 +146,38 @@ def main():
 
     json_rows = []
     for L, result in results.items():
-        examples = [
-            {"prompt": p, "gold": g, "pred": pred, "exact": bool(ok),
-             "relaxed": bool(_relaxed_score(pred, g))}
-            for p, g, pred, ok in result["examples"]
-        ]
+        examples = []
+        for (p, g, pred, ok), metrics in zip(
+            result["examples"], result.get("example_metrics", [])
+        ):
+            ex = {"prompt": p, "gold": g, "pred": pred, "exact": bool(ok)}
+            ex.update(metrics)
+            examples.append(ex)
+        if not examples:
+            examples = [
+                {"prompt": p, "gold": g, "pred": pred, "exact": bool(ok)}
+                for p, g, pred, ok in result["examples"]
+            ]
+        metrics_agg = {
+            name: {"correct": sum(e[name] for e in examples), "acc": sum(e[name] for e in examples) / len(examples)}
+            for name in ("relaxed", "contains", "last_n")
+            if name in examples[0]
+        }
         correct_exact = sum(e["exact"] for e in examples)
-        correct_relaxed = sum(e["relaxed"] for e in examples)
-        json_rows.append({
+        row = {
             "model": label,
             "task": a.task,
             "length": L,
             "n": len(examples),
             "system_prompt": system_prompt,
             "accuracy_exact": result["overall"],
-            "accuracy_relaxed": correct_relaxed / len(examples),
             "correct_exact": correct_exact,
-            "correct_relaxed": correct_relaxed,
             "elapsed": 0.0,
             "examples": examples,
-        })
+        }
+        row.update({f"accuracy_{name}": m["acc"] for name, m in metrics_agg.items()})
+        row.update({f"correct_{name}": m["correct"] for name, m in metrics_agg.items()})
+        json_rows.append(row)
 
     if a.json_out:
         with open(a.json_out, "w") as f:
@@ -184,7 +189,11 @@ def main():
     for L, result in results.items():
         total = len(result["examples"])
         correct = sum(1 for _, _, _, ok in result["examples"] if ok)
-        print(f"  test@L{L}: {result['overall']:.3f} ({correct}/{total})")
+        extra = ""
+        for name in ("relaxed", "contains", "last_n"):
+            if name in result.get("metrics", {}):
+                extra += f" {name}={result['metrics'][name]['overall']:.3f}"
+        print(f"  test@L{L}: exact={result['overall']:.3f}{extra} ({correct}/{total})")
 
 
 if __name__ == "__main__":

@@ -178,13 +178,14 @@ def test_api_backend_mock():
         backend = B.APIBackend("test-model", client=client)
 
     # APIBackend re-attaches the stop token when the API reports finish_reason == "stop",
-    # then normalizes a glued trailing period to match FactWorld's atomic tokenizer.
+    # strips common answer prefixes / surrounding whitespace, and normalizes a glued trailing
+    # period to match FactWorld's atomic tokenizer.
     preds = backend.generate(["facts what is a0 of g3 ? : "], max_new_tokens=4, stop_at=".")
-    assert preds == [" g3 ."]
+    assert preds == ["g3 ."]
 
-    # Without a stop string the raw content is returned unchanged.
+    # Without a stop string the raw content is normalized (prefixes/whitespace stripped).
     preds = backend.generate(["facts what is a0 of g3 ? : "], max_new_tokens=4, stop_at=None)
-    assert preds == [" g3"]
+    assert preds == ["g3"]
 
 
 # --- LocalBackend (torch-dependent) -----------------------------------------

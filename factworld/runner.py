@@ -9,7 +9,15 @@ greedy continuations, and score them with the one canonical metric
 from __future__ import annotations
 
 from .backends import ModelBackend
-from .tasks import CANONICAL, TaskSpec, generate, score_exact
+from .tasks import (
+    CANONICAL,
+    TaskSpec,
+    generate,
+    score_contains,
+    score_exact,
+    score_last_n,
+    score_relaxed,
+)
 
 
 def evaluate_task(
@@ -35,8 +43,10 @@ def evaluate_task(
 
     Returns:
         A dictionary with task name, backend name, evaluation parameters,
-        per-length accuracy, overall accuracy, and a list of inspected examples
-        as ``(prompt, gold, pred, correct)`` tuples.
+        per-length accuracy, overall accuracy, a list of inspected examples
+        as ``(prompt, gold, pred, correct)`` tuples, and a ``metrics`` dict
+        with canonical (``exact``) and tokenizer-robust (``relaxed``,
+        ``contains``, ``last_n``) scores.
     """
     if isinstance(task, str):
         spec = CANONICAL[task]
@@ -56,17 +66,34 @@ def evaluate_task(
             f"for {len(prompts)} prompts"
         )
 
+    scorers = {
+        "exact": score_exact,
+        "relaxed": score_relaxed,
+        "contains": score_contains,
+        "last_n": score_last_n,
+    }
     inspected: list[tuple[str, str, str, bool]] = []
-    by_length: dict[int, list[int]] = {}
-    total_correct = 0
+    example_metrics: list[dict[str, int]] = []
+    by_length: dict[int, dict[str, list[int]]] = {}
+    totals: dict[str, int] = {name: 0 for name in scorers}
     for example, pred in zip(examples, preds):
-        correct = score_exact(pred, example.answer)
-        total_correct += correct
-        inspected.append((example.prompt, example.answer, pred, bool(correct)))
-        by_length.setdefault(example.length, []).append(correct)
+        scores = {name: fn(pred, example.answer) for name, fn in scorers.items()}
+        for name, val in scores.items():
+            totals[name] += val
+        inspected.append((example.prompt, example.answer, pred, bool(scores["exact"])))
+        example_metrics.append({name: scores[name] for name in scorers if name != "exact"})
+        by_length.setdefault(example.length, {name: [] for name in scorers})
+        for name, val in scores.items():
+            by_length[example.length][name].append(val)
 
-    overall = total_correct / len(examples) if examples else 0.0
-    by_length_acc = {length_key: sum(scores) / len(scores) for length_key, scores in by_length.items()}
+    n_examples = len(examples)
+    metrics = {
+        name: {"overall": totals[name] / n_examples if n_examples else 0.0}
+        for name in scorers
+    }
+    for length_key, length_scores in by_length.items():
+        for name, vals in length_scores.items():
+            metrics[name].setdefault("by_length", {})[length_key] = sum(vals) / len(vals)
 
     return {
         "task": spec.name,
@@ -74,7 +101,9 @@ def evaluate_task(
         "n": n,
         "split": split,
         "length": length,
-        "by_length": by_length_acc,
-        "overall": overall,
+        "by_length": metrics["exact"].get("by_length", {}),
+        "overall": metrics["exact"]["overall"],
         "examples": inspected,
+        "example_metrics": example_metrics,
+        "metrics": metrics,
     }

@@ -32,7 +32,7 @@ python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 32
 An Oracle-Validated Instrument for Composing Recall, State-Tracking, and
 Knowledge.* Reference numbers live in [`docs/results.md`](docs/results.md) and
 related docs. The latest external-LLM grid (including Nemotron 3 / Kimi results)
-is in [`docs/openrouter-results.md`](docs/openrouter-results.md); the new S₅ non-abelian
+is in [`docs/openrouter-results.md`](docs/openrouter-results.md); the new `s5_v1`
 grid is in [`docs/openrouter-s5-results.md`](docs/openrouter-s5-results.md).
 
 🔬 **Follow-up — validating non-abelian state-tracking with FactWorld:**
@@ -193,11 +193,16 @@ more the model must maintain latent state over a long stream.
 | `binding_v1` | last-write-wins state tracking | k roles (0.200) | give-stream length |
 | `composite_copy_v1` | binding × in-context recall | k² pairs (~0.031) | binding horizon |
 | `chain_v1` | depth-*k* pointer chase | k agents (~0.167) | composition depth |
-| `s5_v1` | non-abelian S₅ role permutation | 5 roles (0.200) | permutation horizon |
+| `s5_v1` | S₅ role permutation | 5 roles (0.200) | permutation horizon |
+
+The numbers below are **position-strict exact match**, the canonical metric. The evaluation
+pipeline also reports relaxed, semantic-containment, and last-*n* scores to separate formatting
+artifacts from whether the model actually knows the answer.
 
 ### Pretrained open models
 
-OpenRouter grid (n = 30, greedy decoding; format instructions appended where needed):
+OpenRouter grid (n = 30, greedy decoding; format instructions appended where needed).
+The first table shows one eval length per benchmark task; the second shows `s5_v1` across lengths.
 
 **Benchmark tasks** — see [`docs/openrouter-results.md`](docs/openrouter-results.md):
 
@@ -222,7 +227,7 @@ Reading the ladder:
 - **Depth extrapolation stays hard.** `chain_v1` peaks at 0.300, consistent with the paper's claim
   that pointer-chase depth generalization is poor for pretrained chat models.
 
-**Non-abelian S₅** — see [`docs/openrouter-s5-results.md`](docs/openrouter-s5-results.md):
+**`s5_v1` across eval lengths** — see [`docs/openrouter-s5-results.md`](docs/openrouter-s5-results.md):
 
 | model | L32 | L64 | L128 | mean |
 | --- | --- | --- | --- | --- |
@@ -234,9 +239,9 @@ Reading the ladder:
 | llama-3.3-70b-instruct | 0.300 | 0.167 | 0.067 | 0.178 |
 | gpt-4o-mini | 0.100 | 0.167 | 0.167 | 0.144 |
 
-Every model is at the 0.20 chance floor. Even Nemotron 3 Ultra, the strongest composite model in
-the grid, does not lift above it. The format instruction gets the right token *shape*, but none of
-these pretrained models tracks the running non-abelian permutation.
+Every model is at the 0.20 chance floor on `s5_v1`. Even Nemotron 3 Ultra, the strongest composite
+model in the grid, does not lift above it. The format instruction gets the right token *shape*, but
+none of these pretrained models tracks the running S₅ permutation.
 
 ### Custom-trained recurrent models
 
@@ -248,13 +253,13 @@ attention layer in a `[recurrent, recurrent, attn, recurrent]` stack (see `factw
 | model | supervision / training signal | train length | eval | score |
 | --- | --- | --- | --- | --- |
 | `gdp_hybrid` (baseline) | answer-only, ≤L16 | L4–L16 | `composite_copy_v1` @L16 | 0.02 |
-| `gdp_pure` | dense per-step state trace | L32 | S₅ token-acc @L128 | **0.99** |
-| `gdp_hybrid` | dense process supervision (K=1) | L16 | non-abelian composite @L64 | **0.95** |
+| `gdp_pure` | dense per-step state trace | L32 | `s5_v1` token-acc @L128 | **0.99** |
+| `gdp_hybrid` | dense process supervision (K=1) | L16 | `s5_v1` composite @L64 | **0.95** |
 | `gdp_hybrid` | mixed-density internalization (no scratchpad) | L16 | answer-only @L16 | **1.00** |
 | `gdp_hybrid` | horizon-extension curriculum | progressive → L64 | answer-only @L64 | **0.94** |
 | `gdp_hybrid` | post-training deep-state coverage, clean base, no labels | L16 base + L64/L128 burn-in | answer-only @L64 / @L128 | **0.99** / **0.86** |
 
-Sources: baseline composite in [`docs/results.md`](docs/results.md); dense-supervised S₅ in
+Sources: baseline composite in [`docs/results.md`](docs/results.md); dense-supervised `s5_v1` in
 [`docs/state-tracking-results.md`](docs/state-tracking-results.md); full recipe and controls in
 [`followups/non-abelian-state/non-abelian-state.md`](followups/non-abelian-state/non-abelian-state.md)
 and [`REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md).
@@ -262,28 +267,27 @@ and [`REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md).
 What the comparison shows:
 
 - **Architecture is not the bottleneck.** The same GDP backbone that floors the small-scale
-  composite under sparse supervision solves the S₅ word problem when given dense per-step state
-  supervision.
-- **The strongest trained results are hybrid, not pure.** The 0.94–0.99 L64 numbers come from the
+  composite under sparse supervision solves `s5_v1` when given dense per-step state supervision.
+- **The strongest trained results are hybrid, not pure.** The 0.94–0.99 L64 numbers come from
   `gdp_hybrid` trained with dense or curriculum supervision; the pure-recurrence `gdp_pure` result is
   the dense-supervised state-tracking probe (0.99 token-acc at L128), not the full composite.
 - **Pretrained open models are in the sparse-supervision regime.** They were not trained with the
   oracle's intermediate role-permutation trace, so they behave like the answer-only baseline of the
   follow-up: at floor. This matches the follow-up's finding that sparse outcome-level signal —
-  including vanilla RL — cannot climb the non-abelian cliff.
+  including vanilla RL — cannot climb the `s5_v1` cliff.
 - **Length generalization is a data-distribution problem, not a width problem.** Scaling the hybrid
   to 357M does not move the internalized horizon wall (answer-only L64 stays at 0.20), but a
   sufficient density of target-length examples does, and post-training deep-state coverage extends
   the clean circuit to ≈8× the trained horizon with no labels at the target length.
 
-**External context.** Movahedi et al. (2026) report strong S₅ length generalization with a
+**External context.** Movahedi et al. (2026) report strong `s5_v1` length generalization with a
 looped-transformer architecture (FPRM) that uses a causal 1-D convolution / unroll-to-convergence
 mechanism. We did **not** run that model on FactWorld; we cite it only to show that other
 recurrence-side mechanisms can also move the wall once the supervision is right.
 
-In short: the suite climbs from easy single-hop recall, through binding and composition, to a
-non-abelian state-tracking wall that pretrained chat models hit at chance. The wall is movable, but
-the lever is the **supervision and training distribution**, not the model name or parameter count.
+In short: the suite climbs from easy single-hop recall, through binding and composition, to the
+`s5_v1` state-tracking wall that pretrained chat models hit at chance. The wall is movable, but the
+lever is the **supervision and training distribution**, not the model name or parameter count.
 
 ## Repository layout
 
@@ -298,7 +302,7 @@ docs/composite-results.md the §4 small-scale composite (memorization diagnostic
 docs/related-work.md      related work with verified citations
 docs/USAGE.md             backend API reference and custom-backend examples
 docs/openrouter-results.md       external LLM API grid (OpenRouter) on the benchmark tasks
-docs/openrouter-s5-results.md    external LLM API grid on the experimental S₅ non-abelian task
+docs/openrouter-s5-results.md    external LLM API grid on the experimental `s5_v1` task
 factworld/                the instrument (torch-free data/oracle/eval + the model zoo)
   world.py, oracle.py     deterministic KB + symbolic ground-truth solver
   render.py               template renderer + its exact inverse parser (no-leak contract)

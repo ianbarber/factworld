@@ -287,6 +287,16 @@ class APIBackend(ModelBackend):
         # so downstream exact-match scoring sees the same span as local backends.
         if stop_at is not None and getattr(choice, "finish_reason", None) == "stop" and not text.endswith(stop_at):
             text += stop_at
+        # Chat models often prefix answers with "The answer is..." etc. Strip a few
+        # common prefixes so the downstream scorer sees the answer span, not the prose.
+        for prefix in (
+            r"^the answer is[\s:]+",
+            r"^answer[\s:]+",
+            r"^therefore[\s,]+",
+            r"^so[\s,]+",
+        ):
+            text = re.sub(prefix, "", text, flags=re.IGNORECASE)
+        text = text.strip()
         # Chat-model tokenizers often emit "v56." while FactWorld's atomic
         # tokenizer expects "v56 .". Normalize a trailing period that is glued
         # to the preceding token so exact-match scoring is meaningful.

@@ -65,13 +65,6 @@ S5_FORMAT_PROMPT = (
 )
 
 
-def _relaxed_score(pred: str, gold: str) -> int:
-    """Tokenization-agnostic score: ignore whitespace and trailing periods."""
-    pred_norm = pred.replace(".", "").replace(" ", "").strip()
-    gold_norm = gold.replace(".", "").replace(" ", "").strip()
-    return int(pred_norm == gold_norm)
-
-
 def _build_system_prompt(base_prompt: str, task_name: str | None,
                          task_prompts: dict[str, str]) -> str:
     parts = [base_prompt]
@@ -114,18 +107,25 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
                     max_new_tokens=max_new_tokens,
                 )
                 elapsed = time.time() - t0
-                examples = [
-                    {
-                        "prompt": p,
-                        "gold": g,
-                        "pred": pred,
-                        "exact": bool(ok),
-                        "relaxed": bool(_relaxed_score(pred, g)),
-                    }
-                    for p, g, pred, ok in result["examples"]
-                ]
+                examples = []
+                for (p, g, pred, ok), metrics in zip(
+                    result["examples"], result.get("example_metrics", [])
+                ):
+                    ex = {"prompt": p, "gold": g, "pred": pred, "exact": bool(ok)}
+                    ex.update(metrics)
+                    examples.append(ex)
+                # Fallback if runner does not yet return example_metrics.
+                if not examples:
+                    examples = [
+                        {"prompt": p, "gold": g, "pred": pred, "exact": bool(ok)}
+                        for p, g, pred, ok in result["examples"]
+                    ]
+                metrics_agg = {
+                    name: {"correct": sum(e[name] for e in examples), "acc": sum(e[name] for e in examples) / n}
+                    for name in ("relaxed", "contains", "last_n")
+                    if name in examples[0]
+                }
                 correct_exact = sum(e["exact"] for e in examples)
-                correct_relaxed = sum(e["relaxed"] for e in examples)
                 row = {
                     "model": model,
                     "task": task_name,
@@ -133,18 +133,19 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
                     "n": n,
                     "system_prompt": prompt,
                     "accuracy_exact": result["overall"],
-                    "accuracy_relaxed": correct_relaxed / n,
                     "correct_exact": correct_exact,
-                    "correct_relaxed": correct_relaxed,
                     "elapsed": elapsed,
                     "examples": examples,
                 }
+                row.update({f"accuracy_{name}": m["acc"] for name, m in metrics_agg.items()})
+                row.update({f"correct_{name}": m["correct"] for name, m in metrics_agg.items()})
                 results.append(row)
-                print(
-                    f"  {task_name}@L{L}: exact={row['accuracy_exact']:.3f} "
-                    f"relaxed={row['accuracy_relaxed']:.3f} "
-                    f"({correct_exact}/{n} | {correct_relaxed}/{n}) [{elapsed:.1f}s]"
-                )
+                parts = [f"{task_name}@L{L}: exact={row['accuracy_exact']:.3f}"]
+                for name in ("relaxed", "contains", "last_n"):
+                    if f"accuracy_{name}" in row:
+                        parts.append(f"{name}={row[f'accuracy_{name}']:.3f}")
+                parts.append(f"({correct_exact}/{n}) [{elapsed:.1f}s]")
+                print("  " + " ".join(parts))
     return results
 
 
@@ -163,12 +164,14 @@ def write_markdown(results: list[dict], path: str):
             model_order.append(m)
 
     # Pivot: model x task accuracy (averaged over lengths if multiple)
+    metric_names = ["exact", "relaxed", "contains", "last_n"]
     pivot: dict[str, dict[str, dict[str, list[float]]]] = {
-        m: {t: {"exact": [], "relaxed": []} for t in tasks} for m in model_order
+        m: {t: {name: [] for name in metric_names} for t in tasks} for m in model_order
     }
     for r in results:
-        pivot[r["model"]][r["task"]]["exact"].append(r["accuracy_exact"])
-        pivot[r["model"]][r["task"]]["relaxed"].append(r["accuracy_relaxed"])
+        for name in metric_names:
+            if f"accuracy_{name}" in r:
+                pivot[r["model"]][r["task"]][name].append(r[f"accuracy_{name}"])
 
     prompt = results[0]["system_prompt"] if results else ""
 
@@ -191,23 +194,33 @@ def write_markdown(results: list[dict], path: str):
         accs = [f"{sum(pivot[model][t]['exact']) / len(pivot[model][t]['exact']):.3f}" for t in tasks]
         lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
 
-    lines += [
-        "",
-        "## Relaxed results (whitespace / period invariant)",
-        "",
-        "| model | " + " | ".join(tasks) + " |",
-        "| " + " | ".join(["---"] * (len(tasks) + 1)) + " |",
-    ]
-    for model in model_order:
-        accs = [f"{sum(pivot[model][t]['relaxed']) / len(pivot[model][t]['relaxed']):.3f}" for t in tasks]
-        lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
+    if any(pivot[m][t]["contains"] for m in model_order for t in tasks):
+        lines += [
+            "",
+            "## Semantic containment results (tokenizer-robust)",
+            "",
+            "Every non-punctuation token in the gold answer appears somewhere in the prediction. "
+            "For `composite_copy_v1` this means both the holder and value are present; for "
+            "single-token tasks it is equivalent to 'the correct token appears anywhere'.",
+            "",
+            "| model | " + " | ".join(tasks) + " |",
+            "| " + " | ".join(["---"] * (len(tasks) + 1)) + " |",
+        ]
+        for model in model_order:
+            accs = []
+            for t in tasks:
+                vals = pivot[model][t]["contains"]
+                accs.append(f"{sum(vals) / len(vals):.3f}" if vals else "—")
+            lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
 
     lines += [
         "",
         "## Notes",
         "",
-        "- `APIBackend` normalizes a trailing period glued to the preceding token (e.g. `v56.` → `v56 .`).",
-        "- Relaxed scoring strips spaces and trailing periods; exact match remains the canonical metric.",
+        "- Exact match is the canonical metric; semantic containment is reported to separate "
+        "formatting/tokenizer artifacts from whether the model knows the answer.",
+        "- `APIBackend` normalizes common answer prefixes ('The answer is...') and a trailing "
+        "period glued to the preceding token (e.g. `v56.` → `v56 .`).",
         "",
     ]
 

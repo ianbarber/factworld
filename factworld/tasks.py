@@ -246,6 +246,33 @@ def score_exact(pred: str, gold: str) -> int:
     return int(p == g)
 
 
+def score_relaxed(pred: str, gold: str) -> int:
+    """Whitespace / trailing-period invariant exact match. Useful when comparing across tokenizers
+    (e.g. chat-model tokenizers that emit `v56.` instead of `v56 .`)."""
+    g = gold.strip().rstrip(".").split()
+    p = pred.strip().rstrip(".").split()
+    return int(p[: len(g)] == g)
+
+
+def score_contains(pred: str, gold: str) -> int:
+    """Semantic containment: every non-punctuation token in `gold` appears somewhere in `pred`.
+    This is intentionally forgiving — it separates whether the model knows the answer from whether
+    it guessed the exact output format."""
+    g = [t for t in gold.split() if t != "."]
+    p = pred.split()
+    return int(all(t in p for t in g))
+
+
+def score_last_n(pred: str, gold: str) -> int:
+    """Match the last len(gold) tokens of `pred` to `gold` (ignoring trailing period).
+    Handles common chat-model prefixes like 'The answer is ...'."""
+    g = gold.strip().rstrip(".").split()
+    p = pred.strip().rstrip(".").split()
+    if len(p) < len(g):
+        return 0
+    return int(p[-len(g) :] == g)
+
+
 # canonical frozen reference instances (scale via .scaled(...)). `kind` separates scored benchmark tasks
 # from controls/experimental tasks (see the kind field: benchmark|control|experimental).
 CANONICAL = {
