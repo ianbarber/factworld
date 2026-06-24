@@ -12,7 +12,14 @@ train len 16): answer-only = 0.20 floor; dense per-step = ~1.0.
   - RL ~ 0.20   -> the cliff is fundamental to the task at this scale, not specific to SFT.
 We also log the holder-resolution rate (state leg) to see whether RL learns the state even without rewarding it.
 
-  .venv/bin/python followups/non-abelian-state/rl_grpo.py
+Two experiments live here:
+  default  — the GRPO core: 3 seeds, 1500 GRPO steps, within-seed SFT-vs-RL contrast (main()).
+  --flicker — the powered-up flicker-resolution variant: 5 seeds, 7500 GRPO steps, with the reward TRAJECTORY
+             and MID-TRAINING evals logged, so we can tell whether reward/holder climb over training (slow
+             bootstrap) or stay flat (noise). Resolves the n=3 run's lone holder-emergence flicker on s1.
+
+  .venv/bin/python followups/non-abelian-state/rl_grpo.py            # GRPO core (3 seeds, 1500 steps)
+  .venv/bin/python followups/non-abelian-state/rl_grpo.py --flicker  # flicker resolution (5 seeds, 7500 steps)
 """
 from __future__ import annotations
 
@@ -41,6 +48,12 @@ TEMP = 1.0
 LR = 1e-4
 ENT_COEF = 0.01
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rl_grpo.md")
+
+# --- --flicker variant: powered-up trajectory + mid-training eval ---
+FLICKER_SEEDS = [0, 1, 2, 3, 4]
+FLICKER_STEPS = 7500
+EVAL_AT = [0, 1500, 3750, 7500]   # mid-training eval checkpoints (does value/holder climb?)
+FLICKER_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rl_flicker.md")
 
 
 def make_prompt(w: Any, r: Any, origins: dict, oracle: Any, L: int, rng: Any) -> tuple[str, str, str]:
@@ -270,6 +283,68 @@ def train_rl(model: Any, tok: Any, w: Any, r: Any, origins: dict, oracle: Any, s
     return model
 
 
+def train_traj(model: Any, tok: Any, w: Any, r: Any, origins: dict, oracle: Any, seed: int,
+               evs: dict, device: str = "cuda") -> tuple[list, dict]:
+    """GRPO (the --flicker variant) with reward-trajectory + mid-training eval. Returns (traj, ckpt_evals).
+
+    Same GRPO update as ``train_rl`` (group advantage, entropy-bonus loss, lr LR), but runs ``FLICKER_STEPS``
+    and logs the reward trajectory (every 250 steps) and greedy value/holder evals at the ``EVAL_AT``
+    checkpoints, so a slow bootstrap can be distinguished from noise.
+
+    Args:
+        model: the SFT-warmed ``HybridLM`` (mutated in place by GRPO).
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        seed: RNG seed for prompt sampling.
+        evs: maps eval length -> a list of pre-built eval prompts.
+        device: torch device.
+
+    Returns:
+        A ``(traj, ckpt)`` pair: ``traj`` is a list of ``(step, mean_reward)`` points and
+        ``ckpt`` maps checkpoint step -> {length: (value, holder)} evals.
+    """
+    import torch
+    opt = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.0)
+    val_ids = {tok.token_to_id[v] for v in w.value_vocab}
+    ag_ids = {tok.token_to_id[g] for g in w.agents}
+    rng = random.Random(9000 + seed)
+    traj: list = []
+    ckpt: dict = {}
+    if 0 in EVAL_AT:
+        ckpt[0] = {L: evaluate(model, tok, w, evs[L], device) for L in EVAL_LEN}
+    running = []
+    for step in range(1, FLICKER_STEPS + 1):
+        batch = [make_prompt(w, r, origins, oracle, rng.choice(TRAIN_LEN), rng) for _ in range(PROMPTS_PER_STEP)]
+        opt.zero_grad(); step_rew = []
+        for prompt, holder, value in batch:
+            pids = list(tok.encode(prompt))
+            model.eval()
+            comps = generate_group(model, tok, pids, GROUP, device)
+            rew = [reward_and_state(c, tok, val_ids, ag_ids, holder, value)[0] for c in comps]
+            step_rew.extend(rew)
+            m, sd = sum(rew) / len(rew), (statistics.pstdev(rew) if len(set(rew)) > 1 else 0.0)
+            if sd == 0:
+                continue
+            adv = [(x - m) / (sd + 1e-6) for x in rew]
+            model.train()
+            grpo_loss(model, tok, pids, comps, adv, device).backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        opt.step()
+        running.append(sum(step_rew) / len(step_rew))
+        if step % 250 == 0:
+            mr = sum(running[-250:]) / len(running[-250:])
+            traj.append((step, round(mr, 3)))
+            print(f"    s{seed} step {step}: reward {mr:.3f}", flush=True)
+        if step in EVAL_AT:
+            ckpt[step] = {L: evaluate(model, tok, w, evs[L], device) for L in EVAL_LEN}
+            print(f"    s{seed} EVAL@{step}: " + " ".join(
+                f"L{L} v={ckpt[step][L][0]:.3f} h={ckpt[step][L][1]:.3f}" for L in EVAL_LEN), flush=True)
+    return traj, ckpt
+
+
 def main() -> None:
     """SFT-warm per seed, run GRPO from that model, and tabulate within-seed SFT vs RL composite accuracy."""
     import torch
@@ -336,5 +411,61 @@ def write_md(agg: dict) -> None:
         f.write("\n".join(lines) + "\n")
 
 
+def main_flicker() -> None:
+    """Warm-start per seed, run 7500-step GRPO with trajectory + mid-eval logging, and tabulate the climb."""
+    import torch
+    if not torch.cuda.is_available():
+        print("no GPU"); return
+    from factworld import train as T
+    from factworld.oracle import Oracle
+    w, r, origins = _world()
+    oracle = Oracle(w)
+    warm_docs = make_warmup_docs(w, r, origins, oracle, 8000, 2)
+    tok, docs, _ = T.prepare(warm_docs, [], [w])
+    evs = {L: [make_prompt(w, r, origins, oracle, L, random.Random(900 + L + j)) for j in range(150)]
+           for L in EVAL_LEN}
+    agg = defaultdict(dict)
+    print("=== RL FLICKER RESOLUTION: 5 seeds x 7500 GRPO steps, trajectory + mid-eval ===", flush=True)
+    for s in FLICKER_SEEDS:
+        model = T.run("gdp_hybrid", tok, docs, [], steps=2500, batch=32, d_model=256, n_layers=4,
+                      d_ff=1024, seed=s, return_model=True)["model"]
+        traj, ckpt = train_traj(model, tok, w, r, origins, oracle, s, evs)
+        agg[s] = {"traj": traj, "ckpt": ckpt}
+        del model; torch.cuda.empty_cache()
+        write_md_flicker(agg)
+    write_md_flicker(agg)
+    print("rl_flicker done.", flush=True)
+
+
+def write_md_flicker(agg: dict) -> None:
+    """Write the per-seed value/holder/reward-trajectory table to ``FLICKER_OUT``.
+
+    Args:
+        agg: maps seed -> {"traj": [...], "ckpt": {...}}.
+    """
+    lines = [
+        "# RL flicker resolution — slow climb or noise? (5 seeds × 7500 GRPO steps)\n",
+        "`followups/non-abelian-state/rl_grpo.py --flicker`. gdp_hybrid d256, answer-only SFT warmup then GRPO "
+        "7500 steps, outcome 0/1 reward. Per-seed composite value `v` / holder `h` at mid-training checkpoints, "
+        "and the reward trajectory. Climb across checkpoints on multiple seeds = RL bootstraps; flat = negative. "
+        "Floor = 0.20.\n",
+        "| seed | v@0 | v@3750 | v@7500 | h@7500 (L16) | reward 0→7500 |",
+        "|---|---|---|---|---|---|",
+    ]
+    for s in sorted(agg):
+        c = agg[s].get("ckpt", {}); tr = agg[s].get("traj", [])
+        def v(step: int) -> str:
+            """Format L16 composite value at ``step`` (``…`` if not checkpointed)."""
+            return f"{c[step][16][0]:.2f}" if step in c else "…"
+        h7 = f"{c[7500][16][1]:.2f}" if 7500 in c else "…"
+        rwd = f"{tr[0][1]:.2f}→{tr[-1][1]:.2f}" if tr else "…"
+        lines.append(f"| s{s} | {v(0)} | {v(3750)} | {v(7500)} | {h7} | {rwd} |")
+    with open(FLICKER_OUT, "w") as f:
+        f.write("\n".join(lines) + "\n")
+
+
 if __name__ == "__main__":
-    main()
+    if "--flicker" in sys.argv:
+        main_flicker()
+    else:
+        main()

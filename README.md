@@ -36,9 +36,9 @@ recipe — near-dense process supervision to form the circuit, mixed-density
 internalization, a target-length training distribution, base-selection on
 free-running accuracy, and post-training deep-state coverage (length-general to
 ~8× the trained horizon, label-free). See
-[`non-abelian-state.pdf`](followups/non-abelian-state/non-abelian-state.pdf),
-[`RECIPE.md`](followups/non-abelian-state/RECIPE.md), and
-[`FINDINGS.md`](followups/non-abelian-state/FINDINGS.md).
+[`non-abelian-state.pdf`](followups/non-abelian-state/non-abelian-state.pdf)
+and the reproduction guide
+[`REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md).
 
 ## Install
 
