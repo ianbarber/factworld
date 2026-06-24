@@ -276,11 +276,10 @@ What the comparison shows:
   sufficient density of target-length examples does, and post-training deep-state coverage extends
   the clean circuit to ≈8× the trained horizon with no labels at the target length.
 
-A recent looped-transformer result (FPRM; Movahedi et al., 2026) reports strong S₅ length
-generalization with a causal 1-D convolution / unroll-to-convergence mechanism. It is architecturally
-different from our GDP hybrid, but conceptually aligned: both supply the recurrent-state regime that
-ordinary training misses. We do not run that architecture here; the point is that the wall can be
-moved by several recurrence-side mechanisms once the supervision is right.
+**External context.** Movahedi et al. (2026) report strong S₅ length generalization with a
+looped-transformer architecture (FPRM) that uses a causal 1-D convolution / unroll-to-convergence
+mechanism. We did **not** run that model on FactWorld; we cite it only to show that other
+recurrence-side mechanisms can also move the wall once the supervision is right.
 
 In short: the suite climbs from easy single-hop recall, through binding and composition, to a
 non-abelian state-tracking wall that pretrained chat models hit at chance. The wall is movable, but
