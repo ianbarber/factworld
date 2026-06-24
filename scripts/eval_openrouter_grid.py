@@ -1,11 +1,20 @@
 """Evaluate a grid of OpenRouter models on the FactWorld benchmark tasks.
 
-Example:
+Examples:
     export OPENROUTER_API_KEY=...
+
+    # Default grid at the first eval length of each task
+    python scripts/eval_openrouter_grid.py --n 30 --max_workers 4
+
+    # Length sweep for composite_copy_v1
     python scripts/eval_openrouter_grid.py \
-        --models meta-llama/llama-3.1-8b-instruct qwen/qwen-2.5-7b-instruct \
-        --tasks recall_copy_v1 binding_v1 composite_copy_v1 conflict_v1 chain_v1 \
-        --n 30 --max_workers 4 --out docs/openrouter-results.md
+        --models meta-llama/llama-3.3-70b-instruct openai/gpt-4o-mini \
+        --tasks composite_copy_v1 --lengths 16 32 64 --n 30
+
+    # Composite format-prompt ablation
+    python scripts/eval_openrouter_grid.py \
+        --tasks composite_copy_v1 \
+        --task_prompts '{"composite_copy_v1": "Answer with the holder name followed by the value."}'
 """
 from __future__ import annotations
 
@@ -44,21 +53,31 @@ DEFAULT_SYSTEM_PROMPT = (
     "value or values, no explanation. Use the same spelling as in the question."
 )
 
+COMPOSITE_FORMAT_PROMPT = (
+    "For questions that ask 'what is a0 of the holder of ...', "
+    "answer with the holder's name followed by the requested value, "
+    "like 'g3 v9'."
+)
+
 
 def _relaxed_score(pred: str, gold: str) -> int:
-    """Tokenization-agnostic score: ignore whitespace and trailing periods.
-
-    External chat models often omit the space before the period or merge
-    punctuation, so the canonical exact match can be artificially low. This
-    relaxed metric strips those formatting differences while still requiring
-    the correct tokens.
-    """
+    """Tokenization-agnostic score: ignore whitespace and trailing periods."""
     pred_norm = pred.replace(".", "").replace(" ", "").strip()
     gold_norm = gold.replace(".", "").replace(" ", "").strip()
     return int(pred_norm == gold_norm)
 
 
-def run_grid(models, tasks, n, length, max_workers, base_url, system_prompt):
+def _build_system_prompt(base_prompt: str, task_name: str | None,
+                         task_prompts: dict[str, str]) -> str:
+    parts = [base_prompt]
+    key = task_name if task_name in task_prompts else None
+    if key is not None:
+        parts.append(task_prompts[key])
+    return " ".join(parts)
+
+
+def run_grid(models, tasks, n, lengths, max_workers, base_url,
+             system_prompt, task_prompts):
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise SystemExit("OPENROUTER_API_KEY not set")
@@ -66,17 +85,18 @@ def run_grid(models, tasks, n, length, max_workers, base_url, system_prompt):
     results: list[dict] = []
     for model in models:
         print(f"\n>>> {model}")
-        backend = APIBackend(
-            model=model,
-            api_key=api_key,
-            base_url=base_url,
-            max_workers=max_workers,
-            system_prompt=system_prompt,
-        )
         for task_name in tasks:
             spec = TK.CANONICAL[task_name]
-            lengths = [length] if length is not None else [spec.eval_lengths[0]]
-            for L in lengths:
+            task_lengths = lengths if lengths else [spec.eval_lengths[0]]
+            prompt = _build_system_prompt(system_prompt, task_name, task_prompts)
+            backend = APIBackend(
+                model=model,
+                api_key=api_key,
+                base_url=base_url,
+                max_workers=max_workers,
+                system_prompt=prompt,
+            )
+            for L in task_lengths:
                 t0 = time.time()
                 result = evaluate_task(
                     backend,
@@ -87,21 +107,30 @@ def run_grid(models, tasks, n, length, max_workers, base_url, system_prompt):
                     max_new_tokens=16,
                 )
                 elapsed = time.time() - t0
-                correct_exact = sum(1 for _, _, _, ok in result["examples"] if ok)
-                correct_relaxed = sum(
-                    _relaxed_score(pred, gold)
-                    for _, gold, pred, _ in result["examples"]
-                )
+                examples = [
+                    {
+                        "prompt": p,
+                        "gold": g,
+                        "pred": pred,
+                        "exact": bool(ok),
+                        "relaxed": bool(_relaxed_score(pred, g)),
+                    }
+                    for p, g, pred, ok in result["examples"]
+                ]
+                correct_exact = sum(e["exact"] for e in examples)
+                correct_relaxed = sum(e["relaxed"] for e in examples)
                 row = {
                     "model": model,
                     "task": task_name,
                     "length": L,
                     "n": n,
+                    "system_prompt": prompt,
                     "accuracy_exact": result["overall"],
                     "accuracy_relaxed": correct_relaxed / n,
                     "correct_exact": correct_exact,
                     "correct_relaxed": correct_relaxed,
                     "elapsed": elapsed,
+                    "examples": examples,
                 }
                 results.append(row)
                 print(
@@ -116,10 +145,9 @@ def _model_label(model: str) -> str:
     return model.split("/")[-1]
 
 
-def write_markdown(results: list[dict], path: str, system_prompt: str):
+def write_markdown(results: list[dict], path: str):
     tasks = sorted({r["task"] for r in results})
     models = [r["model"] for r in results]
-    # preserve input order of models
     seen = set()
     model_order = []
     for m in models:
@@ -135,15 +163,17 @@ def write_markdown(results: list[dict], path: str, system_prompt: str):
         pivot[r["model"]][r["task"]]["exact"].append(r["accuracy_exact"])
         pivot[r["model"]][r["task"]]["relaxed"].append(r["accuracy_relaxed"])
 
+    prompt = results[0]["system_prompt"] if results else ""
+
     lines = [
         "# FactWorld OpenRouter Model Grid",
         "",
         f"Evaluated at {datetime.now(timezone.utc).isoformat()}.",
-        f"n = {results[0]['n']} examples per task; position-strict exact match.",
+        f"n = {results[0]['n'] if results else 0} examples per task/length; position-strict exact match.",
         "",
         "System prompt:",
         "",
-        f"> {system_prompt}",
+        f"> {prompt}",
         "",
         "## Exact-match results",
         "",
@@ -165,13 +195,23 @@ def write_markdown(results: list[dict], path: str, system_prompt: str):
         accs = [f"{sum(pivot[model][t]['relaxed']) / len(pivot[model][t]['relaxed']):.3f}" for t in tasks]
         lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
 
-    lines += ["", "## Notes", "", "- Relaxed scoring strips spaces and trailing periods. It is provided because external chat models often emit `v56.` instead of the canonical `v56 .`.", "- Exact match remains the canonical FactWorld metric.", ""]
+    lines += [
+        "",
+        "## Notes",
+        "",
+        "- `APIBackend` normalizes a trailing period glued to the preceding token (e.g. `v56.` → `v56 .`).",
+        "- Relaxed scoring strips spaces and trailing periods; exact match remains the canonical metric.",
+        "",
+    ]
 
-    lines += ["", "## Raw data", ""]
-    lines.append("```json")
-    lines.append(json.dumps(results, indent=2))
-    lines.append("```")
-    lines.append("")
+    lines += [
+        "",
+        "## Raw data",
+        "",
+        "Per-task aggregates are in the tables above. Example-level predictions "
+        "are in the accompanying JSON output (see `--json_out`).",
+        "",
+    ]
 
     with open(path, "w") as f:
         f.write("\n".join(lines))
@@ -188,27 +228,47 @@ def main():
     ap.add_argument("--n", type=int, default=30,
                     help="Number of examples per task/length.")
     ap.add_argument("--length", type=int, default=None,
-                    help="Override eval length (default: task's first eval length).")
+                    help="Deprecated: use --lengths.")
+    ap.add_argument("--lengths", nargs="+", type=int, default=None,
+                    help="Override eval lengths (default: task's first eval length).")
     ap.add_argument("--max_workers", type=int, default=4,
                     help="Concurrent API calls per model.")
     ap.add_argument("--base_url", default="https://openrouter.ai/api/v1",
                     help="OpenRouter-compatible API base URL.")
     ap.add_argument("--system_prompt", default=DEFAULT_SYSTEM_PROMPT,
-                    help="System prompt sent to chat models.")
+                    help="Base system prompt sent to chat models.")
+    ap.add_argument("--task_prompts", default=None,
+                    help='JSON mapping task name -> extra instruction, e.g. \'{"composite_copy_v1": "..."}\'.')
+    ap.add_argument("--composite_format", action="store_true",
+                    help="Shorthand: append the composite two-token format instruction.")
     ap.add_argument("--out", default="docs/openrouter-results.md",
                     help="Markdown output path.")
     ap.add_argument("--json_out", default=None,
                     help="Optional separate JSON output path.")
     a = ap.parse_args()
 
-    results = run_grid(a.models, a.tasks, a.n, a.length, a.max_workers, a.base_url, a.system_prompt)
+    lengths = a.lengths
+    if a.length is not None and lengths is None:
+        lengths = [a.length]
+
+    task_prompts: dict[str, str] = {}
+    if a.task_prompts:
+        task_prompts = json.loads(a.task_prompts)
+    if a.composite_format:
+        task_prompts.setdefault("composite_copy_v1", COMPOSITE_FORMAT_PROMPT)
+        task_prompts.setdefault("composite_v1", COMPOSITE_FORMAT_PROMPT)
+
+    results = run_grid(
+        a.models, a.tasks, a.n, lengths, a.max_workers,
+        a.base_url, a.system_prompt, task_prompts,
+    )
 
     if a.json_out:
         with open(a.json_out, "w") as f:
             json.dump(results, f, indent=2)
         print(f"Wrote JSON to {a.json_out}")
 
-    write_markdown(results, a.out, a.system_prompt)
+    write_markdown(results, a.out)
 
 
 if __name__ == "__main__":

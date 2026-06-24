@@ -177,9 +177,10 @@ def test_api_backend_mock():
     with patch.dict(sys.modules, {"openai": fake_openai}):
         backend = B.APIBackend("test-model", client=client)
 
-    # APIBackend re-attaches the stop token when the API reports finish_reason == "stop".
+    # APIBackend re-attaches the stop token when the API reports finish_reason == "stop",
+    # then normalizes a glued trailing period to match FactWorld's atomic tokenizer.
     preds = backend.generate(["facts what is a0 of g3 ? : "], max_new_tokens=4, stop_at=".")
-    assert preds == [" g3."]
+    assert preds == [" g3 ."]
 
     # Without a stop string the raw content is returned unchanged.
     preds = backend.generate(["facts what is a0 of g3 ? : "], max_new_tokens=4, stop_at=None)
