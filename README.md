@@ -70,6 +70,9 @@ python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/L
 # Local from-scratch
 python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
 
+# Run a grid of OpenRouter models (set OPENROUTER_API_KEY)
+python scripts/eval_openrouter_grid.py --n 30
+
 python -m factworld.tasks             # suite self-test (determinism + oracle round-trip)
 python scripts/validate_suite.py      # validity gate: no shallow shortcut clears floor
 ```
@@ -158,6 +161,7 @@ docs/scale-results.md     the §5 ~45M scale + matched LR sweeps
 docs/composite-results.md the §4 small-scale composite (memorization diagnostic + decomposition)
 docs/related-work.md      related work with verified citations
 docs/USAGE.md             backend API reference and custom-backend examples
+docs/openrouter-results.md  external LLM API grid (OpenRouter) on the benchmark tasks
 factworld/                the instrument (torch-free data/oracle/eval + the model zoo)
   world.py, oracle.py     deterministic KB + symbolic ground-truth solver
   render.py               template renderer + its exact inverse parser (no-leak contract)
