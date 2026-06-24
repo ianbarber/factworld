@@ -1,0 +1,898 @@
+[
+  {
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 30,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.0,
+    "accuracy_relaxed": 0.0,
+    "correct_exact": 0,
+    "correct_relaxed": 0,
+    "elapsed": 11.124971866607666,
+    "examples": [
+      {
+        "prompt": "g17 's a0 is v26 . g9 's a0 is v116 . g27 's a0 is v49 . the a0 of g23 is v14 . g20 's a0 is v121 . g2 has a0 v72 . the a0 of g4 is v27 . g30 's a0 is v73 . g19 's a0 is v40 . g6 's a0 is v102 . g15 has a0 v90 . the a0 of g7 is v42 . the a0 of g8 is v52 . the a0 of g28 is v99 . the a0 of g1 is v47 . g5 's a0 is v85 . s0 : o3 is given to g30 . s1 : give o2 to g27 . s2 : o0 is given to g28 . s3 : give o3 to g28 . s4 : give o2 to g28 . s5 : o3 is given to g17 . s6 : give o3 to g7 . s7 : give o0 to g1 . s8 : o0 is given to g1 . s9 : give o1 to g5 . s10 : o3 is given to g2 . s11 : o1 is given to g17 . s12 : give o1 to g4 . s13 : give o2 to g20 . s14 : give o3 to g9 . s15 : give o0 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g30 v73 .",
+        "pred": "v47 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g28 's a0 is v68 . g3 's a0 is v65 . the a0 of g14 is v86 . g5 's a0 is v82 . the a0 of g1 is v48 . g29 has a0 v36 . g31 's a0 is v103 . g24 's a0 is v38 . g20 's a0 is v18 . g15 's a0 is v108 . g30 has a0 v117 . the a0 of g10 is v3 . g0 has a0 v7 . g27 has a0 v106 . g6 's a0 is v78 . g13 's a0 is v30 . s0 : give o1 to g20 . s1 : o2 is given to g15 . s2 : o0 is given to g29 . s3 : o3 is given to g3 . s4 : o2 is given to g30 . s5 : give o1 to g10 . s6 : give o3 to g13 . s7 : give o0 to g29 . s8 : give o0 to g13 . s9 : o2 is given to g1 . s10 : o1 is given to g30 . s11 : o1 is given to g29 . s12 : give o3 to g1 . s13 : o3 is given to g31 . s14 : o2 is given to g10 . s15 : give o3 to g13 . what is a0 of the holder of o1 ? : ",
+        "gold": "g29 v36 .",
+        "pred": "v117 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g4 's a0 is v16 . g0 has a0 v30 . g5 's a0 is v11 . g26 has a0 v9 . the a0 of g16 is v120 . g7 has a0 v92 . g29 has a0 v17 . g27 has a0 v46 . g28 's a0 is v82 . g19 has a0 v7 . g14 's a0 is v41 . g6 has a0 v78 . g13 has a0 v88 . g21 's a0 is v118 . g3 's a0 is v121 . g8 has a0 v32 . s0 : o1 is given to g26 . s1 : give o3 to g13 . s2 : give o1 to g7 . s3 : give o0 to g7 . s4 : o2 is given to g13 . s5 : give o2 to g0 . s6 : o3 is given to g3 . s7 : give o1 to g28 . s8 : give o3 to g7 . s9 : give o0 to g3 . s10 : give o1 to g0 . s11 : o0 is given to g16 . s12 : o2 is given to g29 . s13 : o1 is given to g13 . s14 : give o2 to g4 . s15 : give o2 to g27 . what is a0 of the holder of o3 ? : ",
+        "gold": "g7 v92 .",
+        "pred": "v92 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g22 's a0 is v48 . g19 has a0 v115 . the a0 of g29 is v124 . g16 's a0 is v59 . g25 's a0 is v79 . g8 's a0 is v70 . g20 's a0 is v108 . g23 has a0 v76 . g1 's a0 is v85 . the a0 of g7 is v95 . g15 's a0 is v89 . g0 has a0 v38 . g31 's a0 is v87 . g28 's a0 is v27 . the a0 of g11 is v49 . the a0 of g3 is v47 . s0 : o3 is given to g19 . s1 : give o2 to g7 . s2 : o0 is given to g29 . s3 : give o1 to g28 . s4 : o3 is given to g11 . s5 : o1 is given to g22 . s6 : o2 is given to g7 . s7 : o3 is given to g19 . s8 : o2 is given to g20 . s9 : o2 is given to g25 . s10 : o0 is given to g3 . s11 : o1 is given to g15 . s12 : give o3 to g11 . s13 : o0 is given to g19 . s14 : give o2 to g23 . s15 : give o3 to g7 . what is a0 of the holder of o2 ? : ",
+        "gold": "g23 v76 .",
+        "pred": "v95 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g24 is v101 . the a0 of g20 is v8 . the a0 of g0 is v121 . the a0 of g1 is v16 . g30 has a0 v81 . the a0 of g29 is v52 . g12 's a0 is v41 . g31 's a0 is v122 . g26 's a0 is v117 . g27 has a0 v100 . the a0 of g5 is v12 . the a0 of g17 is v62 . g2 has a0 v26 . the a0 of g13 is v64 . g18 's a0 is v48 . g23 has a0 v49 . s0 : o2 is given to g30 . s1 : o3 is given to g29 . s2 : give o2 to g27 . s3 : o1 is given to g30 . s4 : o2 is given to g31 . s5 : give o0 to g27 . s6 : give o2 to g2 . s7 : o1 is given to g1 . s8 : give o3 to g13 . s9 : o2 is given to g0 . s10 : give o1 to g23 . s11 : o3 is given to g20 . s12 : give o0 to g2 . s13 : o3 is given to g26 . s14 : o1 is given to g1 . s15 : give o0 to g30 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v121 .",
+        "pred": "v81 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g22 's a0 is v78 . g20 's a0 is v64 . the a0 of g6 is v105 . g3 's a0 is v23 . g10 's a0 is v108 . the a0 of g16 is v79 . g1 has a0 v73 . g31 has a0 v4 . g18 's a0 is v65 . g19 's a0 is v49 . g26 has a0 v126 . the a0 of g2 is v81 . g25 's a0 is v87 . g5 's a0 is v39 . g15 has a0 v89 . the a0 of g12 is v2 . s0 : o1 is given to g5 . s1 : give o2 to g18 . s2 : give o1 to g12 . s3 : o3 is given to g12 . s4 : give o2 to g20 . s5 : give o3 to g6 . s6 : o1 is given to g22 . s7 : give o1 to g6 . s8 : give o0 to g25 . s9 : give o3 to g16 . s10 : o0 is given to g1 . s11 : o1 is given to g2 . s12 : o1 is given to g20 . s13 : o2 is given to g5 . s14 : o3 is given to g10 . s15 : give o3 to g26 . what is a0 of the holder of o2 ? : ",
+        "gold": "g5 v39 .",
+        "pred": "v39 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g31 's a0 is v34 . g6 has a0 v11 . the a0 of g20 is v8 . the a0 of g14 is v118 . the a0 of g0 is v38 . g15 's a0 is v59 . g19 has a0 v85 . the a0 of g13 is v111 . the a0 of g30 is v89 . the a0 of g17 is v65 . g10 has a0 v103 . the a0 of g11 is v116 . the a0 of g12 is v104 . the a0 of g16 is v77 . g4 has a0 v12 . the a0 of g21 is v44 . s0 : o0 is given to g10 . s1 : o1 is given to g0 . s2 : give o3 to g30 . s3 : o2 is given to g11 . s4 : o3 is given to g19 . s5 : give o2 to g12 . s6 : o3 is given to g16 . s7 : give o0 to g21 . s8 : give o3 to g11 . s9 : give o0 to g21 . s10 : give o1 to g15 . s11 : o0 is given to g15 . s12 : give o0 to g13 . s13 : give o3 to g16 . s14 : o2 is given to g30 . s15 : o2 is given to g17 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v59 .",
+        "pred": "v59 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g3 has a0 v115 . g25 's a0 is v96 . g27 has a0 v17 . the a0 of g7 is v38 . g23 has a0 v113 . g2 has a0 v34 . g28 's a0 is v44 . g31 's a0 is v27 . the a0 of g29 is v60 . g5 's a0 is v102 . g17 's a0 is v40 . the a0 of g11 is v124 . g0 's a0 is v77 . g13 has a0 v56 . the a0 of g20 is v50 . g21 has a0 v82 . s0 : o1 is given to g7 . s1 : o1 is given to g20 . s2 : give o1 to g31 . s3 : o0 is given to g2 . s4 : o3 is given to g13 . s5 : o2 is given to g17 . s6 : o0 is given to g3 . s7 : give o2 to g29 . s8 : o0 is given to g0 . s9 : o2 is given to g11 . s10 : o1 is given to g7 . s11 : give o1 to g13 . s12 : o0 is given to g23 . s13 : give o1 to g17 . s14 : give o0 to g28 . s15 : o3 is given to g3 . what is a0 of the holder of o1 ? : ",
+        "gold": "g17 v40 .",
+        "pred": "v38 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g26 is v24 . g2 has a0 v118 . g28 has a0 v112 . g19 has a0 v90 . g23 's a0 is v79 . g0 's a0 is v49 . the a0 of g17 is v114 . g13 's a0 is v119 . g9 has a0 v33 . the a0 of g15 is v84 . the a0 of g4 is v52 . the a0 of g25 is v2 . g21 's a0 is v14 . the a0 of g12 is v113 . g24 's a0 is v74 . g16 has a0 v124 . s0 : give o3 to g28 . s1 : give o2 to g12 . s2 : o1 is given to g0 . s3 : o1 is given to g4 . s4 : give o1 to g16 . s5 : o2 is given to g28 . s6 : give o1 to g26 . s7 : o1 is given to g9 . s8 : o0 is given to g2 . s9 : o1 is given to g0 . s10 : give o1 to g2 . s11 : o2 is given to g23 . s12 : give o0 to g24 . s13 : o0 is given to g19 . s14 : give o2 to g28 . s15 : o0 is given to g0 . what is a0 of the holder of o2 ? : ",
+        "gold": "g28 v112 .",
+        "pred": "v112 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g20 is v122 . g21 has a0 v27 . g26 has a0 v87 . g11 's a0 is v17 . g2 's a0 is v76 . g5 's a0 is v107 . g1 's a0 is v86 . g15 's a0 is v98 . g0 's a0 is v43 . g22 has a0 v106 . g14 has a0 v72 . g27 's a0 is v4 . g16 has a0 v101 . the a0 of g4 is v2 . the a0 of g17 is v18 . the a0 of g23 is v124 . s0 : give o3 to g21 . s1 : o3 is given to g16 . s2 : o1 is given to g2 . s3 : o3 is given to g26 . s4 : o2 is given to g1 . s5 : give o2 to g11 . s6 : o1 is given to g4 . s7 : give o1 to g16 . s8 : give o1 to g27 . s9 : give o3 to g2 . s10 : o3 is given to g27 . s11 : o1 is given to g2 . s12 : give o3 to g0 . s13 : give o1 to g16 . s14 : give o0 to g20 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v122 .",
+        "pred": "v86 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g4 is v56 . g13 's a0 is v57 . g21 has a0 v107 . g22 's a0 is v74 . the a0 of g29 is v68 . the a0 of g7 is v30 . the a0 of g6 is v47 . g20 has a0 v51 . g2 's a0 is v72 . the a0 of g18 is v27 . g15 's a0 is v85 . the a0 of g25 is v5 . the a0 of g26 is v24 . g0 's a0 is v1 . g16 has a0 v81 . the a0 of g9 is v31 . s0 : give o3 to g15 . s1 : o0 is given to g21 . s2 : o3 is given to g15 . s3 : give o1 to g29 . s4 : o1 is given to g9 . s5 : give o3 to g26 . s6 : o1 is given to g22 . s7 : give o3 to g16 . s8 : o0 is given to g16 . s9 : give o2 to g6 . s10 : give o1 to g29 . s11 : o2 is given to g15 . s12 : o1 is given to g20 . s13 : o1 is given to g13 . s14 : o3 is given to g4 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v51 .",
+        "pred": "v85 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g20 is v1 . g25 has a0 v44 . g26 has a0 v0 . g4 has a0 v80 . g17 's a0 is v85 . g3 has a0 v50 . g14 has a0 v59 . g13 has a0 v125 . the a0 of g28 is v57 . the a0 of g8 is v111 . g22 's a0 is v27 . the a0 of g31 is v83 . g9 has a0 v73 . g6 has a0 v42 . the a0 of g23 is v114 . g15 has a0 v121 . s0 : give o0 to g15 . s1 : o2 is given to g3 . s2 : o0 is given to g4 . s3 : o3 is given to g3 . s4 : give o2 to g28 . s5 : o0 is given to g9 . s6 : o2 is given to g28 . s7 : give o3 to g23 . s8 : give o1 to g26 . s9 : o1 is given to g13 . s10 : give o2 to g8 . s11 : o2 is given to g9 . s12 : give o1 to g13 . s13 : give o3 to g14 . s14 : give o1 to g17 . s15 : give o3 to g31 . what is a0 of the holder of o3 ? : ",
+        "gold": "g31 v83 .",
+        "pred": "v121 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g23 has a0 v2 . g16 has a0 v80 . g18 's a0 is v78 . the a0 of g14 is v44 . the a0 of g24 is v29 . g31 has a0 v55 . g22 's a0 is v33 . g8 's a0 is v97 . the a0 of g12 is v111 . the a0 of g3 is v0 . g0 has a0 v77 . the a0 of g30 is v110 . the a0 of g1 is v126 . the a0 of g28 is v11 . g25 has a0 v90 . g4 has a0 v59 . s0 : o2 is given to g25 . s1 : give o2 to g24 . s2 : give o3 to g12 . s3 : o0 is given to g3 . s4 : give o2 to g4 . s5 : o3 is given to g8 . s6 : o0 is given to g0 . s7 : o2 is given to g1 . s8 : give o2 to g8 . s9 : o3 is given to g31 . s10 : o1 is given to g25 . s11 : give o0 to g0 . s12 : o1 is given to g16 . s13 : o1 is given to g12 . s14 : give o2 to g28 . s15 : give o3 to g12 . what is a0 of the holder of o0 ? : ",
+        "gold": "g0 v77 .",
+        "pred": "v0, v77 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g8 has a0 v49 . g1 's a0 is v89 . g23 's a0 is v111 . g27 has a0 v44 . the a0 of g28 is v26 . g30 's a0 is v107 . g13 has a0 v94 . the a0 of g14 is v57 . the a0 of g10 is v117 . the a0 of g2 is v113 . the a0 of g5 is v21 . the a0 of g21 is v33 . g25 's a0 is v56 . the a0 of g12 is v61 . g19 's a0 is v8 . the a0 of g31 is v122 . s0 : give o1 to g1 . s1 : o3 is given to g14 . s2 : give o1 to g12 . s3 : give o2 to g8 . s4 : give o0 to g1 . s5 : give o1 to g2 . s6 : give o0 to g13 . s7 : o1 is given to g1 . s8 : o0 is given to g2 . s9 : o2 is given to g2 . s10 : o2 is given to g13 . s11 : give o3 to g27 . s12 : give o1 to g19 . s13 : o0 is given to g13 . s14 : give o3 to g23 . s15 : give o2 to g2 . what is a0 of the holder of o1 ? : ",
+        "gold": "g19 v8 .",
+        "pred": "v113 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g12 has a0 v100 . g28 has a0 v94 . g25 's a0 is v114 . g20 has a0 v91 . g16 's a0 is v29 . g3 's a0 is v78 . g1 has a0 v8 . g15 has a0 v49 . the a0 of g19 is v62 . g10 has a0 v84 . the a0 of g8 is v119 . the a0 of g6 is v42 . the a0 of g4 is v115 . g30 has a0 v47 . g13 's a0 is v23 . g0 's a0 is v88 . s0 : o3 is given to g8 . s1 : o0 is given to g4 . s2 : o3 is given to g15 . s3 : give o1 to g3 . s4 : o3 is given to g12 . s5 : give o3 to g10 . s6 : give o2 to g0 . s7 : o1 is given to g0 . s8 : o2 is given to g28 . s9 : give o3 to g20 . s10 : o3 is given to g10 . s11 : give o3 to g0 . s12 : give o2 to g19 . s13 : o2 is given to g25 . s14 : o1 is given to g30 . s15 : o0 is given to g20 . what is a0 of the holder of o3 ? : ",
+        "gold": "g0 v88 .",
+        "pred": "v119 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g18 is v116 . g27 has a0 v9 . g31 's a0 is v103 . g17 has a0 v71 . g30 has a0 v81 . g4 has a0 v72 . g25 has a0 v32 . g15 's a0 is v112 . g28 's a0 is v34 . g26 's a0 is v126 . the a0 of g13 is v40 . g7 's a0 is v90 . g1 has a0 v62 . g20 has a0 v68 . g10 has a0 v83 . the a0 of g22 is v14 . s0 : o3 is given to g27 . s1 : give o1 to g27 . s2 : o0 is given to g7 . s3 : give o3 to g7 . s4 : o3 is given to g10 . s5 : o1 is given to g7 . s6 : give o1 to g13 . s7 : o2 is given to g25 . s8 : o2 is given to g20 . s9 : o2 is given to g27 . s10 : give o3 to g28 . s11 : give o3 to g25 . s12 : give o0 to g26 . s13 : o1 is given to g18 . s14 : o1 is given to g27 . s15 : o3 is given to g1 . what is a0 of the holder of o2 ? : ",
+        "gold": "g27 v9 .",
+        "pred": "v68 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g27 's a0 is v62 . g13 has a0 v37 . g22 has a0 v6 . g16 's a0 is v125 . g0 's a0 is v2 . the a0 of g24 is v102 . the a0 of g28 is v123 . the a0 of g2 is v55 . g23 's a0 is v29 . g18 has a0 v9 . g7 's a0 is v34 . g29 has a0 v24 . g30 's a0 is v95 . g31 has a0 v11 . the a0 of g21 is v114 . the a0 of g17 is v86 . s0 : o3 is given to g31 . s1 : give o1 to g7 . s2 : o2 is given to g21 . s3 : give o1 to g0 . s4 : give o2 to g21 . s5 : give o0 to g18 . s6 : give o0 to g31 . s7 : o2 is given to g0 . s8 : o1 is given to g23 . s9 : give o2 to g17 . s10 : give o2 to g29 . s11 : give o3 to g24 . s12 : give o1 to g27 . s13 : o0 is given to g31 . s14 : o2 is given to g18 . s15 : o1 is given to g22 . what is a0 of the holder of o2 ? : ",
+        "gold": "g18 v9 .",
+        "pred": "v114 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g17 is v25 . g24 's a0 is v1 . g3 has a0 v24 . g14 has a0 v3 . g22 has a0 v90 . g7 has a0 v70 . g31 's a0 is v48 . g20 has a0 v115 . g0 has a0 v123 . g4 has a0 v117 . g6 has a0 v105 . g29 has a0 v93 . the a0 of g25 is v89 . g13 's a0 is v87 . g2 has a0 v56 . g27 's a0 is v74 . s0 : o1 is given to g27 . s1 : give o0 to g31 . s2 : give o1 to g27 . s3 : o2 is given to g27 . s4 : give o2 to g20 . s5 : give o3 to g25 . s6 : o3 is given to g0 . s7 : o2 is given to g31 . s8 : give o2 to g27 . s9 : o0 is given to g27 . s10 : o1 is given to g24 . s11 : give o1 to g31 . s12 : give o3 to g25 . s13 : o3 is given to g2 . s14 : o2 is given to g13 . s15 : o1 is given to g22 . what is a0 of the holder of o2 ? : ",
+        "gold": "g13 v87 .",
+        "pred": "v48 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g16 is v93 . g4 has a0 v31 . the a0 of g9 is v26 . g2 has a0 v7 . the a0 of g10 is v43 . g13 's a0 is v118 . g23 's a0 is v18 . the a0 of g1 is v44 . g30 has a0 v25 . the a0 of g0 is v50 . g7 's a0 is v88 . the a0 of g31 is v98 . the a0 of g6 is v3 . the a0 of g27 is v58 . g17 's a0 is v42 . g24 has a0 v12 . s0 : o1 is given to g10 . s1 : give o2 to g7 . s2 : give o1 to g27 . s3 : o2 is given to g10 . s4 : give o1 to g23 . s5 : give o1 to g13 . s6 : o0 is given to g16 . s7 : o0 is given to g31 . s8 : give o2 to g13 . s9 : o0 is given to g4 . s10 : o3 is given to g31 . s11 : o3 is given to g6 . s12 : give o1 to g4 . s13 : o1 is given to g30 . s14 : o0 is given to g31 . s15 : give o0 to g6 . what is a0 of the holder of o3 ? : ",
+        "gold": "g6 v3 .",
+        "pred": "v98 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g29 is v79 . the a0 of g26 is v51 . the a0 of g4 is v74 . g14 has a0 v59 . g2 's a0 is v96 . the a0 of g11 is v107 . g0 's a0 is v31 . g27 's a0 is v109 . g18 has a0 v111 . g23 has a0 v86 . g10 's a0 is v110 . the a0 of g19 is v117 . g8 has a0 v113 . g9 has a0 v37 . g20 has a0 v20 . g5 's a0 is v33 . s0 : o0 is given to g9 . s1 : give o1 to g5 . s2 : give o2 to g11 . s3 : give o2 to g2 . s4 : o1 is given to g26 . s5 : give o2 to g26 . s6 : give o3 to g19 . s7 : o0 is given to g11 . s8 : o2 is given to g23 . s9 : o0 is given to g26 . s10 : o0 is given to g10 . s11 : give o2 to g5 . s12 : give o2 to g26 . s13 : give o2 to g2 . s14 : o3 is given to g18 . s15 : o3 is given to g9 . what is a0 of the holder of o3 ? : ",
+        "gold": "g9 v37 .",
+        "pred": "v37 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g17 is v22 . g2 's a0 is v80 . g10 's a0 is v78 . g24 's a0 is v42 . g16 's a0 is v44 . g13 has a0 v52 . the a0 of g31 is v97 . g28 has a0 v92 . g1 's a0 is v41 . the a0 of g0 is v69 . the a0 of g26 is v117 . g19 has a0 v50 . g6 has a0 v89 . g5 's a0 is v28 . g12 's a0 is v43 . g30 's a0 is v53 . s0 : o3 is given to g30 . s1 : give o3 to g30 . s2 : give o2 to g19 . s3 : o3 is given to g1 . s4 : o2 is given to g12 . s5 : o3 is given to g28 . s6 : o1 is given to g5 . s7 : o1 is given to g12 . s8 : give o1 to g26 . s9 : o3 is given to g13 . s10 : o3 is given to g30 . s11 : give o2 to g10 . s12 : o2 is given to g1 . s13 : give o2 to g1 . s14 : o0 is given to g13 . s15 : o3 is given to g0 . what is a0 of the holder of o3 ? : ",
+        "gold": "g0 v69 .",
+        "pred": "v53 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g18 's a0 is v41 . the a0 of g12 is v4 . g28 has a0 v54 . g8 has a0 v113 . the a0 of g25 is v119 . g6 has a0 v125 . the a0 of g14 is v25 . g27 's a0 is v29 . the a0 of g16 is v81 . g22 's a0 is v32 . the a0 of g1 is v12 . g24 has a0 v23 . g10 has a0 v45 . g20 's a0 is v72 . g31 has a0 v63 . g0 has a0 v95 . s0 : o1 is given to g18 . s1 : give o1 to g6 . s2 : give o1 to g31 . s3 : o0 is given to g0 . s4 : give o2 to g16 . s5 : give o0 to g12 . s6 : give o0 to g6 . s7 : give o3 to g1 . s8 : o3 is given to g1 . s9 : o3 is given to g25 . s10 : give o1 to g16 . s11 : give o2 to g25 . s12 : give o3 to g25 . s13 : o0 is given to g24 . s14 : o1 is given to g31 . s15 : o1 is given to g14 . what is a0 of the holder of o1 ? : ",
+        "gold": "g14 v25 .",
+        "pred": "v63 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g7 has a0 v58 . g13 's a0 is v79 . the a0 of g25 is v121 . g9 's a0 is v23 . the a0 of g31 is v45 . the a0 of g0 is v88 . the a0 of g12 is v5 . g30 's a0 is v85 . the a0 of g11 is v66 . g22 's a0 is v65 . g23 has a0 v48 . g15 's a0 is v83 . g6 's a0 is v49 . g21 has a0 v64 . g14 's a0 is v60 . g19 's a0 is v86 . s0 : give o2 to g0 . s1 : o0 is given to g21 . s2 : give o0 to g30 . s3 : o1 is given to g13 . s4 : give o2 to g23 . s5 : o2 is given to g14 . s6 : o0 is given to g23 . s7 : give o2 to g22 . s8 : give o2 to g11 . s9 : o0 is given to g12 . s10 : o3 is given to g9 . s11 : o2 is given to g15 . s12 : o3 is given to g15 . s13 : give o1 to g23 . s14 : o0 is given to g31 . s15 : give o2 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g31 v45 .",
+        "pred": "v64, v85, v5, v45 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g22 is v0 . g28 's a0 is v14 . the a0 of g18 is v42 . g17 has a0 v98 . g29 's a0 is v90 . the a0 of g8 is v65 . the a0 of g16 is v39 . g30 's a0 is v29 . g27 's a0 is v28 . g0 has a0 v112 . g23 's a0 is v81 . g24 has a0 v88 . g25 's a0 is v99 . g2 's a0 is v113 . g26 has a0 v86 . g15 has a0 v71 . s0 : give o3 to g22 . s1 : give o2 to g30 . s2 : give o3 to g0 . s3 : o2 is given to g27 . s4 : o2 is given to g18 . s5 : o3 is given to g29 . s6 : o3 is given to g22 . s7 : give o2 to g15 . s8 : o0 is given to g0 . s9 : give o1 to g22 . s10 : give o1 to g15 . s11 : o2 is given to g2 . s12 : o1 is given to g2 . s13 : o2 is given to g30 . s14 : o1 is given to g30 . s15 : o2 is given to g22 . what is a0 of the holder of o0 ? : ",
+        "gold": "g0 v112 .",
+        "pred": "v112 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g27 is v101 . g4 's a0 is v44 . the a0 of g10 is v25 . g7 's a0 is v124 . the a0 of g13 is v33 . g31 has a0 v66 . g30 's a0 is v13 . the a0 of g29 is v86 . g12 has a0 v87 . the a0 of g28 is v104 . g0 has a0 v11 . g25 has a0 v5 . g22 has a0 v69 . g19 's a0 is v15 . the a0 of g20 is v99 . g15 's a0 is v45 . s0 : give o3 to g7 . s1 : o3 is given to g29 . s2 : o0 is given to g20 . s3 : o3 is given to g31 . s4 : o1 is given to g10 . s5 : o2 is given to g4 . s6 : give o1 to g25 . s7 : o3 is given to g7 . s8 : give o3 to g31 . s9 : o0 is given to g31 . s10 : give o1 to g20 . s11 : o2 is given to g0 . s12 : give o3 to g13 . s13 : o3 is given to g25 . s14 : give o2 to g15 . s15 : give o3 to g25 . what is a0 of the holder of o3 ? : ",
+        "gold": "g25 v5 .",
+        "pred": "v66 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g17 's a0 is v81 . g18 's a0 is v12 . the a0 of g15 is v50 . g10 's a0 is v95 . g12 has a0 v100 . g25 's a0 is v44 . the a0 of g20 is v105 . the a0 of g7 is v101 . g11 's a0 is v7 . g0 has a0 v98 . g26 's a0 is v77 . g24 's a0 is v22 . g22 has a0 v14 . the a0 of g28 is v17 . g31 has a0 v67 . g5 's a0 is v113 . s0 : give o2 to g15 . s1 : o0 is given to g15 . s2 : o3 is given to g15 . s3 : give o1 to g0 . s4 : give o1 to g22 . s5 : give o2 to g11 . s6 : give o3 to g25 . s7 : o1 is given to g25 . s8 : give o2 to g11 . s9 : give o0 to g22 . s10 : o0 is given to g31 . s11 : give o2 to g26 . s12 : give o2 to g31 . s13 : give o1 to g15 . s14 : o2 is given to g10 . s15 : o3 is given to g20 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v50 .",
+        "pred": "v101 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g22 is v30 . the a0 of g5 is v74 . the a0 of g4 is v91 . the a0 of g3 is v113 . g1 's a0 is v89 . the a0 of g12 is v4 . g29 has a0 v102 . g9 's a0 is v47 . g8 's a0 is v2 . g24 has a0 v126 . the a0 of g7 is v88 . g0 's a0 is v70 . g19 's a0 is v104 . g23 has a0 v37 . the a0 of g20 is v110 . g21 has a0 v92 . s0 : o2 is given to g4 . s1 : o3 is given to g5 . s2 : o0 is given to g23 . s3 : give o1 to g9 . s4 : o2 is given to g3 . s5 : o3 is given to g22 . s6 : give o1 to g0 . s7 : give o2 to g7 . s8 : o2 is given to g21 . s9 : o1 is given to g3 . s10 : give o1 to g29 . s11 : o2 is given to g1 . s12 : o3 is given to g22 . s13 : o0 is given to g1 . s14 : give o2 to g21 . s15 : give o2 to g8 . what is a0 of the holder of o0 ? : ",
+        "gold": "g1 v89 .",
+        "pred": "v89 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g2 has a0 v11 . the a0 of g13 is v119 . the a0 of g28 is v123 . g16 has a0 v62 . the a0 of g19 is v98 . the a0 of g22 is v113 . g20 has a0 v52 . g10 has a0 v12 . the a0 of g11 is v14 . g15 's a0 is v29 . g23 has a0 v104 . the a0 of g3 is v110 . g21 has a0 v74 . g8 has a0 v20 . g7 has a0 v0 . the a0 of g17 is v3 . s0 : give o1 to g15 . s1 : o2 is given to g17 . s2 : o0 is given to g15 . s3 : give o1 to g23 . s4 : give o2 to g23 . s5 : o1 is given to g23 . s6 : give o0 to g10 . s7 : give o3 to g3 . s8 : give o2 to g13 . s9 : o0 is given to g7 . s10 : give o3 to g23 . s11 : give o2 to g19 . s12 : o2 is given to g16 . s13 : give o0 to g22 . s14 : give o3 to g17 . s15 : o2 is given to g28 . what is a0 of the holder of o0 ? : ",
+        "gold": "g22 v113 .",
+        "pred": "v12 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g0 is v61 . g2 's a0 is v45 . g18 's a0 is v100 . g12 has a0 v107 . the a0 of g3 is v110 . g31 's a0 is v78 . g28 's a0 is v83 . g26 has a0 v54 . g24 's a0 is v41 . the a0 of g23 is v119 . g14 has a0 v102 . g17 has a0 v12 . the a0 of g20 is v2 . g19 has a0 v40 . g22 has a0 v5 . g5 has a0 v58 . s0 : give o3 to g5 . s1 : o0 is given to g22 . s2 : o0 is given to g28 . s3 : o1 is given to g26 . s4 : give o0 to g20 . s5 : give o1 to g19 . s6 : o3 is given to g17 . s7 : give o0 to g28 . s8 : o0 is given to g28 . s9 : o2 is given to g0 . s10 : o0 is given to g3 . s11 : o1 is given to g22 . s12 : o3 is given to g22 . s13 : o0 is given to g3 . s14 : o0 is given to g12 . s15 : o3 is given to g14 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v61 .",
+        "pred": "v61 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g10 is v91 . the a0 of g25 is v33 . g22 's a0 is v8 . g1 has a0 v89 . g27 's a0 is v16 . the a0 of g2 is v127 . the a0 of g5 is v67 . g29 has a0 v58 . g30 's a0 is v21 . the a0 of g11 is v80 . the a0 of g31 is v76 . g16 's a0 is v107 . the a0 of g18 is v85 . g8 's a0 is v39 . g21 's a0 is v97 . the a0 of g20 is v51 . s0 : o0 is given to g25 . s1 : o0 is given to g21 . s2 : o0 is given to g20 . s3 : give o3 to g29 . s4 : give o1 to g29 . s5 : o0 is given to g2 . s6 : o2 is given to g22 . s7 : o3 is given to g11 . s8 : give o1 to g18 . s9 : give o0 to g29 . s10 : give o1 to g21 . s11 : give o3 to g27 . s12 : give o0 to g31 . s13 : give o2 to g20 . s14 : give o1 to g20 . s15 : give o2 to g1 . what is a0 of the holder of o1 ? : ",
+        "gold": "g20 v51 .",
+        "pred": "v58 .",
+        "exact": false,
+        "relaxed": false
+      }
+    ]
+  },
+  {
+    "model": "openai/gpt-4o-mini",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 30,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.0,
+    "accuracy_relaxed": 0.0,
+    "correct_exact": 0,
+    "correct_relaxed": 0,
+    "elapsed": 10.952237367630005,
+    "examples": [
+      {
+        "prompt": "g17 's a0 is v26 . g9 's a0 is v116 . g27 's a0 is v49 . the a0 of g23 is v14 . g20 's a0 is v121 . g2 has a0 v72 . the a0 of g4 is v27 . g30 's a0 is v73 . g19 's a0 is v40 . g6 's a0 is v102 . g15 has a0 v90 . the a0 of g7 is v42 . the a0 of g8 is v52 . the a0 of g28 is v99 . the a0 of g1 is v47 . g5 's a0 is v85 . s0 : o3 is given to g30 . s1 : give o2 to g27 . s2 : o0 is given to g28 . s3 : give o3 to g28 . s4 : give o2 to g28 . s5 : o3 is given to g17 . s6 : give o3 to g7 . s7 : give o0 to g1 . s8 : o0 is given to g1 . s9 : give o1 to g5 . s10 : o3 is given to g2 . s11 : o1 is given to g17 . s12 : give o1 to g4 . s13 : give o2 to g20 . s14 : give o3 to g9 . s15 : give o0 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g30 v73 .",
+        "pred": "v47 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g28 's a0 is v68 . g3 's a0 is v65 . the a0 of g14 is v86 . g5 's a0 is v82 . the a0 of g1 is v48 . g29 has a0 v36 . g31 's a0 is v103 . g24 's a0 is v38 . g20 's a0 is v18 . g15 's a0 is v108 . g30 has a0 v117 . the a0 of g10 is v3 . g0 has a0 v7 . g27 has a0 v106 . g6 's a0 is v78 . g13 's a0 is v30 . s0 : give o1 to g20 . s1 : o2 is given to g15 . s2 : o0 is given to g29 . s3 : o3 is given to g3 . s4 : o2 is given to g30 . s5 : give o1 to g10 . s6 : give o3 to g13 . s7 : give o0 to g29 . s8 : give o0 to g13 . s9 : o2 is given to g1 . s10 : o1 is given to g30 . s11 : o1 is given to g29 . s12 : give o3 to g1 . s13 : o3 is given to g31 . s14 : o2 is given to g10 . s15 : give o3 to g13 . what is a0 of the holder of o1 ? : ",
+        "gold": "g29 v36 .",
+        "pred": "v117 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g4 's a0 is v16 . g0 has a0 v30 . g5 's a0 is v11 . g26 has a0 v9 . the a0 of g16 is v120 . g7 has a0 v92 . g29 has a0 v17 . g27 has a0 v46 . g28 's a0 is v82 . g19 has a0 v7 . g14 's a0 is v41 . g6 has a0 v78 . g13 has a0 v88 . g21 's a0 is v118 . g3 's a0 is v121 . g8 has a0 v32 . s0 : o1 is given to g26 . s1 : give o3 to g13 . s2 : give o1 to g7 . s3 : give o0 to g7 . s4 : o2 is given to g13 . s5 : give o2 to g0 . s6 : o3 is given to g3 . s7 : give o1 to g28 . s8 : give o3 to g7 . s9 : give o0 to g3 . s10 : give o1 to g0 . s11 : o0 is given to g16 . s12 : o2 is given to g29 . s13 : o1 is given to g13 . s14 : give o2 to g4 . s15 : give o2 to g27 . what is a0 of the holder of o3 ? : ",
+        "gold": "g7 v92 .",
+        "pred": "v121 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g22 's a0 is v48 . g19 has a0 v115 . the a0 of g29 is v124 . g16 's a0 is v59 . g25 's a0 is v79 . g8 's a0 is v70 . g20 's a0 is v108 . g23 has a0 v76 . g1 's a0 is v85 . the a0 of g7 is v95 . g15 's a0 is v89 . g0 has a0 v38 . g31 's a0 is v87 . g28 's a0 is v27 . the a0 of g11 is v49 . the a0 of g3 is v47 . s0 : o3 is given to g19 . s1 : give o2 to g7 . s2 : o0 is given to g29 . s3 : give o1 to g28 . s4 : o3 is given to g11 . s5 : o1 is given to g22 . s6 : o2 is given to g7 . s7 : o3 is given to g19 . s8 : o2 is given to g20 . s9 : o2 is given to g25 . s10 : o0 is given to g3 . s11 : o1 is given to g15 . s12 : give o3 to g11 . s13 : o0 is given to g19 . s14 : give o2 to g23 . s15 : give o3 to g7 . what is a0 of the holder of o2 ? : ",
+        "gold": "g23 v76 .",
+        "pred": "v70 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g24 is v101 . the a0 of g20 is v8 . the a0 of g0 is v121 . the a0 of g1 is v16 . g30 has a0 v81 . the a0 of g29 is v52 . g12 's a0 is v41 . g31 's a0 is v122 . g26 's a0 is v117 . g27 has a0 v100 . the a0 of g5 is v12 . the a0 of g17 is v62 . g2 has a0 v26 . the a0 of g13 is v64 . g18 's a0 is v48 . g23 has a0 v49 . s0 : o2 is given to g30 . s1 : o3 is given to g29 . s2 : give o2 to g27 . s3 : o1 is given to g30 . s4 : o2 is given to g31 . s5 : give o0 to g27 . s6 : give o2 to g2 . s7 : o1 is given to g1 . s8 : give o3 to g13 . s9 : o2 is given to g0 . s10 : give o1 to g23 . s11 : o3 is given to g20 . s12 : give o0 to g2 . s13 : o3 is given to g26 . s14 : o1 is given to g1 . s15 : give o0 to g30 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v121 .",
+        "pred": "v12 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g22 's a0 is v78 . g20 's a0 is v64 . the a0 of g6 is v105 . g3 's a0 is v23 . g10 's a0 is v108 . the a0 of g16 is v79 . g1 has a0 v73 . g31 has a0 v4 . g18 's a0 is v65 . g19 's a0 is v49 . g26 has a0 v126 . the a0 of g2 is v81 . g25 's a0 is v87 . g5 's a0 is v39 . g15 has a0 v89 . the a0 of g12 is v2 . s0 : o1 is given to g5 . s1 : give o2 to g18 . s2 : give o1 to g12 . s3 : o3 is given to g12 . s4 : give o2 to g20 . s5 : give o3 to g6 . s6 : o1 is given to g22 . s7 : give o1 to g6 . s8 : give o0 to g25 . s9 : give o3 to g16 . s10 : o0 is given to g1 . s11 : o1 is given to g2 . s12 : o1 is given to g20 . s13 : o2 is given to g5 . s14 : o3 is given to g10 . s15 : give o3 to g26 . what is a0 of the holder of o2 ? : ",
+        "gold": "g5 v39 .",
+        "pred": "v81 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g31 's a0 is v34 . g6 has a0 v11 . the a0 of g20 is v8 . the a0 of g14 is v118 . the a0 of g0 is v38 . g15 's a0 is v59 . g19 has a0 v85 . the a0 of g13 is v111 . the a0 of g30 is v89 . the a0 of g17 is v65 . g10 has a0 v103 . the a0 of g11 is v116 . the a0 of g12 is v104 . the a0 of g16 is v77 . g4 has a0 v12 . the a0 of g21 is v44 . s0 : o0 is given to g10 . s1 : o1 is given to g0 . s2 : give o3 to g30 . s3 : o2 is given to g11 . s4 : o3 is given to g19 . s5 : give o2 to g12 . s6 : o3 is given to g16 . s7 : give o0 to g21 . s8 : give o3 to g11 . s9 : give o0 to g21 . s10 : give o1 to g15 . s11 : o0 is given to g15 . s12 : give o0 to g13 . s13 : give o3 to g16 . s14 : o2 is given to g30 . s15 : o2 is given to g17 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v59 .",
+        "pred": "v38 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g3 has a0 v115 . g25 's a0 is v96 . g27 has a0 v17 . the a0 of g7 is v38 . g23 has a0 v113 . g2 has a0 v34 . g28 's a0 is v44 . g31 's a0 is v27 . the a0 of g29 is v60 . g5 's a0 is v102 . g17 's a0 is v40 . the a0 of g11 is v124 . g0 's a0 is v77 . g13 has a0 v56 . the a0 of g20 is v50 . g21 has a0 v82 . s0 : o1 is given to g7 . s1 : o1 is given to g20 . s2 : give o1 to g31 . s3 : o0 is given to g2 . s4 : o3 is given to g13 . s5 : o2 is given to g17 . s6 : o0 is given to g3 . s7 : give o2 to g29 . s8 : o0 is given to g0 . s9 : o2 is given to g11 . s10 : o1 is given to g7 . s11 : give o1 to g13 . s12 : o0 is given to g23 . s13 : give o1 to g17 . s14 : give o0 to g28 . s15 : o3 is given to g3 . what is a0 of the holder of o1 ? : ",
+        "gold": "g17 v40 .",
+        "pred": "v40 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g26 is v24 . g2 has a0 v118 . g28 has a0 v112 . g19 has a0 v90 . g23 's a0 is v79 . g0 's a0 is v49 . the a0 of g17 is v114 . g13 's a0 is v119 . g9 has a0 v33 . the a0 of g15 is v84 . the a0 of g4 is v52 . the a0 of g25 is v2 . g21 's a0 is v14 . the a0 of g12 is v113 . g24 's a0 is v74 . g16 has a0 v124 . s0 : give o3 to g28 . s1 : give o2 to g12 . s2 : o1 is given to g0 . s3 : o1 is given to g4 . s4 : give o1 to g16 . s5 : o2 is given to g28 . s6 : give o1 to g26 . s7 : o1 is given to g9 . s8 : o0 is given to g2 . s9 : o1 is given to g0 . s10 : give o1 to g2 . s11 : o2 is given to g23 . s12 : give o0 to g24 . s13 : o0 is given to g19 . s14 : give o2 to g28 . s15 : o0 is given to g0 . what is a0 of the holder of o2 ? : ",
+        "gold": "g28 v112 .",
+        "pred": "v113 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g20 is v122 . g21 has a0 v27 . g26 has a0 v87 . g11 's a0 is v17 . g2 's a0 is v76 . g5 's a0 is v107 . g1 's a0 is v86 . g15 's a0 is v98 . g0 's a0 is v43 . g22 has a0 v106 . g14 has a0 v72 . g27 's a0 is v4 . g16 has a0 v101 . the a0 of g4 is v2 . the a0 of g17 is v18 . the a0 of g23 is v124 . s0 : give o3 to g21 . s1 : o3 is given to g16 . s2 : o1 is given to g2 . s3 : o3 is given to g26 . s4 : o2 is given to g1 . s5 : give o2 to g11 . s6 : o1 is given to g4 . s7 : give o1 to g16 . s8 : give o1 to g27 . s9 : give o3 to g2 . s10 : o3 is given to g27 . s11 : o1 is given to g2 . s12 : give o3 to g0 . s13 : give o1 to g16 . s14 : give o0 to g20 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v122 .",
+        "pred": "v72 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g4 is v56 . g13 's a0 is v57 . g21 has a0 v107 . g22 's a0 is v74 . the a0 of g29 is v68 . the a0 of g7 is v30 . the a0 of g6 is v47 . g20 has a0 v51 . g2 's a0 is v72 . the a0 of g18 is v27 . g15 's a0 is v85 . the a0 of g25 is v5 . the a0 of g26 is v24 . g0 's a0 is v1 . g16 has a0 v81 . the a0 of g9 is v31 . s0 : give o3 to g15 . s1 : o0 is given to g21 . s2 : o3 is given to g15 . s3 : give o1 to g29 . s4 : o1 is given to g9 . s5 : give o3 to g26 . s6 : o1 is given to g22 . s7 : give o3 to g16 . s8 : o0 is given to g16 . s9 : give o2 to g6 . s10 : give o1 to g29 . s11 : o2 is given to g15 . s12 : o1 is given to g20 . s13 : o1 is given to g13 . s14 : o3 is given to g4 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v51 .",
+        "pred": "v47 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g20 is v1 . g25 has a0 v44 . g26 has a0 v0 . g4 has a0 v80 . g17 's a0 is v85 . g3 has a0 v50 . g14 has a0 v59 . g13 has a0 v125 . the a0 of g28 is v57 . the a0 of g8 is v111 . g22 's a0 is v27 . the a0 of g31 is v83 . g9 has a0 v73 . g6 has a0 v42 . the a0 of g23 is v114 . g15 has a0 v121 . s0 : give o0 to g15 . s1 : o2 is given to g3 . s2 : o0 is given to g4 . s3 : o3 is given to g3 . s4 : give o2 to g28 . s5 : o0 is given to g9 . s6 : o2 is given to g28 . s7 : give o3 to g23 . s8 : give o1 to g26 . s9 : o1 is given to g13 . s10 : give o2 to g8 . s11 : o2 is given to g9 . s12 : give o1 to g13 . s13 : give o3 to g14 . s14 : give o1 to g17 . s15 : give o3 to g31 . what is a0 of the holder of o3 ? : ",
+        "gold": "g31 v83 .",
+        "pred": "v121 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g23 has a0 v2 . g16 has a0 v80 . g18 's a0 is v78 . the a0 of g14 is v44 . the a0 of g24 is v29 . g31 has a0 v55 . g22 's a0 is v33 . g8 's a0 is v97 . the a0 of g12 is v111 . the a0 of g3 is v0 . g0 has a0 v77 . the a0 of g30 is v110 . the a0 of g1 is v126 . the a0 of g28 is v11 . g25 has a0 v90 . g4 has a0 v59 . s0 : o2 is given to g25 . s1 : give o2 to g24 . s2 : give o3 to g12 . s3 : o0 is given to g3 . s4 : give o2 to g4 . s5 : o3 is given to g8 . s6 : o0 is given to g0 . s7 : o2 is given to g1 . s8 : give o2 to g8 . s9 : o3 is given to g31 . s10 : o1 is given to g25 . s11 : give o0 to g0 . s12 : o1 is given to g16 . s13 : o1 is given to g12 . s14 : give o2 to g28 . s15 : give o3 to g12 . what is a0 of the holder of o0 ? : ",
+        "gold": "g0 v77 .",
+        "pred": "v77 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g8 has a0 v49 . g1 's a0 is v89 . g23 's a0 is v111 . g27 has a0 v44 . the a0 of g28 is v26 . g30 's a0 is v107 . g13 has a0 v94 . the a0 of g14 is v57 . the a0 of g10 is v117 . the a0 of g2 is v113 . the a0 of g5 is v21 . the a0 of g21 is v33 . g25 's a0 is v56 . the a0 of g12 is v61 . g19 's a0 is v8 . the a0 of g31 is v122 . s0 : give o1 to g1 . s1 : o3 is given to g14 . s2 : give o1 to g12 . s3 : give o2 to g8 . s4 : give o0 to g1 . s5 : give o1 to g2 . s6 : give o0 to g13 . s7 : o1 is given to g1 . s8 : o0 is given to g2 . s9 : o2 is given to g2 . s10 : o2 is given to g13 . s11 : give o3 to g27 . s12 : give o1 to g19 . s13 : o0 is given to g13 . s14 : give o3 to g23 . s15 : give o2 to g2 . what is a0 of the holder of o1 ? : ",
+        "gold": "g19 v8 .",
+        "pred": "v113 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g12 has a0 v100 . g28 has a0 v94 . g25 's a0 is v114 . g20 has a0 v91 . g16 's a0 is v29 . g3 's a0 is v78 . g1 has a0 v8 . g15 has a0 v49 . the a0 of g19 is v62 . g10 has a0 v84 . the a0 of g8 is v119 . the a0 of g6 is v42 . the a0 of g4 is v115 . g30 has a0 v47 . g13 's a0 is v23 . g0 's a0 is v88 . s0 : o3 is given to g8 . s1 : o0 is given to g4 . s2 : o3 is given to g15 . s3 : give o1 to g3 . s4 : o3 is given to g12 . s5 : give o3 to g10 . s6 : give o2 to g0 . s7 : o1 is given to g0 . s8 : o2 is given to g28 . s9 : give o3 to g20 . s10 : o3 is given to g10 . s11 : give o3 to g0 . s12 : give o2 to g19 . s13 : o2 is given to g25 . s14 : o1 is given to g30 . s15 : o0 is given to g20 . what is a0 of the holder of o3 ? : ",
+        "gold": "g0 v88 .",
+        "pred": "v84 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g18 is v116 . g27 has a0 v9 . g31 's a0 is v103 . g17 has a0 v71 . g30 has a0 v81 . g4 has a0 v72 . g25 has a0 v32 . g15 's a0 is v112 . g28 's a0 is v34 . g26 's a0 is v126 . the a0 of g13 is v40 . g7 's a0 is v90 . g1 has a0 v62 . g20 has a0 v68 . g10 has a0 v83 . the a0 of g22 is v14 . s0 : o3 is given to g27 . s1 : give o1 to g27 . s2 : o0 is given to g7 . s3 : give o3 to g7 . s4 : o3 is given to g10 . s5 : o1 is given to g7 . s6 : give o1 to g13 . s7 : o2 is given to g25 . s8 : o2 is given to g20 . s9 : o2 is given to g27 . s10 : give o3 to g28 . s11 : give o3 to g25 . s12 : give o0 to g26 . s13 : o1 is given to g18 . s14 : o1 is given to g27 . s15 : o3 is given to g1 . what is a0 of the holder of o2 ? : ",
+        "gold": "g27 v9 .",
+        "pred": "v68 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g27 's a0 is v62 . g13 has a0 v37 . g22 has a0 v6 . g16 's a0 is v125 . g0 's a0 is v2 . the a0 of g24 is v102 . the a0 of g28 is v123 . the a0 of g2 is v55 . g23 's a0 is v29 . g18 has a0 v9 . g7 's a0 is v34 . g29 has a0 v24 . g30 's a0 is v95 . g31 has a0 v11 . the a0 of g21 is v114 . the a0 of g17 is v86 . s0 : o3 is given to g31 . s1 : give o1 to g7 . s2 : o2 is given to g21 . s3 : give o1 to g0 . s4 : give o2 to g21 . s5 : give o0 to g18 . s6 : give o0 to g31 . s7 : o2 is given to g0 . s8 : o1 is given to g23 . s9 : give o2 to g17 . s10 : give o2 to g29 . s11 : give o3 to g24 . s12 : give o1 to g27 . s13 : o0 is given to g31 . s14 : o2 is given to g18 . s15 : o1 is given to g22 . what is a0 of the holder of o2 ? : ",
+        "gold": "g18 v9 .",
+        "pred": "v86 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g17 is v25 . g24 's a0 is v1 . g3 has a0 v24 . g14 has a0 v3 . g22 has a0 v90 . g7 has a0 v70 . g31 's a0 is v48 . g20 has a0 v115 . g0 has a0 v123 . g4 has a0 v117 . g6 has a0 v105 . g29 has a0 v93 . the a0 of g25 is v89 . g13 's a0 is v87 . g2 has a0 v56 . g27 's a0 is v74 . s0 : o1 is given to g27 . s1 : give o0 to g31 . s2 : give o1 to g27 . s3 : o2 is given to g27 . s4 : give o2 to g20 . s5 : give o3 to g25 . s6 : o3 is given to g0 . s7 : o2 is given to g31 . s8 : give o2 to g27 . s9 : o0 is given to g27 . s10 : o1 is given to g24 . s11 : give o1 to g31 . s12 : give o3 to g25 . s13 : o3 is given to g2 . s14 : o2 is given to g13 . s15 : o1 is given to g22 . what is a0 of the holder of o2 ? : ",
+        "gold": "g13 v87 .",
+        "pred": "v3 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g16 is v93 . g4 has a0 v31 . the a0 of g9 is v26 . g2 has a0 v7 . the a0 of g10 is v43 . g13 's a0 is v118 . g23 's a0 is v18 . the a0 of g1 is v44 . g30 has a0 v25 . the a0 of g0 is v50 . g7 's a0 is v88 . the a0 of g31 is v98 . the a0 of g6 is v3 . the a0 of g27 is v58 . g17 's a0 is v42 . g24 has a0 v12 . s0 : o1 is given to g10 . s1 : give o2 to g7 . s2 : give o1 to g27 . s3 : o2 is given to g10 . s4 : give o1 to g23 . s5 : give o1 to g13 . s6 : o0 is given to g16 . s7 : o0 is given to g31 . s8 : give o2 to g13 . s9 : o0 is given to g4 . s10 : o3 is given to g31 . s11 : o3 is given to g6 . s12 : give o1 to g4 . s13 : o1 is given to g30 . s14 : o0 is given to g31 . s15 : give o0 to g6 . what is a0 of the holder of o3 ? : ",
+        "gold": "g6 v3 .",
+        "pred": "v3 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g29 is v79 . the a0 of g26 is v51 . the a0 of g4 is v74 . g14 has a0 v59 . g2 's a0 is v96 . the a0 of g11 is v107 . g0 's a0 is v31 . g27 's a0 is v109 . g18 has a0 v111 . g23 has a0 v86 . g10 's a0 is v110 . the a0 of g19 is v117 . g8 has a0 v113 . g9 has a0 v37 . g20 has a0 v20 . g5 's a0 is v33 . s0 : o0 is given to g9 . s1 : give o1 to g5 . s2 : give o2 to g11 . s3 : give o2 to g2 . s4 : o1 is given to g26 . s5 : give o2 to g26 . s6 : give o3 to g19 . s7 : o0 is given to g11 . s8 : o2 is given to g23 . s9 : o0 is given to g26 . s10 : o0 is given to g10 . s11 : give o2 to g5 . s12 : give o2 to g26 . s13 : give o2 to g2 . s14 : o3 is given to g18 . s15 : o3 is given to g9 . what is a0 of the holder of o3 ? : ",
+        "gold": "g9 v37 .",
+        "pred": "v117 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g17 is v22 . g2 's a0 is v80 . g10 's a0 is v78 . g24 's a0 is v42 . g16 's a0 is v44 . g13 has a0 v52 . the a0 of g31 is v97 . g28 has a0 v92 . g1 's a0 is v41 . the a0 of g0 is v69 . the a0 of g26 is v117 . g19 has a0 v50 . g6 has a0 v89 . g5 's a0 is v28 . g12 's a0 is v43 . g30 's a0 is v53 . s0 : o3 is given to g30 . s1 : give o3 to g30 . s2 : give o2 to g19 . s3 : o3 is given to g1 . s4 : o2 is given to g12 . s5 : o3 is given to g28 . s6 : o1 is given to g5 . s7 : o1 is given to g12 . s8 : give o1 to g26 . s9 : o3 is given to g13 . s10 : o3 is given to g30 . s11 : give o2 to g10 . s12 : o2 is given to g1 . s13 : give o2 to g1 . s14 : o0 is given to g13 . s15 : o3 is given to g0 . what is a0 of the holder of o3 ? : ",
+        "gold": "g0 v69 .",
+        "pred": "v53 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g18 's a0 is v41 . the a0 of g12 is v4 . g28 has a0 v54 . g8 has a0 v113 . the a0 of g25 is v119 . g6 has a0 v125 . the a0 of g14 is v25 . g27 's a0 is v29 . the a0 of g16 is v81 . g22 's a0 is v32 . the a0 of g1 is v12 . g24 has a0 v23 . g10 has a0 v45 . g20 's a0 is v72 . g31 has a0 v63 . g0 has a0 v95 . s0 : o1 is given to g18 . s1 : give o1 to g6 . s2 : give o1 to g31 . s3 : o0 is given to g0 . s4 : give o2 to g16 . s5 : give o0 to g12 . s6 : give o0 to g6 . s7 : give o3 to g1 . s8 : o3 is given to g1 . s9 : o3 is given to g25 . s10 : give o1 to g16 . s11 : give o2 to g25 . s12 : give o3 to g25 . s13 : o0 is given to g24 . s14 : o1 is given to g31 . s15 : o1 is given to g14 . what is a0 of the holder of o1 ? : ",
+        "gold": "g14 v25 .",
+        "pred": "v81 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g7 has a0 v58 . g13 's a0 is v79 . the a0 of g25 is v121 . g9 's a0 is v23 . the a0 of g31 is v45 . the a0 of g0 is v88 . the a0 of g12 is v5 . g30 's a0 is v85 . the a0 of g11 is v66 . g22 's a0 is v65 . g23 has a0 v48 . g15 's a0 is v83 . g6 's a0 is v49 . g21 has a0 v64 . g14 's a0 is v60 . g19 's a0 is v86 . s0 : give o2 to g0 . s1 : o0 is given to g21 . s2 : give o0 to g30 . s3 : o1 is given to g13 . s4 : give o2 to g23 . s5 : o2 is given to g14 . s6 : o0 is given to g23 . s7 : give o2 to g22 . s8 : give o2 to g11 . s9 : o0 is given to g12 . s10 : o3 is given to g9 . s11 : o2 is given to g15 . s12 : o3 is given to g15 . s13 : give o1 to g23 . s14 : o0 is given to g31 . s15 : give o2 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g31 v45 .",
+        "pred": "v64 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g22 is v0 . g28 's a0 is v14 . the a0 of g18 is v42 . g17 has a0 v98 . g29 's a0 is v90 . the a0 of g8 is v65 . the a0 of g16 is v39 . g30 's a0 is v29 . g27 's a0 is v28 . g0 has a0 v112 . g23 's a0 is v81 . g24 has a0 v88 . g25 's a0 is v99 . g2 's a0 is v113 . g26 has a0 v86 . g15 has a0 v71 . s0 : give o3 to g22 . s1 : give o2 to g30 . s2 : give o3 to g0 . s3 : o2 is given to g27 . s4 : o2 is given to g18 . s5 : o3 is given to g29 . s6 : o3 is given to g22 . s7 : give o2 to g15 . s8 : o0 is given to g0 . s9 : give o1 to g22 . s10 : give o1 to g15 . s11 : o2 is given to g2 . s12 : o1 is given to g2 . s13 : o2 is given to g30 . s14 : o1 is given to g30 . s15 : o2 is given to g22 . what is a0 of the holder of o0 ? : ",
+        "gold": "g0 v112 .",
+        "pred": "v112 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g27 is v101 . g4 's a0 is v44 . the a0 of g10 is v25 . g7 's a0 is v124 . the a0 of g13 is v33 . g31 has a0 v66 . g30 's a0 is v13 . the a0 of g29 is v86 . g12 has a0 v87 . the a0 of g28 is v104 . g0 has a0 v11 . g25 has a0 v5 . g22 has a0 v69 . g19 's a0 is v15 . the a0 of g20 is v99 . g15 's a0 is v45 . s0 : give o3 to g7 . s1 : o3 is given to g29 . s2 : o0 is given to g20 . s3 : o3 is given to g31 . s4 : o1 is given to g10 . s5 : o2 is given to g4 . s6 : give o1 to g25 . s7 : o3 is given to g7 . s8 : give o3 to g31 . s9 : o0 is given to g31 . s10 : give o1 to g20 . s11 : o2 is given to g0 . s12 : give o3 to g13 . s13 : o3 is given to g25 . s14 : give o2 to g15 . s15 : give o3 to g25 . what is a0 of the holder of o3 ? : ",
+        "gold": "g25 v5 .",
+        "pred": "v66 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g17 's a0 is v81 . g18 's a0 is v12 . the a0 of g15 is v50 . g10 's a0 is v95 . g12 has a0 v100 . g25 's a0 is v44 . the a0 of g20 is v105 . the a0 of g7 is v101 . g11 's a0 is v7 . g0 has a0 v98 . g26 's a0 is v77 . g24 's a0 is v22 . g22 has a0 v14 . the a0 of g28 is v17 . g31 has a0 v67 . g5 's a0 is v113 . s0 : give o2 to g15 . s1 : o0 is given to g15 . s2 : o3 is given to g15 . s3 : give o1 to g0 . s4 : give o1 to g22 . s5 : give o2 to g11 . s6 : give o3 to g25 . s7 : o1 is given to g25 . s8 : give o2 to g11 . s9 : give o0 to g22 . s10 : o0 is given to g31 . s11 : give o2 to g26 . s12 : give o2 to g31 . s13 : give o1 to g15 . s14 : o2 is given to g10 . s15 : o3 is given to g20 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v50 .",
+        "pred": "v98 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g22 is v30 . the a0 of g5 is v74 . the a0 of g4 is v91 . the a0 of g3 is v113 . g1 's a0 is v89 . the a0 of g12 is v4 . g29 has a0 v102 . g9 's a0 is v47 . g8 's a0 is v2 . g24 has a0 v126 . the a0 of g7 is v88 . g0 's a0 is v70 . g19 's a0 is v104 . g23 has a0 v37 . the a0 of g20 is v110 . g21 has a0 v92 . s0 : o2 is given to g4 . s1 : o3 is given to g5 . s2 : o0 is given to g23 . s3 : give o1 to g9 . s4 : o2 is given to g3 . s5 : o3 is given to g22 . s6 : give o1 to g0 . s7 : give o2 to g7 . s8 : o2 is given to g21 . s9 : o1 is given to g3 . s10 : give o1 to g29 . s11 : o2 is given to g1 . s12 : o3 is given to g22 . s13 : o0 is given to g1 . s14 : give o2 to g21 . s15 : give o2 to g8 . what is a0 of the holder of o0 ? : ",
+        "gold": "g1 v89 .",
+        "pred": "v89 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g2 has a0 v11 . the a0 of g13 is v119 . the a0 of g28 is v123 . g16 has a0 v62 . the a0 of g19 is v98 . the a0 of g22 is v113 . g20 has a0 v52 . g10 has a0 v12 . the a0 of g11 is v14 . g15 's a0 is v29 . g23 has a0 v104 . the a0 of g3 is v110 . g21 has a0 v74 . g8 has a0 v20 . g7 has a0 v0 . the a0 of g17 is v3 . s0 : give o1 to g15 . s1 : o2 is given to g17 . s2 : o0 is given to g15 . s3 : give o1 to g23 . s4 : give o2 to g23 . s5 : o1 is given to g23 . s6 : give o0 to g10 . s7 : give o3 to g3 . s8 : give o2 to g13 . s9 : o0 is given to g7 . s10 : give o3 to g23 . s11 : give o2 to g19 . s12 : o2 is given to g16 . s13 : give o0 to g22 . s14 : give o3 to g17 . s15 : o2 is given to g28 . what is a0 of the holder of o0 ? : ",
+        "gold": "g22 v113 .",
+        "pred": "v62 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g0 is v61 . g2 's a0 is v45 . g18 's a0 is v100 . g12 has a0 v107 . the a0 of g3 is v110 . g31 's a0 is v78 . g28 's a0 is v83 . g26 has a0 v54 . g24 's a0 is v41 . the a0 of g23 is v119 . g14 has a0 v102 . g17 has a0 v12 . the a0 of g20 is v2 . g19 has a0 v40 . g22 has a0 v5 . g5 has a0 v58 . s0 : give o3 to g5 . s1 : o0 is given to g22 . s2 : o0 is given to g28 . s3 : o1 is given to g26 . s4 : give o0 to g20 . s5 : give o1 to g19 . s6 : o3 is given to g17 . s7 : give o0 to g28 . s8 : o0 is given to g28 . s9 : o2 is given to g0 . s10 : o0 is given to g3 . s11 : o1 is given to g22 . s12 : o3 is given to g22 . s13 : o0 is given to g3 . s14 : o0 is given to g12 . s15 : o3 is given to g14 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v61 .",
+        "pred": "v61 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g10 is v91 . the a0 of g25 is v33 . g22 's a0 is v8 . g1 has a0 v89 . g27 's a0 is v16 . the a0 of g2 is v127 . the a0 of g5 is v67 . g29 has a0 v58 . g30 's a0 is v21 . the a0 of g11 is v80 . the a0 of g31 is v76 . g16 's a0 is v107 . the a0 of g18 is v85 . g8 's a0 is v39 . g21 's a0 is v97 . the a0 of g20 is v51 . s0 : o0 is given to g25 . s1 : o0 is given to g21 . s2 : o0 is given to g20 . s3 : give o3 to g29 . s4 : give o1 to g29 . s5 : o0 is given to g2 . s6 : o2 is given to g22 . s7 : o3 is given to g11 . s8 : give o1 to g18 . s9 : give o0 to g29 . s10 : give o1 to g21 . s11 : give o3 to g27 . s12 : give o0 to g31 . s13 : give o2 to g20 . s14 : give o1 to g20 . s15 : give o2 to g1 . what is a0 of the holder of o1 ? : ",
+        "gold": "g20 v51 .",
+        "pred": "v127 .",
+        "exact": false,
+        "relaxed": false
+      }
+    ]
+  },
+  {
+    "model": "qwen/qwen-2.5-7b-instruct",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 30,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.0,
+    "accuracy_relaxed": 0.0,
+    "correct_exact": 0,
+    "correct_relaxed": 0,
+    "elapsed": 16.662370204925537,
+    "examples": [
+      {
+        "prompt": "g17 's a0 is v26 . g9 's a0 is v116 . g27 's a0 is v49 . the a0 of g23 is v14 . g20 's a0 is v121 . g2 has a0 v72 . the a0 of g4 is v27 . g30 's a0 is v73 . g19 's a0 is v40 . g6 's a0 is v102 . g15 has a0 v90 . the a0 of g7 is v42 . the a0 of g8 is v52 . the a0 of g28 is v99 . the a0 of g1 is v47 . g5 's a0 is v85 . s0 : o3 is given to g30 . s1 : give o2 to g27 . s2 : o0 is given to g28 . s3 : give o3 to g28 . s4 : give o2 to g28 . s5 : o3 is given to g17 . s6 : give o3 to g7 . s7 : give o0 to g1 . s8 : o0 is given to g1 . s9 : give o1 to g5 . s10 : o3 is given to g2 . s11 : o1 is given to g17 . s12 : give o1 to g4 . s13 : give o2 to g20 . s14 : give o3 to g9 . s15 : give o0 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g30 v73 .",
+        "pred": "v72 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g28 's a0 is v68 . g3 's a0 is v65 . the a0 of g14 is v86 . g5 's a0 is v82 . the a0 of g1 is v48 . g29 has a0 v36 . g31 's a0 is v103 . g24 's a0 is v38 . g20 's a0 is v18 . g15 's a0 is v108 . g30 has a0 v117 . the a0 of g10 is v3 . g0 has a0 v7 . g27 has a0 v106 . g6 's a0 is v78 . g13 's a0 is v30 . s0 : give o1 to g20 . s1 : o2 is given to g15 . s2 : o0 is given to g29 . s3 : o3 is given to g3 . s4 : o2 is given to g30 . s5 : give o1 to g10 . s6 : give o3 to g13 . s7 : give o0 to g29 . s8 : give o0 to g13 . s9 : o2 is given to g1 . s10 : o1 is given to g30 . s11 : o1 is given to g29 . s12 : give o3 to g1 . s13 : o3 is given to g31 . s14 : o2 is given to g10 . s15 : give o3 to g13 . what is a0 of the holder of o1 ? : ",
+        "gold": "g29 v36 .",
+        "pred": "v48 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g4 's a0 is v16 . g0 has a0 v30 . g5 's a0 is v11 . g26 has a0 v9 . the a0 of g16 is v120 . g7 has a0 v92 . g29 has a0 v17 . g27 has a0 v46 . g28 's a0 is v82 . g19 has a0 v7 . g14 's a0 is v41 . g6 has a0 v78 . g13 has a0 v88 . g21 's a0 is v118 . g3 's a0 is v121 . g8 has a0 v32 . s0 : o1 is given to g26 . s1 : give o3 to g13 . s2 : give o1 to g7 . s3 : give o0 to g7 . s4 : o2 is given to g13 . s5 : give o2 to g0 . s6 : o3 is given to g3 . s7 : give o1 to g28 . s8 : give o3 to g7 . s9 : give o0 to g3 . s10 : give o1 to g0 . s11 : o0 is given to g16 . s12 : o2 is given to g29 . s13 : o1 is given to g13 . s14 : give o2 to g4 . s15 : give o2 to g27 . what is a0 of the holder of o3 ? : ",
+        "gold": "g7 v92 .",
+        "pred": "v17 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g22 's a0 is v48 . g19 has a0 v115 . the a0 of g29 is v124 . g16 's a0 is v59 . g25 's a0 is v79 . g8 's a0 is v70 . g20 's a0 is v108 . g23 has a0 v76 . g1 's a0 is v85 . the a0 of g7 is v95 . g15 's a0 is v89 . g0 has a0 v38 . g31 's a0 is v87 . g28 's a0 is v27 . the a0 of g11 is v49 . the a0 of g3 is v47 . s0 : o3 is given to g19 . s1 : give o2 to g7 . s2 : o0 is given to g29 . s3 : give o1 to g28 . s4 : o3 is given to g11 . s5 : o1 is given to g22 . s6 : o2 is given to g7 . s7 : o3 is given to g19 . s8 : o2 is given to g20 . s9 : o2 is given to g25 . s10 : o0 is given to g3 . s11 : o1 is given to g15 . s12 : give o3 to g11 . s13 : o0 is given to g19 . s14 : give o2 to g23 . s15 : give o3 to g7 . what is a0 of the holder of o2 ? : ",
+        "gold": "g23 v76 .",
+        "pred": "g20 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g24 is v101 . the a0 of g20 is v8 . the a0 of g0 is v121 . the a0 of g1 is v16 . g30 has a0 v81 . the a0 of g29 is v52 . g12 's a0 is v41 . g31 's a0 is v122 . g26 's a0 is v117 . g27 has a0 v100 . the a0 of g5 is v12 . the a0 of g17 is v62 . g2 has a0 v26 . the a0 of g13 is v64 . g18 's a0 is v48 . g23 has a0 v49 . s0 : o2 is given to g30 . s1 : o3 is given to g29 . s2 : give o2 to g27 . s3 : o1 is given to g30 . s4 : o2 is given to g31 . s5 : give o0 to g27 . s6 : give o2 to g2 . s7 : o1 is given to g1 . s8 : give o3 to g13 . s9 : o2 is given to g0 . s10 : give o1 to g23 . s11 : o3 is given to g20 . s12 : give o0 to g2 . s13 : o3 is given to g26 . s14 : o1 is given to g1 . s15 : give o0 to g30 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v121 .",
+        "pred": "v81 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g22 's a0 is v78 . g20 's a0 is v64 . the a0 of g6 is v105 . g3 's a0 is v23 . g10 's a0 is v108 . the a0 of g16 is v79 . g1 has a0 v73 . g31 has a0 v4 . g18 's a0 is v65 . g19 's a0 is v49 . g26 has a0 v126 . the a0 of g2 is v81 . g25 's a0 is v87 . g5 's a0 is v39 . g15 has a0 v89 . the a0 of g12 is v2 . s0 : o1 is given to g5 . s1 : give o2 to g18 . s2 : give o1 to g12 . s3 : o3 is given to g12 . s4 : give o2 to g20 . s5 : give o3 to g6 . s6 : o1 is given to g22 . s7 : give o1 to g6 . s8 : give o0 to g25 . s9 : give o3 to g16 . s10 : o0 is given to g1 . s11 : o1 is given to g2 . s12 : o1 is given to g20 . s13 : o2 is given to g5 . s14 : o3 is given to g10 . s15 : give o3 to g26 . what is a0 of the holder of o2 ? : ",
+        "gold": "g5 v39 .",
+        "pred": "v49 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g31 's a0 is v34 . g6 has a0 v11 . the a0 of g20 is v8 . the a0 of g14 is v118 . the a0 of g0 is v38 . g15 's a0 is v59 . g19 has a0 v85 . the a0 of g13 is v111 . the a0 of g30 is v89 . the a0 of g17 is v65 . g10 has a0 v103 . the a0 of g11 is v116 . the a0 of g12 is v104 . the a0 of g16 is v77 . g4 has a0 v12 . the a0 of g21 is v44 . s0 : o0 is given to g10 . s1 : o1 is given to g0 . s2 : give o3 to g30 . s3 : o2 is given to g11 . s4 : o3 is given to g19 . s5 : give o2 to g12 . s6 : o3 is given to g16 . s7 : give o0 to g21 . s8 : give o3 to g11 . s9 : give o0 to g21 . s10 : give o1 to g15 . s11 : o0 is given to g15 . s12 : give o0 to g13 . s13 : give o3 to g16 . s14 : o2 is given to g30 . s15 : o2 is given to g17 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v59 .",
+        "pred": "v103 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g3 has a0 v115 . g25 's a0 is v96 . g27 has a0 v17 . the a0 of g7 is v38 . g23 has a0 v113 . g2 has a0 v34 . g28 's a0 is v44 . g31 's a0 is v27 . the a0 of g29 is v60 . g5 's a0 is v102 . g17 's a0 is v40 . the a0 of g11 is v124 . g0 's a0 is v77 . g13 has a0 v56 . the a0 of g20 is v50 . g21 has a0 v82 . s0 : o1 is given to g7 . s1 : o1 is given to g20 . s2 : give o1 to g31 . s3 : o0 is given to g2 . s4 : o3 is given to g13 . s5 : o2 is given to g17 . s6 : o0 is given to g3 . s7 : give o2 to g29 . s8 : o0 is given to g0 . s9 : o2 is given to g11 . s10 : o1 is given to g7 . s11 : give o1 to g13 . s12 : o0 is given to g23 . s13 : give o1 to g17 . s14 : give o0 to g28 . s15 : o3 is given to g3 . what is a0 of the holder of o1 ? : ",
+        "gold": "g17 v40 .",
+        "pred": "v115 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g26 is v24 . g2 has a0 v118 . g28 has a0 v112 . g19 has a0 v90 . g23 's a0 is v79 . g0 's a0 is v49 . the a0 of g17 is v114 . g13 's a0 is v119 . g9 has a0 v33 . the a0 of g15 is v84 . the a0 of g4 is v52 . the a0 of g25 is v2 . g21 's a0 is v14 . the a0 of g12 is v113 . g24 's a0 is v74 . g16 has a0 v124 . s0 : give o3 to g28 . s1 : give o2 to g12 . s2 : o1 is given to g0 . s3 : o1 is given to g4 . s4 : give o1 to g16 . s5 : o2 is given to g28 . s6 : give o1 to g26 . s7 : o1 is given to g9 . s8 : o0 is given to g2 . s9 : o1 is given to g0 . s10 : give o1 to g2 . s11 : o2 is given to g23 . s12 : give o0 to g24 . s13 : o0 is given to g19 . s14 : give o2 to g28 . s15 : o0 is given to g0 . what is a0 of the holder of o2 ? : ",
+        "gold": "g28 v112 .",
+        "pred": "v119 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g20 is v122 . g21 has a0 v27 . g26 has a0 v87 . g11 's a0 is v17 . g2 's a0 is v76 . g5 's a0 is v107 . g1 's a0 is v86 . g15 's a0 is v98 . g0 's a0 is v43 . g22 has a0 v106 . g14 has a0 v72 . g27 's a0 is v4 . g16 has a0 v101 . the a0 of g4 is v2 . the a0 of g17 is v18 . the a0 of g23 is v124 . s0 : give o3 to g21 . s1 : o3 is given to g16 . s2 : o1 is given to g2 . s3 : o3 is given to g26 . s4 : o2 is given to g1 . s5 : give o2 to g11 . s6 : o1 is given to g4 . s7 : give o1 to g16 . s8 : give o1 to g27 . s9 : give o3 to g2 . s10 : o3 is given to g27 . s11 : o1 is given to g2 . s12 : give o3 to g0 . s13 : give o1 to g16 . s14 : give o0 to g20 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v122 .",
+        "pred": "v107 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g4 is v56 . g13 's a0 is v57 . g21 has a0 v107 . g22 's a0 is v74 . the a0 of g29 is v68 . the a0 of g7 is v30 . the a0 of g6 is v47 . g20 has a0 v51 . g2 's a0 is v72 . the a0 of g18 is v27 . g15 's a0 is v85 . the a0 of g25 is v5 . the a0 of g26 is v24 . g0 's a0 is v1 . g16 has a0 v81 . the a0 of g9 is v31 . s0 : give o3 to g15 . s1 : o0 is given to g21 . s2 : o3 is given to g15 . s3 : give o1 to g29 . s4 : o1 is given to g9 . s5 : give o3 to g26 . s6 : o1 is given to g22 . s7 : give o3 to g16 . s8 : o0 is given to g16 . s9 : give o2 to g6 . s10 : give o1 to g29 . s11 : o2 is given to g15 . s12 : o1 is given to g20 . s13 : o1 is given to g13 . s14 : o3 is given to g4 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v51 .",
+        "pred": "v51 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g20 is v1 . g25 has a0 v44 . g26 has a0 v0 . g4 has a0 v80 . g17 's a0 is v85 . g3 has a0 v50 . g14 has a0 v59 . g13 has a0 v125 . the a0 of g28 is v57 . the a0 of g8 is v111 . g22 's a0 is v27 . the a0 of g31 is v83 . g9 has a0 v73 . g6 has a0 v42 . the a0 of g23 is v114 . g15 has a0 v121 . s0 : give o0 to g15 . s1 : o2 is given to g3 . s2 : o0 is given to g4 . s3 : o3 is given to g3 . s4 : give o2 to g28 . s5 : o0 is given to g9 . s6 : o2 is given to g28 . s7 : give o3 to g23 . s8 : give o1 to g26 . s9 : o1 is given to g13 . s10 : give o2 to g8 . s11 : o2 is given to g9 . s12 : give o1 to g13 . s13 : give o3 to g14 . s14 : give o1 to g17 . s15 : give o3 to g31 . what is a0 of the holder of o3 ? : ",
+        "gold": "g31 v83 .",
+        "pred": "v125 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g23 has a0 v2 . g16 has a0 v80 . g18 's a0 is v78 . the a0 of g14 is v44 . the a0 of g24 is v29 . g31 has a0 v55 . g22 's a0 is v33 . g8 's a0 is v97 . the a0 of g12 is v111 . the a0 of g3 is v0 . g0 has a0 v77 . the a0 of g30 is v110 . the a0 of g1 is v126 . the a0 of g28 is v11 . g25 has a0 v90 . g4 has a0 v59 . s0 : o2 is given to g25 . s1 : give o2 to g24 . s2 : give o3 to g12 . s3 : o0 is given to g3 . s4 : give o2 to g4 . s5 : o3 is given to g8 . s6 : o0 is given to g0 . s7 : o2 is given to g1 . s8 : give o2 to g8 . s9 : o3 is given to g31 . s10 : o1 is given to g25 . s11 : give o0 to g0 . s12 : o1 is given to g16 . s13 : o1 is given to g12 . s14 : give o2 to g28 . s15 : give o3 to g12 . what is a0 of the holder of o0 ? : ",
+        "gold": "g0 v77 .",
+        "pred": "v77 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g8 has a0 v49 . g1 's a0 is v89 . g23 's a0 is v111 . g27 has a0 v44 . the a0 of g28 is v26 . g30 's a0 is v107 . g13 has a0 v94 . the a0 of g14 is v57 . the a0 of g10 is v117 . the a0 of g2 is v113 . the a0 of g5 is v21 . the a0 of g21 is v33 . g25 's a0 is v56 . the a0 of g12 is v61 . g19 's a0 is v8 . the a0 of g31 is v122 . s0 : give o1 to g1 . s1 : o3 is given to g14 . s2 : give o1 to g12 . s3 : give o2 to g8 . s4 : give o0 to g1 . s5 : give o1 to g2 . s6 : give o0 to g13 . s7 : o1 is given to g1 . s8 : o0 is given to g2 . s9 : o2 is given to g2 . s10 : o2 is given to g13 . s11 : give o3 to g27 . s12 : give o1 to g19 . s13 : o0 is given to g13 . s14 : give o3 to g23 . s15 : give o2 to g2 . what is a0 of the holder of o1 ? : ",
+        "gold": "g19 v8 .",
+        "pred": "v117 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g12 has a0 v100 . g28 has a0 v94 . g25 's a0 is v114 . g20 has a0 v91 . g16 's a0 is v29 . g3 's a0 is v78 . g1 has a0 v8 . g15 has a0 v49 . the a0 of g19 is v62 . g10 has a0 v84 . the a0 of g8 is v119 . the a0 of g6 is v42 . the a0 of g4 is v115 . g30 has a0 v47 . g13 's a0 is v23 . g0 's a0 is v88 . s0 : o3 is given to g8 . s1 : o0 is given to g4 . s2 : o3 is given to g15 . s3 : give o1 to g3 . s4 : o3 is given to g12 . s5 : give o3 to g10 . s6 : give o2 to g0 . s7 : o1 is given to g0 . s8 : o2 is given to g28 . s9 : give o3 to g20 . s10 : o3 is given to g10 . s11 : give o3 to g0 . s12 : give o2 to g19 . s13 : o2 is given to g25 . s14 : o1 is given to g30 . s15 : o0 is given to g20 . what is a0 of the holder of o3 ? : ",
+        "gold": "g0 v88 .",
+        "pred": "v114 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g18 is v116 . g27 has a0 v9 . g31 's a0 is v103 . g17 has a0 v71 . g30 has a0 v81 . g4 has a0 v72 . g25 has a0 v32 . g15 's a0 is v112 . g28 's a0 is v34 . g26 's a0 is v126 . the a0 of g13 is v40 . g7 's a0 is v90 . g1 has a0 v62 . g20 has a0 v68 . g10 has a0 v83 . the a0 of g22 is v14 . s0 : o3 is given to g27 . s1 : give o1 to g27 . s2 : o0 is given to g7 . s3 : give o3 to g7 . s4 : o3 is given to g10 . s5 : o1 is given to g7 . s6 : give o1 to g13 . s7 : o2 is given to g25 . s8 : o2 is given to g20 . s9 : o2 is given to g27 . s10 : give o3 to g28 . s11 : give o3 to g25 . s12 : give o0 to g26 . s13 : o1 is given to g18 . s14 : o1 is given to g27 . s15 : o3 is given to g1 . what is a0 of the holder of o2 ? : ",
+        "gold": "g27 v9 .",
+        "pred": "g25 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g27 's a0 is v62 . g13 has a0 v37 . g22 has a0 v6 . g16 's a0 is v125 . g0 's a0 is v2 . the a0 of g24 is v102 . the a0 of g28 is v123 . the a0 of g2 is v55 . g23 's a0 is v29 . g18 has a0 v9 . g7 's a0 is v34 . g29 has a0 v24 . g30 's a0 is v95 . g31 has a0 v11 . the a0 of g21 is v114 . the a0 of g17 is v86 . s0 : o3 is given to g31 . s1 : give o1 to g7 . s2 : o2 is given to g21 . s3 : give o1 to g0 . s4 : give o2 to g21 . s5 : give o0 to g18 . s6 : give o0 to g31 . s7 : o2 is given to g0 . s8 : o1 is given to g23 . s9 : give o2 to g17 . s10 : give o2 to g29 . s11 : give o3 to g24 . s12 : give o1 to g27 . s13 : o0 is given to g31 . s14 : o2 is given to g18 . s15 : o1 is given to g22 . what is a0 of the holder of o2 ? : ",
+        "gold": "g18 v9 .",
+        "pred": "v24 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g17 is v25 . g24 's a0 is v1 . g3 has a0 v24 . g14 has a0 v3 . g22 has a0 v90 . g7 has a0 v70 . g31 's a0 is v48 . g20 has a0 v115 . g0 has a0 v123 . g4 has a0 v117 . g6 has a0 v105 . g29 has a0 v93 . the a0 of g25 is v89 . g13 's a0 is v87 . g2 has a0 v56 . g27 's a0 is v74 . s0 : o1 is given to g27 . s1 : give o0 to g31 . s2 : give o1 to g27 . s3 : o2 is given to g27 . s4 : give o2 to g20 . s5 : give o3 to g25 . s6 : o3 is given to g0 . s7 : o2 is given to g31 . s8 : give o2 to g27 . s9 : o0 is given to g27 . s10 : o1 is given to g24 . s11 : give o1 to g31 . s12 : give o3 to g25 . s13 : o3 is given to g2 . s14 : o2 is given to g13 . s15 : o1 is given to g22 . what is a0 of the holder of o2 ? : ",
+        "gold": "g13 v87 .",
+        "pred": "v117 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g16 is v93 . g4 has a0 v31 . the a0 of g9 is v26 . g2 has a0 v7 . the a0 of g10 is v43 . g13 's a0 is v118 . g23 's a0 is v18 . the a0 of g1 is v44 . g30 has a0 v25 . the a0 of g0 is v50 . g7 's a0 is v88 . the a0 of g31 is v98 . the a0 of g6 is v3 . the a0 of g27 is v58 . g17 's a0 is v42 . g24 has a0 v12 . s0 : o1 is given to g10 . s1 : give o2 to g7 . s2 : give o1 to g27 . s3 : o2 is given to g10 . s4 : give o1 to g23 . s5 : give o1 to g13 . s6 : o0 is given to g16 . s7 : o0 is given to g31 . s8 : give o2 to g13 . s9 : o0 is given to g4 . s10 : o3 is given to g31 . s11 : o3 is given to g6 . s12 : give o1 to g4 . s13 : o1 is given to g30 . s14 : o0 is given to g31 . s15 : give o0 to g6 . what is a0 of the holder of o3 ? : ",
+        "gold": "g6 v3 .",
+        "pred": "v58 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g29 is v79 . the a0 of g26 is v51 . the a0 of g4 is v74 . g14 has a0 v59 . g2 's a0 is v96 . the a0 of g11 is v107 . g0 's a0 is v31 . g27 's a0 is v109 . g18 has a0 v111 . g23 has a0 v86 . g10 's a0 is v110 . the a0 of g19 is v117 . g8 has a0 v113 . g9 has a0 v37 . g20 has a0 v20 . g5 's a0 is v33 . s0 : o0 is given to g9 . s1 : give o1 to g5 . s2 : give o2 to g11 . s3 : give o2 to g2 . s4 : o1 is given to g26 . s5 : give o2 to g26 . s6 : give o3 to g19 . s7 : o0 is given to g11 . s8 : o2 is given to g23 . s9 : o0 is given to g26 . s10 : o0 is given to g10 . s11 : give o2 to g5 . s12 : give o2 to g26 . s13 : give o2 to g2 . s14 : o3 is given to g18 . s15 : o3 is given to g9 . what is a0 of the holder of o3 ? : ",
+        "gold": "g9 v37 .",
+        "pred": "g18 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g17 is v22 . g2 's a0 is v80 . g10 's a0 is v78 . g24 's a0 is v42 . g16 's a0 is v44 . g13 has a0 v52 . the a0 of g31 is v97 . g28 has a0 v92 . g1 's a0 is v41 . the a0 of g0 is v69 . the a0 of g26 is v117 . g19 has a0 v50 . g6 has a0 v89 . g5 's a0 is v28 . g12 's a0 is v43 . g30 's a0 is v53 . s0 : o3 is given to g30 . s1 : give o3 to g30 . s2 : give o2 to g19 . s3 : o3 is given to g1 . s4 : o2 is given to g12 . s5 : o3 is given to g28 . s6 : o1 is given to g5 . s7 : o1 is given to g12 . s8 : give o1 to g26 . s9 : o3 is given to g13 . s10 : o3 is given to g30 . s11 : give o2 to g10 . s12 : o2 is given to g1 . s13 : give o2 to g1 . s14 : o0 is given to g13 . s15 : o3 is given to g0 . what is a0 of the holder of o3 ? : ",
+        "gold": "g0 v69 .",
+        "pred": "v69 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g18 's a0 is v41 . the a0 of g12 is v4 . g28 has a0 v54 . g8 has a0 v113 . the a0 of g25 is v119 . g6 has a0 v125 . the a0 of g14 is v25 . g27 's a0 is v29 . the a0 of g16 is v81 . g22 's a0 is v32 . the a0 of g1 is v12 . g24 has a0 v23 . g10 has a0 v45 . g20 's a0 is v72 . g31 has a0 v63 . g0 has a0 v95 . s0 : o1 is given to g18 . s1 : give o1 to g6 . s2 : give o1 to g31 . s3 : o0 is given to g0 . s4 : give o2 to g16 . s5 : give o0 to g12 . s6 : give o0 to g6 . s7 : give o3 to g1 . s8 : o3 is given to g1 . s9 : o3 is given to g25 . s10 : give o1 to g16 . s11 : give o2 to g25 . s12 : give o3 to g25 . s13 : o0 is given to g24 . s14 : o1 is given to g31 . s15 : o1 is given to g14 . what is a0 of the holder of o1 ? : ",
+        "gold": "g14 v25 .",
+        "pred": "v41 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g7 has a0 v58 . g13 's a0 is v79 . the a0 of g25 is v121 . g9 's a0 is v23 . the a0 of g31 is v45 . the a0 of g0 is v88 . the a0 of g12 is v5 . g30 's a0 is v85 . the a0 of g11 is v66 . g22 's a0 is v65 . g23 has a0 v48 . g15 's a0 is v83 . g6 's a0 is v49 . g21 has a0 v64 . g14 's a0 is v60 . g19 's a0 is v86 . s0 : give o2 to g0 . s1 : o0 is given to g21 . s2 : give o0 to g30 . s3 : o1 is given to g13 . s4 : give o2 to g23 . s5 : o2 is given to g14 . s6 : o0 is given to g23 . s7 : give o2 to g22 . s8 : give o2 to g11 . s9 : o0 is given to g12 . s10 : o3 is given to g9 . s11 : o2 is given to g15 . s12 : o3 is given to g15 . s13 : give o1 to g23 . s14 : o0 is given to g31 . s15 : give o2 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g31 v45 .",
+        "pred": "v88 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g22 is v0 . g28 's a0 is v14 . the a0 of g18 is v42 . g17 has a0 v98 . g29 's a0 is v90 . the a0 of g8 is v65 . the a0 of g16 is v39 . g30 's a0 is v29 . g27 's a0 is v28 . g0 has a0 v112 . g23 's a0 is v81 . g24 has a0 v88 . g25 's a0 is v99 . g2 's a0 is v113 . g26 has a0 v86 . g15 has a0 v71 . s0 : give o3 to g22 . s1 : give o2 to g30 . s2 : give o3 to g0 . s3 : o2 is given to g27 . s4 : o2 is given to g18 . s5 : o3 is given to g29 . s6 : o3 is given to g22 . s7 : give o2 to g15 . s8 : o0 is given to g0 . s9 : give o1 to g22 . s10 : give o1 to g15 . s11 : o2 is given to g2 . s12 : o1 is given to g2 . s13 : o2 is given to g30 . s14 : o1 is given to g30 . s15 : o2 is given to g22 . what is a0 of the holder of o0 ? : ",
+        "gold": "g0 v112 .",
+        "pred": "v112 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g27 is v101 . g4 's a0 is v44 . the a0 of g10 is v25 . g7 's a0 is v124 . the a0 of g13 is v33 . g31 has a0 v66 . g30 's a0 is v13 . the a0 of g29 is v86 . g12 has a0 v87 . the a0 of g28 is v104 . g0 has a0 v11 . g25 has a0 v5 . g22 has a0 v69 . g19 's a0 is v15 . the a0 of g20 is v99 . g15 's a0 is v45 . s0 : give o3 to g7 . s1 : o3 is given to g29 . s2 : o0 is given to g20 . s3 : o3 is given to g31 . s4 : o1 is given to g10 . s5 : o2 is given to g4 . s6 : give o1 to g25 . s7 : o3 is given to g7 . s8 : give o3 to g31 . s9 : o0 is given to g31 . s10 : give o1 to g20 . s11 : o2 is given to g0 . s12 : give o3 to g13 . s13 : o3 is given to g25 . s14 : give o2 to g15 . s15 : give o3 to g25 . what is a0 of the holder of o3 ? : ",
+        "gold": "g25 v5 .",
+        "pred": "v101 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g17 's a0 is v81 . g18 's a0 is v12 . the a0 of g15 is v50 . g10 's a0 is v95 . g12 has a0 v100 . g25 's a0 is v44 . the a0 of g20 is v105 . the a0 of g7 is v101 . g11 's a0 is v7 . g0 has a0 v98 . g26 's a0 is v77 . g24 's a0 is v22 . g22 has a0 v14 . the a0 of g28 is v17 . g31 has a0 v67 . g5 's a0 is v113 . s0 : give o2 to g15 . s1 : o0 is given to g15 . s2 : o3 is given to g15 . s3 : give o1 to g0 . s4 : give o1 to g22 . s5 : give o2 to g11 . s6 : give o3 to g25 . s7 : o1 is given to g25 . s8 : give o2 to g11 . s9 : give o0 to g22 . s10 : o0 is given to g31 . s11 : give o2 to g26 . s12 : give o2 to g31 . s13 : give o1 to g15 . s14 : o2 is given to g10 . s15 : o3 is given to g20 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v50 .",
+        "pred": "v7 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g22 is v30 . the a0 of g5 is v74 . the a0 of g4 is v91 . the a0 of g3 is v113 . g1 's a0 is v89 . the a0 of g12 is v4 . g29 has a0 v102 . g9 's a0 is v47 . g8 's a0 is v2 . g24 has a0 v126 . the a0 of g7 is v88 . g0 's a0 is v70 . g19 's a0 is v104 . g23 has a0 v37 . the a0 of g20 is v110 . g21 has a0 v92 . s0 : o2 is given to g4 . s1 : o3 is given to g5 . s2 : o0 is given to g23 . s3 : give o1 to g9 . s4 : o2 is given to g3 . s5 : o3 is given to g22 . s6 : give o1 to g0 . s7 : give o2 to g7 . s8 : o2 is given to g21 . s9 : o1 is given to g3 . s10 : give o1 to g29 . s11 : o2 is given to g1 . s12 : o3 is given to g22 . s13 : o0 is given to g1 . s14 : give o2 to g21 . s15 : give o2 to g8 . what is a0 of the holder of o0 ? : ",
+        "gold": "g1 v89 .",
+        "pred": "v91 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g2 has a0 v11 . the a0 of g13 is v119 . the a0 of g28 is v123 . g16 has a0 v62 . the a0 of g19 is v98 . the a0 of g22 is v113 . g20 has a0 v52 . g10 has a0 v12 . the a0 of g11 is v14 . g15 's a0 is v29 . g23 has a0 v104 . the a0 of g3 is v110 . g21 has a0 v74 . g8 has a0 v20 . g7 has a0 v0 . the a0 of g17 is v3 . s0 : give o1 to g15 . s1 : o2 is given to g17 . s2 : o0 is given to g15 . s3 : give o1 to g23 . s4 : give o2 to g23 . s5 : o1 is given to g23 . s6 : give o0 to g10 . s7 : give o3 to g3 . s8 : give o2 to g13 . s9 : o0 is given to g7 . s10 : give o3 to g23 . s11 : give o2 to g19 . s12 : o2 is given to g16 . s13 : give o0 to g22 . s14 : give o3 to g17 . s15 : o2 is given to g28 . what is a0 of the holder of o0 ? : ",
+        "gold": "g22 v113 .",
+        "pred": "v12 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g0 is v61 . g2 's a0 is v45 . g18 's a0 is v100 . g12 has a0 v107 . the a0 of g3 is v110 . g31 's a0 is v78 . g28 's a0 is v83 . g26 has a0 v54 . g24 's a0 is v41 . the a0 of g23 is v119 . g14 has a0 v102 . g17 has a0 v12 . the a0 of g20 is v2 . g19 has a0 v40 . g22 has a0 v5 . g5 has a0 v58 . s0 : give o3 to g5 . s1 : o0 is given to g22 . s2 : o0 is given to g28 . s3 : o1 is given to g26 . s4 : give o0 to g20 . s5 : give o1 to g19 . s6 : o3 is given to g17 . s7 : give o0 to g28 . s8 : o0 is given to g28 . s9 : o2 is given to g0 . s10 : o0 is given to g3 . s11 : o1 is given to g22 . s12 : o3 is given to g22 . s13 : o0 is given to g3 . s14 : o0 is given to g12 . s15 : o3 is given to g14 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v61 .",
+        "pred": "v100 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g10 is v91 . the a0 of g25 is v33 . g22 's a0 is v8 . g1 has a0 v89 . g27 's a0 is v16 . the a0 of g2 is v127 . the a0 of g5 is v67 . g29 has a0 v58 . g30 's a0 is v21 . the a0 of g11 is v80 . the a0 of g31 is v76 . g16 's a0 is v107 . the a0 of g18 is v85 . g8 's a0 is v39 . g21 's a0 is v97 . the a0 of g20 is v51 . s0 : o0 is given to g25 . s1 : o0 is given to g21 . s2 : o0 is given to g20 . s3 : give o3 to g29 . s4 : give o1 to g29 . s5 : o0 is given to g2 . s6 : o2 is given to g22 . s7 : o3 is given to g11 . s8 : give o1 to g18 . s9 : give o0 to g29 . s10 : give o1 to g21 . s11 : give o3 to g27 . s12 : give o0 to g31 . s13 : give o2 to g20 . s14 : give o1 to g20 . s15 : give o2 to g1 . what is a0 of the holder of o1 ? : ",
+        "gold": "g20 v51 .",
+        "pred": "v127 .",
+        "exact": false,
+        "relaxed": false
+      }
+    ]
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 30,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.0,
+    "accuracy_relaxed": 0.0,
+    "correct_exact": 0,
+    "correct_relaxed": 0,
+    "elapsed": 18.181990385055542,
+    "examples": [
+      {
+        "prompt": "g17 's a0 is v26 . g9 's a0 is v116 . g27 's a0 is v49 . the a0 of g23 is v14 . g20 's a0 is v121 . g2 has a0 v72 . the a0 of g4 is v27 . g30 's a0 is v73 . g19 's a0 is v40 . g6 's a0 is v102 . g15 has a0 v90 . the a0 of g7 is v42 . the a0 of g8 is v52 . the a0 of g28 is v99 . the a0 of g1 is v47 . g5 's a0 is v85 . s0 : o3 is given to g30 . s1 : give o2 to g27 . s2 : o0 is given to g28 . s3 : give o3 to g28 . s4 : give o2 to g28 . s5 : o3 is given to g17 . s6 : give o3 to g7 . s7 : give o0 to g1 . s8 : o0 is given to g1 . s9 : give o1 to g5 . s10 : o3 is given to g2 . s11 : o1 is given to g17 . s12 : give o1 to g4 . s13 : give o2 to g20 . s14 : give o3 to g9 . s15 : give o0 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g30 v73 .",
+        "pred": "v121 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g28 's a0 is v68 . g3 's a0 is v65 . the a0 of g14 is v86 . g5 's a0 is v82 . the a0 of g1 is v48 . g29 has a0 v36 . g31 's a0 is v103 . g24 's a0 is v38 . g20 's a0 is v18 . g15 's a0 is v108 . g30 has a0 v117 . the a0 of g10 is v3 . g0 has a0 v7 . g27 has a0 v106 . g6 's a0 is v78 . g13 's a0 is v30 . s0 : give o1 to g20 . s1 : o2 is given to g15 . s2 : o0 is given to g29 . s3 : o3 is given to g3 . s4 : o2 is given to g30 . s5 : give o1 to g10 . s6 : give o3 to g13 . s7 : give o0 to g29 . s8 : give o0 to g13 . s9 : o2 is given to g1 . s10 : o1 is given to g30 . s11 : o1 is given to g29 . s12 : give o3 to g1 . s13 : o3 is given to g31 . s14 : o2 is given to g10 . s15 : give o3 to g13 . what is a0 of the holder of o1 ? : ",
+        "gold": "g29 v36 .",
+        "pred": "v117 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g4 's a0 is v16 . g0 has a0 v30 . g5 's a0 is v11 . g26 has a0 v9 . the a0 of g16 is v120 . g7 has a0 v92 . g29 has a0 v17 . g27 has a0 v46 . g28 's a0 is v82 . g19 has a0 v7 . g14 's a0 is v41 . g6 has a0 v78 . g13 has a0 v88 . g21 's a0 is v118 . g3 's a0 is v121 . g8 has a0 v32 . s0 : o1 is given to g26 . s1 : give o3 to g13 . s2 : give o1 to g7 . s3 : give o0 to g7 . s4 : o2 is given to g13 . s5 : give o2 to g0 . s6 : o3 is given to g3 . s7 : give o1 to g28 . s8 : give o3 to g7 . s9 : give o0 to g3 . s10 : give o1 to g0 . s11 : o0 is given to g16 . s12 : o2 is given to g29 . s13 : o1 is given to g13 . s14 : give o2 to g4 . s15 : give o2 to g27 . what is a0 of the holder of o3 ? : ",
+        "gold": "g7 v92 .",
+        "pred": "v121 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g22 's a0 is v48 . g19 has a0 v115 . the a0 of g29 is v124 . g16 's a0 is v59 . g25 's a0 is v79 . g8 's a0 is v70 . g20 's a0 is v108 . g23 has a0 v76 . g1 's a0 is v85 . the a0 of g7 is v95 . g15 's a0 is v89 . g0 has a0 v38 . g31 's a0 is v87 . g28 's a0 is v27 . the a0 of g11 is v49 . the a0 of g3 is v47 . s0 : o3 is given to g19 . s1 : give o2 to g7 . s2 : o0 is given to g29 . s3 : give o1 to g28 . s4 : o3 is given to g11 . s5 : o1 is given to g22 . s6 : o2 is given to g7 . s7 : o3 is given to g19 . s8 : o2 is given to g20 . s9 : o2 is given to g25 . s10 : o0 is given to g3 . s11 : o1 is given to g15 . s12 : give o3 to g11 . s13 : o0 is given to g19 . s14 : give o2 to g23 . s15 : give o3 to g7 . what is a0 of the holder of o2 ? : ",
+        "gold": "g23 v76 .",
+        "pred": "v85 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g24 is v101 . the a0 of g20 is v8 . the a0 of g0 is v121 . the a0 of g1 is v16 . g30 has a0 v81 . the a0 of g29 is v52 . g12 's a0 is v41 . g31 's a0 is v122 . g26 's a0 is v117 . g27 has a0 v100 . the a0 of g5 is v12 . the a0 of g17 is v62 . g2 has a0 v26 . the a0 of g13 is v64 . g18 's a0 is v48 . g23 has a0 v49 . s0 : o2 is given to g30 . s1 : o3 is given to g29 . s2 : give o2 to g27 . s3 : o1 is given to g30 . s4 : o2 is given to g31 . s5 : give o0 to g27 . s6 : give o2 to g2 . s7 : o1 is given to g1 . s8 : give o3 to g13 . s9 : o2 is given to g0 . s10 : give o1 to g23 . s11 : o3 is given to g20 . s12 : give o0 to g2 . s13 : o3 is given to g26 . s14 : o1 is given to g1 . s15 : give o0 to g30 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v121 .",
+        "pred": "v81 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g22 's a0 is v78 . g20 's a0 is v64 . the a0 of g6 is v105 . g3 's a0 is v23 . g10 's a0 is v108 . the a0 of g16 is v79 . g1 has a0 v73 . g31 has a0 v4 . g18 's a0 is v65 . g19 's a0 is v49 . g26 has a0 v126 . the a0 of g2 is v81 . g25 's a0 is v87 . g5 's a0 is v39 . g15 has a0 v89 . the a0 of g12 is v2 . s0 : o1 is given to g5 . s1 : give o2 to g18 . s2 : give o1 to g12 . s3 : o3 is given to g12 . s4 : give o2 to g20 . s5 : give o3 to g6 . s6 : o1 is given to g22 . s7 : give o1 to g6 . s8 : give o0 to g25 . s9 : give o3 to g16 . s10 : o0 is given to g1 . s11 : o1 is given to g2 . s12 : o1 is given to g20 . s13 : o2 is given to g5 . s14 : o3 is given to g10 . s15 : give o3 to g26 . what is a0 of the holder of o2 ? : ",
+        "gold": "g5 v39 .",
+        "pred": "v65 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g31 's a0 is v34 . g6 has a0 v11 . the a0 of g20 is v8 . the a0 of g14 is v118 . the a0 of g0 is v38 . g15 's a0 is v59 . g19 has a0 v85 . the a0 of g13 is v111 . the a0 of g30 is v89 . the a0 of g17 is v65 . g10 has a0 v103 . the a0 of g11 is v116 . the a0 of g12 is v104 . the a0 of g16 is v77 . g4 has a0 v12 . the a0 of g21 is v44 . s0 : o0 is given to g10 . s1 : o1 is given to g0 . s2 : give o3 to g30 . s3 : o2 is given to g11 . s4 : o3 is given to g19 . s5 : give o2 to g12 . s6 : o3 is given to g16 . s7 : give o0 to g21 . s8 : give o3 to g11 . s9 : give o0 to g21 . s10 : give o1 to g15 . s11 : o0 is given to g15 . s12 : give o0 to g13 . s13 : give o3 to g16 . s14 : o2 is given to g30 . s15 : o2 is given to g17 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v59 .",
+        "pred": "v59 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g3 has a0 v115 . g25 's a0 is v96 . g27 has a0 v17 . the a0 of g7 is v38 . g23 has a0 v113 . g2 has a0 v34 . g28 's a0 is v44 . g31 's a0 is v27 . the a0 of g29 is v60 . g5 's a0 is v102 . g17 's a0 is v40 . the a0 of g11 is v124 . g0 's a0 is v77 . g13 has a0 v56 . the a0 of g20 is v50 . g21 has a0 v82 . s0 : o1 is given to g7 . s1 : o1 is given to g20 . s2 : give o1 to g31 . s3 : o0 is given to g2 . s4 : o3 is given to g13 . s5 : o2 is given to g17 . s6 : o0 is given to g3 . s7 : give o2 to g29 . s8 : o0 is given to g0 . s9 : o2 is given to g11 . s10 : o1 is given to g7 . s11 : give o1 to g13 . s12 : o0 is given to g23 . s13 : give o1 to g17 . s14 : give o0 to g28 . s15 : o3 is given to g3 . what is a0 of the holder of o1 ? : ",
+        "gold": "g17 v40 .",
+        "pred": "v102 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g26 is v24 . g2 has a0 v118 . g28 has a0 v112 . g19 has a0 v90 . g23 's a0 is v79 . g0 's a0 is v49 . the a0 of g17 is v114 . g13 's a0 is v119 . g9 has a0 v33 . the a0 of g15 is v84 . the a0 of g4 is v52 . the a0 of g25 is v2 . g21 's a0 is v14 . the a0 of g12 is v113 . g24 's a0 is v74 . g16 has a0 v124 . s0 : give o3 to g28 . s1 : give o2 to g12 . s2 : o1 is given to g0 . s3 : o1 is given to g4 . s4 : give o1 to g16 . s5 : o2 is given to g28 . s6 : give o1 to g26 . s7 : o1 is given to g9 . s8 : o0 is given to g2 . s9 : o1 is given to g0 . s10 : give o1 to g2 . s11 : o2 is given to g23 . s12 : give o0 to g24 . s13 : o0 is given to g19 . s14 : give o2 to g28 . s15 : o0 is given to g0 . what is a0 of the holder of o2 ? : ",
+        "gold": "g28 v112 .",
+        "pred": "v112 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g20 is v122 . g21 has a0 v27 . g26 has a0 v87 . g11 's a0 is v17 . g2 's a0 is v76 . g5 's a0 is v107 . g1 's a0 is v86 . g15 's a0 is v98 . g0 's a0 is v43 . g22 has a0 v106 . g14 has a0 v72 . g27 's a0 is v4 . g16 has a0 v101 . the a0 of g4 is v2 . the a0 of g17 is v18 . the a0 of g23 is v124 . s0 : give o3 to g21 . s1 : o3 is given to g16 . s2 : o1 is given to g2 . s3 : o3 is given to g26 . s4 : o2 is given to g1 . s5 : give o2 to g11 . s6 : o1 is given to g4 . s7 : give o1 to g16 . s8 : give o1 to g27 . s9 : give o3 to g2 . s10 : o3 is given to g27 . s11 : o1 is given to g2 . s12 : give o3 to g0 . s13 : give o1 to g16 . s14 : give o0 to g20 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v122 .",
+        "pred": "v2 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g4 is v56 . g13 's a0 is v57 . g21 has a0 v107 . g22 's a0 is v74 . the a0 of g29 is v68 . the a0 of g7 is v30 . the a0 of g6 is v47 . g20 has a0 v51 . g2 's a0 is v72 . the a0 of g18 is v27 . g15 's a0 is v85 . the a0 of g25 is v5 . the a0 of g26 is v24 . g0 's a0 is v1 . g16 has a0 v81 . the a0 of g9 is v31 . s0 : give o3 to g15 . s1 : o0 is given to g21 . s2 : o3 is given to g15 . s3 : give o1 to g29 . s4 : o1 is given to g9 . s5 : give o3 to g26 . s6 : o1 is given to g22 . s7 : give o3 to g16 . s8 : o0 is given to g16 . s9 : give o2 to g6 . s10 : give o1 to g29 . s11 : o2 is given to g15 . s12 : o1 is given to g20 . s13 : o1 is given to g13 . s14 : o3 is given to g4 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v51 .",
+        "pred": "The holder of o2 is g20 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g20 is v1 . g25 has a0 v44 . g26 has a0 v0 . g4 has a0 v80 . g17 's a0 is v85 . g3 has a0 v50 . g14 has a0 v59 . g13 has a0 v125 . the a0 of g28 is v57 . the a0 of g8 is v111 . g22 's a0 is v27 . the a0 of g31 is v83 . g9 has a0 v73 . g6 has a0 v42 . the a0 of g23 is v114 . g15 has a0 v121 . s0 : give o0 to g15 . s1 : o2 is given to g3 . s2 : o0 is given to g4 . s3 : o3 is given to g3 . s4 : give o2 to g28 . s5 : o0 is given to g9 . s6 : o2 is given to g28 . s7 : give o3 to g23 . s8 : give o1 to g26 . s9 : o1 is given to g13 . s10 : give o2 to g8 . s11 : o2 is given to g9 . s12 : give o1 to g13 . s13 : give o3 to g14 . s14 : give o1 to g17 . s15 : give o3 to g31 . what is a0 of the holder of o3 ? : ",
+        "gold": "g31 v83 .",
+        "pred": "v50 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g23 has a0 v2 . g16 has a0 v80 . g18 's a0 is v78 . the a0 of g14 is v44 . the a0 of g24 is v29 . g31 has a0 v55 . g22 's a0 is v33 . g8 's a0 is v97 . the a0 of g12 is v111 . the a0 of g3 is v0 . g0 has a0 v77 . the a0 of g30 is v110 . the a0 of g1 is v126 . the a0 of g28 is v11 . g25 has a0 v90 . g4 has a0 v59 . s0 : o2 is given to g25 . s1 : give o2 to g24 . s2 : give o3 to g12 . s3 : o0 is given to g3 . s4 : give o2 to g4 . s5 : o3 is given to g8 . s6 : o0 is given to g0 . s7 : o2 is given to g1 . s8 : give o2 to g8 . s9 : o3 is given to g31 . s10 : o1 is given to g25 . s11 : give o0 to g0 . s12 : o1 is given to g16 . s13 : o1 is given to g12 . s14 : give o2 to g28 . s15 : give o3 to g12 . what is a0 of the holder of o0 ? : ",
+        "gold": "g0 v77 .",
+        "pred": "v77 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g8 has a0 v49 . g1 's a0 is v89 . g23 's a0 is v111 . g27 has a0 v44 . the a0 of g28 is v26 . g30 's a0 is v107 . g13 has a0 v94 . the a0 of g14 is v57 . the a0 of g10 is v117 . the a0 of g2 is v113 . the a0 of g5 is v21 . the a0 of g21 is v33 . g25 's a0 is v56 . the a0 of g12 is v61 . g19 's a0 is v8 . the a0 of g31 is v122 . s0 : give o1 to g1 . s1 : o3 is given to g14 . s2 : give o1 to g12 . s3 : give o2 to g8 . s4 : give o0 to g1 . s5 : give o1 to g2 . s6 : give o0 to g13 . s7 : o1 is given to g1 . s8 : o0 is given to g2 . s9 : o2 is given to g2 . s10 : o2 is given to g13 . s11 : give o3 to g27 . s12 : give o1 to g19 . s13 : o0 is given to g13 . s14 : give o3 to g23 . s15 : give o2 to g2 . what is a0 of the holder of o1 ? : ",
+        "gold": "g19 v8 .",
+        "pred": "v89 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g12 has a0 v100 . g28 has a0 v94 . g25 's a0 is v114 . g20 has a0 v91 . g16 's a0 is v29 . g3 's a0 is v78 . g1 has a0 v8 . g15 has a0 v49 . the a0 of g19 is v62 . g10 has a0 v84 . the a0 of g8 is v119 . the a0 of g6 is v42 . the a0 of g4 is v115 . g30 has a0 v47 . g13 's a0 is v23 . g0 's a0 is v88 . s0 : o3 is given to g8 . s1 : o0 is given to g4 . s2 : o3 is given to g15 . s3 : give o1 to g3 . s4 : o3 is given to g12 . s5 : give o3 to g10 . s6 : give o2 to g0 . s7 : o1 is given to g0 . s8 : o2 is given to g28 . s9 : give o3 to g20 . s10 : o3 is given to g10 . s11 : give o3 to g0 . s12 : give o2 to g19 . s13 : o2 is given to g25 . s14 : o1 is given to g30 . s15 : o0 is given to g20 . what is a0 of the holder of o3 ? : ",
+        "gold": "g0 v88 .",
+        "pred": "v100 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g18 is v116 . g27 has a0 v9 . g31 's a0 is v103 . g17 has a0 v71 . g30 has a0 v81 . g4 has a0 v72 . g25 has a0 v32 . g15 's a0 is v112 . g28 's a0 is v34 . g26 's a0 is v126 . the a0 of g13 is v40 . g7 's a0 is v90 . g1 has a0 v62 . g20 has a0 v68 . g10 has a0 v83 . the a0 of g22 is v14 . s0 : o3 is given to g27 . s1 : give o1 to g27 . s2 : o0 is given to g7 . s3 : give o3 to g7 . s4 : o3 is given to g10 . s5 : o1 is given to g7 . s6 : give o1 to g13 . s7 : o2 is given to g25 . s8 : o2 is given to g20 . s9 : o2 is given to g27 . s10 : give o3 to g28 . s11 : give o3 to g25 . s12 : give o0 to g26 . s13 : o1 is given to g18 . s14 : o1 is given to g27 . s15 : o3 is given to g1 . what is a0 of the holder of o2 ? : ",
+        "gold": "g27 v9 .",
+        "pred": "v32 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g27 's a0 is v62 . g13 has a0 v37 . g22 has a0 v6 . g16 's a0 is v125 . g0 's a0 is v2 . the a0 of g24 is v102 . the a0 of g28 is v123 . the a0 of g2 is v55 . g23 's a0 is v29 . g18 has a0 v9 . g7 's a0 is v34 . g29 has a0 v24 . g30 's a0 is v95 . g31 has a0 v11 . the a0 of g21 is v114 . the a0 of g17 is v86 . s0 : o3 is given to g31 . s1 : give o1 to g7 . s2 : o2 is given to g21 . s3 : give o1 to g0 . s4 : give o2 to g21 . s5 : give o0 to g18 . s6 : give o0 to g31 . s7 : o2 is given to g0 . s8 : o1 is given to g23 . s9 : give o2 to g17 . s10 : give o2 to g29 . s11 : give o3 to g24 . s12 : give o1 to g27 . s13 : o0 is given to g31 . s14 : o2 is given to g18 . s15 : o1 is given to g22 . what is a0 of the holder of o2 ? : ",
+        "gold": "g18 v9 .",
+        "pred": "v114 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g17 is v25 . g24 's a0 is v1 . g3 has a0 v24 . g14 has a0 v3 . g22 has a0 v90 . g7 has a0 v70 . g31 's a0 is v48 . g20 has a0 v115 . g0 has a0 v123 . g4 has a0 v117 . g6 has a0 v105 . g29 has a0 v93 . the a0 of g25 is v89 . g13 's a0 is v87 . g2 has a0 v56 . g27 's a0 is v74 . s0 : o1 is given to g27 . s1 : give o0 to g31 . s2 : give o1 to g27 . s3 : o2 is given to g27 . s4 : give o2 to g20 . s5 : give o3 to g25 . s6 : o3 is given to g0 . s7 : o2 is given to g31 . s8 : give o2 to g27 . s9 : o0 is given to g27 . s10 : o1 is given to g24 . s11 : give o1 to g31 . s12 : give o3 to g25 . s13 : o3 is given to g2 . s14 : o2 is given to g13 . s15 : o1 is given to g22 . what is a0 of the holder of o2 ? : ",
+        "gold": "g13 v87 .",
+        "pred": "v1 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g16 is v93 . g4 has a0 v31 . the a0 of g9 is v26 . g2 has a0 v7 . the a0 of g10 is v43 . g13 's a0 is v118 . g23 's a0 is v18 . the a0 of g1 is v44 . g30 has a0 v25 . the a0 of g0 is v50 . g7 's a0 is v88 . the a0 of g31 is v98 . the a0 of g6 is v3 . the a0 of g27 is v58 . g17 's a0 is v42 . g24 has a0 v12 . s0 : o1 is given to g10 . s1 : give o2 to g7 . s2 : give o1 to g27 . s3 : o2 is given to g10 . s4 : give o1 to g23 . s5 : give o1 to g13 . s6 : o0 is given to g16 . s7 : o0 is given to g31 . s8 : give o2 to g13 . s9 : o0 is given to g4 . s10 : o3 is given to g31 . s11 : o3 is given to g6 . s12 : give o1 to g4 . s13 : o1 is given to g30 . s14 : o0 is given to g31 . s15 : give o0 to g6 . what is a0 of the holder of o3 ? : ",
+        "gold": "g6 v3 .",
+        "pred": "v3 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g29 is v79 . the a0 of g26 is v51 . the a0 of g4 is v74 . g14 has a0 v59 . g2 's a0 is v96 . the a0 of g11 is v107 . g0 's a0 is v31 . g27 's a0 is v109 . g18 has a0 v111 . g23 has a0 v86 . g10 's a0 is v110 . the a0 of g19 is v117 . g8 has a0 v113 . g9 has a0 v37 . g20 has a0 v20 . g5 's a0 is v33 . s0 : o0 is given to g9 . s1 : give o1 to g5 . s2 : give o2 to g11 . s3 : give o2 to g2 . s4 : o1 is given to g26 . s5 : give o2 to g26 . s6 : give o3 to g19 . s7 : o0 is given to g11 . s8 : o2 is given to g23 . s9 : o0 is given to g26 . s10 : o0 is given to g10 . s11 : give o2 to g5 . s12 : give o2 to g26 . s13 : give o2 to g2 . s14 : o3 is given to g18 . s15 : o3 is given to g9 . what is a0 of the holder of o3 ? : ",
+        "gold": "g9 v37 .",
+        "pred": "v37 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g17 is v22 . g2 's a0 is v80 . g10 's a0 is v78 . g24 's a0 is v42 . g16 's a0 is v44 . g13 has a0 v52 . the a0 of g31 is v97 . g28 has a0 v92 . g1 's a0 is v41 . the a0 of g0 is v69 . the a0 of g26 is v117 . g19 has a0 v50 . g6 has a0 v89 . g5 's a0 is v28 . g12 's a0 is v43 . g30 's a0 is v53 . s0 : o3 is given to g30 . s1 : give o3 to g30 . s2 : give o2 to g19 . s3 : o3 is given to g1 . s4 : o2 is given to g12 . s5 : o3 is given to g28 . s6 : o1 is given to g5 . s7 : o1 is given to g12 . s8 : give o1 to g26 . s9 : o3 is given to g13 . s10 : o3 is given to g30 . s11 : give o2 to g10 . s12 : o2 is given to g1 . s13 : give o2 to g1 . s14 : o0 is given to g13 . s15 : o3 is given to g0 . what is a0 of the holder of o3 ? : ",
+        "gold": "g0 v69 .",
+        "pred": "v53 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g18 's a0 is v41 . the a0 of g12 is v4 . g28 has a0 v54 . g8 has a0 v113 . the a0 of g25 is v119 . g6 has a0 v125 . the a0 of g14 is v25 . g27 's a0 is v29 . the a0 of g16 is v81 . g22 's a0 is v32 . the a0 of g1 is v12 . g24 has a0 v23 . g10 has a0 v45 . g20 's a0 is v72 . g31 has a0 v63 . g0 has a0 v95 . s0 : o1 is given to g18 . s1 : give o1 to g6 . s2 : give o1 to g31 . s3 : o0 is given to g0 . s4 : give o2 to g16 . s5 : give o0 to g12 . s6 : give o0 to g6 . s7 : give o3 to g1 . s8 : o3 is given to g1 . s9 : o3 is given to g25 . s10 : give o1 to g16 . s11 : give o2 to g25 . s12 : give o3 to g25 . s13 : o0 is given to g24 . s14 : o1 is given to g31 . s15 : o1 is given to g14 . what is a0 of the holder of o1 ? : ",
+        "gold": "g14 v25 .",
+        "pred": "The a0 of the holder of o1 is v41 (g18) .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g7 has a0 v58 . g13 's a0 is v79 . the a0 of g25 is v121 . g9 's a0 is v23 . the a0 of g31 is v45 . the a0 of g0 is v88 . the a0 of g12 is v5 . g30 's a0 is v85 . the a0 of g11 is v66 . g22 's a0 is v65 . g23 has a0 v48 . g15 's a0 is v83 . g6 's a0 is v49 . g21 has a0 v64 . g14 's a0 is v60 . g19 's a0 is v86 . s0 : give o2 to g0 . s1 : o0 is given to g21 . s2 : give o0 to g30 . s3 : o1 is given to g13 . s4 : give o2 to g23 . s5 : o2 is given to g14 . s6 : o0 is given to g23 . s7 : give o2 to g22 . s8 : give o2 to g11 . s9 : o0 is given to g12 . s10 : o3 is given to g9 . s11 : o2 is given to g15 . s12 : o3 is given to g15 . s13 : give o1 to g23 . s14 : o0 is given to g31 . s15 : give o2 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g31 v45 .",
+        "pred": "v64 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g22 is v0 . g28 's a0 is v14 . the a0 of g18 is v42 . g17 has a0 v98 . g29 's a0 is v90 . the a0 of g8 is v65 . the a0 of g16 is v39 . g30 's a0 is v29 . g27 's a0 is v28 . g0 has a0 v112 . g23 's a0 is v81 . g24 has a0 v88 . g25 's a0 is v99 . g2 's a0 is v113 . g26 has a0 v86 . g15 has a0 v71 . s0 : give o3 to g22 . s1 : give o2 to g30 . s2 : give o3 to g0 . s3 : o2 is given to g27 . s4 : o2 is given to g18 . s5 : o3 is given to g29 . s6 : o3 is given to g22 . s7 : give o2 to g15 . s8 : o0 is given to g0 . s9 : give o1 to g22 . s10 : give o1 to g15 . s11 : o2 is given to g2 . s12 : o1 is given to g2 . s13 : o2 is given to g30 . s14 : o1 is given to g30 . s15 : o2 is given to g22 . what is a0 of the holder of o0 ? : ",
+        "gold": "g0 v112 .",
+        "pred": "v112 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g27 is v101 . g4 's a0 is v44 . the a0 of g10 is v25 . g7 's a0 is v124 . the a0 of g13 is v33 . g31 has a0 v66 . g30 's a0 is v13 . the a0 of g29 is v86 . g12 has a0 v87 . the a0 of g28 is v104 . g0 has a0 v11 . g25 has a0 v5 . g22 has a0 v69 . g19 's a0 is v15 . the a0 of g20 is v99 . g15 's a0 is v45 . s0 : give o3 to g7 . s1 : o3 is given to g29 . s2 : o0 is given to g20 . s3 : o3 is given to g31 . s4 : o1 is given to g10 . s5 : o2 is given to g4 . s6 : give o1 to g25 . s7 : o3 is given to g7 . s8 : give o3 to g31 . s9 : o0 is given to g31 . s10 : give o1 to g20 . s11 : o2 is given to g0 . s12 : give o3 to g13 . s13 : o3 is given to g25 . s14 : give o2 to g15 . s15 : give o3 to g25 . what is a0 of the holder of o3 ? : ",
+        "gold": "g25 v5 .",
+        "pred": "v124 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g17 's a0 is v81 . g18 's a0 is v12 . the a0 of g15 is v50 . g10 's a0 is v95 . g12 has a0 v100 . g25 's a0 is v44 . the a0 of g20 is v105 . the a0 of g7 is v101 . g11 's a0 is v7 . g0 has a0 v98 . g26 's a0 is v77 . g24 's a0 is v22 . g22 has a0 v14 . the a0 of g28 is v17 . g31 has a0 v67 . g5 's a0 is v113 . s0 : give o2 to g15 . s1 : o0 is given to g15 . s2 : o3 is given to g15 . s3 : give o1 to g0 . s4 : give o1 to g22 . s5 : give o2 to g11 . s6 : give o3 to g25 . s7 : o1 is given to g25 . s8 : give o2 to g11 . s9 : give o0 to g22 . s10 : o0 is given to g31 . s11 : give o2 to g26 . s12 : give o2 to g31 . s13 : give o1 to g15 . s14 : o2 is given to g10 . s15 : o3 is given to g20 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v50 .",
+        "pred": "v50 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g22 is v30 . the a0 of g5 is v74 . the a0 of g4 is v91 . the a0 of g3 is v113 . g1 's a0 is v89 . the a0 of g12 is v4 . g29 has a0 v102 . g9 's a0 is v47 . g8 's a0 is v2 . g24 has a0 v126 . the a0 of g7 is v88 . g0 's a0 is v70 . g19 's a0 is v104 . g23 has a0 v37 . the a0 of g20 is v110 . g21 has a0 v92 . s0 : o2 is given to g4 . s1 : o3 is given to g5 . s2 : o0 is given to g23 . s3 : give o1 to g9 . s4 : o2 is given to g3 . s5 : o3 is given to g22 . s6 : give o1 to g0 . s7 : give o2 to g7 . s8 : o2 is given to g21 . s9 : o1 is given to g3 . s10 : give o1 to g29 . s11 : o2 is given to g1 . s12 : o3 is given to g22 . s13 : o0 is given to g1 . s14 : give o2 to g21 . s15 : give o2 to g8 . what is a0 of the holder of o0 ? : ",
+        "gold": "g1 v89 .",
+        "pred": "v113 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "g2 has a0 v11 . the a0 of g13 is v119 . the a0 of g28 is v123 . g16 has a0 v62 . the a0 of g19 is v98 . the a0 of g22 is v113 . g20 has a0 v52 . g10 has a0 v12 . the a0 of g11 is v14 . g15 's a0 is v29 . g23 has a0 v104 . the a0 of g3 is v110 . g21 has a0 v74 . g8 has a0 v20 . g7 has a0 v0 . the a0 of g17 is v3 . s0 : give o1 to g15 . s1 : o2 is given to g17 . s2 : o0 is given to g15 . s3 : give o1 to g23 . s4 : give o2 to g23 . s5 : o1 is given to g23 . s6 : give o0 to g10 . s7 : give o3 to g3 . s8 : give o2 to g13 . s9 : o0 is given to g7 . s10 : give o3 to g23 . s11 : give o2 to g19 . s12 : o2 is given to g16 . s13 : give o0 to g22 . s14 : give o3 to g17 . s15 : o2 is given to g28 . what is a0 of the holder of o0 ? : ",
+        "gold": "g22 v113 .",
+        "pred": "v29 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g0 is v61 . g2 's a0 is v45 . g18 's a0 is v100 . g12 has a0 v107 . the a0 of g3 is v110 . g31 's a0 is v78 . g28 's a0 is v83 . g26 has a0 v54 . g24 's a0 is v41 . the a0 of g23 is v119 . g14 has a0 v102 . g17 has a0 v12 . the a0 of g20 is v2 . g19 has a0 v40 . g22 has a0 v5 . g5 has a0 v58 . s0 : give o3 to g5 . s1 : o0 is given to g22 . s2 : o0 is given to g28 . s3 : o1 is given to g26 . s4 : give o0 to g20 . s5 : give o1 to g19 . s6 : o3 is given to g17 . s7 : give o0 to g28 . s8 : o0 is given to g28 . s9 : o2 is given to g0 . s10 : o0 is given to g3 . s11 : o1 is given to g22 . s12 : o3 is given to g22 . s13 : o0 is given to g3 . s14 : o0 is given to g12 . s15 : o3 is given to g14 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v61 .",
+        "pred": "v61 .",
+        "exact": false,
+        "relaxed": false
+      },
+      {
+        "prompt": "the a0 of g10 is v91 . the a0 of g25 is v33 . g22 's a0 is v8 . g1 has a0 v89 . g27 's a0 is v16 . the a0 of g2 is v127 . the a0 of g5 is v67 . g29 has a0 v58 . g30 's a0 is v21 . the a0 of g11 is v80 . the a0 of g31 is v76 . g16 's a0 is v107 . the a0 of g18 is v85 . g8 's a0 is v39 . g21 's a0 is v97 . the a0 of g20 is v51 . s0 : o0 is given to g25 . s1 : o0 is given to g21 . s2 : o0 is given to g20 . s3 : give o3 to g29 . s4 : give o1 to g29 . s5 : o0 is given to g2 . s6 : o2 is given to g22 . s7 : o3 is given to g11 . s8 : give o1 to g18 . s9 : give o0 to g29 . s10 : give o1 to g21 . s11 : give o3 to g27 . s12 : give o0 to g31 . s13 : give o2 to g20 . s14 : give o1 to g20 . s15 : give o2 to g1 . what is a0 of the holder of o1 ? : ",
+        "gold": "g20 v51 .",
+        "pred": "v85 .",
+        "exact": false,
+        "relaxed": false
+      }
+    ]
+  }
+]
