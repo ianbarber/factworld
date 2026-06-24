@@ -32,7 +32,8 @@ python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 32
 An Oracle-Validated Instrument for Composing Recall, State-Tracking, and
 Knowledge.* Reference numbers live in [`docs/results.md`](docs/results.md) and
 related docs. The latest external-LLM grid (including Nemotron 3 / Kimi results)
-is in [`docs/openrouter-results.md`](docs/openrouter-results.md).
+is in [`docs/openrouter-results.md`](docs/openrouter-results.md); the new S₅ non-abelian
+grid is in [`docs/openrouter-s5-results.md`](docs/openrouter-s5-results.md).
 
 🔬 **Follow-up — validating non-abelian state-tracking with FactWorld:**
 [`followups/non-abelian-state/`](followups/non-abelian-state/) — *FactWorld: A
@@ -180,6 +181,91 @@ Scale any task to stress larger models via explicit difficulty knobs:
 hard = CANONICAL["composite_copy_v1"].scaled(k=64, eval_lengths=(32, 64, 128))
 ```
 
+## How the tasks get harder — and who solves them
+
+The REPORTED suite forms a difficulty ladder. The same strong pretrained open models
+that are near ceiling on single-hop recall fall back to the floor once the task
+requires maintaining non-abelian latent state.
+
+### Pretrained open models on the benchmark tasks
+
+OpenRouter grid (n = 30, greedy decoding, composite-format instruction appended;
+see [`docs/openrouter-results.md`](docs/openrouter-results.md)):
+
+| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 |
+| --- | --- | --- | --- | --- | --- |
+| nemotron-3-ultra-550b-a55b | 1.000 | 1.000 | 0.733 | 0.000 | **0.767** |
+| kimi-k2 | 1.000 | 1.000 | **0.900** | 0.300 | 0.733 |
+| kimi-k2.5 | 1.000 | 1.000 | 0.800 | 0.300 | 0.633 |
+| kimi-k2.6 | 1.000 | 1.000 | 0.867 | 0.133 | 0.567 |
+| deepseek-chat | 1.000 | 1.000 | 0.467 | 0.200 | 0.600 |
+| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.700 | 0.167 | 0.200 |
+| gpt-4o-mini | 1.000 | 1.000 | 0.567 | 0.067 | 0.167 |
+
+Reading the ladder:
+
+- **Single-hop recall and conflict are easy.** Every strong model is at or near ceiling.
+- **Binding is scale-sensitive.** Kimi K2 leads at 0.900; Nemotron 3 Ultra and Llama 3.3 70B follow.
+- **Composition is the bottleneck — with a caveat.** Nemotron 3 Ultra scores 0.767 and Kimi K2 0.733
+  on `composite_copy_v1`, but only after an explicit output-format instruction tells the model to
+  emit `<holder> <value> .`. Without that instruction every model scores 0% because it emits only
+  the value.
+- **Depth extrapolation stays hard.** `chain_v1` peaks at 0.300, consistent with the paper's claim
+  that pointer-chase depth generalization is poor for pretrained chat models.
+
+### The non-abelian wall: S₅ role permutations
+
+The experimental `s5_v1` task pushes one step further. A stream of `swap`/`cycle_roles` events
+permutes which agent holds each of five roles; the query asks for the role of a single agent at the
+end. There are five possible answers, so random guessing is 0.20.
+
+OpenRouter grid with a role-token format instruction
+([`docs/openrouter-s5-results.md`](docs/openrouter-s5-results.md)):
+
+| model | L32 | L64 | L128 | mean |
+| --- | --- | --- | --- | --- |
+| nemotron-3-ultra-550b-a55b | 0.233 | 0.167 | 0.267 | 0.222 |
+| kimi-k2 | 0.067 | 0.200 | 0.233 | 0.167 |
+| kimi-k2.5 | 0.200 | 0.233 | 0.267 | 0.233 |
+| kimi-k2.6 | 0.133 | 0.233 | 0.200 | 0.189 |
+| deepseek-chat | 0.200 | 0.067 | 0.100 | 0.122 |
+| llama-3.3-70b-instruct | 0.300 | 0.167 | 0.067 | 0.178 |
+| gpt-4o-mini | 0.100 | 0.167 | 0.167 | 0.144 |
+
+Every model is at the chance floor. Even Nemotron 3 Ultra, the strongest composite model in the
+grid, does not lift above it. The format instruction gets the right token *shape*, but none of these
+pretrained models tracks the running non-abelian permutation.
+
+### Custom-trained architectures: the same wall, moved by supervision
+
+The follow-up study in [`followups/non-abelian-state/`](followups/non-abelian-state/) holds the
+architecture class fixed (a GatedDeltaProduct recurrent hybrid) and varies the supervision. It shows
+that the wall is **learnability**, not capacity, and that the right training signal moves it.
+
+| regime | recipe | headline result |
+| --- | --- | --- |
+| Small-scale baseline | `gdp_hybrid`, d_model=320, 4 layers, 8k steps, seed 0 | `composite_copy_v1` floors at ≤0.020 across L4–L64 (see [`docs/results.md`](docs/results.md)) |
+| Dense-supervised S₅ | `gdp_pure`, per-step state trace, L32 train | L32/L64/L128 token-acc = 1.00 / 1.00 / **0.99** (see [`docs/state-tracking-results.md`](docs/state-tracking-results.md)) |
+| Non-abelian recipe (follow-up) | dense process supervision → mixed-density internalization → target-length distribution → post-training deep-state coverage | dense K=1: L16=1.00, L64=0.95; internalized horizon curriculum: L64=**0.94**; post-train on clean base: L64=**0.99**, L128=**0.86** |
+
+The comparison tells a clear story:
+
+- **Architecture is not the immediate bottleneck.** The product-recurrence backbone that fails the
+  small-scale composite under sparse supervision *solves* the S₅ word problem when given dense
+  per-step state supervision.
+- **Pretrained open models are in the sparse-supervision regime.** They were not trained with the
+  oracle's intermediate role-permutation trace, so they behave like the answer-only baseline of the
+  follow-up: at floor. This is consistent with the follow-up's claim that sparse outcome-level
+  signal — including vanilla RL — cannot climb the non-abelian cliff.
+- **Length generalization is a data-distribution problem, not a width problem.** Scaling the custom
+  architecture to 357M does not move the internalized horizon wall (answer-only L64 stays at 0.20),
+  but a sufficient density of target-length examples does, and post-training deep-state coverage
+  extends the clean circuit to ≈8× the trained horizon with no labels at the target length.
+
+In short: the suite climbs from easy single-hop recall, through binding and composition, to a
+non-abelian state-tracking wall that pretrained chat models hit at chance. The wall is movable, but
+the lever is the **supervision and training distribution**, not the model name or parameter count.
+
 ## Repository layout
 
 ```
@@ -192,7 +278,8 @@ docs/scale-results.md     the §5 ~45M scale + matched LR sweeps
 docs/composite-results.md the §4 small-scale composite (memorization diagnostic + decomposition)
 docs/related-work.md      related work with verified citations
 docs/USAGE.md             backend API reference and custom-backend examples
-docs/openrouter-results.md  external LLM API grid (OpenRouter) on the benchmark tasks
+docs/openrouter-results.md       external LLM API grid (OpenRouter) on the benchmark tasks
+docs/openrouter-s5-results.md    external LLM API grid on the experimental S₅ non-abelian task
 factworld/                the instrument (torch-free data/oracle/eval + the model zoo)
   world.py, oracle.py     deterministic KB + symbolic ground-truth solver
   render.py               template renderer + its exact inverse parser (no-leak contract)
