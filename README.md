@@ -35,7 +35,9 @@ to localize the non-abelian (S₅) state-tracking wall and derive a training
 recipe — near-dense process supervision to form the circuit, mixed-density
 internalization, a target-length training distribution, base-selection on
 free-running accuracy, and post-training deep-state coverage (length-general to
-~8× the trained horizon, label-free). See
+~8× the trained horizon on a selected clean base, label-free) — scoped to this
+hybrid and scale regime (k=5 S₅, ≤357M), not a claim about model scaling in
+general. See
 [`non-abelian-state.pdf`](followups/non-abelian-state/non-abelian-state.pdf)
 and the reproduction guide
 [`REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md).
