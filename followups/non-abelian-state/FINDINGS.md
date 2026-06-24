@@ -550,6 +550,18 @@ not transfer to our gated-delta recurrence without retuning). (ii) **EMA** over 
 toward a norm-preserving recurrence) **+ EMA** — a *modest* positive: lifts the middle of the L16 distribution
 (four seeds into 0.82–0.92) and EMA crosses two over → **2/8 clean vs 1/8 default** (~2× the clean rate, small-n;
 notably it produces no top-0.97 seed, so it broadens rather than sharpens). No arm shows native length-gen (L128
-floors everywhere — post-training is still required). Net: **base-selection remains the reliability recipe**;
-gate-init + EMA can roughly halve the K needed; short-conv is a documented non-transfer. **Raising the ~1/7
-clean-base rate substantially is still open.**
+floors everywhere — post-training is still required).
+
+**Scheduled sampling lifts the distribution but not the clean rate (`schedsample.py`, 3 arms × 6 seeds).** The
+free-running-stability diagnosis predicts that *training* on the model's own holders should help. At holder
+slots, with probability ramping 0 → 0.5, we splice the model's own argmax holder into the context (targets stay
+gold). It gives the **best distributional lift of any base-reliability lever** — it raises the weaker seeds
+substantially (s2 0.62 → 0.89, s4 0.77 → 0.88; with EMA both reach ≈ 0.95) — but at the strict L16 ≥ 0.95 bar it
+is still **1/6, the same as baseline**, the lifted seeds sitting right *at* the threshold; stacking it with the
+gate-init is worse (0/6). So free-running exposure shifts the L16 distribution toward 1.0 (confirming the
+mechanism) without reliably clearing the bar at n = 6.
+
+Net: **base-selection remains the reliability recipe**; gate-init + EMA can roughly halve the K needed;
+scheduled sampling lifts the distribution but not the clean rate; short-conv is a documented non-transfer.
+**Across every lever tried, none makes clean bases common — raising the ~1/7 clean-base rate substantially is
+still open.**

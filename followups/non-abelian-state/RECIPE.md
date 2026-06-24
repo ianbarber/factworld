@@ -56,9 +56,11 @@ The post-training lever (Step 6) is **reliable given a clean base** but base qua
 - **Cost / the open frontier:** clean bases (L16 ≥ 0.95) are **rare — ~1/7 of seeds** — so budget **K ≈ 15–20**.
   Cheap levers that modestly help (`base_reliability.py`): **GDP forget-gate retention-init + EMA** over the
   cosine tail roughly *doubles* the clean rate (~1/8 → 2/8, small-n) by lifting the mid-distribution; EMA alone is
-  marginal. Post-training **repairs in-distribution accuracy but cannot install length-generality on a base that
-  was not already clean** (the clean recurrence must pre-exist). **Making clean bases common (raising the ~1/7
-  rate) is the principal open problem.** [open]
+  marginal. **Scheduled sampling** (`schedsample.py`: train on the model's own holders) gives the best
+  *distributional* lift but does not clear the clean bar more often; **short-conv** drop-in *floors* in-distribution
+  (non-transfer). Post-training **repairs in-distribution accuracy but cannot install length-generality on a base
+  that was not already clean** (the clean recurrence must pre-exist). **Making clean bases common (raising the ~1/7
+  rate) is the principal open problem** — no lever tried makes them common. [open]
 
 ### Step 6 — Post-train with unlabeled deep-state coverage. [validated, given a clean base]
 On the selected clean base, run **1500 steps at lr 3e-4** on *unlabeled* burn-in examples — prepend B ∈ {0…192}

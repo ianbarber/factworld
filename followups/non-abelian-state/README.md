@@ -27,7 +27,7 @@ Each script writes a `<name>.md` table next to it. All reuse the repo's `factwor
 | **From-scratch deep-state coverage doesn't build the circuit** (null; hurts in-distribution) | `carried_state.py` |
 | **Post-training deep-state coverage DOES extend it** — floor→0.99 at 4×, 0.86 at 8×, no labels at length (confirms Buitrago Ruiz & Gu 2025) | `post_state.py` |
 | **The lever is reliable; fragility is base-side**: variance is between-base (~300×), predictor = free-running L16; select the clean base (≈1/7 of seeds) then post → reliable length-general extrapolation | `post_reliability.py`, `base_select.py` |
-| **Base-training reliability** (open): short-conv drop-in floors in-dist (non-transfer); gate-retention-init + EMA modestly ~2× the clean-base rate; raising ~1/7 substantially is unsolved | `base_reliability.py` |
+| **Base-training reliability** (open): gate-retention-init + EMA modestly ~2× the clean-base rate; scheduled sampling lifts the L16 distribution but not the clean rate; short-conv drop-in floors in-dist (non-transfer); raising ~1/7 substantially is unsolved | `base_reliability.py`, `schedsample.py` |
 | **Horizon-extension curriculum** moves the wall; token re-anchoring doesn't | `horizon.py`, `coarse.py` |
 | The internalized cap **tracks max training length** | `horizon_mech.py` |
 | Supervision density × horizon are **orthogonal** levers | `sup_horizon.py` |

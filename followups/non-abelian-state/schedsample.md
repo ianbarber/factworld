@@ -4,5 +4,6 @@ At holder slots, with prob p(ramp 0->p_max) replace the gold holder in CONTEXT w
 
 | arm | clean L16 raw | clean L16 ema | max L128 (raw / ema) | L16 per seed (raw) |
 |---|---|---|---|---|
-| baseline | 0/1 | 0/1 | 0.00 / 0.00 | 0.20 |
-| ss | 0/1 | 0/1 | 0.00 / 0.00 | 0.20 |
+| baseline | 1/6 | 1/6 | 0.26 / 0.24 | 0.97 0.86 0.77 0.62 0.37 0.30 |
+| ss | 1/6 | 1/6 | 0.20 / 0.22 | 0.99 0.89 0.88 0.65 0.47 0.36 |
+| ss+gate | 0/6 | 0/6 | 0.23 / 0.23 | 0.93 0.89 0.75 0.55 0.47 0.25 |
