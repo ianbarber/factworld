@@ -28,6 +28,18 @@ An Oracle-Validated Instrument for Composing Recall, State-Tracking, and
 Knowledge.* Reference numbers live in
 [`docs/results.md`](docs/results.md) and related docs.
 
+🔬 **Follow-up — validating non-abelian state-tracking with FactWorld:**
+[`followups/non-abelian-state/`](followups/non-abelian-state/) — *FactWorld: A
+Recipe for Length-Generalizing Non-Abelian State-Tracking.* Uses the instrument
+to localize the non-abelian (S₅) state-tracking wall and derive a training
+recipe — near-dense process supervision to form the circuit, mixed-density
+internalization, a target-length training distribution, base-selection on
+free-running accuracy, and post-training deep-state coverage (length-general to
+~8× the trained horizon, label-free). See
+[`non-abelian-state.pdf`](followups/non-abelian-state/non-abelian-state.pdf),
+[`RECIPE.md`](followups/non-abelian-state/RECIPE.md), and
+[`FINDINGS.md`](followups/non-abelian-state/FINDINGS.md).
+
 ## Install
 
 The data / oracle / eval layer is pure-stdlib (no GPU needed). Backends are
@@ -167,6 +179,7 @@ factworld/                the instrument (torch-free data/oracle/eval + the mode
   models.py, train.py     transformer / mamba2 / gdp_hybrid / gdn_hybrid / gru on one skeleton
 scripts/                  the runnable suite (run_benchmark, eval_model, validate_suite, …)
 tests/                    oracle, renderer, tokenizer, model-parity, and validity tests
+followups/non-abelian-state/  follow-up study: the non-abelian state-tracking recipe + learnability map (segregated)
 ```
 
 The hybrid configuration (`[recurrent, recurrent, attn, recurrent]`, n_h=4, neg-eig) lives in
