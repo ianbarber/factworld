@@ -14,12 +14,15 @@ of the abstract role-permutation rendering — bridging "S5 word problem" to "tr
 
   .venv/bin/python followups/non-abelian-state/code_trace.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -37,8 +40,19 @@ D_MODEL, N_LAYERS, D_FF = 384, 6, 1536
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "code_trace.md")
 
 
-def build(w, oracle, L, K, rng):
-    """Variable-swap execution trace. Returns (words, snapshot_spans[(start,end)], ans_idx, gold_value)."""
+def build(w: Any, oracle: Any, L: int, K: int, rng: Any):
+    """Variable-swap execution trace. Returns (words, snapshot_spans[(start,end)], ans_idx, gold_value).
+
+    Args:
+        w: the FactWorld ``World``.
+        oracle: the symbolic ``Oracle``.
+        L: number of ops in the trace.
+        K: emit a full-state snapshot every ``K`` ops (plus the final).
+        rng: RNG for chain sampling and query choice.
+
+    Returns:
+        A ``(words, spans, ans_idx, gold_value)`` tuple for one rendered trace.
+    """
     ev = w.sample_hard_chain(L, episode_seed=f"ct|{rng.random()}")
     trace = oracle.hard_trace(ev)                       # trace[i][agent] = value (role) after i ops; trace[0]=identity
     words, spans = [], []
@@ -64,8 +78,20 @@ def build(w, oracle, L, K, rng):
     return words, spans, ans, trace[L][q]
 
 
-def code_eval(model, tok, w, exs, device="cuda", max_tok=8):
-    """Free-running: ops forced; the model GENERATES the state snapshots + the final value. Score final value."""
+def code_eval(model: Any, tok: Any, w: Any, exs: list, device: str = "cuda", max_tok: int = 8) -> float:
+    """Free-running: ops forced; the model GENERATES the state snapshots + the final value. Score final value.
+
+    Args:
+        model: the model to evaluate.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        exs: pre-built ``(words, spans, ans, gold)`` eval examples.
+        device: torch device.
+        max_tok: max tokens to generate per snapshot / value.
+
+    Returns:
+        Fraction of examples whose generated final value matches ``gold``.
+    """
     import torch
     role_ids = {tok.token_to_id[r] for r in w.roles}
     dot = tok.token_to_id["."]
@@ -99,7 +125,18 @@ def code_eval(model, tok, w, exs, device="cuda", max_tok=8):
     return correct / len(exs)
 
 
-def train(tok, pool, seed, device="cuda"):
+def train(tok: Any, pool: list[str], seed: int, device: str = "cuda") -> Any:
+    """Train one gdp_hybrid model from scratch on the code-trace pool.
+
+    Args:
+        tok: the atomic tokenizer.
+        pool: training strings (rendered variable-swap traces).
+        seed: RNG/init seed.
+        device: torch device.
+
+    Returns:
+        The trained model.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -130,7 +167,8 @@ def train(tok, pool, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Re-run the supervision-density sweep on the code-trace rendering and tabulate L16/L64 to ``OUT``."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -157,7 +195,8 @@ def main():
     print("code_trace done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the per-K L16/L64 code-trace cliff table to ``OUT``."""
     lines = [
         "# Code-trace non-abelian cliff — does the wall appear in execution-trace clothing?\n",
         "`followups/non-abelian-state/code_trace.py`. gdp_hybrid d384 (18.5M), 3 seeds. Our non-abelian dynamics "

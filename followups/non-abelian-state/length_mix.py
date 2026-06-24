@@ -16,12 +16,15 @@ is the reachable horizon set by the MAX trained length or by needing examples AT
 
   .venv/bin/python followups/non-abelian-state/length_mix.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -49,7 +52,18 @@ CONDS = {                                          # name -> sampler(rng) -> len
 }
 
 
-def train(tok, pool, seed, device="cuda"):
+def train(tok: Any, pool: list[str], seed: int, device: str = "cuda") -> Any:
+    """Train a gdp_hybrid model on a fixed pool of training strings.
+
+    Args:
+        tok: the atomic tokenizer.
+        pool: training strings sampled from one length-mix condition.
+        seed: RNG / init seed.
+        device: torch device.
+
+    Returns:
+        The trained model.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -80,7 +94,8 @@ def train(tok, pool, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Sweep each length-mix condition and tabulate answer-only accuracy at L32/L64/L128."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -108,7 +123,8 @@ def main():
     print("length_mix done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the per-condition accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Length-mix — which training-length distribution unlocks extrapolation? (`length_mix.py`, 18.5M, 3 seeds)\n",
         "Fixed capacity (d384x6, 18.5M), mixed density. Vary the training-length distribution; answer-only "

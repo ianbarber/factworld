@@ -18,11 +18,14 @@ cliffs near 2*Lmax (a shortcut). Same e2e_eval / metric for all three -> apples-
 
   .venv/bin/python followups/non-abelian-state/decay_curve.py
 """
+from __future__ import annotations
+
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -42,9 +45,22 @@ N_POOL, N_EVAL = 8000, 150
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "decay_curve.md")
 
 
-def build_abelian(w, r, origins, oracle, L, K, rng):
+def build_abelian(w: Any, r: Any, origins: dict, oracle: Any, L: int, K: int, rng: Any) -> tuple:
     """Abelian analogue of supervision_sweep.build: give-events, holder = last writer of a fixed object,
-    holder checkpoints every K (+ always final). Same (words, hidx, vidx) shape so e2e_eval is reused."""
+    holder checkpoints every K (+ always final). Same (words, hidx, vidx) shape so e2e_eval is reused.
+
+    Args:
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle`` (unused; kept for signature parity with the non-abelian builder).
+        L: number of give-events in the chain.
+        K: holder-checkpoint period (``10**9`` == answer-only / final-only).
+        rng: RNG for sampling objects and agents.
+
+    Returns:
+        ``(words, hidx, vidx)``: the word stream, holder-target word indices, and value word index.
+    """
     ev = [Event("give", (rng.choice(w.objects), rng.choice(w.agents))) for _ in range(L)]
     obj = ev[0].args[0]                                   # given at step 0 -> holder always defined
     hist = r.render_history(tuple(ev), with_steps=True)
@@ -60,7 +76,22 @@ def build_abelian(w, r, origins, oracle, L, K, rng):
     return words, hidx, vidx
 
 
-def make_pool(buildfn, w, r, origins, oracle, mixedK, seed):
+def make_pool(buildfn: Any, w: Any, r: Any, origins: dict, oracle: Any, mixedK: bool,
+              seed: int) -> list[str]:
+    """Build a training pool of rendered documents for one arm.
+
+    Args:
+        buildfn: the doc builder (``build_abelian`` or ``build_nonabelian``).
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        mixedK: if True, sample K per doc from ``KS``; else answer-only (``10**9``).
+        seed: RNG seed for sampling lengths, densities, and chains.
+
+    Returns:
+        A list of ``N_POOL`` whitespace-joined training strings.
+    """
     rng = random.Random(seed)
     pool = []
     for _ in range(N_POOL):
@@ -69,7 +100,8 @@ def make_pool(buildfn, w, r, origins, oracle, mixedK, seed):
     return pool
 
 
-def main():
+def main() -> None:
+    """Train each arm across seeds and tabulate the answer-only length-decay curve to L256."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -105,7 +137,8 @@ def main():
     print("decay_curve done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the per-arm length-decay accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Decay curve — real circuit vs shortcut (`decay_curve.py`, 18.5M, 3 seeds)\n",
         "gdp_hybrid d384x6, trained at the short envelope {4,8,16} (Lmax=16), evaluated internalized "

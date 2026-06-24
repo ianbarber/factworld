@@ -11,6 +11,8 @@ Combine with scale_tuned's 44.8M/70M for the full 44.8M->357M ladder. Reuses sca
 
   .venv/bin/python followups/non-abelian-state/scale_big.py
 """
+from __future__ import annotations
+
 import os
 import random
 import statistics
@@ -31,7 +33,8 @@ EVAL_LEN = [16, 64]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scale_big.md")
 
 
-def main():
+def main() -> None:
+    """Train each of the 140M/268M/357M scales per seed and tabulate answer-only L16/L64 (the horizon wall)."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -62,7 +65,12 @@ def main():
     print("scale_big done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the per-scale answer-only L16/L64 table (mean ± pstdev over seeds) to ``OUT``.
+
+    Args:
+        agg: maps scale name -> seed -> {length: accuracy}.
+    """
     lines = [
         "# Scale push — does the horizon wall lift with capacity past 70M? (`scale_big.py`, lr 1e-3, bs32, 2 seeds)\n",
         "gdp_hybrid, mixed-density, 8000 steps, batch 32 (consistent with scale_tuned's 70M point). Answer-only "
@@ -75,7 +83,8 @@ def write_md(agg):
     ]
     for name, _d, _l, _ff in SCALES:
         d = agg.get(name, {})
-        def col(L):
+        def col(L: int) -> str:
+            """Format mean ± pstdev accuracy at length ``L`` across seeds (``…`` if empty)."""
             xs = [d[s][L] for s in d if L in d[s]]
             return f"{statistics.mean(xs):.2f}±{statistics.pstdev(xs):.2f}" if xs else "…"
         lines.append(f"| {name} | {col(16)} | {col(64)} |")

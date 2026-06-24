@@ -22,11 +22,14 @@ non-abelian circuit can be made length-general without labels at the target leng
 
   .venv/bin/python followups/non-abelian-state/carried_state.py
 """
+from __future__ import annotations
+
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -47,9 +50,23 @@ N_POOL, N_EVAL = 8000, 150
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "carried_state.md")
 
 
-def build_burnin(w, r, origins, oracle, B, Lwin, K, rng):
+def build_burnin(w: Any, r: Any, origins: dict, oracle: Any, B: int, Lwin: int, K: int, rng: Any) -> list[str]:
     """role r . [B unlabeled events] [Lwin events, holder labelled every K] what is a0 ? : value .
-    Burn-in drives the recurrent state to depth B (no labels); the window supplies the state supervision."""
+    Burn-in drives the recurrent state to depth B (no labels); the window supplies the state supervision.
+
+    Args:
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        B: number of unlabeled burn-in events (state-coverage depth).
+        Lwin: length of the labeled window.
+        K: label the window holder every ``K`` events (mixed-density).
+        rng: RNG for chain sampling and role choice.
+
+    Returns:
+        The rendered word list for one training document.
+    """
     ev = w.sample_hard_chain(B + Lwin, episode_seed=f"b{B}|{rng.random()}")
     trace = oracle.hard_trace(ev)                         # trace[i] = assignment after i events
     role = rng.choice(w.roles)
@@ -67,7 +84,20 @@ def build_burnin(w, r, origins, oracle, B, Lwin, K, rng):
     return words
 
 
-def make_pool(arm, w, r, origins, oracle, seed):
+def make_pool(arm: str, w: Any, r: Any, origins: dict, oracle: Any, seed: int) -> list[str]:
+    """Build a training pool of rendered documents for one arm.
+
+    Args:
+        arm: ``"short_only"`` (no burn-in) or anything else (``"burnin"``: unlabeled deep-state coverage).
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        seed: RNG seed for sampling lengths, densities, and chains.
+
+    Returns:
+        A list of ``N_POOL`` whitespace-joined training strings.
+    """
     rng = random.Random(seed)
     pool = []
     for _ in range(N_POOL):
@@ -79,7 +109,8 @@ def make_pool(arm, w, r, origins, oracle, seed):
     return pool
 
 
-def main():
+def main() -> None:
+    """Train short_only vs burnin arms and tabulate internalized accuracy to L256."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -111,7 +142,8 @@ def main():
     print("carried_state done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the short_only-vs-burnin accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Carried-state — does deep-state coverage form a length-general non-abelian circuit? "
         "(`carried_state.py`, 18.5M, 3 seeds)\n",

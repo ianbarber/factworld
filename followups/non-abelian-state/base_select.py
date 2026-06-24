@@ -13,6 +13,8 @@ L16>=0.95 base with high probability.
 
   .venv/bin/python followups/non-abelian-state/base_select.py
 """
+from __future__ import annotations
+
 import copy
 import math
 import os
@@ -39,7 +41,8 @@ N_EVAL = 150
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "base_select.md")
 
 
-def main():
+def main() -> None:
+    """Train K=8 bases, rank by free-running L16, post-train the top & bottom, and tabulate to L256."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -80,7 +83,8 @@ def main():
     print("base_select done.", flush=True)
 
 
-def write_md(bases, posts):
+def write_md(bases: list, posts: dict) -> None:
+    """Write the base-L16 distribution, recommended K, and top/bottom post-training table to ``OUT``."""
     ranked = sorted(([s, l16] for s, l16, *_ in bases), key=lambda t: -t[1])
     n_clean = sum(l16 >= CLEAN_THR for _, l16 in ranked)
     p_clean = n_clean / len(ranked) if ranked else 0.0

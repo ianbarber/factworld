@@ -11,12 +11,15 @@ gdp_hybrid d384 (18.5M), 3 seeds. Compare directly to supervision_sweep.md (same
 
   .venv/bin/python followups/non-abelian-state/sup_horizon.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -35,7 +38,18 @@ D_MODEL, N_LAYERS, D_FF = 384, 6, 1536
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sup_horizon.md")
 
 
-def train(tok, pool, seed, device="cuda"):
+def train(tok: Any, pool: list[str], seed: int, device: str = "cuda") -> Any:
+    """Train a gdp_hybrid d384 on the long-horizon density-sweep pool.
+
+    Args:
+        tok: the atomic tokenizer.
+        pool: training strings for one supervision stride K.
+        seed: RNG seed for init and minibatch sampling.
+        device: torch device.
+
+    Returns:
+        The trained ``HybridLM``.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -66,7 +80,8 @@ def train(tok, pool, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Sweep density K at long-horizon training and tabulate L64/L128 e2e accuracy."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -94,7 +109,8 @@ def main():
     print("sup_horizon done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the density × horizon accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Supervision × horizon — does training at length lower the density needed?\n",
         "`followups/non-abelian-state/sup_horizon.py`. gdp_hybrid d384 (18.5M), 3 seeds. Density sweep K with "

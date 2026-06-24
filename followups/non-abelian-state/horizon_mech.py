@@ -10,12 +10,15 @@ trained step-count, and you extend reach by training longer — confirming the �
 
   .venv/bin/python followups/non-abelian-state/horizon_mech.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -33,11 +36,23 @@ D_MODEL, N_LAYERS, D_FF = 384, 6, 1536
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "horizon_mech.md")
 
 
-def lengths_up_to(Lmax):
+def lengths_up_to(Lmax: int) -> tuple:
+    """Return the training lengths from the fixed grid that do not exceed ``Lmax``."""
     return tuple(L for L in (4, 8, 16, 24, 32, 48, 64) if L <= Lmax)
 
 
-def train(tok, pool, seed, device="cuda"):
+def train(tok: Any, pool: list[str], seed: int, device: str = "cuda") -> Any:
+    """Train a gdp_hybrid model on a mixed-density pool (warmup + cosine; matches train.run).
+
+    Args:
+        tok: the atomic tokenizer.
+        pool: training strings (the mixed-density pool for one ``Lmax``).
+        seed: RNG seed for init and minibatch sampling.
+        device: torch device.
+
+    Returns:
+        The trained ``HybridLM``.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -68,7 +83,8 @@ def train(tok, pool, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Train internalized to each Lmax across seeds and tabulate in-range vs 2x-Lmax OOD accuracy."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -98,7 +114,8 @@ def main():
     print("horizon_mech done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the per-Lmax in-range vs OOD accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Horizon mechanism — does the internalized length cap track the max training length?\n",
         "`followups/non-abelian-state/horizon_mech.py`. gdp_hybrid d384 (18.5M), mixed density, 3 seeds. Train "

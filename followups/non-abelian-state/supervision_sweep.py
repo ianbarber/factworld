@@ -15,11 +15,14 @@ Headline metric: end-to-end free-running composite accuracy vs supervision strid
 
   .venv/bin/python followups/non-abelian-state/supervision_sweep.py
 """
+from __future__ import annotations
+
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -35,8 +38,22 @@ STRIDES = [1, 2, 4, 8, 10**9]   # 10**9 == answer-only (only final holder labell
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "supervision_sweep.md")
 
 
-def build(w, r, origins, oracle, L, K, rng):
-    """Parametric non-abelian composite with holder checkpoints every K steps (+ always the final step)."""
+def build(w: Any, r: Any, origins: dict, oracle: Any, L: int, K: int, rng: Any) -> tuple[list[str], list[int], int]:
+    """Parametric non-abelian composite with holder checkpoints every K steps (+ always the final step).
+
+    Args:
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        L: number of events in the chain.
+        K: supervision stride (label the holder every ``K`` events; ``10**9`` == answer-only).
+        rng: RNG for sampling the chain and role.
+
+    Returns:
+        A ``(words, hidx, vidx)`` triple: the rendered token list, the holder-checkpoint
+        token indices, and the final answer-value token index.
+    """
     ev = w.sample_hard_chain(L, episode_seed=f"K{K}|{rng.random()}")
     trace = oracle.hard_trace(ev)                         # trace[i] = assignment after i events
     role = rng.choice(w.roles)
@@ -55,7 +72,8 @@ def build(w, r, origins, oracle, L, K, rng):
     return words, hidx, vidx
 
 
-def main():
+def main() -> None:
+    """Sweep supervision stride K over seeds and tabulate end-to-end composite accuracy."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -86,7 +104,8 @@ def main():
     print("supervision_sweep done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the supervision-sparsity sweep table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Supervision-sparsity sweep — how sparse can the state supervision be?\n",
         "`followups/non-abelian-state/supervision_sweep.py`. gdp_hybrid d256x4, 4000 steps, 5 seeds, "
@@ -104,7 +123,7 @@ def write_md(agg):
             if not d:
                 continue
             xs = list(d.values())
-            def ms(k):
+            def ms(k: str) -> tuple[float, float]:
                 return statistics.mean(x[k] for x in xs), statistics.pstdev(x[k] for x in xs)
             conv = sum(x["e2e_v"] > 0.5 for x in xs)
             lines.append(f"| {tag} | {nlab[tag]} | {L} | {ms('dense_h')[0]:.2f}±{ms('dense_h')[1]:.2f} | "

@@ -14,10 +14,13 @@ Also report answer-only L16 (internalisation at trained length) and dense L64 (e
 
   .venv/bin/python followups/non-abelian-state/scale.py
 """
+from __future__ import annotations
+
 import math
 import os
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -38,8 +41,22 @@ SCALES = [("5.7M", 256, 4, 1024), ("18.5M", 384, 6, 1536), ("44.8M", 512, 8, 204
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scale.md")
 
 
-def train_mixed(tok, pools, d_model, n_layers, d_ff, seed, device="cuda"):
-    """Mixed-density training (random K per example) at a given model size. Recipe matches train.run."""
+def train_mixed(tok: Any, pools: dict, d_model: int, n_layers: int, d_ff: int, seed: int,
+                device: str = "cuda") -> Any:
+    """Mixed-density training (random K per example) at a given model size. Recipe matches train.run.
+
+    Args:
+        tok: the atomic tokenizer.
+        pools: maps density K -> a list of rendered training docs.
+        d_model: model width.
+        n_layers: number of layers.
+        d_ff: feed-forward width.
+        seed: RNG / init seed.
+        device: torch device.
+
+    Returns:
+        The trained ``gdp_hybrid`` model.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -71,7 +88,8 @@ def train_mixed(tok, pools, d_model, n_layers, d_ff, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Train the mixed-density recipe at 5.7M/18.5M/44.8M per seed and tabulate the internalisation dissociation."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -101,7 +119,12 @@ def main():
     print("scale done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the per-scale answer-only / dense accuracy table (mean ± pstdev, hit-count) to ``OUT``.
+
+    Args:
+        agg: maps (scale name, eval key) -> seed -> accuracy.
+    """
     lines = [
         "# Scale check — does the internalisation dissociation soften? (mixed-density recipe)\n",
         "`followups/non-abelian-state/scale.py`. gdp_hybrid, mixed-density training, 6000 steps, 3 seeds, "
@@ -111,7 +134,8 @@ def write_md(agg):
         "|---|---|---|---|",
     ]
     for name, _d, _l, _ff in SCALES:
-        def cell(key):
+        def cell(key: tuple) -> str:
+            """Format mean ± pstdev (hit-count) for one (scale, eval-key) cell (``…`` if empty)."""
             d = agg.get((name, key))
             if not d:
                 return "…"

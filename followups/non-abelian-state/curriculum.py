@@ -15,12 +15,15 @@ Headline: ANSWER-ONLY eval (K=inf, no intermediate scratchpad) — did the circu
 
   .venv/bin/python followups/non-abelian-state/curriculum.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -38,8 +41,15 @@ STEPS = 6000
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "curriculum.md")
 
 
-def anneal_K(step):
-    """1 -> 2 -> 4 -> 8 -> inf; most budget on the dense (form) and the answer-only (internalize) ends."""
+def anneal_K(step: int) -> int:
+    """1 -> 2 -> 4 -> 8 -> inf; most budget on the dense (form) and the answer-only (internalize) ends.
+
+    Args:
+        step: the current training step.
+
+    Returns:
+        The supervision density K for this step (``10**9`` == answer-only).
+    """
     f = step / STEPS
     if f < 0.40: return 1
     if f < 0.55: return 2
@@ -48,8 +58,19 @@ def anneal_K(step):
     return 10**9
 
 
-def make_pools(w, r, origins, oracle, per=8000):
-    """A doc pool per density K (built once; sampled during training)."""
+def make_pools(w: Any, r: Any, origins: dict, oracle: Any, per: int = 8000) -> dict:
+    """A doc pool per density K (built once; sampled during training).
+
+    Args:
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        per: number of documents per density K.
+
+    Returns:
+        A dict ``{K: list[str]}`` of rendered training docs per density.
+    """
     pools = {}
     for K in KS:
         rng = random.Random(1000 + (0 if K >= 10**9 else K))
@@ -57,7 +78,19 @@ def make_pools(w, r, origins, oracle, per=8000):
     return pools
 
 
-def train_curriculum(arm, tok, pools, seed, device="cuda"):
+def train_curriculum(arm: str, tok: Any, pools: dict, seed: int, device: str = "cuda") -> Any:
+    """Train a model on one curriculum arm (custom loop so density can vary over training steps).
+
+    Args:
+        arm: ``"anneal"`` (K schedule 1->2->4->8->inf) or ``"mixed"`` (random K per example).
+        tok: the atomic tokenizer.
+        pools: per-density doc pools from ``make_pools``.
+        seed: RNG seed for init and minibatch sampling.
+        device: torch device.
+
+    Returns:
+        The trained ``HybridLM``.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -94,7 +127,8 @@ def train_curriculum(arm, tok, pools, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Train both curriculum arms across seeds and tabulate answer-only vs dense e2e accuracy."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -124,7 +158,8 @@ def main():
     print("curriculum done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the anneal-vs-mixed accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Curriculum — can dense->sparse weaning internalize the state circuit?\n",
         "`followups/non-abelian-state/curriculum.py`. gdp_hybrid d256x4, 6000 steps, 5 seeds, parametric. "

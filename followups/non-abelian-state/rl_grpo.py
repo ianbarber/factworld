@@ -14,11 +14,14 @@ We also log the holder-resolution rate (state leg) to see whether RL learns the 
 
   .venv/bin/python followups/non-abelian-state/rl_grpo.py
 """
+from __future__ import annotations
+
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -40,8 +43,20 @@ ENT_COEF = 0.01
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rl_grpo.md")
 
 
-def make_prompt(w, r, origins, oracle, L, rng):
-    """Non-abelian composite, parametric recall. Returns (prompt_str, gold_holder, gold_value)."""
+def make_prompt(w: Any, r: Any, origins: dict, oracle: Any, L: int, rng: Any) -> tuple[str, str, str]:
+    """Non-abelian composite, parametric recall. Returns (prompt_str, gold_holder, gold_value).
+
+    Args:
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        L: chain length.
+        rng: a ``random.Random`` for sampling the episode and role.
+
+    Returns:
+        A ``(prompt_str, gold_holder, gold_value)`` triple.
+    """
     ev = w.sample_hard_chain(L, episode_seed=f"rl|{rng.random()}")
     inv = {ro: ag for ag, ro in oracle.hard_assignment(ev).items()}
     role = rng.choice(w.roles)
@@ -50,9 +65,21 @@ def make_prompt(w, r, origins, oracle, L, rng):
     return f"{hist} what is a0 of the holder of role {role} ? : ", holder, origins[holder]
 
 
-def make_warmup_docs(w, r, origins, oracle, n, seed):
+def make_warmup_docs(w: Any, r: Any, origins: dict, oracle: Any, n: int, seed: int) -> list[str]:
     """Answer-only SFT docs (the static baseline that floors): prompt + gold value. RL starts from this model,
-    so the comparison is within-seed: does outcome-reward RL push past the static answer-only SFT it begins at?"""
+    so the comparison is within-seed: does outcome-reward RL push past the static answer-only SFT it begins at?
+
+    Args:
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        n: number of docs to generate.
+        seed: RNG seed for sampling.
+
+    Returns:
+        A list of ``n`` answer-only training strings.
+    """
     rng = random.Random(seed)
     out = []
     for _ in range(n):
@@ -61,8 +88,19 @@ def make_warmup_docs(w, r, origins, oracle, n, seed):
     return out
 
 
-def generate_group(model, tok, prompt_ids, G, device):
-    """Sample G completions for one prompt (no grad). Returns list of completion-id lists (no prompt)."""
+def generate_group(model: Any, tok: Any, prompt_ids: list, G: int, device: str) -> list:
+    """Sample G completions for one prompt (no grad). Returns list of completion-id lists (no prompt).
+
+    Args:
+        model: the policy model.
+        tok: the atomic tokenizer.
+        prompt_ids: the prompt token ids.
+        G: number of completions to sample.
+        device: torch device.
+
+    Returns:
+        A list of ``G`` completion-id lists (each excludes the prompt).
+    """
     import torch
     dot = tok.token_to_id["."]
     base = torch.tensor([prompt_ids] * G, device=device)            # (G, P) identical prompt
@@ -88,8 +126,21 @@ def generate_group(model, tok, prompt_ids, G, device):
     return comps
 
 
-def reward_and_state(comp, tok, val_ids, ag_ids, gold_holder, gold_value):
-    """(reward, holder_resolved): reward=1 if first emitted value == gold value (the composite answer)."""
+def reward_and_state(comp: list, tok: Any, val_ids: Any, ag_ids: Any, gold_holder: str,
+                     gold_value: str) -> tuple[float, float]:
+    """(reward, holder_resolved): reward=1 if first emitted value == gold value (the composite answer).
+
+    Args:
+        comp: one completion's token ids.
+        tok: the atomic tokenizer.
+        val_ids: the set of value-token ids.
+        ag_ids: the set of agent-token ids.
+        gold_holder: the gold holder agent token.
+        gold_value: the gold composite value token.
+
+    Returns:
+        A ``(reward, holder_resolved)`` pair of 0/1 floats.
+    """
     first_val = next((t for t in comp if t in val_ids), None)
     first_ag = next((t for t in comp if t in ag_ids), None)
     rew = 1.0 if first_val is not None and first_val == tok.token_to_id[gold_value] else 0.0
@@ -97,8 +148,20 @@ def reward_and_state(comp, tok, val_ids, ag_ids, gold_holder, gold_value):
     return rew, holder_ok
 
 
-def grpo_loss(model, tok, prompt_ids, comps, adv, device):
-    """Policy-gradient loss over one group: -sum_t logprob(comp_t) * advantage, + entropy bonus."""
+def grpo_loss(model: Any, tok: Any, prompt_ids: list, comps: list, adv: list, device: str) -> Any:
+    """Policy-gradient loss over one group: -sum_t logprob(comp_t) * advantage, + entropy bonus.
+
+    Args:
+        model: the policy model.
+        tok: the atomic tokenizer.
+        prompt_ids: the prompt token ids.
+        comps: the group's completion-id lists.
+        adv: per-completion advantages.
+        device: torch device.
+
+    Returns:
+        The scalar GRPO loss tensor (backward-able).
+    """
     import torch
     import torch.nn.functional as F
     seqs = [prompt_ids + c for c in comps]
@@ -125,8 +188,19 @@ def grpo_loss(model, tok, prompt_ids, comps, adv, device):
     return (total - ENT_COEF * ent_total) / max(1, ntok)
 
 
-def evaluate(model, tok, w, exs, device):
-    """Greedy composite value-accuracy + holder-resolution rate."""
+def evaluate(model: Any, tok: Any, w: Any, exs: list, device: str) -> tuple[float, float]:
+    """Greedy composite value-accuracy + holder-resolution rate.
+
+    Args:
+        model: the model to evaluate.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        exs: a list of ``(prompt, holder, value)`` eval examples.
+        device: torch device.
+
+    Returns:
+        A ``(value_accuracy, holder_resolution_rate)`` pair.
+    """
     import torch
     val_ids = {tok.token_to_id[v] for v in w.value_vocab}
     ag_ids = {tok.token_to_id[g] for g in w.agents}
@@ -147,8 +221,23 @@ def evaluate(model, tok, w, exs, device):
     return v_ok / len(exs), h_ok / len(exs)
 
 
-def train_rl(model, tok, w, r, origins, oracle, seed, device="cuda"):
-    """GRPO on a pre-warmed model (answer-only SFT). Returns the RL-updated model."""
+def train_rl(model: Any, tok: Any, w: Any, r: Any, origins: dict, oracle: Any, seed: int,
+             device: str = "cuda") -> Any:
+    """GRPO on a pre-warmed model (answer-only SFT). Returns the RL-updated model.
+
+    Args:
+        model: the SFT-warmed model (mutated in place).
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        seed: RNG seed for prompt sampling.
+        device: torch device.
+
+    Returns:
+        The same ``model``, RL-updated in place.
+    """
     import torch
     opt = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.0)
     val_ids = {tok.token_to_id[v] for v in w.value_vocab}
@@ -181,7 +270,8 @@ def train_rl(model, tok, w, r, origins, oracle, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """SFT-warm per seed, run GRPO from that model, and tabulate within-seed SFT vs RL composite accuracy."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -215,7 +305,12 @@ def main():
     print("rl_grpo done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the SFT-vs-RL value/holder table (mean ± pstdev over seeds) to ``OUT``.
+
+    Args:
+        agg: maps eval length -> seed -> {"sft": (...), "rl": (...)}.
+    """
     lines = [
         "# RL (GRPO, outcome-only reward) vs static SFT — does reward climb the supervision cliff?\n",
         "`followups/non-abelian-state/rl_grpo.py`. gdp_hybrid d256x4, 3 seeds. Within-seed contrast: answer-only "

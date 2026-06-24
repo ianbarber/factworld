@@ -15,12 +15,15 @@ supervision_sweep.build. Single 3090, ~2.5-3 hr.
 
   .venv/bin/python followups/non-abelian-state/post_reliability.py
 """
+from __future__ import annotations
+
 import copy
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -40,9 +43,20 @@ N_EVAL = 150
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "post_reliability.md")
 
 
-def state_norm_ratio(model, tok, w, r, origins):
+def state_norm_ratio(model: Any, tok: Any, w: Any, r: Any, origins: dict) -> dict:
     """Label-free probe: per-(recurrent)-block hidden-norm growth ratio over a length-256 chain
-    (mean norm of last 32 positions / first 32). >1 = state norm grows with depth; ~1 = flat/calibrated."""
+    (mean norm of last 32 positions / first 32). >1 = state norm grows with depth; ~1 = flat/calibrated.
+
+    Args:
+        model: the model to probe.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (unused beyond signature parity).
+
+    Returns:
+        A dict ``{block_index: norm_growth_ratio}`` (empty if the probe raises).
+    """
     try:
         import torch
         caught = {}
@@ -67,7 +81,8 @@ def state_norm_ratio(model, tok, w, r, origins):
         return {}
 
 
-def main():
+def main() -> None:
+    """Decompose L128 variance into between-base vs within-base across base seeds x post restarts."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -107,7 +122,8 @@ def main():
     print("post_reliability done.", flush=True)
 
 
-def write_md(rows):
+def write_md(rows: list) -> None:
+    """Write the base-quality vs post-luck decomposition tables and verdict to ``OUT``."""
     by_base = defaultdict(list)
     for d in rows:
         by_base[d["base"]].append(d)

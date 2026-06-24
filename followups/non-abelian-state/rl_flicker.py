@@ -10,10 +10,13 @@ Same setup as rl_grpo (d256, answer-only SFT warmup then GRPO, outcome 0/1 rewar
 
   .venv/bin/python followups/non-abelian-state/rl_flicker.py
 """
+from __future__ import annotations
+
 import os
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -30,15 +33,33 @@ EVAL_LEN = [16, 64]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rl_flicker.md")
 
 
-def train_traj(model, tok, w, r, origins, oracle, seed, evs, device="cuda"):
-    """GRPO with reward-trajectory + mid-training eval. Returns (traj, ckpt_evals)."""
+def train_traj(model: Any, tok: Any, w: Any, r: Any, origins: dict, oracle: Any, seed: int,
+               evs: dict, device: str = "cuda") -> tuple[list, dict]:
+    """GRPO with reward-trajectory + mid-training eval. Returns (traj, ckpt_evals).
+
+    Args:
+        model: the SFT-warmed ``HybridLM`` (mutated in place by GRPO).
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        seed: RNG seed for prompt sampling.
+        evs: maps eval length -> a list of pre-built eval prompts.
+        device: torch device.
+
+    Returns:
+        A ``(traj, ckpt)`` pair: ``traj`` is a list of ``(step, mean_reward)`` points and
+        ``ckpt`` maps checkpoint step -> {length: (value, holder)} evals.
+    """
     import random
     import torch
     opt = torch.optim.AdamW(model.parameters(), lr=RG.LR, weight_decay=0.0)
     val_ids = {tok.token_to_id[v] for v in w.value_vocab}
     ag_ids = {tok.token_to_id[g] for g in w.agents}
     rng = random.Random(9000 + seed)
-    traj, ckpt = [], {}
+    traj: list = []
+    ckpt: dict = {}
     if 0 in EVAL_AT:
         ckpt[0] = {L: evaluate(model, tok, w, evs[L], device) for L in EVAL_LEN}
     running = []
@@ -71,7 +92,8 @@ def train_traj(model, tok, w, r, origins, oracle, seed, evs, device="cuda"):
     return traj, ckpt
 
 
-def main():
+def main() -> None:
+    """Warm-start per seed, run 7500-step GRPO with trajectory + mid-eval logging, and tabulate the climb."""
     import random
     import torch
     if not torch.cuda.is_available():
@@ -97,7 +119,12 @@ def main():
     print("rl_flicker done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the per-seed value/holder/reward-trajectory table to ``OUT``.
+
+    Args:
+        agg: maps seed -> {"traj": [...], "ckpt": {...}}.
+    """
     lines = [
         "# RL flicker resolution — slow climb or noise? (5 seeds × 7500 GRPO steps)\n",
         "`followups/non-abelian-state/rl_flicker.py`. gdp_hybrid d256, answer-only SFT warmup then GRPO 7500 "
@@ -109,7 +136,8 @@ def write_md(agg):
     ]
     for s in sorted(agg):
         c = agg[s].get("ckpt", {}); tr = agg[s].get("traj", [])
-        def v(step):
+        def v(step: int) -> str:
+            """Format L16 composite value at ``step`` (``…`` if not checkpointed)."""
             return f"{c[step][16][0]:.2f}" if step in c else "…"
         h7 = f"{c[7500][16][1]:.2f}" if 7500 in c else "…"
         rwd = f"{tr[0][1]:.2f}→{tr[-1][1]:.2f}" if tr else "…"

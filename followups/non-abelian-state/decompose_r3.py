@@ -17,11 +17,14 @@ keyed by a non-abelian pointer fails). If holder also collapses in `param` -> st
 
   .venv/bin/python followups/non-abelian-state/decompose_r3.py
 """
+from __future__ import annotations
+
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -33,7 +36,12 @@ EVAL_LEN = [16, 64]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "decompose_r3.md")
 
 
-def _world():
+def _world() -> tuple:
+    """Build the fixed FactWorld world, renderer, and parametric agent -> a0 origins map.
+
+    Returns:
+        ``(w, r, origins)``: the ``World``, the ``Renderer``, and the fixed agent -> a0-value dict.
+    """
     from factworld.config import WorldConfig
     from factworld.render import Renderer
     from factworld.world import World
@@ -45,12 +53,29 @@ def _world():
     return w, r, origins
 
 
-def _facts(w, r, origins):
+def _facts(w: Any, r: Any, origins: dict) -> str:
+    """Render the in-context agent -> a0 fact sheet as a single whitespace-joined string."""
     return " ".join(r.render_fact(a, "a0", origins[a], key=str(a)) for a in w.agents)
 
 
-def make(arm, w, r, origins, oracle, n, seed, with_cot, lengths):
-    """with_cot True -> training docs; False -> (prompt, holder, value, L) eval tuples. CoT = 'holder value'."""
+def make(arm: str, w: Any, r: Any, origins: dict, oracle: Any, n: int, seed: int,
+         with_cot: bool, lengths: tuple) -> list:
+    """with_cot True -> training docs; False -> (prompt, holder, value, L) eval tuples. CoT = 'holder value'.
+
+    Args:
+        arm: ``"inctx"`` (facts rendered) or ``"param"`` (facts omitted; parametric recall).
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map.
+        oracle: the symbolic ``Oracle``.
+        n: number of examples to produce.
+        seed: RNG seed for chains and role choice.
+        with_cot: if True, return training strings; else return ``(prompt, holder, value, L)`` eval tuples.
+        lengths: lengths to sample chains from.
+
+    Returns:
+        A list of training strings (``with_cot``) or eval tuples.
+    """
     rng = random.Random(seed)
     facts = _facts(w, r, origins) + " " if arm == "inctx" else ""
     out = []
@@ -69,8 +94,22 @@ def make(arm, w, r, origins, oracle, n, seed, with_cot, lengths):
     return out
 
 
-def decompose_eval(model, tok, w, origins, exs, device="cuda", max_new=6):
-    """Free-running; emit holder then value. Routing on holder-wrong uses the FIXED parametric map."""
+def decompose_eval(model: Any, tok: Any, w: Any, origins: dict, exs: list, device: str = "cuda",
+                   max_new: int = 6) -> dict:
+    """Free-running; emit holder then value. Routing on holder-wrong uses the FIXED parametric map.
+
+    Args:
+        model: the model to evaluate.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        origins: the fixed agent -> a0-value map (for the routing breakdown).
+        exs: ``(prompt, holder, value, L)`` eval tuples.
+        device: torch device.
+        max_new: max tokens to free-run per example.
+
+    Returns:
+        A dict of holder/value/both accuracies, P(v|holder_ok), and the holder-wrong routing breakdown.
+    """
     import torch
     val_ids = {tok.token_to_id[v] for v in w.value_vocab}
     ag_ids = {tok.token_to_id[g] for g in w.agents}
@@ -102,7 +141,8 @@ def decompose_eval(model, tok, w, origins, exs, device="cuda", max_new=6):
                 route=route / d, other=other / d, none=none / d)
 
 
-def main():
+def main() -> None:
+    """Train in-context vs parametric arms across seeds and tabulate the decomposed leg breakdown."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -130,7 +170,8 @@ def main():
     print("decompose_r3 done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the decomposed in-context vs parametric leg-breakdown table to ``OUT``."""
     lines = [
         "# R3 decomposition — in-context vs parametric (which leg breaks?)\n",
         "`followups/non-abelian-state/decompose_r3.py`. gdp_hybrid d256x4, 4000 steps, 5 seeds, CoT. "

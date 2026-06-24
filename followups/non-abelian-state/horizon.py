@@ -13,12 +13,15 @@ over training (8 -> 16 -> 32 -> 48 -> 64), mixed-density throughout, and ask:
 
   .venv/bin/python followups/non-abelian-state/horizon.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -36,7 +39,7 @@ D_MODEL, N_LAYERS, D_FF = 384, 6, 1536
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "horizon.md")
 
 
-def unlocked(step):
+def unlocked(step: int) -> list[int]:
     """Length curriculum: progressively admit longer sequences."""
     f = step / STEPS
     if f < 0.25: return [8, 16]
@@ -45,7 +48,7 @@ def unlocked(step):
     return LBUCKETS
 
 
-def make_len_pools(w, r, origins, oracle, per=4000):
+def make_len_pools(w: Any, r: Any, origins: dict, oracle: Any, per: int = 4000) -> dict:
     """Per-length pools, each mixed over supervision density K."""
     pools = {}
     for L in LBUCKETS:
@@ -54,7 +57,18 @@ def make_len_pools(w, r, origins, oracle, per=4000):
     return pools
 
 
-def train(tok, pools, seed, device="cuda"):
+def train(tok: Any, pools: dict, seed: int, device: str = "cuda") -> Any:
+    """Train a gdp_hybrid model with the growing length curriculum.
+
+    Args:
+        tok: the atomic tokenizer.
+        pools: per-length training-string pools (length -> list[str]).
+        seed: RNG / init seed.
+        device: torch device.
+
+    Returns:
+        The trained model.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -87,7 +101,8 @@ def train(tok, pools, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Run the horizon curriculum per seed and tabulate answer-only accuracy at 16/64/128."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -115,7 +130,8 @@ def main():
     print("horizon done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the answer-only accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Horizon-extension curriculum — does training the recurrence at length unlock internalised extrapolation?\n",
         "`followups/non-abelian-state/horizon.py`. gdp_hybrid d384x6 (18.5M), mixed density, training lengths "

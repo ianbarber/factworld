@@ -18,12 +18,15 @@ test of the post-training hypothesis.
 
   .venv/bin/python followups/non-abelian-state/post_state.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -43,7 +46,21 @@ N_POOL, N_EVAL = 8000, 150
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "post_state.md")
 
 
-def make_pool(arm, w, r, origins, oracle, seed):
+def make_pool(arm: str, w: Any, r: Any, origins: dict, oracle: Any, seed: int) -> list[str]:
+    """Build a training pool of rendered documents for one arm.
+
+    Args:
+        arm: ``"short"`` (no burn-in; the in-distribution circuit) or anything else
+            (``"burnin"``: an unlabeled deep-state-coverage prefix before a short labeled window).
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map (parametric recall).
+        oracle: the symbolic ``Oracle``.
+        seed: RNG seed for sampling lengths, densities, and chains.
+
+    Returns:
+        A list of ``N_POOL`` whitespace-joined training strings.
+    """
     rng = random.Random(seed)
     pool = []
     for _ in range(N_POOL):
@@ -55,8 +72,22 @@ def make_pool(arm, w, r, origins, oracle, seed):
     return pool
 
 
-def post_train(model, tok, pool, steps, lr, seed, device="cuda"):
-    """Continue training an EXISTING model (low-LR, own cosine) — the post-training coverage phase."""
+def post_train(model: Any, tok: Any, pool: list[str], steps: int, lr: float, seed: int,
+               device: str = "cuda") -> Any:
+    """Continue training an existing model (low-LR, own cosine) — the post-training coverage phase.
+
+    Args:
+        model: a built, already-trained ``HybridLM`` (mutated in place).
+        tok: the atomic tokenizer.
+        pool: training strings (the burn-in coverage pool).
+        steps: number of post-training steps.
+        lr: peak learning rate for the post phase.
+        seed: RNG seed for minibatch sampling.
+        device: torch device.
+
+    Returns:
+        The same ``model``, post-trained in place.
+    """
     import torch
     import torch.nn.functional as F
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
@@ -83,7 +114,18 @@ def post_train(model, tok, pool, steps, lr, seed, device="cuda"):
     return model
 
 
-def _eval(model, tok, w, evs):
+def _eval(model: Any, tok: Any, w: Any, evs: dict) -> dict:
+    """Internalized answer-only end-to-end value accuracy at each length in ``EVAL_LEN``.
+
+    Args:
+        model: the model to evaluate.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        evs: maps length -> a list of pre-built eval examples.
+
+    Returns:
+        A dict ``{length: value_accuracy}`` (NaN for any length whose eval raises).
+    """
     out = {}
     for L in EVAL_LEN:
         try:
@@ -94,7 +136,8 @@ def _eval(model, tok, w, evs):
     return out
 
 
-def main():
+def main() -> None:
+    """Train a clean base per seed, post-train it with deep-state coverage, and tabulate base vs post to L256."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -127,7 +170,8 @@ def main():
     print("post_state done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the base-vs-post accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Post-training state coverage — does it extend the circuit when from-scratch didn't? "
         "(`post_state.py`, 18.5M, 3 seeds)\n",

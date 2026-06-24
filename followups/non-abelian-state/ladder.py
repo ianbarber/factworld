@@ -19,11 +19,14 @@ Contrasts:  R0->R1 dereference of a computed pointer;  R1->R2 does verbalizing t
 
 Run on the 3090:  .venv/bin/python followups/non-abelian-state/ladder.py
 """
+from __future__ import annotations
+
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -38,7 +41,8 @@ EVAL_LEN = [16, 64]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ladder.md")
 
 
-def _world():
+def _world() -> tuple[Any, Any, dict]:
+    """Build the FactWorld world, renderer, and the FIXED agent -> a0-value (parametric) map."""
     from factworld.config import WorldConfig
     from factworld.render import Renderer
     from factworld.world import World
@@ -51,7 +55,8 @@ def _world():
 
 
 # --------------------------------------------------------------------------- data per rung
-def _gives(w, rng, L):
+def _gives(w: Any, rng: Any, L: int) -> tuple[list, Any, Any]:
+    """Sample ``L`` give-events; return the events, a chosen object, and its last holder."""
     ev = [Event("give", (rng.choice(w.objects), rng.choice(w.agents))) for _ in range(L)]
     obj = rng.choice(sorted({e.args[0] for e in ev}))
     holder = None
@@ -61,7 +66,7 @@ def _gives(w, rng, L):
     return ev, obj, holder
 
 
-def make_docs(rung, w, r, origins, oracle, n, seed):
+def make_docs(rung: str, w: Any, r: Any, origins: dict, oracle: Any, n: int, seed: int) -> list[str]:
     """Training documents (no facts rendered -> recall must come from weights)."""
     rng = random.Random(seed)
     out = []
@@ -87,7 +92,7 @@ def make_docs(rung, w, r, origins, oracle, n, seed):
     return out
 
 
-def make_eval(rung, w, r, origins, oracle, n, seed, L):
+def make_eval(rung: str, w: Any, r: Any, origins: dict, oracle: Any, n: int, seed: int, L: int) -> list:
     """(prompt, holder, value, L) eval tuples; prompt ends ' : ' (model generates the answer)."""
     rng = random.Random(seed)
     out = []
@@ -110,7 +115,7 @@ def make_eval(rung, w, r, origins, oracle, n, seed, L):
 
 
 # --------------------------------------------------------------------------- eval
-def value_eval(model, tok, w, exs, device="cuda", max_new=8):
+def value_eval(model: Any, tok: Any, w: Any, exs: list, device: str = "cuda", max_new: int = 8) -> float:
     """No-CoT: first emitted value token must equal the (parametric) gold value."""
     import torch
     val_ids = {tok.token_to_id[v] for v in w.value_vocab}
@@ -133,7 +138,8 @@ def value_eval(model, tok, w, exs, device="cuda", max_new=8):
     return correct / len(exs)
 
 
-def main():
+def main() -> None:
+    """Train each ladder rung per seed and tabulate parametric-recall accuracy at L16/L64."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -166,7 +172,8 @@ def main():
     print("ladder done.", flush=True)
 
 
-def write_md(res):
+def write_md(res: dict) -> None:
+    """Write the per-rung accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Parametric-composite localization ladder (follow-on, segregated)\n",
         "`followups/non-abelian-state/ladder.py`. gdp_hybrid, d256x4 (~6M), 4000 steps, 3 seeds. "

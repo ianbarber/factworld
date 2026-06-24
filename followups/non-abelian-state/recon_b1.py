@@ -13,10 +13,13 @@ If strict_pos collapses, the 0.83 was a scoring artifact and the §3 rung must b
 
   .venv/bin/python followups/non-abelian-state/recon_b1.py
 """
+from __future__ import annotations
+
 import os
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -30,9 +33,20 @@ EVAL_LEN = [16, 64]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recon_b1.md")
 
 
-def strict_pos_eval(model, tok, w, exs, device="cuda"):
+def strict_pos_eval(model: Any, tok: Any, w: Any, exs: list, device: str = "cuda") -> float:
     """Position-strict: the argmax at the answer position (prompt's last token) must equal gold value.
-    Single forward per example, no autoregressive scan."""
+    Single forward per example, no autoregressive scan.
+
+    Args:
+        model: the model to evaluate.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        exs: ``(prompt, holder, value, L)`` eval tuples.
+        device: torch device.
+
+    Returns:
+        Fraction of examples whose answer-position argmax equals the gold value.
+    """
     import torch
     model.eval()
     correct = 0
@@ -45,7 +59,8 @@ def strict_pos_eval(model, tok, w, exs, device="cuda"):
     return correct / len(exs)
 
 
-def main():
+def main() -> None:
+    """Train R1 models per seed and score them value-scan vs position-strict to L64."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -73,7 +88,8 @@ def main():
     print("recon_b1 done.", flush=True)
 
 
-def write_md(res):
+def write_md(res: dict) -> None:
+    """Write the value-scan vs position-strict accuracy table to ``OUT``."""
     lines = [
         "# B1 reconciliation — R1 (abelian + parametric) under lenient vs position-strict scoring\n",
         "`followups/non-abelian-state/recon_b1.py`. gdp_hybrid d256x4, 4000 steps, 3 seeds. `scan` = first "

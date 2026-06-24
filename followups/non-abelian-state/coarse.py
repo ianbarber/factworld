@@ -16,12 +16,15 @@ model emitting its OWN summaries, at L64 and L128 (2x-4x train). Floor = 0.20. B
 
   .venv/bin/python followups/non-abelian-state/coarse.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -39,8 +42,17 @@ CONDS = [("full_C8", 8, True), ("full_C16", 16, True), ("single_C8", 8, False)]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "coarse.md")
 
 
-def make_builder(oracle):
-    def build(w, r, origins, L, C, full, rng):
+def make_builder(oracle: Any):
+    """Build the example-rendering closure bound to ``oracle``.
+
+    Args:
+        oracle: the symbolic ``Oracle`` (captured for hard-state traces).
+
+    Returns:
+        A ``build(w, r, origins, L, C, full, rng)`` closure returning
+        ``(words, spans, vidx, gold_value)``.
+    """
+    def build(w: Any, r: Any, origins: dict, L: int, C: int, full: bool, rng: Any):
         ev = w.sample_hard_chain(L, episode_seed=f"{C}{full}|{rng.random()}")
         trace = oracle.hard_trace(ev)
         role = rng.choice(w.roles)
@@ -67,8 +79,20 @@ def make_builder(oracle):
     return build
 
 
-def coarse_eval(model, tok, w, exs, device="cuda", max_tok=8):
-    """Free-running: events forced; the model GENERATES its own summaries + final value. Score final value."""
+def coarse_eval(model: Any, tok: Any, w: Any, exs: list, device: str = "cuda", max_tok: int = 8) -> float:
+    """Free-running: events forced; the model GENERATES its own summaries + final value. Score final value.
+
+    Args:
+        model: the model to evaluate.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        exs: pre-built ``(words, spans, vidx, gold)`` eval examples.
+        device: torch device.
+        max_tok: max tokens to generate per summary / value.
+
+    Returns:
+        Fraction of examples whose generated final value matches ``gold``.
+    """
     import torch
     val_ids = {tok.token_to_id[v] for v in w.value_vocab}
     dot = tok.token_to_id["."]
@@ -102,7 +126,18 @@ def coarse_eval(model, tok, w, exs, device="cuda", max_tok=8):
     return correct / len(exs)
 
 
-def train(tok, pool, seed, device="cuda"):
+def train(tok: Any, pool: list[str], seed: int, device: str = "cuda") -> Any:
+    """Train one gdp_hybrid model from scratch on the coarse-summary pool.
+
+    Args:
+        tok: the atomic tokenizer.
+        pool: training strings (rendered documents with periodic summaries).
+        seed: RNG/init seed.
+        device: torch device.
+
+    Returns:
+        The trained model.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -133,7 +168,8 @@ def train(tok, pool, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Train each re-anchoring condition and tabulate free-running composite accuracy at L64/L128."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -161,7 +197,8 @@ def main():
     print("coarse done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the per-condition L64/L128 composite-accuracy table to ``OUT``."""
     lines = [
         "# Coarse re-anchoring — does a periodic compressed full-state summary unlock length-robust tracking?\n",
         "`followups/non-abelian-state/coarse.py`. gdp_hybrid d384x6 (18.5M), 3 seeds, parametric. Model emits a "

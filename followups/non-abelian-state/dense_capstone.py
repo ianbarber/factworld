@@ -22,11 +22,14 @@ Metrics (5 seeds, gdp_hybrid):
 
   .venv/bin/python followups/non-abelian-state/dense_capstone.py
 """
+from __future__ import annotations
+
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -38,7 +41,12 @@ EVAL_LEN = [16, 64]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dense_capstone.md")
 
 
-def _world():
+def _world() -> tuple:
+    """Build the fixed FactWorld world, renderer, and parametric agent -> a0 origins map.
+
+    Returns:
+        ``(w, r, origins)``: the ``World``, the ``Renderer``, and the fixed agent -> a0-value dict.
+    """
     from factworld.config import WorldConfig
     from factworld.render import Renderer
     from factworld.world import World
@@ -50,12 +58,26 @@ def _world():
     return w, r, origins
 
 
-def _facts(w, r, origins):
+def _facts(w: Any, r: Any, origins: dict) -> str:
+    """Render the in-context agent -> a0 fact sheet as a single whitespace-joined string."""
     return " ".join(r.render_fact(a, "a0", origins[a], key=str(a)) for a in w.agents)
 
 
-def build(arm, w, r, origins, oracle, L, rng):
-    """Return (words, holder_word_idx[list], value_word_idx) for one dense example."""
+def build(arm: str, w: Any, r: Any, origins: dict, oracle: Any, L: int, rng: Any) -> tuple:
+    """Return (words, holder_word_idx[list], value_word_idx) for one dense example.
+
+    Args:
+        arm: ``"inctx"`` (facts rendered) or ``"param"`` (facts omitted; parametric recall).
+        w: the FactWorld ``World``.
+        r: the ``Renderer``.
+        origins: the fixed agent -> a0-value map.
+        oracle: the symbolic ``Oracle`` (provides the dense ``hard_trace``).
+        L: number of events in the chain.
+        rng: RNG for sampling the chain and role.
+
+    Returns:
+        ``(words, hidx, vidx)``: the word stream, dense holder-target word indices, and value word index.
+    """
     ev = w.sample_hard_chain(L, episode_seed=f"{arm}|{rng.random()}")
     trace = oracle.hard_trace(ev)                      # len L+1; trace[i] = assignment after i events
     role = rng.choice(w.roles)
@@ -77,18 +99,31 @@ def build(arm, w, r, origins, oracle, L, rng):
     return words, hidx, vidx
 
 
-def make_docs(arm, w, r, origins, oracle, n, seed):
+def make_docs(arm: str, w: Any, r: Any, origins: dict, oracle: Any, n: int, seed: int) -> list[str]:
+    """Build ``n`` rendered training docs for one arm at mixed short lengths."""
     rng = random.Random(seed)
     return [" ".join(build(arm, w, r, origins, oracle, rng.choice(TRAIN_LEN), rng)[0]) for _ in range(n)]
 
 
-def make_eval(arm, w, r, origins, oracle, n, seed, L):
+def make_eval(arm: str, w: Any, r: Any, origins: dict, oracle: Any, n: int, seed: int, L: int) -> list:
+    """Build ``n`` ``(words, hidx, vidx)`` eval examples for one arm at a fixed length ``L``."""
     rng = random.Random(seed)
     return [build(arm, w, r, origins, oracle, L, rng) for _ in range(n)]
 
 
-def dense_eval(model, tok, w, exs, device="cuda"):
-    """Teacher-forced single forward: per-step holder accuracy + value-accuracy given the true trace."""
+def dense_eval(model: Any, tok: Any, w: Any, exs: list, device: str = "cuda") -> tuple:
+    """Teacher-forced single forward: per-step holder accuracy + value-accuracy given the true trace.
+
+    Args:
+        model: the model to evaluate.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        exs: ``(words, hidx, vidx)`` eval examples.
+        device: torch device.
+
+    Returns:
+        ``(dense_holder_acc, value_given_trace_acc)``.
+    """
     import torch
     model.eval()
     h_hit = h_tot = v_hit = v_tot = 0
@@ -108,9 +143,21 @@ def dense_eval(model, tok, w, exs, device="cuda"):
     return h_hit / max(1, h_tot), v_hit / max(1, v_tot)
 
 
-def e2e_eval(model, tok, w, exs, device="cuda", max_slot=4):
+def e2e_eval(model: Any, tok: Any, w: Any, exs: list, device: str = "cuda", max_slot: int = 4) -> tuple:
     """Guided free-run: events forced, holders + final value GENERATED (model's own state). Score final
-    holder and value."""
+    holder and value.
+
+    Args:
+        model: the model to evaluate.
+        tok: the atomic tokenizer.
+        w: the FactWorld ``World``.
+        exs: ``(words, hidx, vidx)`` eval examples.
+        device: torch device.
+        max_slot: max tokens to generate per holder/value slot.
+
+    Returns:
+        ``(final_holder_acc, value_acc)``.
+    """
     import torch
     ag_ids = {tok.token_to_id[g] for g in w.agents}
     val_ids = {tok.token_to_id[v] for v in w.value_vocab}
@@ -151,7 +198,8 @@ def e2e_eval(model, tok, w, exs, device="cuda", max_slot=4):
     return fh / n, fv / n
 
 
-def main():
+def main() -> None:
+    """Train in-context vs parametric arms with dense state supervision and tabulate the metrics."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -180,7 +228,8 @@ def main():
     print("dense_capstone done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the in-context vs parametric dense/value/e2e metric table to ``OUT``."""
     lines = [
         "# Dense-supervision capstone — does lifting the state leg rescue the PARAMETRIC composite?\n",
         "`followups/non-abelian-state/dense_capstone.py`. gdp_hybrid d256x4, 4000 steps, 5 seeds. "

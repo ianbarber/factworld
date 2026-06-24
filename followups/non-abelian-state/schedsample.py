@@ -14,12 +14,15 @@ Arms (K seeds), metric = clean-base fraction (free-running answer-only L16 e2e >
 
   .venv/bin/python followups/non-abelian-state/schedsample.py
 """
+from __future__ import annotations
+
 import copy
 import math
 import os
 import random
 import statistics
 import sys
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -39,7 +42,21 @@ EVAL_LEN = [16, 128]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schedsample.md")
 
 
-def train_ss(tok, pool, seed, p_max, gate, device="cuda"):
+def train_ss(tok: Any, pool: list[str], seed: int, p_max: float, gate: str,
+             device: str = "cuda") -> tuple[Any, Any]:
+    """Train a gdp_hybrid base with scheduled-sampling (free-running) holder exposure.
+
+    Args:
+        tok: the atomic tokenizer.
+        pool: the short in-distribution training strings.
+        seed: RNG seed for init and minibatch sampling.
+        p_max: peak scheduled-sampling probability (ramped 0 -> p_max over the first half).
+        gate: the GDP forget-gate retention-init mode passed to ``apply_gate_init``.
+        device: torch device.
+
+    Returns:
+        A ``(model, ema_model)`` pair: the final model and its cosine-tail weight average.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -90,7 +107,8 @@ def train_ss(tok, pool, seed, p_max, gate, device="cuda"):
     return model, ema_model
 
 
-def main():
+def main() -> None:
+    """Train each scheduled-sampling arm over seeds and tabulate clean-base / EMA / L128 rates."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -125,7 +143,8 @@ def main():
     print("schedsample done.", flush=True)
 
 
-def write_md(res):
+def write_md(res: dict) -> None:
+    """Write the scheduled-sampling clean-base / EMA / L128 table to ``OUT``."""
     lines = [
         "# Scheduled sampling — free-running exposure in base training (`schedsample.py`, 18.5M)\n",
         f"At holder slots, with prob p(ramp 0->p_max) replace the gold holder in CONTEXT with the model's own "

@@ -17,12 +17,15 @@ EMA) to catch any NATIVE length-generalization (would be a big surprise -> short
 
   .venv/bin/python followups/non-abelian-state/base_reliability.py
 """
+from __future__ import annotations
+
 import copy
 import math
 import os
 import random
 import statistics
 import sys
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -44,11 +47,25 @@ EVAL_LEN = [16, 128]                        # L16 = clean-base predictor; L128 =
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "base_reliability.md")
 
 
-def inv_softplus(y):
+def inv_softplus(y: float) -> float:
+    """Inverse softplus.
+
+    Args:
+        y: the softplus output value.
+
+    Returns:
+        The pre-softplus value x such that ``softplus(x) == y``.
+    """
     return math.log(math.expm1(y))
 
 
-def apply_gate_init(model, mode):
+def apply_gate_init(model: Any, mode: str) -> None:
+    """Bias the GDP forget gate toward retention (slow gate) for retention-init arms.
+
+    Args:
+        model: a built ``HybridLM`` (mutated in place).
+        mode: ``"default"`` (no-op) or ``"slow"`` (retention init on GDP layers).
+    """
     if mode == "default":
         return
     for b in model.blocks:
@@ -59,7 +76,21 @@ def apply_gate_init(model, mode):
                 lyr.A_log.data.fill_(math.log(0.5))
 
 
-def train_emma(tok, pool, seed, use_conv, gate, device="cuda"):
+def train_emma(tok: Any, pool: list[str], seed: int, use_conv: bool, gate: str,
+               device: str = "cuda") -> tuple[Any, Any]:
+    """Train one gdp_hybrid base while accumulating an EMA copy of the weights.
+
+    Args:
+        tok: the atomic tokenizer.
+        pool: training strings (the short in-distribution pool).
+        seed: RNG/init seed.
+        use_conv: whether to enable ShortConvolution (``use_short_conv``).
+        gate: gate-init mode passed to ``apply_gate_init`` (``"default"`` or ``"slow"``).
+        device: torch device.
+
+    Returns:
+        A ``(model, ema_model)`` pair — the raw trained model and its EMA-weight copy.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -98,7 +129,8 @@ def train_emma(tok, pool, seed, use_conv, gate, device="cuda"):
     return model, ema_model
 
 
-def main():
+def main() -> None:
+    """Train K=8 bases per arm (short-conv x gate-init) and tabulate clean-base fraction and L128 length-gen."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -131,7 +163,8 @@ def main():
     print("base_reliability done.", flush=True)
 
 
-def write_md(res):
+def write_md(res: dict) -> None:
+    """Write the clean-base-fraction and L128 length-gen table to ``OUT``."""
     lines = [
         "# Base-reliability — short-conv x gate-init, clean-base fraction (`base_reliability.py`, 18.5M)\n",
         f"Free-running answer-only L16 e2e (clean = >= {CLEAN_THR}); baseline ~1/8. `shortconv` = use_short_conv "

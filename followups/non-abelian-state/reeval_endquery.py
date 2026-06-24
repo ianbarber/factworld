@@ -13,6 +13,8 @@ and the decay_curve cliff was the front-query online-recurrence carry artifact.
 
   .venv/bin/python followups/non-abelian-state/reeval_endquery.py
 """
+from __future__ import annotations
+
 import os
 import statistics
 import sys
@@ -31,7 +33,8 @@ EVAL_LEN = [16, 24, 32, 48, 64, 96, 128, 192, 256]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reeval_endquery.md")
 
 
-def main():
+def main() -> None:
+    """Re-run the exact ladder recipe (R1/R2/R3a) on the fine L16..256 grid and tabulate per-rung accuracy."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -41,7 +44,7 @@ def main():
     from iso import strict_eval
     w, r, origins = Ldr._world()
     oracle = Oracle(w)
-    is_cot = {"R1": False, "R2": True, "R3a": False}
+    is_cot: dict[str, bool] = {"R1": False, "R2": True, "R3a": False}
     res = defaultdict(lambda: defaultdict(list))
     print("=== END-QUERY RE-EVAL: ladder recipe on fine grid L16..256 ===", flush=True)
     for rung in RUNGS:
@@ -62,7 +65,12 @@ def main():
     print("reeval_endquery done.", flush=True)
 
 
-def write_md(res):
+def write_md(res: dict) -> None:
+    """Write the per-rung accuracy table (mean ± pstdev over seeds) across ``EVAL_LEN`` to ``OUT``.
+
+    Args:
+        res: maps rung -> length -> list of per-seed accuracies.
+    """
     lines = [
         "# End-query re-eval — does the ladder recipe hold to high length? (`reeval_endquery.py`, d256x4, 3 seeds)\n",
         "Exact ladder recipe (gdp_hybrid d256x4, 4000 steps, train {4,8,16}, parametric recall). Query stated "

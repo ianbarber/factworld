@@ -10,12 +10,15 @@ capacity or by under-training within reach — firming "learnability, not capaci
 
   .venv/bin/python followups/non-abelian-state/scale_tuned.py
 """
+from __future__ import annotations
+
 import math
 import os
 import random
 import statistics
 import sys
 from collections import defaultdict
+from typing import Any
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
@@ -34,7 +37,23 @@ EVAL_LEN = [16, 64]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scale_tuned.md")
 
 
-def train(tok, pools, d_model, n_layers, d_ff, lr, seed, device="cuda"):
+def train(tok: Any, pools: dict, d_model: int, n_layers: int, d_ff: int, lr: float, seed: int,
+          device: str = "cuda") -> Any:
+    """Train a gdp_hybrid at the given scale and LR on the mixed-density pools.
+
+    Args:
+        tok: the atomic tokenizer.
+        pools: maps chain-length K -> a list of training strings.
+        d_model: model width.
+        n_layers: number of layers.
+        d_ff: feed-forward width.
+        lr: peak learning rate.
+        seed: RNG seed for init and minibatch sampling.
+        device: torch device.
+
+    Returns:
+        The trained ``HybridLM``.
+    """
     import torch
     import torch.nn.functional as F
     from factworld.models import build_model
@@ -66,7 +85,8 @@ def train(tok, pools, d_model, n_layers, d_ff, lr, seed, device="cuda"):
     return model
 
 
-def main():
+def main() -> None:
+    """Sweep the largest scales × LRs × seeds and tabulate answer-only L16/L64 accuracy."""
     import torch
     if not torch.cuda.is_available():
         print("no GPU"); return
@@ -95,7 +115,8 @@ def main():
     print("scale_tuned done.", flush=True)
 
 
-def write_md(agg):
+def write_md(agg: dict) -> None:
+    """Write the scale × LR accuracy table (mean ± pstdev over seeds) to ``OUT``."""
     lines = [
         "# Scale-done-right — LR-tuned + 70M ceiling: is the horizon wall capacity or under-training?\n",
         "`followups/non-abelian-state/scale_tuned.py`. gdp_hybrid, mixed-density, 8000 steps, 2 seeds. Largest "
@@ -110,7 +131,7 @@ def write_md(agg):
             d = agg.get((name, lr))
             if not d:
                 continue
-            def col(L):
+            def col(L: int) -> str:
                 xs = [d[(L, s)] for s in SEEDS if (L, s) in d]
                 return f"{statistics.mean(xs):.2f}±{statistics.pstdev(xs):.2f}" if xs else "…"
             lines.append(f"| {name} | {lr} | {col(16)} | {col(64)} |")
