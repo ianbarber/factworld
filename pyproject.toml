@@ -14,7 +14,9 @@ dependencies = []
 #   uv pip install "flash-linear-attention==0.5.0" numpy pytest
 # Verified working: torch 2.12.0+cu130, triton 3.7.0, fla 0.5.0 on RTX 3090 (sm_86).
 train = ["torch>=2.12", "flash-linear-attention>=0.5.0", "numpy"]
-dev = ["pytest"]
+api = ["openai>=1.0"]
+hf = ["transformers>=4.40", "torch"]
+dev = ["pytest", "openai>=1.0", "transformers>=4.40", "torch>=2.12", "flash-linear-attention>=0.5.0", "numpy"]
 
 [build-system]
 requires = ["hatchling"]

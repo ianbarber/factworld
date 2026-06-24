@@ -18,7 +18,9 @@ sys.path.insert(0, REPO)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
-from factworld import tasks as TK  # noqa: E402
+from factworld import tasks as TK
+from factworld.backends import LocalBackend
+from factworld.runner import evaluate_task
 
 
 def build_docs(examples, use_trace):
@@ -30,25 +32,13 @@ def build_docs(examples, use_trace):
     return docs
 
 
-def greedy_continuation(model, tok, prompt, max_new, device="cuda"):
-    import torch
-    ids = tok.encode(prompt); start = len(ids); dot = tok.token_to_id["."]
-    model.eval()
-    with torch.no_grad():
-        for _ in range(max_new):
-            with torch.autocast(device, dtype=torch.bfloat16):
-                nx = int(model(torch.tensor([ids], device=device))[0, -1].float().argmax())
-            ids.append(nx)
-            if nx == dot:
-                break
-    return tok.decode(ids[start:])
-
-
 def run_task(name, *, spec=None, arch="gdp_hybrid", d_model=256, n_layers=4, d_ff=None, steps=4000,
              batch=32, train_n=8000, eval_n=200, seed=0, use_trace=False, device="cuda"):
     """Train on the task's `train` split; return {eval_length: canonical position-strict accuracy}."""
     import torch
+
     from factworld import train as T
+
     spec = spec or TK.CANONICAL[name]
     d_ff = d_ff or 4 * d_model
     w, r = TK.build_world(spec)
@@ -57,15 +47,16 @@ def run_task(name, *, spec=None, arch="gdp_hybrid", d_model=256, n_layers=4, d_f
     run = T.run(arch, tok, docs, [], steps=steps, batch=batch, d_model=d_model, n_layers=n_layers,
                 d_ff=d_ff, seed=seed, return_model=True, device=device)
     model = run["model"]
+
+    backend = LocalBackend([w], arch=arch, model=model, tokenizer=tok, device=device)
+
     out = {}
     for L in spec.eval_lengths:
-        test = TK.generate(spec, "test", n=eval_n, length=L)
-        c = 0
-        for e in test:
-            cont = greedy_continuation(model, tok, e.prompt, max_new=len(e.answer.split()) + 2, device=device)
-            c += TK.score_exact(cont, e.answer)
-        out[L] = c / eval_n
-    del model; torch.cuda.empty_cache()
+        result = evaluate_task(backend, spec, split="test", n=eval_n, length=L)
+        out[L] = result["overall"]
+
+    del model
+    torch.cuda.empty_cache()
     return out
 
 
@@ -81,7 +72,6 @@ def main():
     a = ap.parse_args()
     acc = run_task(a.task, arch=a.arch, d_model=a.d_model, n_layers=a.n_layers, steps=a.steps,
                    seed=a.seed, use_trace=a.use_trace)
-    spec = TK.CANONICAL[a.task]
     print(f"\n{a.task} [{a.arch} d{a.d_model} x{a.n_layers}, {a.steps} steps] — position-strict exact match:")
     for L, v in acc.items():
         print(f"  test@L{L}: {v:.3f}")
