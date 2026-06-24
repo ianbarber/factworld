@@ -59,6 +59,11 @@ COMPOSITE_FORMAT_PROMPT = (
     "like 'g3 v9'."
 )
 
+S5_FORMAT_PROMPT = (
+    "For 'what role does ... have?' questions, answer with only a role token "
+    "(r0, r1, r2, r3, or r4) followed by a period. Example: 'r2 .'"
+)
+
 
 def _relaxed_score(pred: str, gold: str) -> int:
     """Tokenization-agnostic score: ignore whitespace and trailing periods."""
@@ -243,6 +248,8 @@ def main():
                     help='JSON mapping task name -> extra instruction, e.g. \'{"composite_copy_v1": "..."}\'.')
     ap.add_argument("--composite_format", action="store_true",
                     help="Shorthand: append the composite two-token format instruction.")
+    ap.add_argument("--s5_format", action="store_true",
+                    help="Shorthand: append the S5 role-output format instruction.")
     ap.add_argument("--max_new_tokens", type=int, default=16,
                     help="Generation budget per example (default: 16).")
     ap.add_argument("--no_reasoning", action="store_true",
@@ -263,6 +270,8 @@ def main():
     if a.composite_format:
         task_prompts.setdefault("composite_copy_v1", COMPOSITE_FORMAT_PROMPT)
         task_prompts.setdefault("composite_v1", COMPOSITE_FORMAT_PROMPT)
+    if a.s5_format:
+        task_prompts.setdefault("s5_v1", S5_FORMAT_PROMPT)
 
     results = run_grid(
         a.models, a.tasks, a.n, lengths, a.max_workers,
