@@ -183,14 +183,23 @@ hard = CANONICAL["composite_copy_v1"].scaled(k=64, eval_lengths=(32, 64, 128))
 
 ## How the tasks get harder — and who solves them
 
-The REPORTED suite forms a difficulty ladder. The same strong pretrained open models
-that are near ceiling on single-hop recall fall back to the floor once the task
-requires maintaining non-abelian latent state.
+The suite is ordered by the *kind* of computation each task needs. The further down the table, the
+more the model must maintain latent state over a long stream.
 
-### Pretrained open models on the benchmark tasks
+| task | what it measures | answer space (floor) | difficulty axis |
+| --- | --- | --- | --- |
+| `recall_copy_v1` | 1-of-N in-context-copy recall | k facts (~0.016) | distractor pool |
+| `conflict_v1` | parametric ↔ in-context override | k facts (~0.016) | memorized map vs. context |
+| `binding_v1` | last-write-wins state tracking | k roles (0.200) | give-stream length |
+| `composite_copy_v1` | binding × in-context recall | k² pairs (~0.031) | binding horizon |
+| `chain_v1` | depth-*k* pointer chase | k agents (~0.167) | composition depth |
+| `s5_v1` | non-abelian S₅ role permutation | 5 roles (0.200) | permutation horizon |
 
-OpenRouter grid (n = 30, greedy decoding, composite-format instruction appended;
-see [`docs/openrouter-results.md`](docs/openrouter-results.md)):
+### Pretrained open models
+
+OpenRouter grid (n = 30, greedy decoding; format instructions appended where needed):
+
+**Benchmark tasks** — see [`docs/openrouter-results.md`](docs/openrouter-results.md):
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 |
 | --- | --- | --- | --- | --- | --- |
@@ -213,14 +222,7 @@ Reading the ladder:
 - **Depth extrapolation stays hard.** `chain_v1` peaks at 0.300, consistent with the paper's claim
   that pointer-chase depth generalization is poor for pretrained chat models.
 
-### The non-abelian wall: S₅ role permutations
-
-The experimental `s5_v1` task pushes one step further. A stream of `swap`/`cycle_roles` events
-permutes which agent holds each of five roles; the query asks for the role of a single agent at the
-end. There are five possible answers, so random guessing is 0.20.
-
-OpenRouter grid with a role-token format instruction
-([`docs/openrouter-s5-results.md`](docs/openrouter-s5-results.md)):
+**Non-abelian S₅** — see [`docs/openrouter-s5-results.md`](docs/openrouter-s5-results.md):
 
 | model | L32 | L64 | L128 | mean |
 | --- | --- | --- | --- | --- |
@@ -232,35 +234,53 @@ OpenRouter grid with a role-token format instruction
 | llama-3.3-70b-instruct | 0.300 | 0.167 | 0.067 | 0.178 |
 | gpt-4o-mini | 0.100 | 0.167 | 0.167 | 0.144 |
 
-Every model is at the chance floor. Even Nemotron 3 Ultra, the strongest composite model in the
-grid, does not lift above it. The format instruction gets the right token *shape*, but none of these
-pretrained models tracks the running non-abelian permutation.
+Every model is at the 0.20 chance floor. Even Nemotron 3 Ultra, the strongest composite model in
+the grid, does not lift above it. The format instruction gets the right token *shape*, but none of
+these pretrained models tracks the running non-abelian permutation.
 
-### Custom-trained architectures: the same wall, moved by supervision
+### Custom-trained recurrent models
 
-The follow-up study in [`followups/non-abelian-state/`](followups/non-abelian-state/) holds the
-architecture class fixed (a GatedDeltaProduct recurrent hybrid) and varies the supervision. It shows
-that the wall is **learnability**, not capacity, and that the right training signal moves it.
+The follow-up study in [`followups/non-abelian-state/`](followups/non-abelian-state/) trains the
+same architecture family from scratch and varies only the supervision and training distribution.
+All rows below use variants of the GatedDeltaProduct (GDP) product-recurrence; the hybrid adds one
+attention layer in a `[recurrent, recurrent, attn, recurrent]` stack (see `factworld/models.py`).
 
-| regime | recipe | headline result |
-| --- | --- | --- |
-| Small-scale baseline | `gdp_hybrid`, d_model=320, 4 layers, 8k steps, seed 0 | `composite_copy_v1` floors at ≤0.020 across L4–L64 (see [`docs/results.md`](docs/results.md)) |
-| Dense-supervised S₅ | `gdp_pure`, per-step state trace, L32 train | L32/L64/L128 token-acc = 1.00 / 1.00 / **0.99** (see [`docs/state-tracking-results.md`](docs/state-tracking-results.md)) |
-| Non-abelian recipe (follow-up) | dense process supervision → mixed-density internalization → target-length distribution → post-training deep-state coverage | dense K=1: L16=1.00, L64=0.95; internalized horizon curriculum: L64=**0.94**; post-train on clean base: L64=**0.99**, L128=**0.86** |
+| model | supervision / training signal | train length | eval | score |
+| --- | --- | --- | --- | --- |
+| `gdp_hybrid` (baseline) | answer-only, ≤L16 | L4–L16 | `composite_copy_v1` @L16 | 0.02 |
+| `gdp_pure` | dense per-step state trace | L32 | S₅ token-acc @L128 | **0.99** |
+| `gdp_hybrid` | dense process supervision (K=1) | L16 | non-abelian composite @L64 | **0.95** |
+| `gdp_hybrid` | mixed-density internalization (no scratchpad) | L16 | answer-only @L16 | **1.00** |
+| `gdp_hybrid` | horizon-extension curriculum | progressive → L64 | answer-only @L64 | **0.94** |
+| `gdp_hybrid` | post-training deep-state coverage, clean base, no labels | L16 base + L64/L128 burn-in | answer-only @L64 / @L128 | **0.99** / **0.86** |
 
-The comparison tells a clear story:
+Sources: baseline composite in [`docs/results.md`](docs/results.md); dense-supervised S₅ in
+[`docs/state-tracking-results.md`](docs/state-tracking-results.md); full recipe and controls in
+[`followups/non-abelian-state/non-abelian-state.md`](followups/non-abelian-state/non-abelian-state.md)
+and [`REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md).
 
-- **Architecture is not the immediate bottleneck.** The product-recurrence backbone that fails the
-  small-scale composite under sparse supervision *solves* the S₅ word problem when given dense
-  per-step state supervision.
+What the comparison shows:
+
+- **Architecture is not the bottleneck.** The same GDP backbone that floors the small-scale
+  composite under sparse supervision solves the S₅ word problem when given dense per-step state
+  supervision.
+- **The strongest trained results are hybrid, not pure.** The 0.94–0.99 L64 numbers come from the
+  `gdp_hybrid` trained with dense or curriculum supervision; the pure-recurrence `gdp_pure` result is
+  the dense-supervised state-tracking probe (0.99 token-acc at L128), not the full composite.
 - **Pretrained open models are in the sparse-supervision regime.** They were not trained with the
   oracle's intermediate role-permutation trace, so they behave like the answer-only baseline of the
-  follow-up: at floor. This is consistent with the follow-up's claim that sparse outcome-level
-  signal — including vanilla RL — cannot climb the non-abelian cliff.
-- **Length generalization is a data-distribution problem, not a width problem.** Scaling the custom
-  architecture to 357M does not move the internalized horizon wall (answer-only L64 stays at 0.20),
-  but a sufficient density of target-length examples does, and post-training deep-state coverage
-  extends the clean circuit to ≈8× the trained horizon with no labels at the target length.
+  follow-up: at floor. This matches the follow-up's finding that sparse outcome-level signal —
+  including vanilla RL — cannot climb the non-abelian cliff.
+- **Length generalization is a data-distribution problem, not a width problem.** Scaling the hybrid
+  to 357M does not move the internalized horizon wall (answer-only L64 stays at 0.20), but a
+  sufficient density of target-length examples does, and post-training deep-state coverage extends
+  the clean circuit to ≈8× the trained horizon with no labels at the target length.
+
+A recent looped-transformer result (FPRM; Movahedi et al., 2026) reports strong S₅ length
+generalization with a causal 1-D convolution / unroll-to-convergence mechanism. It is architecturally
+different from our GDP hybrid, but conceptually aligned: both supply the recurrent-state regime that
+ordinary training misses. We do not run that architecture here; the point is that the wall can be
+moved by several recurrence-side mechanisms once the supervision is right.
 
 In short: the suite climbs from easy single-hop recall, through binding and composition, to a
 non-abelian state-tracking wall that pretrained chat models hit at chance. The wall is movable, but
