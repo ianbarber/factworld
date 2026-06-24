@@ -82,7 +82,10 @@ def split_title(md_text):
 
 
 def main():
-    md_text = open(SRC, encoding="utf-8").read()
+    import sys
+    src = sys.argv[1] if len(sys.argv) > 1 else SRC
+    out = sys.argv[2] if len(sys.argv) > 2 else (os.path.splitext(src)[0] + ".pdf" if len(sys.argv) > 1 else OUT)
+    md_text = open(src, encoding="utf-8").read()
     title, byline, body = split_title(md_text)
 
     html_body = markdown.markdown(
@@ -100,8 +103,8 @@ def main():
         f"<!DOCTYPE html><html><head><meta charset='utf-8'>"
         f"<style>{CSS}</style></head><body>{head}{html_body}</body></html>"
     )
-    HTML(string=html_doc, base_url=REPO).write_pdf(OUT)
-    print(f"wrote {OUT} ({os.path.getsize(OUT)/1024:.0f} KB)  title={title!r}")
+    HTML(string=html_doc, base_url=REPO).write_pdf(out)
+    print(f"wrote {out} ({os.path.getsize(out)/1024:.0f} KB)  title={title!r}")
 
 
 if __name__ == "__main__":
