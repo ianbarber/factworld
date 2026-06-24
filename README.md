@@ -184,7 +184,8 @@ hard = CANONICAL["composite_copy_v1"].scaled(k=64, eval_lengths=(32, 64, 128))
 ## How the tasks get harder — and who solves them
 
 The suite is ordered by the *kind* of computation each task needs. The further down the table, the
-more the model must maintain latent state over a long stream.
+more the model must maintain latent state over a long stream. Concrete examples and real model
+mistakes are in [`docs/tasks.md`](docs/tasks.md).
 
 | task | what it measures | answer space (floor) | difficulty axis |
 | --- | --- | --- | --- |
@@ -303,6 +304,7 @@ docs/related-work.md      related work with verified citations
 docs/USAGE.md             backend API reference and custom-backend examples
 docs/openrouter-results.md       external LLM API grid (OpenRouter) on the benchmark tasks
 docs/openrouter-s5-results.md    external LLM API grid on the experimental `s5_v1` task
+docs/tasks.md                  concrete prompts, gold answers, and real model mistakes for every task
 factworld/                the instrument (torch-free data/oracle/eval + the model zoo)
   world.py, oracle.py     deterministic KB + symbolic ground-truth solver
   render.py               template renderer + its exact inverse parser (no-leak contract)
