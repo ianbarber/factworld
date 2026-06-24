@@ -16,6 +16,7 @@ dist/
 *.ckpt
 *.log
 .DS_Store
+.env
 
 # local agent/runtime state
 .claude/

@@ -69,7 +69,9 @@ conts = backend.generate(["what is a0 of g3 ? : "], max_new_tokens=8, stop_at=".
 
 ### `APIBackend`
 
-OpenAI-compatible chat-completions (OpenAI, vLLM, ollama, etc.).
+OpenAI-compatible chat-completions (OpenAI, vLLM, ollama, etc.). Calls are
+issued concurrently (``max_workers``) and a ``system_prompt`` can be provided
+to steer output formatting.
 
 ```python
 import os
@@ -78,6 +80,10 @@ from factworld.backends import APIBackend
 backend = APIBackend(
     model="gpt-4o-mini",
     api_key=os.getenv("OPENAI_API_KEY"),
+    max_workers=4,
+    system_prompt=(
+        "Answer each question with only the requested value, no explanation."
+    ),
 )
 conts = backend.generate(["what is a0 of g3 ? : "], max_new_tokens=8, stop_at=".")
 ```
@@ -102,6 +108,38 @@ from factworld.backends import FunctionBackend
 backend = FunctionBackend(
     lambda prompts, n, stop: ["g0 ."] * len(prompts),
     name="always-g0",
+)
+```
+
+## Composite output format
+
+`composite_copy_v1` and `composite_v1` require a two-token answer span
+(``<holder> <value> .``). Naive chat-model prompts tend to emit only the value,
+so the built-in CLI appends an explicit format instruction for API and HF
+backends:
+
+```bash
+python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini
+```
+
+To disable it (e.g. for ablations):
+
+```bash
+python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --no-composite-format
+```
+
+When using ``APIBackend`` directly, include the instruction in the
+``system_prompt``:
+
+```python
+backend = APIBackend(
+    model="gpt-4o-mini",
+    system_prompt=(
+        "Answer each question with only the requested value, no explanation. "
+        "For questions that ask 'what is a0 of the holder of ...', "
+        "answer with the holder's name followed by the requested value, "
+        "like 'g3 v9'."
+    ),
 )
 ```
 

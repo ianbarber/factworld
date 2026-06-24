@@ -13,7 +13,7 @@ You can evaluate any model that can continue a prompt: OpenAI-compatible APIs
 from-scratch locally, or your own Python callable.
 
 ```bash
-# API
+# API (composite format instruction is appended automatically for composite tasks)
 python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50
 
 # HuggingFace
@@ -23,10 +23,16 @@ python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/L
 python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
 ```
 
+> **Composite-format note:** the API and HuggingFace backends automatically append
+> an output-format instruction for ``composite_copy_v1`` and ``composite_v1`` so
+> chat models emit the required ``<holder> <value> .`` answer span. Use
+> ``--no-composite-format`` to disable it (e.g. for ablations).
+
 📄 **The paper:** [`paper.pdf`](paper.pdf) · [`paper.md`](paper.md) — *FactWorld:
 An Oracle-Validated Instrument for Composing Recall, State-Tracking, and
-Knowledge.* Reference numbers live in
-[`docs/results.md`](docs/results.md) and related docs.
+Knowledge.* Reference numbers live in [`docs/results.md`](docs/results.md) and
+related docs. The latest external-LLM grid (including Nemotron 3 / Kimi results)
+is in [`docs/openrouter-results.md`](docs/openrouter-results.md).
 
 ## Install
 
@@ -61,7 +67,7 @@ print(result["overall"])
 ```
 
 ```bash
-# API
+# API (auto-appends composite format instruction for composite tasks)
 python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50
 
 # HuggingFace
@@ -69,6 +75,20 @@ python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/L
 
 # Local from-scratch
 python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
+
+# Run a grid of OpenRouter models (set OPENROUTER_API_KEY)
+python scripts/eval_openrouter_grid.py --n 30
+
+# Hybrid / state-space models on OpenRouter (disable built-in chain-of-thought)
+python scripts/eval_openrouter_grid.py \\
+    --models nvidia/nemotron-3-ultra-550b-a55b moonshotai/kimi-k2.6 \\
+    --n 30 --composite_format --no_reasoning
+
+# Evaluate a local model and merge it into the OpenRouter table
+python scripts/eval_model.py composite_copy_v1 --backend local --arch gdn_hybrid \\
+    --d_model 320 --steps 8000 --n 50 --json_out results/local-gdn.json
+python scripts/merge_grid_results.py docs/openrouter-results.json results/local-gdn.json \\
+    --out docs/combined-results.md
 
 python -m factworld.tasks             # suite self-test (determinism + oracle round-trip)
 python scripts/validate_suite.py      # validity gate: no shallow shortcut clears floor
@@ -158,6 +178,7 @@ docs/scale-results.md     the §5 ~45M scale + matched LR sweeps
 docs/composite-results.md the §4 small-scale composite (memorization diagnostic + decomposition)
 docs/related-work.md      related work with verified citations
 docs/USAGE.md             backend API reference and custom-backend examples
+docs/openrouter-results.md  external LLM API grid (OpenRouter) on the benchmark tasks
 factworld/                the instrument (torch-free data/oracle/eval + the model zoo)
   world.py, oracle.py     deterministic KB + symbolic ground-truth solver
   render.py               template renderer + its exact inverse parser (no-leak contract)
