@@ -111,6 +111,38 @@ backend = FunctionBackend(
 )
 ```
 
+## Composite output format
+
+`composite_copy_v1` and `composite_v1` require a two-token answer span
+(``<holder> <value> .``). Naive chat-model prompts tend to emit only the value,
+so the built-in CLI appends an explicit format instruction for API and HF
+backends:
+
+```bash
+python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini
+```
+
+To disable it (e.g. for ablations):
+
+```bash
+python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --no-composite-format
+```
+
+When using ``APIBackend`` directly, include the instruction in the
+``system_prompt``:
+
+```python
+backend = APIBackend(
+    model="gpt-4o-mini",
+    system_prompt=(
+        "Answer each question with only the requested value, no explanation. "
+        "For questions that ask 'what is a0 of the holder of ...', "
+        "answer with the holder's name followed by the requested value, "
+        "like 'g3 v9'."
+    ),
+)
+```
+
 ## Custom backend by subclassing
 
 Subclass ``ModelBackend`` and pass the instance to

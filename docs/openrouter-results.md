@@ -1,6 +1,6 @@
 # FactWorld OpenRouter Model Grid
 
-Evaluated at 2026-06-24T03:18:37Z.
+Evaluated at 2026-06-24T04:28:28Z.
 
 **Setup:** n = 30 examples per task/length, greedy decoding (temperature 0), held-out `test` split. The base system prompt is:
 
@@ -11,6 +11,8 @@ For `composite_copy_v1` and `composite_v1` an additional format instruction is a
 > For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.
 
 `APIBackend` normalizes a trailing period glued to the preceding token (e.g. `v56.` → `v56 .`) so the canonical exact-match metric is meaningful for chat-model output. In this run exact and relaxed scores coincide.
+
+Nemotron 3 models were evaluated with built-in chain-of-thought disabled (`reasoning={"effort": "none"}`), because they otherwise emit a long reasoning trace that exceeds the short generation budget.
 
 ## Results
 
@@ -25,13 +27,30 @@ For `composite_copy_v1` and `composite_v1` an additional format instruction is a
 | gpt-4o-mini | 0.567 | 0.067 | 0.167 | 1.000 | 1.000 |
 | gemini-2.5-flash-lite | 0.067 | 0.267 | 0.133 | 0.933 | 1.000 |
 | claude-3-haiku | 0.433 | 0.033 | 0.033 | 0.767 | 0.900 |
+| nemotron-3-nano-30b-a3b | 0.700 | 0.033 | 0.233 | 0.933 | 0.867 |
+| nemotron-3-super-120b-a12b | 0.700 | 0.000 | 0.200 | 0.967 | 0.767 |
+| nemotron-3-ultra-550b-a55b | 0.733 | 0.000 | **0.767** | 1.000 | 1.000 |
+| llama-3.3-nemotron-super-49b-v1.5 | 0.600 | 0.067 | 0.267 | 1.000 | 0.867 |
+| kimi-k2 | **0.900** | 0.300 | 0.733 | 1.000 | 1.000 |
+| kimi-k2.5 | 0.800 | 0.300 | 0.633 | 1.000 | 1.000 |
+| kimi-k2.6 | 0.867 | 0.133 | 0.567 | 1.000 | 1.000 |
 
 ## What the numbers show
 
 - **Single-hop tasks are easy.** `recall_copy_v1` and `conflict_v1` are at or near ceiling for strong models.
-- **Binding is scale-sensitive.** Llama 3.3 70B (0.700) and GPT-4o-mini (0.567) do best; smaller models and Gemini Flash Lite lag.
-- **Chain remains hard.** Even the best models are ≤ 0.267 on `chain_v1@L4`, consistent with the paper's depth-extrapolation claim.
-- **Composition is the bottleneck.** With an explicit output-format instruction, `composite_copy_v1` rises well above zero (DeepSeek 0.600, Llama 3.3 70B 0.200), but still far below the single-hop tasks. Without the format instruction every model scored 0%.
+- **Binding is scale-sensitive.** Kimi K2 (0.900) and Kimi K2.6 (0.867) lead; Nemotron 3 Ultra (0.733) and Llama 3.3 70B (0.700) follow.
+- **Chain remains hard.** Even the best models are ≤ 0.300 on `chain_v1@L4`, consistent with the paper's depth-extrapolation claim.
+- **Composition is the bottleneck — but hybrid models break through.** With an explicit output-format instruction, `composite_copy_v1` rises well above zero. Nemotron 3 Ultra scores **0.767** and Kimi K2 scores **0.733**, both well above the earlier best (DeepSeek 0.600). Without the format instruction every model scored 0%.
+
+## Hybrid / state-space / MoE models
+
+We added a second batch of models that are architecturally closer to the local recurrent baselines:
+
+- **Nemotron 3** (Nano / Super / Ultra): hybrid Mamba-2 + sparse attention + MoE. The Ultra variant is the strongest composite model in the grid at **0.767**, with perfect recall/conflict and solid binding (0.733). Nano and Super are comparable to Llama 3.3 70B on composite.
+- **Llama 3.3 Nemotron Super 49B**: a Nemotron-post-trained Llama variant. It matches the Nano/Super composite level (0.267) but with stronger single-hop recall.
+- **Kimi K2 / K2.5 / K2.6**: Moonshot's MoE models (MLA-based; K2 is the strongest here at **0.733** composite and **0.900** binding). Note: the directly GatedDeltaNet-related `moonshotai/kimi-linear-48b-a3b-instruct` is not currently routable through OpenRouter, so these are the closest available proxies.
+
+All Nemotron runs used `--no_reasoning` because the OpenRouter endpoints default to emitting a long internal reasoning trace; without disabling it the model returns no answer within the short generation budget.
 
 ## Format sensitivity on `composite_copy_v1`
 
@@ -69,6 +88,8 @@ This matches the instrument's OOD-length behavior: composition is learnable in-d
 ## Raw data
 
 - `docs/openrouter-results.json` — example-level predictions for the main grid.
+- `docs/openrouter-nemotron-results.json` — Nemotron 3 + Llama-Nemotron 49B outputs.
+- `docs/openrouter-kimi-results.json` — Kimi K2 / K2.5 / K2.6 outputs.
 - `docs/openrouter-composite-baseline.json` — naive-prompt composite outputs.
 - `docs/openrouter-composite-format.json` — format-prompt ablation outputs.
 - `docs/openrouter-composite-lengths.json` — L16/L32/L64 composite outputs.

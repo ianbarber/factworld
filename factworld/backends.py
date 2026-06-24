@@ -16,9 +16,15 @@ environments (e.g. for the ``FunctionBackend`` smoke test path).
 from __future__ import annotations
 
 import re
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
+
+try:
+    import openai
+except ImportError:  # pragma: no cover
+    openai = None
 
 if TYPE_CHECKING:
     from .world import World
@@ -142,6 +148,7 @@ class HFBackend(ModelBackend):
         device: str | None = None,
         dtype: Any | None = None,
         tokenizer_kwargs: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
         **model_kwargs,
     ):
         try:
@@ -154,6 +161,7 @@ class HFBackend(ModelBackend):
             ) from exc
 
         self.model_name_or_path = model_name_or_path
+        self.system_prompt = system_prompt
         tokenizer_kwargs = tokenizer_kwargs or {}
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, **tokenizer_kwargs)
         if self.tokenizer.pad_token is None:
@@ -181,6 +189,8 @@ class HFBackend(ModelBackend):
         """
         import torch
 
+        if self.system_prompt is not None:
+            prompts = [f"{self.system_prompt}\n\n{p}" for p in prompts]
         inputs = self.tokenizer(prompts, return_tensors="pt", padding=True).to(self.device)
         with torch.no_grad():
             outputs = self.model.generate(
@@ -218,6 +228,7 @@ class APIBackend(ModelBackend):
         client: Any | None = None,
         max_workers: int = 4,
         system_prompt: str | None = None,
+        extra_body: dict[str, Any] | None = None,
     ):
         try:
             from openai import OpenAI
@@ -231,20 +242,42 @@ class APIBackend(ModelBackend):
         self.client = client if client is not None else OpenAI(api_key=api_key, base_url=base_url)
         self.max_workers = max_workers
         self.system_prompt = system_prompt
+        self.extra_body = extra_body
 
     def _call_one(self, prompt: str, max_new_tokens: int, stop: list[str] | None, stop_at: str | None) -> str:
         messages: list[dict[str, str]] = []
         if self.system_prompt is not None:
             messages.append({"role": "system", "content": self.system_prompt})
         messages.append({"role": "user", "content": prompt})
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=0,
-            top_p=1,
-            max_tokens=max_new_tokens,
-            stop=stop,
-        )
+
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0,
+                    top_p=1,
+                    max_tokens=max_new_tokens,
+                    stop=stop,
+                    extra_body=self.extra_body,
+                )
+                break
+            except openai.RateLimitError as exc:
+                if attempt == max_retries - 1:
+                    raise
+                headers = getattr(exc.response, "headers", {}) or {}
+                # Case-insensitive header lookup.
+                hdr = {k.lower(): v for k, v in (headers.items() if hasattr(headers, "items") else [])}
+                if "retry-after" in hdr:
+                    wait = float(hdr["retry-after"])
+                elif "x-ratelimit-reset" in hdr:
+                    reset_ms = int(hdr["x-ratelimit-reset"])
+                    wait = max(0.5, (reset_ms / 1000.0) - time.time())
+                else:
+                    wait = 2 ** attempt
+                time.sleep(wait)
+
         choices = getattr(response, "choices", None)
         if not choices:
             return ""

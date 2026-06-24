@@ -77,7 +77,7 @@ def _build_system_prompt(base_prompt: str, task_name: str | None,
 
 
 def run_grid(models, tasks, n, lengths, max_workers, base_url,
-             system_prompt, task_prompts):
+             system_prompt, task_prompts, max_new_tokens, no_reasoning):
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise SystemExit("OPENROUTER_API_KEY not set")
@@ -89,12 +89,14 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
             spec = TK.CANONICAL[task_name]
             task_lengths = lengths if lengths else [spec.eval_lengths[0]]
             prompt = _build_system_prompt(system_prompt, task_name, task_prompts)
+            extra_body = {"reasoning": {"effort": "none"}} if no_reasoning else None
             backend = APIBackend(
                 model=model,
                 api_key=api_key,
                 base_url=base_url,
                 max_workers=max_workers,
                 system_prompt=prompt,
+                extra_body=extra_body,
             )
             for L in task_lengths:
                 t0 = time.time()
@@ -104,7 +106,7 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
                     split="test",
                     n=n,
                     length=L,
-                    max_new_tokens=16,
+                    max_new_tokens=max_new_tokens,
                 )
                 elapsed = time.time() - t0
                 examples = [
@@ -241,6 +243,10 @@ def main():
                     help='JSON mapping task name -> extra instruction, e.g. \'{"composite_copy_v1": "..."}\'.')
     ap.add_argument("--composite_format", action="store_true",
                     help="Shorthand: append the composite two-token format instruction.")
+    ap.add_argument("--max_new_tokens", type=int, default=16,
+                    help="Generation budget per example (default: 16).")
+    ap.add_argument("--no_reasoning", action="store_true",
+                    help="Pass reasoning={\"effort\":\"none\"} to disable chain-of-thought (OpenRouter).")
     ap.add_argument("--out", default="docs/openrouter-results.md",
                     help="Markdown output path.")
     ap.add_argument("--json_out", default=None,
@@ -260,7 +266,8 @@ def main():
 
     results = run_grid(
         a.models, a.tasks, a.n, lengths, a.max_workers,
-        a.base_url, a.system_prompt, task_prompts,
+        a.base_url, a.system_prompt, task_prompts, a.max_new_tokens,
+        a.no_reasoning,
     )
 
     if a.json_out:
