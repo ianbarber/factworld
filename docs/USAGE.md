@@ -69,7 +69,9 @@ conts = backend.generate(["what is a0 of g3 ? : "], max_new_tokens=8, stop_at=".
 
 ### `APIBackend`
 
-OpenAI-compatible chat-completions (OpenAI, vLLM, ollama, etc.).
+OpenAI-compatible chat-completions (OpenAI, vLLM, ollama, etc.). Calls are
+issued concurrently (``max_workers``) and a ``system_prompt`` can be provided
+to steer output formatting.
 
 ```python
 import os
@@ -78,6 +80,10 @@ from factworld.backends import APIBackend
 backend = APIBackend(
     model="gpt-4o-mini",
     api_key=os.getenv("OPENAI_API_KEY"),
+    max_workers=4,
+    system_prompt=(
+        "Answer each question with only the requested value, no explanation."
+    ),
 )
 conts = backend.generate(["what is a0 of g3 ? : "], max_new_tokens=8, stop_at=".")
 ```

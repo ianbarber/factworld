@@ -204,8 +204,9 @@ class HFBackend(ModelBackend):
 class APIBackend(ModelBackend):
     """Backend wrapping an OpenAI-compatible chat-completion endpoint.
 
-    Calls are made sequentially (one request per prompt). For large ``n``,
-    prefer a local endpoint or batch via a vLLM/ollama server.
+    By default calls are issued concurrently via a small thread pool
+    (``max_workers``). Set ``max_workers=1`` for sequential execution, or use a
+    local endpoint for large ``n``.
     """
 
     def __init__(
@@ -214,6 +215,8 @@ class APIBackend(ModelBackend):
         api_key: str | None = None,
         base_url: str | None = None,
         client: Any | None = None,
+        max_workers: int = 4,
+        system_prompt: str | None = None,
     ):
         try:
             from openai import OpenAI
@@ -225,26 +228,46 @@ class APIBackend(ModelBackend):
 
         self.model = model
         self.client = client if client is not None else OpenAI(api_key=api_key, base_url=base_url)
+        self.max_workers = max_workers
+        self.system_prompt = system_prompt
+
+    def _call_one(self, prompt: str, max_new_tokens: int, stop: list[str] | None, stop_at: str | None) -> str:
+        messages: list[dict[str, str]] = []
+        if self.system_prompt is not None:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=0,
+            top_p=1,
+            max_tokens=max_new_tokens,
+            stop=stop,
+        )
+        choices = getattr(response, "choices", None)
+        if not choices:
+            return ""
+        choice = choices[0]
+        text = choice.message.content or ""
+        # OpenAI excludes the stop token from the returned text; re-attach it
+        # so downstream exact-match scoring sees the same span as local backends.
+        if stop_at is not None and getattr(choice, "finish_reason", None) == "stop" and not text.endswith(stop_at):
+            text += stop_at
+        return text
 
     def generate(self, prompts: list[str], max_new_tokens: int, stop_at: str | None = None) -> list[str]:
         stop = [stop_at] if stop_at is not None else None
-        out: list[str] = []
-        for prompt in prompts:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                top_p=1,
-                max_tokens=max_new_tokens,
-                stop=stop,
-            )
-            text = response.choices[0].message.content or ""
-            # OpenAI excludes the stop token from the returned text; re-attach it
-            # so downstream exact-match scoring sees the same span as local backends.
-            if stop_at is not None and response.choices[0].finish_reason == "stop" and not text.endswith(stop_at):
-                text += stop_at
-            out.append(text)
-        return out
+        if self.max_workers == 1 or len(prompts) == 1:
+            return [self._call_one(p, max_new_tokens, stop, stop_at) for p in prompts]
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
+            futures = [
+                pool.submit(self._call_one, p, max_new_tokens, stop, stop_at)
+                for p in prompts
+            ]
+            return [f.result() for f in futures]
 
     @property
     def name(self) -> str:
