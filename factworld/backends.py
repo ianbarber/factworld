@@ -15,6 +15,7 @@ environments (e.g. for the ``FunctionBackend`` smoke test path).
 """
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -253,6 +254,10 @@ class APIBackend(ModelBackend):
         # so downstream exact-match scoring sees the same span as local backends.
         if stop_at is not None and getattr(choice, "finish_reason", None) == "stop" and not text.endswith(stop_at):
             text += stop_at
+        # Chat-model tokenizers often emit "v56." while FactWorld's atomic
+        # tokenizer expects "v56 .". Normalize a trailing period that is glued
+        # to the preceding token so exact-match scoring is meaningful.
+        text = re.sub(r"(?<=\S)\.$", " .", text)
         return text
 
     def generate(self, prompts: list[str], max_new_tokens: int, stop_at: str | None = None) -> list[str]:
