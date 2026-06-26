@@ -52,14 +52,18 @@ def _content_tokens(s):
     return [t for t in Renderer.normalize(s).split() if t != "."]
 
 
-def prefix_decomp(inspected):
-    """Prefix-match decomposition over (prompt, gold, pred, correct) tuples, on CONTENT tokens
-    (punctuation dropped).
+def prefix_decomp(inspected, trace_mode=False):
+    """Prefix-match decomposition over (prompt, gold, pred, correct) tuples, on CONTENT tokens.
 
     For a 2-token composite answer (holder, value) this yields prefix {0: neither, 1: holder-only,
     2: both} -- a direct read of where composition breaks. `holder_acc` is first-content-token
     accuracy (the binding/state leg); `value_acc` is second-content-token accuracy over the
-    2-content-token answers (the recall leg of composition)."""
+    2-content-token answers (the recall leg of composition).
+
+    In ``trace_mode`` the prediction is a self-generated scratchpad (trace) FOLLOWED BY the
+    answer, so we score the LAST len(gold) content tokens (the committed answer), not the
+    prefix -- otherwise the trace tokens are misread as the answer.
+    """
     n = len(inspected)
     buckets = {0: 0, 1: 0, 2: 0}
     leg1 = 0           # first content token correct (holder / single-token answer)
@@ -68,6 +72,8 @@ def prefix_decomp(inspected):
     for _prompt, gold, pred, _ok in inspected:
         g = _content_tokens(gold)
         p = _content_tokens(pred)
+        if trace_mode and len(p) >= len(g):
+            p = p[-len(g):]                          # score the committed answer (tail), not the trace
         k = 0
         while k < len(g) and k < len(p) and p[k] == g[k]:
             k += 1
@@ -101,8 +107,11 @@ def run_one(spec, arch, seed, *, d_model, n_layers, steps, batch, train_n, eval_
     backend = LocalBackend([w], arch=arch, model=run["model"], tokenizer=tok, device=device)
     out = {}
     for L in spec.eval_lengths:
-        res = evaluate_task(backend, spec, split="test", n=eval_n, length=L)
-        out[str(L)] = {"overall": res["overall"], **prefix_decomp(res["examples"])}
+        # In trace mode the model emits the full scratchpad (length tokens) THEN the answer,
+        # so size the generation budget for trace + answer, and score the committed tail.
+        max_new = (L + 6) if use_trace else None
+        res = evaluate_task(backend, spec, split="test", n=eval_n, length=L, max_new_tokens=max_new)
+        out[str(L)] = {"overall": res["overall"], **prefix_decomp(res["examples"], trace_mode=use_trace)}
     del run["model"]
     torch.cuda.empty_cache()
     return {"lengths": out, "final_loss": run["final_loss"]}
@@ -176,6 +185,9 @@ def main():
     ap.add_argument("--train_n", type=int, default=8000)
     ap.add_argument("--eval_n", type=int, default=100, help="Test examples per length.")
     ap.add_argument("--use_trace", action="store_true", help="Append oracle worked-trace (s5/composite).")
+    ap.add_argument("--worked_trace", action="store_true",
+                    help="Force worked_trace=True on the spec (needed for composite_copy_scale_v1, "
+                         "whose default is False). Implies --use_trace.")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--out_prefix", default=None,
                     help="Output prefix (default: results/sweep_<task0>_<timestamp>).")
@@ -200,6 +212,8 @@ def main():
     print(f"=== sweep: {total} runs -> {log_path} ===", flush=True)
     for task in tasks:
         spec = TK.CANONICAL[task]
+        if a.worked_trace:
+            spec = spec.scaled(worked_trace=True)
         for arch in archs:
             use_short, resolved = False, arch
             if arch == "gdp_hybrid_shortconv":
@@ -210,7 +224,8 @@ def main():
                 try:
                     r = run_one(spec, resolved, seed, d_model=a.d_model, n_layers=a.n_layers,
                                 steps=a.steps, batch=a.batch, train_n=a.train_n, eval_n=a.eval_n,
-                                use_short_conv=use_short, use_trace=a.use_trace, device=a.device)
+                                use_short_conv=use_short,
+                                use_trace=(a.use_trace or a.worked_trace), device=a.device)
                 except Exception as e:  # noqa: BLE001
                     import traceback; traceback.print_exc()
                     r = {"error": str(e)}
