@@ -2,6 +2,14 @@
 
 **Evaluate your own model on a recall × state-tracking × composition benchmark in three commands.**
 
+> **Status (in refactor):** the benchmark now renders a single **clean natural-language
+> format** (attached punctuation, one fixed phrasing per statement type — see
+> `factworld/render.py`). The earlier atomic-token format and its papers are archived under
+> [`phases/`](phases/). Local multi-seed sweeps are running on the natural format
+> (`results/sweep_*`); the OpenRouter grid is being re-run. Results tables below are from the
+> pre-refactor format and will be refreshed. The forward experiment plan — autoregressive /
+> test-time-compute reasoning — is in [`docs/experiments/autoregressive-reasoning.md`](docs/experiments/autoregressive-reasoning.md).
+
 FactWorld is a synthetic, oracle-validated evaluation instrument. Every task is a
 frozen, versioned ``TaskSpec`` with deterministic examples and one canonical
 metric — **position-strict exact match** of the answer span. Gold answers come
@@ -28,20 +36,21 @@ python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 32
 > chat models emit the required ``<holder> <value> .`` answer span. Use
 > ``--no-composite-format`` to disable it (e.g. for ablations).
 
-📄 **Tech reports:**
-- [`reports/factworld.md`](reports/factworld.md) · [`reports/factworld.pdf`](reports/factworld.pdf) —
-  *FactWorld: An Oracle-Validated Instrument for Composing Recall, State-Tracking, and Knowledge.*
-- [`reports/non-abelian-state.md`](reports/non-abelian-state.md) ·
-  [`reports/non-abelian-state.pdf`](reports/non-abelian-state.pdf) — *FactWorld: A Recipe for
-  Length-Generalizing Non-Abelian State-Tracking.*
+📄 **Prior tech reports (archived in [`phases/`](phases/)):** these ran on the earlier
+atomic-token format; the benchmark now renders clean natural language.
+- [`phases/01-instrument/factworld.md`](phases/01-instrument/factworld.md) — *FactWorld: An
+  Oracle-Validated Instrument for Composing Recall, State-Tracking, and Knowledge.*
+- [`phases/02-non-abelian-state/report.md`](phases/02-non-abelian-state/report.md) — *FactWorld:
+  A Recipe for Length-Generalizing Non-Abelian State-Tracking* (+ reproduction kit,
+  [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md)).
 
-Reference numbers live in the capability-organized `docs/` folders below. The latest external-LLM
-grid (including Nemotron 3 / Kimi results) is in [`docs/openrouter/results.md`](docs/openrouter/results.md);
-the `s5_v1` grid is in [`docs/openrouter/s5-results.md`](docs/openrouter/s5-results.md).
+A consolidated report on the natural-language format is in progress. Reference numbers live in
+the `docs/` folders below (the OpenRouter grids are pre-refactor, atomic-token format; they are
+being re-run on the natural format — see `docs/openrouter/`).
 
 🔬 **Reproduction code for the non-abelian report:**
-[`followups/non-abelian-state/`](followups/non-abelian-state/) — every claim maps to one script;
-see [`REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md). Scoped to this hybrid and scale
+[`phases/02-non-abelian-state/`](phases/02-non-abelian-state/) — every claim maps to one script;
+see [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md). Scoped to this hybrid and scale
 regime (k=5 S₅, ≤357M), not a claim about model scaling in general.
 
 ## Install
@@ -241,7 +250,7 @@ none of these pretrained models tracks the running S₅ permutation.
 
 ### Custom-trained recurrent models
 
-The follow-up study in [`followups/non-abelian-state/`](followups/non-abelian-state/) trains the
+The follow-up study in [`phases/02-non-abelian-state/`](phases/02-non-abelian-state/) trains the
 same architecture family from scratch and varies only the supervision and training distribution.
 All rows below use variants of the GatedDeltaProduct (GDP) product-recurrence; the hybrid adds one
 attention layer in a `[recurrent, recurrent, attn, recurrent]` stack (see `factworld/models.py`).
@@ -257,8 +266,8 @@ attention layer in a `[recurrent, recurrent, attn, recurrent]` stack (see `factw
 
 Sources: baseline composite in [`docs/results.md`](docs/results.md); dense-supervised `s5_v1` in
 [`docs/state-tracking/dense-supervised.md`](docs/state-tracking/dense-supervised.md); full recipe and
-controls in [`reports/non-abelian-state.md`](reports/non-abelian-state.md) and
-[`followups/non-abelian-state/REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md).
+controls in [`phases/02-non-abelian-state/report.md`](phases/02-non-abelian-state/report.md) and
+[`phases/02-non-abelian-state/REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md).
 
 What the comparison shows:
 
@@ -288,11 +297,9 @@ lever is the **supervision and training distribution**, not the model name or pa
 ## Repository layout
 
 ```
-reports/
-  factworld.md            original FactWorld paper (Markdown source)
-  factworld.pdf           typeset PDF        (rebuild: python scripts/build_pdf.py)
-  non-abelian-state.md    non-abelian state-tracking recipe / learnability map
-  non-abelian-state.pdf   typeset PDF
+phases/                  prior work, archived (ran on the atomic-token format)
+  01-instrument/           original FactWorld paper (.md + .pdf)
+  02-non-abelian-state/    non-abelian state-tracking report + reproduction kit
 docs/
   tasks.md                concrete prompts, gold answers, and real model mistakes for every task
   USAGE.md                backend API reference and custom-backend examples
@@ -318,7 +325,7 @@ factworld/                the instrument (torch-free data/oracle/eval + the mode
   models.py, train.py     transformer / mamba2 / gdp_hybrid / gdn_hybrid / gru on one skeleton
 scripts/                  the runnable suite (run_benchmark, eval_model, validate_suite, …)
 tests/                    oracle, renderer, tokenizer, model-parity, and validity tests
-followups/non-abelian-state/  reproduction scripts + per-claim result tables for the non-abelian report
+phases/02-non-abelian-state/  archived reproduction scripts + per-claim tables (non-abelian report)
 ```
 
 The hybrid configuration (`[recurrent, recurrent, attn, recurrent]`, n_h=4, neg-eig) lives in
@@ -373,7 +380,7 @@ python scripts/gdp_confirm_5e4.py         # gdp 45M @ tuned lr 5e-4, 5 seeds   (
 python scripts/gdn_confirm_3e4.py         # gdn 45M @ lr 3e-4, 5 seeds         (W2: 4/5 converge, 1/5 extrapolate)
 python scripts/fair_config.py             # W3: transformer n_heads=8+resid (floor survives 0/10) + recurrent short-conv
 
-# Non-abelian report (reports/non-abelian-state.md) — see followups/non-abelian-state/REPRODUCE.md
+# Non-abelian report (phases/02-non-abelian-state/report.md) — see phases/02-non-abelian-state/REPRODUCE.md
 ```
 
 </details>

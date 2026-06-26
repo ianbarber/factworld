@@ -28,7 +28,7 @@ import torch.nn.functional as F
 
 from fla.layers import GatedDeltaNet, GatedDeltaProduct, Mamba2
 
-ARCHS = ("transformer", "mamba2", "gdp_hybrid", "gdn_hybrid", "gru")
+ARCHS = ("transformer", "mamba2", "gdp_hybrid", "gdn_hybrid", "gru", "fprm")
 _HYBRID_RECURRENT = {"gdp_hybrid": "gdp", "gdn_hybrid": "gdn"}
 
 
@@ -200,5 +200,80 @@ class HybridLM(nn.Module):
         return total
 
 
-def build_model(arch: str, vocab_size: int, **kw) -> HybridLM:
+class CausalConv1d(nn.Module):
+    """Depthwise causal 1-D convolution: pad on the left only, crop to input length."""
+
+    def __init__(self, channels: int, kernel_size: int = 3):
+        super().__init__()
+        self.conv = nn.Conv1d(
+            channels, channels, kernel_size=kernel_size, groups=channels, bias=False
+        )
+
+    def forward(self, x):
+        B, T, C = x.shape
+        x = x.transpose(1, 2)                          # (B, C, T)
+        x = F.pad(x, (self.conv.kernel_size[0] - 1, 0))  # causal left pad
+        x = self.conv(x)
+        x = x[..., :T]                                 # crop to input length
+        return x.transpose(1, 2)                       # (B, T, C)
+
+
+class FPRMBlock(nn.Module):
+    """Single FPRM layer: pre-norm -> depthwise causal conv -> RoPE attention -> residual,
+    then pre-norm -> SwiGLU -> residual.  This block is weight-tied across loops in FPRM."""
+
+    def __init__(self, d_model: int, n_heads: int, d_ff: int):
+        super().__init__()
+        self.norm1 = nn.RMSNorm(d_model)
+        self.conv = CausalConv1d(d_model, kernel_size=3)
+        self.attn = RoPECausalAttention(d_model, n_heads)
+        self.norm2 = nn.RMSNorm(d_model)
+        self.ff = SwiGLU(d_model, d_ff)
+
+    def forward(self, x):
+        x = x + self.attn(self.conv(self.norm1(x)))
+        x = x + self.ff(self.norm2(x))
+        return x
+
+
+class FPRM(nn.Module):
+    """Fast Parallel Recurrent Model: embedding -> weight-tied FPRMBlock looped n_loops times
+    (default n_loops = n_layers) -> final RMSNorm -> tied LM head."""
+
+    def __init__(self, vocab_size: int, d_model: int = 320, n_layers: int = 4,
+                 n_heads: int = 4, d_ff: int = 1280, tie_head: bool = True,
+                 n_loops: int | None = None):
+        super().__init__()
+        self.arch = "fprm"
+        self.n_loops = n_loops if n_loops is not None else n_layers
+        self.layers_plan = ["fprm"] * self.n_loops
+        self.embed = nn.Embedding(vocab_size, d_model)
+        nn.init.normal_(self.embed.weight, std=0.02)
+        self.block = FPRMBlock(d_model, n_heads, d_ff)
+        self.norm = nn.RMSNorm(d_model)
+        self.head = nn.Linear(d_model, vocab_size, bias=False)
+        if tie_head:
+            self.head.weight = self.embed.weight
+
+    def forward(self, idx):
+        x = self.embed(idx)
+        for _ in range(self.n_loops):
+            x = self.block(x)
+        return self.head(self.norm(x))  # (B, T, vocab)
+
+    def num_params(self) -> int:
+        seen, total = set(), 0
+        for p in self.parameters():
+            if id(p) not in seen:  # tied head/embed counted once
+                seen.add(id(p))
+                total += p.numel()
+        return total
+
+
+def build_model(arch: str, vocab_size: int, **kw):
+    if arch == "fprm":
+        fprm_kw = {k: v for k, v in kw.items() if k in {
+            "d_model", "n_layers", "n_heads", "d_ff", "tie_head", "n_loops"
+        }}
+        return FPRM(vocab_size, **fprm_kw)
     return HybridLM(arch, vocab_size, **kw)
