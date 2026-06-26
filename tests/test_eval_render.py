@@ -59,12 +59,13 @@ def test_history_roundtrip_both_modes():
             assert r.parse_history(r.render_history(ev, with_steps=with_steps)) == list(ev)
 
 
-def test_render_is_deterministic_and_uses_paraphrase_slots():
+def test_render_is_deterministic():
+    """Rendering is deterministic (one fixed phrasing per statement type)."""
     w, o, r = _wo()
     facts = [r.render_fact(e, a, o.recall(e, a)) for e in w.entities[:200] for a in w.attribute_names]
     facts2 = [r.render_fact(e, a, o.recall(e, a)) for e in w.entities[:200] for a in w.attribute_names]
     assert facts == facts2                                   # deterministic
-    assert len({f.split(" ")[1] for f in facts}) > 1          # more than one template realised
+    assert all(f.endswith(".") for f in facts)               # attached-punctuation format
 
 
 def test_query_roundtrip():
@@ -75,6 +76,22 @@ def test_query_roundtrip():
     assert r.parse(r.render_query("state_easy", target="o2"))["family"] == "state_easy"
     q = r.parse(r.render_query("state_hard", target="g2", t=5))
     assert q["family"] == "state_hard" and q["target"] == "g2" and q["step"] == "s4"
+
+
+def test_state_easy_query_is_unambiguous():
+    """state_easy query should ask for the final holder, not every holder, and round-trip."""
+    w, o, r = _wo()
+    q = r.render_query("state_easy", target="o2")
+    assert "final holder" in q or "holds" in q
+    assert r.parse(q)["family"] == "state_easy"
+    assert r.parse(q)["target"] == "o2"
+
+
+def test_composite_recall_query_not_misrouted():
+    """The composite recall query contains 'holder' but must parse as recall, not state_easy."""
+    w, o, r = _wo()
+    q = r.render_query("recall", attribute="a0", entity="the holder of o3")
+    assert r.parse(q)["family"] == "recall"
 
 
 # --- eval gold == oracle (truth is KB-derived) --------------------------------------------

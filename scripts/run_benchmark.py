@@ -20,14 +20,19 @@ os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 from factworld import tasks as TK
 from factworld.backends import LocalBackend
+from factworld.render import Renderer
 from factworld.runner import evaluate_task
 
 
 def build_docs(examples, use_trace):
-    """Training strings: prompt + (optional oracle worked-trace) + final answer."""
+    """Training strings: prompt + (optional oracle worked-trace) + final answer.
+
+    Prompts end with '?' (attached), so a single space separates the query from
+    the answer continuation.
+    """
     docs = []
     for e in examples:
-        trace = f"{e.meta['trace']} " if (use_trace and "trace" in e.meta) else ""
+        trace = f" {e.meta['trace']} " if (use_trace and "trace" in e.meta) else " "
         docs.append(f"{e.prompt}{trace}{e.answer}")
     return docs
 
@@ -43,7 +48,7 @@ def run_task(name, *, spec=None, arch="gdp_hybrid", d_model=256, n_layers=4, d_f
     d_ff = d_ff or 4 * d_model
     w, r = TK.build_world(spec)
     train = TK.generate(spec, "train", n=train_n)
-    tok, docs, _ = T.prepare(build_docs(train, use_trace), [], [w])
+    tok, docs, _ = T.prepare(build_docs(train, use_trace), [], [w], renderer=r)
     run = T.run(arch, tok, docs, [], steps=steps, batch=batch, d_model=d_model, n_layers=n_layers,
                 d_ff=d_ff, seed=seed, return_model=True, device=device)
     model = run["model"]

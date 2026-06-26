@@ -60,7 +60,7 @@ class TaskSpec:
 
 @dataclass
 class Example:
-    prompt: str        # the model input (everything up to and including ' : ')
+    prompt: str        # the model input (the full query, ending in '?')
     answer: str        # the exact expected continuation (space-separated atomic tokens)
     length: int        # the difficulty coordinate this example was drawn at
     meta: dict = field(default_factory=dict)
@@ -99,6 +99,12 @@ def _param_map(spec: TaskSpec, w: World) -> dict:
     return {a: rng.choice(list(w.value_vocab)) for a in w.agents}
 
 
+def _render_answer(core: str) -> str:
+    """Render the answer span with attached punctuation (e.g. `g4.`, `g0 v109.`) to match the
+    natural-language prompt style."""
+    return f"{core}."
+
+
 # ---------------------------------------------------------------------------
 # per-family example builders
 # ---------------------------------------------------------------------------
@@ -114,7 +120,8 @@ def _ex_recall(spec, w, r, fixed_origins, rng, split, length, idx):
         origins = dict(zip(chosen, rng.sample(list(w.value_vocab), pool)))
     g = rng.choice(chosen)
     facts = " ".join(r.render_fact(a, "a0", origins[a], key=f"{a}|{idx}|{rng.random()}") for a in chosen)
-    return Example(f"{facts} what is a0 of {g} ? : ", f"{origins[g]} .", length)
+    q = r.render_query("recall", entity=g, attribute="a0")
+    return Example(f"{facts} {q}", _render_answer(origins[g]), length)
 
 
 def _ex_binding(spec, w, r, oracle, rng, length):
@@ -124,7 +131,8 @@ def _ex_binding(spec, w, r, oracle, rng, length):
     obj = rng.choice(sorted({e.args[0] for e in ev}))
     holder = oracle.easy_holder(ev, obj)
     hist = " ".join(r.render_history(tuple(ev), with_steps=True))
-    return Example(f"{hist} what is the holder of {obj} ? : ", f"{holder} .", length, {"obj": obj})
+    q = r.render_query("state_easy", target=obj)
+    return Example(f"{hist} {q}", _render_answer(holder), length, {"obj": obj})
 
 
 def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
@@ -139,11 +147,12 @@ def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
     value = origins[holder]
     facts = " ".join(r.render_fact(a, "a0", origins[a], key=f"{a}|{idx}|{rng.random()}") for a in chosen)
     hist = " ".join(r.render_history(tuple(ev), with_steps=True))
-    prompt = f"{facts} {hist} what is a0 of the holder of {obj} ? : "
+    q = r.render_query("recall", attribute="a0", entity=f"the holder of {obj}")
+    prompt = f"{facts} {hist} {q}"
     meta = {"holder": holder}
     if spec.worked_trace:    # oracle worked-trace = optional TRAINING signal, not part of the scored answer
         meta["trace"] = " ".join(oracle.easy_holder(ev, obj, t=t) for t in range(1, length + 1))
-    return Example(prompt, f"{holder} {value} .", length, meta)   # canonical answer = final (holder value)
+    return Example(prompt, _render_answer(f"{holder} {value}"), length, meta)
 
 
 def _ex_s5(spec, w, r, oracle, rng, length, idx):
@@ -152,11 +161,12 @@ def _ex_s5(spec, w, r, oracle, rng, length, idx):
     agent = rng.choice(w.agents)
     role = oracle.hard_role(events, agent)
     hist = " ".join(r.render_history(tuple(events), with_steps=True))
-    prompt = f"{hist} {r.render_query('state_hard', target=agent)} : "
+    q = r.render_query("state_hard", target=agent)
+    prompt = f"{hist} {q}"
     meta = {}
     if spec.worked_trace:    # oracle role-trajectory = optional TRAINING signal, not the scored answer
         meta["trace"] = " ".join(oracle.hard_role(events, agent, t=t) for t in range(1, length + 1))
-    return Example(prompt, f"{role} .", length, meta)   # canonical answer = final role
+    return Example(prompt, _render_answer(role), length, meta)
 
 
 def _ex_conflict(spec, w, r, pmap, rng, length, idx):
@@ -170,7 +180,8 @@ def _ex_conflict(spec, w, r, pmap, rng, length, idx):
     ctx = {a: (v_ctx if a == g else rng.choice(list(w.value_vocab))) for a in pool}
     present = pool[:]; rng.shuffle(present)                           # scramble order: no first-position shortcut
     facts = " ".join(r.render_fact(a, "a0", ctx[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
-    return Example(f"{facts} what is a0 of {g} ? : ", f"{v_ctx} .", length,
+    q = r.render_query("recall", entity=g, attribute="a0")
+    return Example(f"{facts} {q}", _render_answer(v_ctx), length,
                    {"param_value": pmap[g], "in_context_value": v_ctx})
 
 
@@ -189,8 +200,8 @@ def _ex_chain(spec, w, r, rng, depth, idx):
     cur = start
     for _ in range(depth):
         cur = nxt[cur]
-    query = "what is " + "a0 of " * depth + f"{start} ? : "
-    return Example(f"{facts} {query}", f"{cur} .", depth, {"depth": depth, "start": start})
+    query = "what is " + "a0 of " * depth + f"{start}?"
+    return Example(f"{facts} {query}", _render_answer(cur), depth, {"depth": depth, "start": start})
 
 
 # ---------------------------------------------------------------------------
@@ -209,7 +220,7 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
             out, agents = [], list(w.agents)
             for j in range(n // 2):   # reinforce g→pmap[g] as standalone facts so the model memorizes it
                 a = agents[j % len(agents)]
-                out.append(Example("", f"{a} a0 {pmap[a]} .", 0, {"reinforce": True}))
+                out.append(Example("", f"{a} a0 {pmap[a]}.", 0, {"reinforce": True}))
             for i in range(n - n // 2):
                 L = spec.train_lengths[i % len(spec.train_lengths)]
                 out.append(_ex_conflict(spec, w, r, pmap, _rng(spec, "train", L, i), L, i))

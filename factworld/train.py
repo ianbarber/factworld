@@ -19,15 +19,20 @@ from .render import Renderer
 from .tokenizer import Tokenizer
 
 
-def prepare(texts, probes, worlds, max_len=1280):
+def prepare(texts, probes, worlds, max_len=1280, renderer=None):
     """Tokenizer + PER-DOCUMENT training sequences (length-sorted) + pre-encoded probes, once.
 
     Each doc is its own training sequence (not concatenated into fixed windows): the previous packed
     scheme trained answers inside a cross-document context that eval — which presents each prompt in
     isolation — never sees, so state-tracking could not even be overfit. Docs are length-sorted so
     dynamic per-batch padding wastes little.
+
+    Args:
+        renderer: optional ``Renderer`` instance (defaults to a fresh ``Renderer()``).
+            The renderer is only used to probe structural tokens; pass it explicitly
+            when the caller already holds one (e.g. the task's renderer).
     """
-    tok = Tokenizer.build(worlds, Renderer())
+    tok = Tokenizer.build(worlds, renderer or Renderer())
     docs = [tok.encode(t, add_eos=True)[:max_len] for t in texts]
     docs.sort(key=len)
     encoded = [(tok.encode(p.prompt), tok.token_to_id.get(p.gold, tok.unk_id),

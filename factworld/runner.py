@@ -9,6 +9,7 @@ greedy continuations, and score them with the one canonical metric
 from __future__ import annotations
 
 from .backends import ModelBackend
+from .render import Renderer
 from .tasks import (
     CANONICAL,
     TaskSpec,
@@ -77,7 +78,12 @@ def evaluate_task(
     by_length: dict[int, dict[str, list[int]]] = {}
     totals: dict[str, int] = {name: 0 for name in scorers}
     for example, pred in zip(examples, preds):
-        scores = {name: fn(pred, example.answer) for name, fn in scorers.items()}
+        # Normalize output (detach attached punctuation, expand contractions) to canonical
+        # whitespace tokens before scoring. Both prediction and gold are normalized so attached-
+        # punctuation answers (e.g. "g4.") score correctly against equally-attached gold.
+        pred_norm = Renderer.normalize(pred)
+        gold_norm = Renderer.normalize(example.answer)
+        scores = {name: fn(pred_norm, gold_norm) for name, fn in scorers.items()}
         for name, val in scores.items():
             totals[name] += val
         inspected.append((example.prompt, example.answer, pred, bool(scores["exact"])))
