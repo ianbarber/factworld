@@ -1,0 +1,114 @@
+{
+  "task": "composite_copy_v1",
+  "spec": {
+    "name": "composite_copy_v1",
+    "family": "composite",
+    "natural": true,
+    "k": 32,
+    "n_objects": 8,
+    "value_vocab_size": 128,
+    "train_lengths": [
+      4,
+      8,
+      16
+    ],
+    "eval_lengths": [
+      16,
+      32,
+      64
+    ]
+  },
+  "timestamp": "2026-06-24T19:43:34.235913+00:00",
+  "rows": [
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 0,
+      "d_model": 512,
+      "n_layers": 4,
+      "steps": 20000,
+      "use_short_conv": true,
+      "final_loss": 0.037033844739198685,
+      "acc": {
+        "16": 0.01,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 1,
+      "d_model": 512,
+      "n_layers": 4,
+      "steps": 20000,
+      "use_short_conv": true,
+      "final_loss": 0.03802545368671417,
+      "acc": {
+        "16": 0.005,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 2,
+      "d_model": 512,
+      "n_layers": 4,
+      "steps": 20000,
+      "use_short_conv": true,
+      "final_loss": 0.0375833585858345,
+      "acc": {
+        "16": 0.01,
+        "32": 0.005,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "transformer",
+      "seed": 0,
+      "d_model": 512,
+      "n_layers": 4,
+      "steps": 20000,
+      "use_short_conv": false,
+      "final_loss": 0.03706246241927147,
+      "acc": {
+        "16": 0.0,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "transformer",
+      "seed": 1,
+      "d_model": 512,
+      "n_layers": 4,
+      "steps": 20000,
+      "use_short_conv": false,
+      "final_loss": 0.038250114768743515,
+      "acc": {
+        "16": 0.005,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "transformer",
+      "seed": 2,
+      "d_model": 512,
+      "n_layers": 4,
+      "steps": 20000,
+      "use_short_conv": false,
+      "final_loss": 0.03783712908625603,
+      "acc": {
+        "16": 0.005,
+        "32": 0.0,
+        "64": 0.0
+      }
+    }
+  ]
+}

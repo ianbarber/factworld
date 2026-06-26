@@ -1,0 +1,204 @@
+{
+  "task": "binding_v1",
+  "spec": {
+    "name": "binding_v1",
+    "family": "binding",
+    "natural": true,
+    "k": 5,
+    "n_objects": 8,
+    "value_vocab_size": 64,
+    "train_lengths": [
+      4,
+      8,
+      16
+    ],
+    "eval_lengths": [
+      16,
+      32,
+      64
+    ]
+  },
+  "timestamp": "2026-06-25T08:30:05.876501+00:00",
+  "rows": [
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.20357351005077362,
+      "acc": {
+        "16": 0.995,
+        "32": 0.36,
+        "64": 0.34
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.4332278072834015,
+      "acc": {
+        "16": 0.995,
+        "32": 0.965,
+        "64": 0.955
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.3021928369998932,
+      "acc": {
+        "16": 1.0,
+        "32": 0.995,
+        "64": 0.955
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": true,
+      "final_loss": 0.107845738530159,
+      "acc": {
+        "16": 1.0,
+        "32": 0.535,
+        "64": 0.5
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": true,
+      "final_loss": 0.1368967741727829,
+      "acc": {
+        "16": 0.995,
+        "32": 0.98,
+        "64": 0.985
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": true,
+      "final_loss": 0.344759464263916,
+      "acc": {
+        "16": 0.985,
+        "32": 0.41,
+        "64": 0.375
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "fprm",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.5796794295310974,
+      "acc": {
+        "16": 1.0,
+        "32": 0.925,
+        "64": 0.89
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "fprm",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.5778542160987854,
+      "acc": {
+        "16": 0.985,
+        "32": 0.99,
+        "64": 0.88
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "fprm",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.45493030548095703,
+      "acc": {
+        "16": 1.0,
+        "32": 0.97,
+        "64": 0.935
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "transformer",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.593817949295044,
+      "acc": {
+        "16": 0.405,
+        "32": 0.355,
+        "64": 0.22
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "transformer",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.5955166220664978,
+      "acc": {
+        "16": 0.395,
+        "32": 0.43,
+        "64": 0.315
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "transformer",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.496625691652298,
+      "acc": {
+        "16": 0.36,
+        "32": 0.355,
+        "64": 0.235
+      }
+    }
+  ]
+}

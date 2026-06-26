@@ -68,7 +68,10 @@ REASONING_MODELS = {"moonshotai/kimi-k2.6", "z-ai/glm-5.2", "moonshotai/kimi-k2.
 def _model_budget(model: str, max_new_tokens: int) -> tuple[int, str | None]:
     """Return (token_budget, stop_at) for a model."""
     if model in REASONING_MODELS:
-        return 4096, None          # let reasoning finish; no '.' stop (would truncate thinking)
+        # Reasoning models consume tokens on thinking before committing; GLM-5.2 in particular
+        # can reason past 4096 on the 16-event composite and return empty. 8192 is enough for
+        # both Kimi and GLM to finish reasoning then emit the answer (~5s/call).
+        return 8192, None          # let reasoning finish; no '.' stop (would truncate thinking)
     return max_new_tokens, "."
 
 

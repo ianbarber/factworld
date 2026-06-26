@@ -56,8 +56,30 @@ def main() -> int:
         print(f"  ok  {arch:<12} params={m.num_params()/1e6:5.2f}M  plan={m.layers_plan}  "
               f"loss {first:.3f} -> {last:.3f}")
 
+    test_fprm_builds_and_forward()
+
     print(f"\n{len(ARCHS)} architectures train.")
     return 0
+
+
+def test_fprm_builds_and_forward():
+    try:
+        import torch
+    except Exception as e:  # noqa: BLE001
+        print(f"skipped (no torch: {e})")
+        return
+
+    from factworld.models import build_model
+
+    V, B, T, d = 128, 2, 32, 64
+    torch.manual_seed(0)
+    m = build_model("fprm", V, d_model=d, n_layers=3, n_heads=4, d_ff=4 * d)
+    x = torch.randint(0, V, (B, T))
+    logits = m(x)
+    assert logits.shape == (B, T, V), f"expected (B,T,V), got {logits.shape}"
+    params = m.num_params()
+    assert params > 0
+    print(f"  ok  fprm         params={params/1e6:5.2f}M  output={tuple(logits.shape)}")
 
 
 if __name__ == "__main__":
