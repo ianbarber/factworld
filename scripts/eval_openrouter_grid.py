@@ -199,7 +199,10 @@ def write_markdown(results: list[dict], path: str):
         "| " + " | ".join(["---"] * (len(tasks) + 1)) + " |",
     ]
     for model in model_order:
-        accs = [f"{sum(pivot[model][t]['exact']) / len(pivot[model][t]['exact']):.3f}" for t in tasks]
+        accs = []
+        for t in tasks:
+            vals = pivot[model][t]["exact"]
+            accs.append(f"{sum(vals) / len(vals):.3f}" if vals else "-")
         lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
 
     if any(pivot[m][t]["contains"] for m in model_order for t in tasks):

@@ -56,6 +56,21 @@ STRUCTURED_S5 = (
     "write the final role token followed by a period, like `r2.`"
 )
 
+# Reasoning models: they emit a <think> block (inline, e.g. GLM) or reason in a separate
+# `reasoning` field and leave `content` clean (e.g. Kimi). They consume the token budget on
+# thinking, so they need (a) a much larger budget and (b) NO `.` stop token, which would cut
+# reasoning mid-stream. The backend's <think> strip handles inline reasoners; field reasoners
+# already return clean content. last_n + decomposition scoring find the answer after any preamble.
+REASONING_MODELS = {"moonshotai/kimi-k2.6", "z-ai/glm-5.2", "moonshotai/kimi-k2.7-code",
+                    "moonshotai/kimi-k2-thinking"}
+
+
+def _model_budget(model: str, max_new_tokens: int) -> tuple[int, str | None]:
+    """Return (token_budget, stop_at) for a model."""
+    if model in REASONING_MODELS:
+        return 4096, None          # let reasoning finish; no '.' stop (would truncate thinking)
+    return max_new_tokens, "."
+
 
 def system_prompt(base: str, cond: str, task_name: str) -> str:
     if cond == "none":
@@ -125,7 +140,8 @@ def run_condition(model, spec, cond, n, length, api_key, base_url, max_workers,
         prompts = [e.prompt for e in examples]
     backend = APIBackend(model=model, api_key=api_key, base_url=base_url,
                          max_workers=max_workers, system_prompt=sysp)
-    preds = backend.generate(prompts, max_new_tokens=max_new_tokens, stop_at=".")
+    budget, stop_at = _model_budget(model, max_new_tokens)
+    preds = backend.generate(prompts, max_new_tokens=budget, stop_at=stop_at)
     rows = []
     for e, pred in zip(examples, preds):
         if cond == "scaffolded" and spec.family == "composite":
