@@ -149,7 +149,7 @@ def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
     hist = " ".join(r.render_history(tuple(ev), with_steps=True))
     q = r.render_query("recall", attribute="a0", entity=f"the holder of {obj}")
     prompt = f"{facts} {hist} {q}"
-    meta = {"holder": holder}
+    meta = {"holder": holder, "obj": obj}
     if spec.worked_trace:    # oracle worked-trace = optional TRAINING signal, not part of the scored answer
         meta["trace"] = " ".join(oracle.easy_holder(ev, obj, t=t) for t in range(1, length + 1))
     return Example(prompt, _render_answer(f"{holder} {value}"), length, meta)

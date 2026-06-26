@@ -69,13 +69,38 @@ def system_prompt(base: str, cond: str, task_name: str) -> str:
 
 
 def scaffold_prompt(example, task_name: str) -> str:
-    """Inject the correct holder/role into the prompt so the model only does the recall leg."""
+    """Inject the correct holder into the prompt so the model only does the recall leg.
+
+    This is the recall-leg upper bound: given the binding answer, can the model recall?
+    """
     if task_name in ("composite_copy_v1", "composite_copy_scale_v1", "composite_v1"):
         holder = example.meta.get("holder")
         if holder is None:
             return example.prompt
         return f"{example.prompt} (the holder is {holder})"
     return example.prompt  # s5 has no single decoupled leg; scaffold is a no-op
+
+
+def binding_prompt(example, task_name: str) -> str:
+    """Rewrite the composite query to ask ONLY for the holder (binding leg in isolation).
+
+    Symmetric to the recall-scaffold: instead of 'what is a0 of the holder of o3?' (binding +
+    recall + routing), ask 'who is the final holder of o3?' so only last-write-wins state
+    tracking is needed. Gold becomes the holder alone. This localizes whether the API
+    composition failure is binding itself (state-tracking) or routing the holder into recall.
+    """
+    if task_name not in ("composite_copy_v1", "composite_copy_scale_v1", "composite_v1"):
+        return example.prompt, example.answer
+    obj = example.meta.get("obj")
+    holder = example.meta.get("holder")
+    if obj is None or holder is None:
+        return example.prompt, example.answer
+    # strip the composite query and replace with a plain binding query
+    import re
+    base = re.sub(r"\s*what is a0 of the holder of \S+\?$", "", example.prompt)
+    prompt = f"{base} who is the final holder of {obj}?"
+    gold = f"{holder}."
+    return prompt, gold
 
 
 def run_condition(model, spec, cond, n, length, api_key, base_url, max_workers,
@@ -91,6 +116,11 @@ def run_condition(model, spec, cond, n, length, api_key, base_url, max_workers,
     examples = TK.generate(spec, "test", n=n, length=length)
     if cond == "scaffolded":
         prompts = [scaffold_prompt(e, spec.name) for e in examples]
+    elif cond == "binding":
+        # binding-leg isolation: rewrite to ask only for the holder; gold = holder alone
+        rewritten = [binding_prompt(e, spec.name) for e in examples]
+        prompts = [p for p, _g in rewritten]
+        binding_gold = [g for _p, g in rewritten]
     else:
         prompts = [e.prompt for e in examples]
     backend = APIBackend(model=model, api_key=api_key, base_url=base_url,
@@ -106,6 +136,13 @@ def run_condition(model, spec, cond, n, length, api_key, base_url, max_workers,
             value_ok = int(value is not None and value in pred_ct)
             row = {"gold": e.answer, "pred": pred, "exact": value_ok,
                    "last_n": value_ok, "holder_ok": 1, "value_ok": value_ok, "prefix": 1 + value_ok}
+        elif cond == "binding" and spec.family == "composite":
+            # binding leg only: gold is the holder; does pred contain it?
+            holder = e.meta.get("holder")
+            pred_ct = TK.content_tokens(pred)
+            holder_ok = int(holder is not None and holder in pred_ct)
+            row = {"gold": f"{holder}.", "pred": pred, "exact": holder_ok,
+                   "last_n": holder_ok, "holder_ok": holder_ok, "value_ok": 1, "prefix": 1 + holder_ok}
         else:
             dec = TK.decompose_composite(pred, e.answer)
             row = {"gold": e.answer, "pred": pred,
@@ -121,12 +158,13 @@ def summarize(rows):
     n = len(rows)
     if not n:
         return {}
-    two = max(1, sum(1 for r in rows if len(TK.content_tokens(r["gold"])) >= 2))
+    two_gold = [r for r in rows if len(TK.content_tokens(r["gold"])) >= 2]
     return {
         "exact": sum(r["exact"] for r in rows) / n,
         "last_n": sum(r["last_n"] for r in rows) / n,
         "holder_acc": sum(r["holder_ok"] for r in rows) / n,
-        "value_acc": sum(r["value_ok"] for r in rows) / two,
+        # value_acc is only meaningful for 2-token (holder,value) answers; report 0 when N/A
+        "value_acc": (sum(r["value_ok"] for r in two_gold) / len(two_gold)) if two_gold else 0.0,
         "trace_acc": (sum(r["trace"]["token_acc"] for r in rows if "trace" in r)
                       / max(1, sum(1 for r in rows if "trace" in r))),
         "n": n,
