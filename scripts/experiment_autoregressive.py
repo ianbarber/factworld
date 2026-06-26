@@ -1,0 +1,222 @@
+"""Autoregressive / test-time-compute experiment (E1 + E2).
+
+Question: does letting a model generate MORE before answering (a self-produced
+scratchpad / chain-of-thought) unlock composition and state-tracking — and is the
+gain real computation or just more tokens?
+
+This script runs the API side (E1: answer-only vs free-CoT vs structured-CoT vs
+scaffolded upper bound) and is structured so the local trained-scratchpad side
+(E2) can be run via scripts/sweep.py --use_trace.
+
+Run (API):
+    set -a; source .env; set +a
+    .venv-api/bin/python scripts/experiment_autoregressive.py \\
+        --tasks composite_copy_v1 s5_v1 --n 30
+
+Conditions (E1):
+    none        — answer directly (baseline).
+    free        — "think step by step, then answer" (free chain-of-thought).
+    structured  — "first write `holder: <g>`, then `<g> <value>.`" (parseable intermediate).
+    scaffolded  — inject the CORRECT holder into the prompt; model only recalls.
+                  This is the ceiling for any CoT that merely gets the holder right.
+
+Scoring: final answer via score_last_n, plus the holder/value decomposition and
+(for trace-bearing tasks) self-trace accuracy against the oracle trajectory.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from collections import defaultdict
+from datetime import datetime, timezone
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
+
+from factworld import tasks as TK
+from factworld.backends import APIBackend
+from factworld.render import Renderer
+from factworld.runner import evaluate_task
+
+
+# Per-task scaffolds: the system-prompt instruction + (optionally) a prompt rewriter.
+FREE_COT = (
+    "Think step by step about who holds the object and what their value is, "
+    "then end your answer with the final holder and value."
+)
+STRUCTURED_COT = (
+    "First write the resolved holder on its own line as `holder: <g>`, "
+    "then on the next line write the final answer as `<holder> <value>.` "
+    "Use only tokens that appear in the question."
+)
+STRUCTURED_S5 = (
+    "Track the role step by step. First write `role: <r>` then on the next line "
+    "write the final role token followed by a period, like `r2.`"
+)
+
+
+def system_prompt(base: str, cond: str, task_name: str) -> str:
+    if cond == "none":
+        return base
+    if cond == "free":
+        return base + " " + FREE_COT
+    if cond == "structured":
+        extra = STRUCTURED_S5 if task_name == "s5_v1" else STRUCTURED_COT
+        return base + " " + extra
+    return base  # scaffolded uses a plain prompt + a rewritten user prompt
+
+
+def scaffold_prompt(example, task_name: str) -> str:
+    """Inject the correct holder/role into the prompt so the model only does the recall leg."""
+    if task_name in ("composite_copy_v1", "composite_copy_scale_v1", "composite_v1"):
+        holder = example.meta.get("holder")
+        if holder is None:
+            return example.prompt
+        return f"{example.prompt} (the holder is {holder})"
+    return example.prompt  # s5 has no single decoupled leg; scaffold is a no-op
+
+
+def run_condition(model, spec, cond, n, length, api_key, base_url, max_workers,
+                  base_system, max_new_tokens):
+    """Run one (model, task, condition) cell; return per-example dicts.
+
+    For the scaffolded condition (correct holder/role injected) the model only does
+    the recall leg, so the gold is the VALUE alone and we score value-only match.
+    For CoT conditions the final answer may be preceded by a scratchpad, so the
+    headline metric is ``last_n`` (last len(gold) tokens), not position-strict exact.
+    """
+    sysp = system_prompt(base_system, cond, spec.name)
+    examples = TK.generate(spec, "test", n=n, length=length)
+    if cond == "scaffolded":
+        prompts = [scaffold_prompt(e, spec.name) for e in examples]
+    else:
+        prompts = [e.prompt for e in examples]
+    backend = APIBackend(model=model, api_key=api_key, base_url=base_url,
+                         max_workers=max_workers, system_prompt=sysp)
+    preds = backend.generate(prompts, max_new_tokens=max_new_tokens, stop_at=".")
+    rows = []
+    for e, pred in zip(examples, preds):
+        if cond == "scaffolded" and spec.family == "composite":
+            # recall leg only: gold is the value (2nd content token); does pred contain it?
+            gold_ct = TK.content_tokens(e.answer)
+            value = gold_ct[1] if len(gold_ct) >= 2 else None
+            pred_ct = TK.content_tokens(pred)
+            value_ok = int(value is not None and value in pred_ct)
+            row = {"gold": e.answer, "pred": pred, "exact": value_ok,
+                   "last_n": value_ok, "holder_ok": 1, "value_ok": value_ok, "prefix": 1 + value_ok}
+        else:
+            dec = TK.decompose_composite(pred, e.answer)
+            row = {"gold": e.answer, "pred": pred,
+                   "exact": TK.score_exact(Renderer.normalize(pred), Renderer.normalize(e.answer)),
+                   "last_n": TK.score_last_n(pred, e.answer), **dec}
+        if "trace" in e.meta:
+            row["trace"] = TK.trace_accuracy(pred, e.meta["trace"])
+        rows.append(row)
+    return rows
+
+
+def summarize(rows):
+    n = len(rows)
+    if not n:
+        return {}
+    two = max(1, sum(1 for r in rows if len(TK.content_tokens(r["gold"])) >= 2))
+    return {
+        "exact": sum(r["exact"] for r in rows) / n,
+        "last_n": sum(r["last_n"] for r in rows) / n,
+        "holder_acc": sum(r["holder_ok"] for r in rows) / n,
+        "value_acc": sum(r["value_ok"] for r in rows) / two,
+        "trace_acc": (sum(r["trace"]["token_acc"] for r in rows if "trace" in r)
+                      / max(1, sum(1 for r in rows if "trace" in r))),
+        "n": n,
+    }
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Autoregressive / test-time-compute experiment (API).")
+    ap.add_argument("--models", nargs="+", default=[
+        "meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat",
+        "openai/gpt-4o-mini", "google/gemini-2.5-flash-lite"])
+    ap.add_argument("--tasks", nargs="+", default=["composite_copy_v1", "s5_v1"])
+    ap.add_argument("--conditions", nargs="+",
+                    default=["none", "free", "structured", "scaffolded"])
+    ap.add_argument("--n", type=int, default=30)
+    ap.add_argument("--length", type=int, default=None)
+    ap.add_argument("--max_new_tokens", type=int, default=128,
+                    help="Generous budget for CoT (default 128).")
+    ap.add_argument("--max_workers", type=int, default=4)
+    ap.add_argument("--base_url", default="https://openrouter.ai/api/v1")
+    ap.add_argument("--base_system", default=(
+        "You are taking a short test about facts and state. "
+        "Answer using only tokens that appear in the question."))
+    ap.add_argument("--out_prefix", default=None)
+    a = ap.parse_args()
+
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise SystemExit("OPENROUTER_API_KEY not set")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    from pathlib import Path
+    prefix = Path(a.out_prefix or f"results/autoregressive_api_{ts}")
+    prefix.parent.mkdir(parents=True, exist_ok=True)
+    jsonl = Path(f"{prefix}.jsonl")
+    md = Path(f"{prefix}.md")
+
+    all_rows = []
+    print(f"=== autoregressive API experiment -> {jsonl} ===", flush=True)
+    for model in a.models:
+        for task in a.tasks:
+            spec = TK.CANONICAL[task]
+            length = a.length or spec.eval_lengths[0]
+            for cond in a.conditions:
+                tag = f"{model} | {task}@L{length} | {cond}"
+                print(f"\n--- {tag} ---", flush=True)
+                try:
+                    rows = run_condition(model, spec, cond, a.n, length, api_key,
+                                         a.base_url, a.max_workers, a.base_system,
+                                         a.max_new_tokens)
+                except Exception as e:  # noqa: BLE001
+                    import traceback; traceback.print_exc()
+                    rows = []
+                summ = summarize(rows)
+                print(f"    exact={summ.get('exact',0):.2f} last_n={summ.get('last_n',0):.2f} "
+                      f"holder={summ.get('holder_acc',0):.2f} value={summ.get('value_acc',0):.2f}", flush=True)
+                rec = {"model": model, "task": task, "length": length, "condition": cond,
+                       "summary": summ, "examples": rows}
+                with jsonl.open("a") as f:
+                    f.write(json.dumps(rec) + "\n")
+                all_rows.append(rec)
+
+    # markdown summary
+    by = defaultdict(dict)
+    for r in all_rows:
+        by[(r["task"], r["length"])][(r["model"], r["condition"])] = r["summary"]
+    lines = ["# Autoregressive / test-time-compute experiment (API, E1)", ""]
+    lines.append(f"n={a.n} per cell, max_new_tokens={a.max_new_tokens}")
+    lines.append("")
+    for (task, length), cells in by.items():
+        lines.append(f"## {task} @ L{length}")
+        conds = sorted({c for _m, c in cells})
+        models = sorted({m for m, _c in cells})
+        lines.append("| model | " + " | ".join(
+            f"{c} (exact/holder/value)" for c in conds) + " |")
+        lines.append("|" + "---|" * (len(conds) + 1))
+        for m in models:
+            row = [m]
+            for c in conds:
+                s = cells.get((m, c), {})
+                if s:
+                    row.append(f"{s.get('exact',0):.2f} / {s.get('holder_acc',0):.2f} / {s.get('value_acc',0):.2f}")
+                else:
+                    row.append("-")
+            lines.append("| " + " | ".join(row) + " |")
+        lines.append("")
+        lines.append("_scaffolded = correct holder injected; the recall-leg ceiling for composition._")
+        lines.append("")
+    md.write_text("\n".join(lines))
+    print(f"\n=== wrote {md} ===", flush=True)
+
+
+if __name__ == "__main__":
+    main()

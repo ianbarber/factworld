@@ -284,6 +284,69 @@ def score_last_n(pred: str, gold: str) -> int:
     return int(p[-len(g) :] == g)
 
 
+def content_tokens(text: str) -> list[str]:
+    """Normalized answer tokens with punctuation stripped: the semantic span.
+
+    Used by the composition decomposition (holder leg vs value leg) and by trace
+    scoring, so both ignore attached/legacy punctuation.
+    """
+    from .render import Renderer
+    return [t for t in Renderer.normalize(text).split() if t != "."]
+
+
+def decompose_composite(pred: str, gold: str) -> dict:
+    """Per-leg accuracy for a 2-content-token composite answer (holder, value).
+
+    Returns:
+        holder_ok: first content token matches (the state-tracking / binding leg)
+        value_ok:  second content token matches, among 2-token answers (the recall leg)
+        prefix:    longest matching prefix length (0/1/2) — a direct read of where
+                   composition breaks (0=neither, 1=holder-only, 2=both)
+    """
+    g = content_tokens(gold)
+    p = content_tokens(pred)
+    k = 0
+    while k < len(g) and k < len(p) and p[k] == g[k]:
+        k += 1
+    return {
+        "holder_ok": int(len(g) >= 1 and len(p) >= 1 and p[0] == g[0]),
+        "value_ok":  int(len(g) >= 2 and len(p) >= 2 and p[1] == g[1]),
+        "prefix":    k,
+    }
+
+
+def trace_accuracy(pred_trace: str, gold_trace: str) -> dict:
+    """Token-level agreement of a self-generated/unrolled trace against the oracle trajectory.
+
+    Used by the autoregressive experiments (E3): for composite/s5 tasks the gold
+    `meta["trace"]` is the oracle's per-step state (holder / role). This scores how
+    far a model's self-produced trace follows the correct trajectory.
+
+    Returns:
+        token_acc: fraction of gold trace tokens matched at the right position
+        first_diverge: index of the first mismatched token (len(gold) if all match)
+        full_match: token_acc == 1.0
+    """
+    g = content_tokens(gold_trace)
+    p = content_tokens(pred_trace)
+    if not g:
+        return {"token_acc": 1.0, "first_diverge": 0, "full_match": True}
+    matched = 0
+    first_div = len(g)
+    for i, gt in enumerate(g):
+        pt = p[i] if i < len(p) else None
+        if pt == gt:
+            matched += 1
+        else:
+            first_div = min(first_div, i)
+            break
+    return {
+        "token_acc": matched / len(g),
+        "first_diverge": first_div,
+        "full_match": matched == len(g),
+    }
+
+
 # canonical frozen reference instances (scale via .scaled(...)). `kind` separates scored benchmark tasks
 # from controls/experimental tasks (see the kind field: benchmark|control|experimental).
 CANONICAL = {
