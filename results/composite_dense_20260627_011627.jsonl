@@ -1,0 +1,15 @@
+{"condition": "answer_only", "seed": 0, "L16_holder_freerun": 0.43, "L16_value_freerun": 0.43, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.44, "L64_value_freerun": 0.44, "L64_value_given_trace": 1.0}
+{"condition": "answer_only", "seed": 1, "L16_holder_freerun": 0.38, "L16_value_freerun": 0.38, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.34, "L64_value_freerun": 0.34, "L64_value_given_trace": 1.0}
+{"condition": "answer_only", "seed": 2, "L16_holder_freerun": 0.43, "L16_value_freerun": 0.43, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.43, "L64_value_freerun": 0.43, "L64_value_given_trace": 0.97}
+{"condition": "answer_only", "seed": 3, "L16_holder_freerun": 0.38, "L16_value_freerun": 0.38, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.25, "L64_value_freerun": 0.25, "L64_value_given_trace": 1.0}
+{"condition": "answer_only", "seed": 4, "L16_holder_freerun": 0.3, "L16_value_freerun": 0.3, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.4, "L64_value_freerun": 0.4, "L64_value_given_trace": 1.0}
+{"condition": "dense", "seed": 0, "L16_holder_freerun": 0.4, "L16_value_freerun": 0.4, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.32, "L64_value_freerun": 0.32, "L64_value_given_trace": 1.0}
+{"condition": "dense", "seed": 1, "L16_holder_freerun": 0.4, "L16_value_freerun": 0.4, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.26, "L64_value_freerun": 0.26, "L64_value_given_trace": 1.0}
+{"condition": "dense", "seed": 2, "L16_holder_freerun": 0.39, "L16_value_freerun": 0.39, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.23, "L64_value_freerun": 0.23, "L64_value_given_trace": 0.94}
+{"condition": "dense", "seed": 3, "L16_holder_freerun": 0.41, "L16_value_freerun": 0.41, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.28, "L64_value_freerun": 0.28, "L64_value_given_trace": 1.0}
+{"condition": "dense", "seed": 4, "L16_holder_freerun": 0.4, "L16_value_freerun": 0.4, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.34, "L64_value_freerun": 0.34, "L64_value_given_trace": 1.0}
+{"condition": "dense_wean", "seed": 0, "L16_holder_freerun": 0.25, "L16_value_freerun": 0.25, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.23, "L64_value_freerun": 0.23, "L64_value_given_trace": 1.0}
+{"condition": "dense_wean", "seed": 1, "L16_holder_freerun": 0.37, "L16_value_freerun": 0.37, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.29, "L64_value_freerun": 0.3, "L64_value_given_trace": 1.0}
+{"condition": "dense_wean", "seed": 2, "L16_holder_freerun": 0.43, "L16_value_freerun": 0.43, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.44, "L64_value_freerun": 0.44, "L64_value_given_trace": 1.0}
+{"condition": "dense_wean", "seed": 3, "L16_holder_freerun": 0.41, "L16_value_freerun": 0.41, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.45, "L64_value_freerun": 0.45, "L64_value_given_trace": 1.0}
+{"condition": "dense_wean", "seed": 4, "L16_holder_freerun": 0.4, "L16_value_freerun": 0.4, "L16_value_given_trace": 1.0, "L64_holder_freerun": 0.37, "L64_value_freerun": 0.37, "L64_value_given_trace": 1.0}

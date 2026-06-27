@@ -310,18 +310,21 @@ strongest length-extrapolator (0.94 @L64), but like every architecture it floors
 answer-only supervision.
 
 In short: the suite climbs from easy single-hop recall, through binding and composition, to the
-`s5_v1` state-tracking wall. Two clean dissociations:
+`s5_v1` state-tracking wall. Three clean dissociations (full write-up: [`docs/experiments/`](docs/experiments/)):
 
-1. **Composition is a routing limit.** Models that solve the binding leg and the recall leg
-   *separately* still fail to chain them; a self-generated scratchpad compounds errors rather than
-   fixing them, and only an *oracle-provided* intermediate unlocks the recall leg.
-2. **State-tracking is a learnability limit.** The `s5_v1` wall floors every architecture under
-   answer-only/sparse supervision (the agentic regime) but **moves to ~0.9 under dense per-step
-   supervision** and then extrapolates 8× with no target-length labels — reproduced on the natural
-   format. **Inference-time compute (self-consistency) does not move either wall.**
+1. **Composition is a reasoning-strength wall.** Given the output format, strong reasoning models
+   (kimi 0.97, glm 0.75) solve it; non-reasoners floor. Routing is *not* the bottleneck — given the
+   correct holder, every model recalls (0.93–1.00); the wall is *generating* the holder. Explicit
+   structured CoT **hurts** (0.00 for all).
+2. **Non-abelian state-tracking (s5) is a learnability wall.** It floors every architecture under
+   sparse/answer-only supervision but **moves to ~1.0 under dense per-step supervision** (10/10 seeds),
+   and the learned circuit extrapolates 4–8× with no target-length labels — *but only for the recurrent
+   hybrid* (gdp_hybrid 0.75@L64; fprm/transformer solve in-distribution yet don't extrapolate).
+3. **Test-time compute does not move either wall.** Sampling (majority vote to 30) and iterative
+   self-correction (3 rounds) both give exactly zero lift; explicit intermediates compound errors.
 
-The levers are **supervision density** and (for composition) **routing**, not model name,
-parameter count, or test-time compute.
+The levers are **base-model reasoning strength** (composition), **supervision density** (s5), and
+**recurrent architecture** (s5 length extrapolation) — not parameter count or test-time compute.
 
 ## Repository layout
 
