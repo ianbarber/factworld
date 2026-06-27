@@ -79,17 +79,25 @@ K=2 partial-circuit model, L64, iterative self-correction (3 rounds of "check an
 | 3 | 0.80 | 0.80 |
 
 **Finding:** iterative self-correction gives **exactly zero lift** (flat across rounds), on top of
-the earlier majority-vote null. The strong version of the null holds: neither sampling nor iterative
-refinement moves the wall. Combined with E1b (structured CoT hurts), **test-time compute does not
-help** — implicit reasoning (strong base models) works; explicit step-by-step does not.
+the earlier majority-vote null — for *local* (non-reasoning) models. **Caveat:** this does NOT settle
+whether test-time compute helps in general. Reasoning models (kimi/glm) solved composite in E1b
+(0.97/0.75) with their background reasoning *on* — that IS test-time compute working. What these
+local probes show is that *explicit* CoT prompting and *sampling-based* self-correction don't help a
+model that lacks implicit reasoning ability. Whether background reasoning effort helps the API
+reasoners is tested directly in the reasoning on/off sweep below.
 
-## Synthesis
+## Synthesis (preliminary — pending the reasoning on/off sweep)
 
-| wall | what it is | what moves it | what doesn't |
+| wall | what it is | what moves it | what doesn't (so far) |
 | --- | --- | --- | --- |
-| **composition** | generating the holder (last-write-wins over objects) | strong implicit reasoning + format (kimi/glm) | explicit CoT, scaffolded self-gen, dense holder supervision, self-correction |
-| **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision** (then extrapolates 4–8×) | sparse/answer-only, test-time compute |
+| **composition** | generating the holder (last-write-wins over objects) | background reasoning + format (kimi/glm) — *is* this test-time compute? | explicit CoT prompting, scaffolded self-gen, dense holder supervision, local self-correction |
+| **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision** (then extrapolates 4–8×, gdp_hybrid) | sparse/answer-only, local self-correction |
 | **recall (value)** | — | given the holder, trivially solved (0.93–1.00) | — |
+
+**Open question (the confound):** kimi/glm solving composition may be *exactly* test-time compute
+(background reasoning) working — which would mean our earlier "test-time doesn't help" claim was
+wrong. The reasoning on/off/levels sweep settles it. What IS established: explicit structured CoT
+*hurts*, and sampling/self-correction don't help a non-reasoning model.
 
 Two clean dissociations, neither movable by test-time compute; one movable by supervision density
 (s5), one movable by base-model reasoning strength (composition). Architecture matters only for

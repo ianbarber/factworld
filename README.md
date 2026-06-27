@@ -320,11 +320,16 @@ In short: the suite climbs from easy single-hop recall, through binding and comp
    sparse/answer-only supervision but **moves to ~1.0 under dense per-step supervision** (10/10 seeds),
    and the learned circuit extrapolates 4–8× with no target-length labels — *but only for the recurrent
    hybrid* (gdp_hybrid 0.75@L64; fprm/transformer solve in-distribution yet don't extrapolate).
-3. **Test-time compute does not move either wall.** Sampling (majority vote to 30) and iterative
-   self-correction (3 rounds) both give exactly zero lift; explicit intermediates compound errors.
+3. **Test-time compute — partially open.** Sampling (majority vote to 30) and iterative
+   self-correction (3 rounds) give exactly zero lift for *local* (non-reasoning) models, and explicit
+   structured CoT **hurts**. But reasoning models (kimi/glm) solving composition *with background
+   reasoning on* may itself be test-time compute working — that is being tested directly with a
+   reasoning on/off/levels sweep. What's established so far: explicit prompting and sampling don't
+   substitute for implicit reasoning ability.
 
-The levers are **base-model reasoning strength** (composition), **supervision density** (s5), and
-**recurrent architecture** (s5 length extrapolation) — not parameter count or test-time compute.
+The established levers are **base-model reasoning strength** (composition), **supervision density**
+(s5), and **recurrent architecture** (s5 length extrapolation). Whether background test-time compute
+is itself a lever is the open question. Full write-up: [`docs/experiments/`](docs/experiments/).
 
 ## Repository layout
 
