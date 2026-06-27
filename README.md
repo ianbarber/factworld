@@ -282,8 +282,23 @@ L64); `gdp_hybrid` is the only architecture that converges on composition (40%).
 structured-but-wrong trace that compounds errors, the opposite of the API scaffolded result where the
 *oracle-provided* holder unlocks recall (0.97–1.00). See
 [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
-This reproduces Phase 2's finding that `s5_v1` worked-traces "learn train length but compound at
-generation" (why `s5_v1` stays `experimental`).
+
+**But the s5 / non-abelian wall is movable with the right supervision** (reproduced on the natural
+format, `scripts/experiment_dense_supervision.py`). Per-step state supervision every K events (guided
+free-run eval — events forced, holder/value slots generated):
+
+| K (stride) | value @L16 | value @L64 |
+| --- | --- | --- |
+| 1 (dense) | **1.00** | **0.90** |
+| 2 | 0.96 | 0.50 (bimodal) |
+| 4, 8 | 0.20 | 0.20 (floor) |
+
+Dense K=1 solves s5 and extrapolates to **~8× the trained length** (L128≈0.90 trained at ≤L16); the
+circuit fails to form below a checkpoint every ~2 events. **Inference-time compute (self-consistency,
+up to 30 votes) does not move the wall in either direction** — seeds with the circuit are already
+greedy-optimal; seeds without stay at the floor. The wall is in *learnability/supervision density*,
+not test-time compute — consistent with the API result that only an *oracle-provided* intermediate
+helps.
 
 The prior (atomic-token format) non-abelian recipe and its dense-supervision `s5_v1` results
 (0.94–0.99) are archived in [`phases/02-non-abelian-state/`](phases/02-non-abelian-state/).
@@ -295,11 +310,18 @@ strongest length-extrapolator (0.94 @L64), but like every architecture it floors
 answer-only supervision.
 
 In short: the suite climbs from easy single-hop recall, through binding and composition, to the
-`s5_v1` state-tracking wall. The composition wall is a **routing** limit — models that can do the
-binding leg and the recall leg *separately* still fail to chain them, and a self-generated
-scratchpad does not help (it compounds errors). Only an *oracle-provided* intermediate unlocks the
-recal l leg. The lever for the deeper `s5_v1` wall remains the **supervision density**
-(Phase 2), not the model name, parameter count, or test-time compute.
+`s5_v1` state-tracking wall. Two clean dissociations:
+
+1. **Composition is a routing limit.** Models that solve the binding leg and the recall leg
+   *separately* still fail to chain them; a self-generated scratchpad compounds errors rather than
+   fixing them, and only an *oracle-provided* intermediate unlocks the recall leg.
+2. **State-tracking is a learnability limit.** The `s5_v1` wall floors every architecture under
+   answer-only/sparse supervision (the agentic regime) but **moves to ~0.9 under dense per-step
+   supervision** and then extrapolates 8× with no target-length labels — reproduced on the natural
+   format. **Inference-time compute (self-consistency) does not move either wall.**
+
+The levers are **supervision density** and (for composition) **routing**, not model name,
+parameter count, or test-time compute.
 
 ## Repository layout
 
