@@ -82,8 +82,8 @@ def make_world(spec):
     return w, r, Oracle(w)
 
 
-def run_K(spec, K, seed, *, steps, batch, d_model, n_layers, train_n, device):
-    """Train one (K, seed) cell; return (model, tok, w, r, oracle, origins)."""
+def run_K(spec, K, seed, *, steps, batch, d_model, n_layers, train_n, device, arch="gdp_hybrid"):
+    """Train one (K, seed, arch) cell; return (model, tok, w, r, oracle, origins)."""
     w, r, oracle = make_world(spec)
     origins = TK._fixed_origins(spec, w)
     rng = random.Random(seed)
@@ -96,7 +96,7 @@ def run_K(spec, K, seed, *, steps, batch, d_model, n_layers, train_n, device):
     docs = [tok.encode(t, add_eos=True) for t in train]
     docs.sort(key=len)
     d_ff = 4 * d_model
-    run = T.run("gdp_hybrid", tok, docs, [], steps=steps, batch=batch, d_model=d_model,
+    run = T.run(arch, tok, docs, [], steps=steps, batch=batch, d_model=d_model,
                 n_layers=n_layers, d_ff=d_ff, seed=seed, return_model=True, device=device)
     return run["model"], tok, w, r, oracle, origins
 
@@ -216,6 +216,8 @@ def main():
     ap.add_argument("--eval_lengths", type=int, nargs="+", default=[16, 64])
     ap.add_argument("--majority_votes", type=int, default=5,
                     help="Inference-time probe: majority-vote count (0 = off).")
+    ap.add_argument("--arch", default="gdp_hybrid",
+                    help="Architecture (gdp_hybrid / fprm / transformer).")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--out_prefix", default=None)
     a = ap.parse_args()
@@ -228,15 +230,15 @@ def main():
     jsonl = Path(f"{prefix}.jsonl"); md = Path(f"{prefix}.md")
 
     print(f"=== dense-supervision sweep -> {jsonl} ===", flush=True)
-    print(f"    K={a.Ks} seeds={a.seeds} L={a.eval_lengths} (gdp_hybrid d{a.d_model})", flush=True)
+    print(f"    arch={a.arch} K={a.Ks} seeds={a.seeds} L={a.eval_lengths} (d{a.d_model})", flush=True)
     agg = defaultdict(lambda: defaultdict(list))  # K -> L -> [e2e_v,...]
     for K in a.Ks:
         for seed in a.seeds:
-            print(f"\n--- K={K} seed={seed} ---", flush=True)
+            print(f"\n--- {a.arch} K={K} seed={seed} ---", flush=True)
             model, tok, w, r, oracle, origins = run_K(
                 spec, K, seed, steps=a.steps, batch=a.batch, d_model=a.d_model,
-                n_layers=a.n_layers, train_n=a.train_n, device=a.device)
-            row = {"K": K, "seed": seed}
+                n_layers=a.n_layers, train_n=a.train_n, device=a.device, arch=a.arch)
+            row = {"arch": a.arch, "K": K, "seed": seed}
             for L in a.eval_lengths:
                 exs = build_eval(spec, w, r, oracle, origins, L, K, a.eval_n)
                 fh, fv = e2e_eval(model, tok, w, exs, device=a.device)
@@ -255,7 +257,7 @@ def main():
 
     # markdown summary
     lines = ["# Dense-vs-sparse state-supervision sweep (s5 / non-abelian composite)",
-             "", f"`scripts/experiment_dense_supervision.py`. gdp_hybrid d{a.d_model}x{a.n_layers}, "
+             "", f"`scripts/experiment_dense_supervision.py`. {a.arch} d{a.d_model}x{a.n_layers}, "
              f"{a.steps} steps, seeds {a.seeds}. K = holder supervised every K events (K=1 dense). "
              f"Guided free-run eval (events forced, holder/value slots generated). Floor = 0.20.", "",
              "| K (stride) | " + " | ".join(f"value @L{L}" for L in a.eval_lengths) +

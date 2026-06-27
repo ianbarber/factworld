@@ -207,6 +207,8 @@ def main():
     ap.add_argument("--base_system", default=(
         "You are taking a short test about facts and state. "
         "Answer using only tokens that appear in the question."))
+    ap.add_argument("--composite_format", action="store_true",
+                    help="Append the composite two-token format instruction (format-fair comparison vs the grid).")
     ap.add_argument("--out_prefix", default=None)
     a = ap.parse_args()
 
@@ -220,18 +222,26 @@ def main():
     jsonl = Path(f"{prefix}.jsonl")
     md = Path(f"{prefix}.md")
 
+    COMPOSITE_FORMAT = (
+        "For questions that ask 'what is a0 of the holder of ...', "
+        "answer with the holder's name followed by the requested value, like 'g3 v9'.")
     all_rows = []
     print(f"=== autoregressive API experiment -> {jsonl} ===", flush=True)
     for model in a.models:
         for task in a.tasks:
             spec = TK.CANONICAL[task]
             length = a.length or spec.eval_lengths[0]
+            # Format-fair: append the composite format instruction so the only variable
+            # across conditions is the reasoning regime (not whether the model knows the output shape).
+            base_sys = a.base_system
+            if a.composite_format and spec.family == "composite":
+                base_sys = base_sys + " " + COMPOSITE_FORMAT
             for cond in a.conditions:
                 tag = f"{model} | {task}@L{length} | {cond}"
                 print(f"\n--- {tag} ---", flush=True)
                 try:
                     rows = run_condition(model, spec, cond, a.n, length, api_key,
-                                         a.base_url, a.max_workers, a.base_system,
+                                         a.base_url, a.max_workers, base_sys,
                                          a.max_new_tokens)
                 except Exception as e:  # noqa: BLE001
                     import traceback; traceback.print_exc()
