@@ -86,18 +86,47 @@ local probes show is that *explicit* CoT prompting and *sampling-based* self-cor
 model that lacks implicit reasoning ability. Whether background reasoning effort helps the API
 reasoners is tested directly in the reasoning on/off sweep below.
 
-## Synthesis (preliminary — pending the reasoning on/off sweep)
+## Synthesis
 
-| wall | what it is | what moves it | what doesn't (so far) |
+| wall | what it is | what moves it | what doesn't |
 | --- | --- | --- | --- |
-| **composition** | generating the holder (last-write-wins over objects) | background reasoning + format (kimi/glm) — *is* this test-time compute? | explicit CoT prompting, scaffolded self-gen, dense holder supervision, local self-correction |
-| **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision** (then extrapolates 4–8×, gdp_hybrid) | sparse/answer-only, local self-correction |
+| **composition** | generating the holder (last-write-wins over objects) | **background reasoning + format** (kimi/glm: dose-response 0.14→0.81 with effort) | explicit CoT prompting (hurts), dense holder supervision, local self-correction |
+| **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision → wean to answer-only** (wean_mixed 7/7), then gdp_hybrid extrapolates 8× | reasoning effort (floor at all levels), sparse/answer-only |
 | **recall (value)** | — | given the holder, trivially solved (0.93–1.00) | — |
 
-**Open question (the confound):** kimi/glm solving composition may be *exactly* test-time compute
-(background reasoning) working — which would mean our earlier "test-time doesn't help" claim was
-wrong. The reasoning on/off/levels sweep settles it. What IS established: explicit structured CoT
-*hurts*, and sampling/self-correction don't help a non-reasoning model.
+**Two dissociations, both now clean:**
+- **Composition is movable by test-time compute** (reasoning) for strong models; **s5 is not** — it
+  needs training-time supervision density, and that circuit can be *weaned* to label-free deployment.
+- Architecture (gdp_hybrid vs fprm vs transformer) gates **length extrapolation** of a learned s5
+  circuit, not its formation.
+
+What never helps: explicit structured CoT prompting, and sampling/self-correction on non-reasoning
+models. The levers are **reasoning strength** (composition), **supervision density + weaning** (s5),
+and **recurrent architecture** (s5 extrapolation).
+
+**Open question (the confound) — RESOLVED by the reasoning sweep.** kimi/glm solving
+composition *was* test-time compute working. The reasoning on/off/levels sweep
+(`reasoning-results.md`) shows a clear dose-response: composite value climbs with effort
+(kimi 0.22→0.96→0.98; glm 0.14→0.74→0.81) while **s5 stays at floor regardless of effort**.
+So the corrected statement: **background reasoning (test-time compute) IS a lever for
+composition; it is NOT for s5.** What does not help either wall: explicit structured CoT
+prompting (hurts), and sampling/self-correction on non-reasoning local models.
+
+## 5. Weaning bridge — `experiment_weaning.py` (8 seeds)
+
+Can a dense-learned s5 circuit survive weaning to answer-only (the agentic regime)?
+
+| arm | value @L16 | value @L32 | value @L64 | conv @L16 |
+| --- | --- | --- | --- | --- |
+| dense_only | 1.00±0.00 | 0.68±0.28 | 0.61±0.27 | 8/8 |
+| answer_only | 0.19±0.05 | 0.21 | 0.19 | 0/8 |
+| wean_linear | 0.64±0.28 | 0.21 | 0.18 | 5/8 |
+| **wean_mixed** | **1.00**±0.00 | 0.64±0.35 | 0.55±0.34 | **7/7** |
+
+**Finding — the bridge works.** Phase-2's mixed-density curriculum (wean_mixed) reaches dense-level
+accuracy in-distribution (7/7 converge) and tracks dense extrapolation — the dense-learned circuit
+persists with no deploy-time labels. So s5 is movable *all the way to deployment*: dense supervision
+forms the circuit, weaning internalizes it, gdp_hybrid extrapolates it in length.
 
 Two clean dissociations, neither movable by test-time compute; one movable by supervision density
 (s5), one movable by base-model reasoning strength (composition). Architecture matters only for

@@ -310,26 +310,21 @@ strongest length-extrapolator (0.94 @L64), but like every architecture it floors
 answer-only supervision.
 
 In short: the suite climbs from easy single-hop recall, through binding and composition, to the
-`s5_v1` state-tracking wall. Three clean dissociations (full write-up: [`docs/experiments/`](docs/experiments/)):
+`s5_v1` state-tracking wall. Two clean dissociations (full write-up: [`docs/experiments/`](docs/experiments/)):
 
-1. **Composition is a reasoning-strength wall.** Given the output format, strong reasoning models
-   (kimi 0.97, glm 0.75) solve it; non-reasoners floor. Routing is *not* the bottleneck — given the
-   correct holder, every model recalls (0.93–1.00); the wall is *generating* the holder. Explicit
-   structured CoT **hurts** (0.00 for all).
-2. **Non-abelian state-tracking (s5) is a learnability wall.** It floors every architecture under
-   sparse/answer-only supervision but **moves to ~1.0 under dense per-step supervision** (10/10 seeds),
-   and the learned circuit extrapolates 4–8× with no target-length labels — *but only for the recurrent
-   hybrid* (gdp_hybrid 0.75@L64; fprm/transformer solve in-distribution yet don't extrapolate).
-3. **Test-time compute — partially open.** Sampling (majority vote to 30) and iterative
-   self-correction (3 rounds) give exactly zero lift for *local* (non-reasoning) models, and explicit
-   structured CoT **hurts**. But reasoning models (kimi/glm) solving composition *with background
-   reasoning on* may itself be test-time compute working — that is being tested directly with a
-   reasoning on/off/levels sweep. What's established so far: explicit prompting and sampling don't
-   substitute for implicit reasoning ability.
+1. **Composition is movable by test-time compute** for strong reasoning models. A reasoning-effort
+   dose-response sweep shows composite value climbing with effort (kimi 0.22→0.98, glm 0.14→0.81);
+   given the output format, reasoners solve it. Non-reasoners floor. (The earlier "test-time doesn't
+   help" claim was wrong — it held only for explicit CoT *prompting* and for non-reasoning local models.)
+2. **Non-abelian state-tracking (s5) is movable by training-time supervision density, NOT by reasoning.**
+   It floors at every reasoning effort, but dense per-step supervision solves it (10/10 seeds) and the
+   circuit **survives weaning to answer-only** (wean_mixed 7/7) — so it deploys label-free. Only the
+   recurrent hybrid (gdp_hybrid) **extrapolates** the learned circuit (0.64@L128 vs fprm/transformer
+   collapsing past L32).
 
-The established levers are **base-model reasoning strength** (composition), **supervision density**
-(s5), and **recurrent architecture** (s5 length extrapolation). Whether background test-time compute
-is itself a lever is the open question. Full write-up: [`docs/experiments/`](docs/experiments/).
+The levers are **reasoning strength** (composition), **supervision density + weaning** (s5), and
+**recurrent architecture** (s5 length extrapolation). Explicit structured CoT prompting never helps
+(and hurts); recall is trivial once the holder is known.
 
 ## Repository layout
 
