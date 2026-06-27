@@ -100,7 +100,7 @@ def train_phase(model, tok, docs, *, steps, batch, d_model, n_layers, d_ff, seed
     return model
 
 
-def run_arm(spec, arm, seed, *, steps, wean_steps, batch, d_model, n_layers, train_n, device):
+def run_arm(spec, arm, seed, *, steps, wean_steps, batch, d_model, n_layers, train_n, device, mix_default="1,2,4,inf"):
     """Train one (arm, seed). Returns the trained model + assets."""
     w, r, oracle = make_world(spec)
     origins = TK._fixed_origins(spec, w)
@@ -137,12 +137,15 @@ def run_arm(spec, arm, seed, *, steps, wean_steps, batch, d_model, n_layers, tra
                                 n_layers=n_layers, d_ff=d_ff, seed=seed, device=device)
         return model, tok, w, r, oracle, origins
 
-    if arm == "wean_mixed":
-        # Phase 2's winner: fine-tune on a MIX of densities (each batch randomly K in {1,2,4,inf})
+    if arm.startswith("wean_mixed"):
+        # Phase 2's winner: fine-tune on a MIX of densities. The K-set is configurable via the arm
+        # name (e.g. 'wean_mixed:1,2,4,inf' or 'wean_mixed:1,inf') or the --mix default.
+        ks_str = arm.split(":", 1)[1] if ":" in arm else mix_default
+        ks = [int(k) if k != "inf" else 10 ** 9 for k in ks_str.split(",")]
         docs = []
         for j in range(train_n):
             L = [4, 8, 16][j % 3]
-            K = random.Random(seed * 7 + j).choice([1, 2, 4, 10 ** 9])
+            K = random.Random(seed * 7 + j).choice(ks)
             words, *_ = eds.build_stream(spec, w, r, oracle, origins, L, K, random.Random(seed * 1000 + j))
             docs.append(" ".join(words))
         model = train_phase(model, tok, docs, steps=wean_steps, batch=batch, d_model=d_model,
@@ -156,6 +159,8 @@ def main():
     ap = argparse.ArgumentParser(description="s5 weaning bridge: dense -> answer-only.")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4, 5, 6, 7])
     ap.add_argument("--arms", nargs="+", default=["dense_only", "answer_only", "wean_linear", "wean_mixed"])
+    ap.add_argument("--mix", default="1,2,4,inf",
+                    help="Default density K-set for wean_mixed (comma-sep, 'inf'=answer-only). Override per-arm with wean_mixed:1,4,inf.")
     ap.add_argument("--steps", type=int, default=4000, help="Dense + answer-only training steps.")
     ap.add_argument("--wean_steps", type=int, default=4000, help="Total weaning fine-tune steps.")
     ap.add_argument("--d_model", type=int, default=256)
@@ -184,7 +189,8 @@ def main():
             print(f"\n--- {arm} seed={seed} ---", flush=True)
             model, tok, w, r, oracle, origins = run_arm(
                 spec, arm, seed, steps=a.steps, wean_steps=a.wean_steps, batch=a.batch,
-                d_model=a.d_model, n_layers=a.n_layers, train_n=a.train_n, device=a.device)
+                d_model=a.d_model, n_layers=a.n_layers, train_n=a.train_n, device=a.device,
+                mix_default=a.mix)
             row = {"arm": arm, "seed": seed}
             for L in a.eval_lengths:
                 exs = eds.build_eval(spec, w, r, oracle, origins, L, 1, a.eval_n)
