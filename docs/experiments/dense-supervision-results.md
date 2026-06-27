@@ -15,23 +15,28 @@ Training streams interleave the oracle's **holder-of-the-queried-role every K ev
 (K=1 dense → large K = answer-only). Eval is **guided free-run**: events are teacher-forced,
 the holder slots and final value are *generated* by the model, scored on the generated output.
 
-## Sparsity cliff (reproduced on natural format)
+## Sparsity cliff (10-seed, gdp_hybrid)
 
-| K (stride) | labels / 16-ep | value @L16 | value @L64 | conv(>0.5) |
+| K (stride) | labels / 16-ep | value @L16 | value @L64 | conv(>0.5) @L16 |
 | --- | --- | --- | --- | --- |
-| 1 (dense) | 16 | **1.00**±0.00 | **0.90**±0.06 | 3/3 |
-| 2 | 8 | 0.96±0.04 | 0.50±0.33 | 3/3 |
-| 4 | 4 | 0.20±0.01 | 0.19±0.02 | 0/3 |
-| 8 | 2 | 0.20±0.03 | 0.19±0.04 | 0/3 |
+| 1 (dense) | 16 | **1.00**±0.00 | **0.75**±0.22 | 10/10 |
+| 2 | 8 | 0.98±0.03 | 0.40±0.26 | 10/10 |
+| 4 | 4 | 0.19±0.02 | 0.20±0.04 | 0/10 |
+| 8 | 2 | 0.21±0.02 | 0.20±0.04 | 0/10 |
 
-**The wall moves.** Dense K=1 supervision solves s5 (1.00 in-distribution, 0.90 @L64) where
-answer-only and our main sweep floored at the 0.20 chance. The circuit forms only down to a
-checkpoint every ~2 events; at K≥4 it does not form at all. This reproduces Phase 2's
+(`results/dense_power_gdp_*`; 10 seeds each. The earlier 3-seed run's K=2 L64=0.50 was a noisy
+subsample; the firm 10-seed number is 0.40±0.26 — still bimodal at the *extrapolation* length, but
+the in-distribution circuit forms reliably: 10/10 at L16.)
+
+**The wall moves.** Dense K=1 supervision solves s5 in-distribution (1.00, 10/10 converge) where
+answer-only and our main sweep floored at the 0.20 chance. The circuit forms reliably in-distribution
+down to K=2 (10/10 at L16); at K≥4 it does not form at all (0/10). This reproduces Phase 2's
 near-dense cliff on the natural format — the mechanism is format-independent.
 
-**Length extrapolation.** K=1 trained at lengths ≤16 reaches **L128 ≈ 0.90** (2 seeds) — roughly
-8× the trained horizon, with no target-length labels. (Phase 2 reported the same via post-training
-deep-state coverage; here it shows up directly from the dense-trained base.)
+**Length extrapolation is the bimodal regime.** K=1 reaches L64=0.75±0.22 and (on 2 seeds) L128≈0.90 —
+roughly 4–8× the trained horizon, with no target-length labels — but the variance is real. K=2's
+extrapolation is sharply bimodal (0.40±0.26). (Phase 2 reported cleaner extrapolation via post-training
+deep-state coverage; the bare dense base extrapolates but not deterministically.)
 
 ## Inference-time scaling probe — does test-time compute loosen the cliff?
 
