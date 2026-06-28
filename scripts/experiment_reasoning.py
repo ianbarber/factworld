@@ -79,6 +79,8 @@ def main():
     ap.add_argument("--efforts", nargs="+", default=EFFORTS,
                     help="Reasoning effort levels (OpenRouter). Add 'default' for the model default.")
     ap.add_argument("--n", type=int, default=100)
+    ap.add_argument("--length", type=int, default=None,
+                    help="Eval length (default: task's first eval length). Use for long-context runs.")
     ap.add_argument("--max_new_tokens", type=int, default=8192,
                     help="Generous budget so reasoning can finish before the answer.")
     ap.add_argument("--max_workers", type=int, default=4)
@@ -100,7 +102,7 @@ def main():
     for model in a.models:
         for task in a.tasks:
             spec = TK.CANONICAL[task]
-            length = spec.eval_lengths[0]
+            length = a.length or spec.eval_lengths[0]
             for effort in a.efforts:
                 tag = f"{model.split('/')[-1]} | {task}@L{length} | effort={effort}"
                 print(f"\n--- {tag} ---", flush=True)
