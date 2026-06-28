@@ -112,21 +112,24 @@ So the corrected statement: **background reasoning (test-time compute) IS a leve
 composition; it is NOT for s5.** What does not help either wall: explicit structured CoT
 prompting (hurts), and sampling/self-correction on non-reasoning local models.
 
-## 5. Weaning bridge — `experiment_weaning.py` (8 seeds)
+## 5. Weaning bridge — deep-dive (8 seeds) — `experiment_weaning.py`
 
-Can a dense-learned s5 circuit survive weaning to answer-only (the agentic regime)?
+Can a dense-learned s5 circuit survive weaning to answer-only, and does weaning change extrapolation?
 
-| arm | value @L16 | value @L32 | value @L64 | conv @L16 |
-| --- | --- | --- | --- | --- |
-| dense_only | 1.00±0.00 | 0.68±0.28 | 0.61±0.27 | 8/8 |
-| answer_only | 0.19±0.05 | 0.21 | 0.19 | 0/8 |
-| wean_linear | 0.64±0.28 | 0.21 | 0.18 | 5/8 |
-| **wean_mixed** | **1.00**±0.00 | 0.64±0.35 | 0.55±0.34 | **7/7** |
+| arm | L16 | L32 | L64 | L128 | conv @L16 |
+| --- | --- | --- | --- | --- | --- |
+| dense_only | 1.00±0.00 | 0.68±0.28 | 0.61±0.27 | 0.50±0.26 | 8/8 |
+| wean_mixed:{1,2,4,inf} | 1.00±0.00 | 0.61±0.33 | 0.50±0.34 | 0.46±0.33 | 8/8 |
+| wean_mixed:{1,inf} | 0.99±0.01 | 0.69±0.30 | 0.54±0.33 | 0.48±0.29 | 8/8 |
+| wean_mixed:{1,4} | 1.00±0.00 | 0.68±0.29 | 0.53±0.33 | 0.47±0.33 | 8/8 |
+| answer_only | 0.19 | 0.21 | 0.19 | — | 0/8 |
 
-**Finding — the bridge works.** Phase-2's mixed-density curriculum (wean_mixed) reaches dense-level
-accuracy in-distribution (7/7 converge) and tracks dense extrapolation — the dense-learned circuit
-persists with no deploy-time labels. So s5 is movable *all the way to deployment*: dense supervision
-forms the circuit, weaning internalizes it, gdp_hybrid extrapolates it in length.
+**Findings:** (1) **the circuit survives weaning** — every mix converges 8/8 @L16 free-run, no
+ deploy-time labels. (2) **weaning does NOT improve extrapolation over dense-only** — all mixes track
+ dense within noise (L128 0.46–0.53 vs dense 0.50). The win is label-free *deployment*, not better
+ length generalization. (3) **the specific mix barely matters** — the key is just *some* answer-only
+ exposure alongside dense. Deployment recipe: train dense → fine-tune on any mix including answer-only
+ → deploy answer-only. Doc: `weaning_deep_results.md`.
 
 Two clean dissociations, neither movable by test-time compute; one movable by supervision density
 (s5), one movable by base-model reasoning strength (composition). Architecture matters only for
