@@ -82,7 +82,7 @@ def make_world(spec):
     return w, r, Oracle(w)
 
 
-def run_K(spec, K, seed, *, steps, batch, d_model, n_layers, train_n, device, arch="gdp_hybrid"):
+def run_K(spec, K, seed, *, steps, batch, d_model, n_layers, train_n, device, arch="gdp_hybrid", eval_lengths=(16,64)):
     """Train one (K, seed, arch) cell; return (model, tok, w, r, oracle, origins)."""
     w, r, oracle = make_world(spec)
     origins = TK._fixed_origins(spec, w)
@@ -92,7 +92,9 @@ def run_K(spec, K, seed, *, steps, batch, d_model, n_layers, train_n, device, ar
         L = [4, 8, 16][j % 3]
         words, *_ = build_stream(spec, w, r, oracle, origins, L, K, random.Random(seed * 1000 + j))
         train.append(" ".join(words))
-    tok = Tokenizer.build([w], r)
+    # max_step covers the longest eval length (step tokens s0..s{L-1}); default 256 is too small for L512.
+    max_step = max(256, max(eval_lengths, default=64) + 16)
+    tok = Tokenizer.build([w], r, max_step=max_step)
     docs = [tok.encode(t, add_eos=True) for t in train]
     docs.sort(key=len)
     d_ff = 4 * d_model
@@ -237,7 +239,8 @@ def main():
             print(f"\n--- {a.arch} K={K} seed={seed} ---", flush=True)
             model, tok, w, r, oracle, origins = run_K(
                 spec, K, seed, steps=a.steps, batch=a.batch, d_model=a.d_model,
-                n_layers=a.n_layers, train_n=a.train_n, device=a.device, arch=a.arch)
+                n_layers=a.n_layers, train_n=a.train_n, device=a.device, arch=a.arch,
+                eval_lengths=a.eval_lengths)
             row = {"arch": a.arch, "K": K, "seed": seed}
             for L in a.eval_lengths:
                 exs = build_eval(spec, w, r, oracle, origins, L, K, a.eval_n)
