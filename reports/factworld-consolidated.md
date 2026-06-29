@@ -19,7 +19,7 @@ Three findings carry the report:
 
 - **A. Composition is movable by background reasoning.** On the 2-hop composition task,
   accuracy climbs with reasoning effort (GLM-5.2: 0.14 → 0.81; Kimi-K2.6: 0.22 → 0.98),
-  and the benefit survives long context (0.93–0.97 at L256 with high effort).
+  and the benefit survives long context (0.80–0.97 at L256–L512 with high effort).
 - **B. Non-abelian state-tracking (S₅) is movable by training-time supervision that
   develops a circuit.** Dense per-step state supervision solves S₅ (10/10 seeds); the
   circuit forms down to a checkpoint every other step and is gone below. It survives
@@ -144,8 +144,10 @@ recurrent]` GatedDeltaProduct stack).
 | transformer | 0.19 | 0.45 | 0.05 | 0.20 |
 
 All numbers are in-distribution (the longest length seen in training for each task). OOD
-extrapolation is reported separately below. Composite is the learnable k=5 variant.
-Full data in `results/sweep_main_*` and `results/recall_arch_*`.
+extrapolation is reported separately below. **Note: the local composite column uses the
+learnable k=5 variant (`composite_copy_scale_v1`), not the k=32 flagship (`composite_copy_v1`)
+in the §2 API table — they are different difficulties and not directly comparable across the
+two tables.** Full data in `results/sweep_main_*` and `results/recall_arch_*`.
 
 Two things stand out, and both reproduce takeaways established in the instrument's
 earlier phases.
@@ -153,8 +155,9 @@ earlier phases.
 **Recall is architecture-dependent at this scale; the recurrent hybrid solves it, the
 transformer does not.** On in-context recall at the max training pool (pool 5), the recurrent
 hybrid scores 0.73 while the transformer scores 0.19 — and the gap widens at larger pools
-(gdp 0.62 vs transformer 0.14 at pool 6, OOD). This is not a new finding: it reproduces the Phase 1 data exactly (gdp_hybrid 1.00 in-distribution vs transformer 0.48 at
-the same scale and step budget), and it is a genuine dissociation, not an artifact of
+(gdp 0.62 vs transformer 0.14 at pool 6, OOD). This is not a new finding: it reproduces
+the Phase 1 data (gdp_hybrid ≈0.85 vs transformer ≈0.18 at pool 5, same scale and step
+budget) — the same dissociation, the same order of magnitude. It is not an artifact of
 undertraining. We checked the obvious alternative explanations for the transformer's weakness:
 training on the eval pool sizes (not just smaller ones) lifted pool-6 only 0.11 → ~0.20;
 scaling width 16× (d=256 / 4M → d=1024 / 68M) gave no improvement and on wide pools made
@@ -265,12 +268,13 @@ under horizon stress — reasoning carries composition, supervision density carr
 ## 6. Discussion
 
 The instrument lets the same controlled behavior be measured two ways, and the two ways
-agree where they overlap. Transformers — whether a 45M local model or a 70B+ pretrained
-one — solve composition's recall leg and shortcut on state-tracking. Recurrent hybrids
-solve in-context recall less well but carry a learned state circuit far past their
-training horizon. Pretrained reasoning models add a third lever: background reasoning
-moves composition at inference, including at long context, in a way no training
-intervention or prompting trick reproduced.
+agree where they overlap. At the matched-compute scale where we can ablate architectures,
+recurrent hybrids solve in-context recall where small transformers do not, and a recurrent
+hybrid carries a learned state circuit far past its training horizon where transformers and
+looped blocks shortcut. The pretrained transformers in the API grid solve recall at ceiling
+— a different, much larger regime — and add a third lever: background reasoning moves
+composition at inference, including at long context, in a way no training intervention or
+prompting trick reproduced at the small scale.
 
 The takeaways we want a reader to carry:
 
@@ -307,6 +311,9 @@ which we extend rather than survey.
 
 ## 8. Reproducibility
 
-Every claim maps to one script in `docs/experiments/`; raw results in `results/`; the
-validity gate (`scripts/validate_suite.py`) certifies the suite. The data and eval layer
-is pure-stdlib (no GPU); training runs need a single CUDA GPU.
+Every headline claim maps to a committed script in `docs/experiments/` or `scripts/`;
+raw results in `results/`; the validity gate (`scripts/validate_suite.py`) certifies the
+suite. The recall ablations (training-distribution, width, recipe sweep) are
+`scripts/experiment_recall_ablation.py`, `experiment_recall_width.py`, and
+`experiment_recipe_sweep.py`. The data and eval layer is pure-stdlib (no GPU); training
+runs need a single CUDA GPU.
