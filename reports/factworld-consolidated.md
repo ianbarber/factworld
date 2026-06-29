@@ -152,13 +152,16 @@ score 0.48–0.62. This corrects a tempting overclaim: in-context recall is not 
 general — it is cheap for attention, and hard for recurrence. (The pretrained grid
 showed recall at ceiling because those models are transformer-based.) A natural reading
 is that the small transformer is simply undertrained or under-exposed, since attention is
-architecturally suited to retrieval; we checked. Training on the eval pool sizes (not just
-smaller ones) and quadrupling the data lifted pool-6 accuracy only from 0.11 to ~0.20 — a
-real but small gain. At d=256 the transformer's in-context recall is genuinely weak at
-this pool size, not merely undertrained; a larger transformer would likely do better, but
-we did not vary width. Parametric recall — facts stored in weights — is the complementary
-case; we do not validate it for API models here, though fine-tuning a fixed fact set into
-a model and testing recall of it would be a clean way to do so.
+architecturally suited to retrieval; we checked on three axes. (i) Training on the eval pool
+sizes (not just smaller ones) lifted pool-6 accuracy only 0.11 → ~0.20. (ii) Quadrupling the
+data added nothing on top of that. (iii) Scaling width 16×, from d=256 (4M) to d=1024 (68M),
+gave no improvement on narrow pools — and on wide pools the 68M transformer got *worse*
+(0.02–0.04, apparently overfitting the trained pool sizes). So at this step budget the small
+transformer's in-context recall is a genuine limitation, not fixed by width, data, or training
+distribution; pretrained transformers reach ceiling on recall, so it is specific to this
+small-scale regime, not the architecture in principle. Parametric recall — facts stored in
+weights — is the complementary case; we do not validate it for API models here, though
+fine-tuning a fixed fact set into a model and testing recall of it would be a clean way.
 
 **Architecture determines whether a learned circuit generalizes in length.** On S₅ under
 dense supervision (below), all three architectures form the circuit in-distribution. But
