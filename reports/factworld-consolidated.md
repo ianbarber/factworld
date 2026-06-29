@@ -150,10 +150,15 @@ earlier phases.
 On single-hop in-context recall, the transformer scores 0.14 while the recurrent models
 score 0.48–0.62. This corrects a tempting overclaim: in-context recall is not free in
 general — it is cheap for attention, and hard for recurrence. (The pretrained grid
-showed recall at ceiling because those models are transformer-based.) Parametric recall —
-facts stored in weights — is the complementary case; we do not validate it for API models
-here, though fine-tuning a fixed fact set into a model and testing recall of it would be
-a clean way to do so.
+showed recall at ceiling because those models are transformer-based.) A natural reading
+is that the small transformer is simply undertrained or under-exposed, since attention is
+architecturally suited to retrieval; we checked. Training on the eval pool sizes (not just
+smaller ones) and quadrupling the data lifted pool-6 accuracy only from 0.11 to ~0.20 — a
+real but small gain. At d=256 the transformer's in-context recall is genuinely weak at
+this pool size, not merely undertrained; a larger transformer would likely do better, but
+we did not vary width. Parametric recall — facts stored in weights — is the complementary
+case; we do not validate it for API models here, though fine-tuning a fixed fact set into
+a model and testing recall of it would be a clean way to do so.
 
 **Architecture determines whether a learned circuit generalizes in length.** On S₅ under
 dense supervision (below), all three architectures form the circuit in-distribution. But
@@ -230,16 +235,16 @@ composition collapses for pretrained models past L128 (llama-3.3-70b: 0.80 @L16 
 @L128). But that collapse is a default-effort artifact. With reasoning effort swept
 {none, high} at long length (n=30, value accuracy):
 
-| model | L128 none | L128 high | L256 none | L256 high |
-| --- | --- | --- | --- | --- |
-| kimi-k2.6 | 0.03 | **0.97** | 0.00 | **0.97** |
-| glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** |
+| model | L128 none | L128 high | L256 none | L256 high | L512 high |
+| --- | --- | --- | --- | --- | --- |
+| kimi-k2.6 | 0.03 | **0.97** | 0.00 | **0.97** | **0.93** |
+| glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
 
-High reasoning effort recovers composition to 0.93–0.97 even at L256. The composition
-lever (§2) survives long context when the reasoning budget is there. S₅ does not: it
-stays at 0.00 at high effort at every length we tested. The two tasks' levers hold their
-distinct characters under horizon stress — reasoning carries composition, supervision
-density carries S₅.
+High reasoning effort recovers composition to 0.80–0.97 all the way out to L512 — roughly
+32× the L16 sweet spot and ~3.5k-token prompts. The composition lever (§2) is remarkably
+horizon-robust when the reasoning budget is there. S₅ does not move: it stays at 0.00 at
+high effort at every length we tested. The two tasks' levers hold their distinct characters
+under horizon stress — reasoning carries composition, supervision density carries S₅.
 
 ## 6. Discussion
 
