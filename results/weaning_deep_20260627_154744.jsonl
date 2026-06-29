@@ -29,3 +29,4 @@
 {"arm": "wean_mixed:1,4", "seed": 4, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.89, "L32_value": 0.89, "L64_holder": 0.64, "L64_value": 0.64, "L128_holder": 0.44, "L128_value": 0.44}
 {"arm": "wean_mixed:1,4", "seed": 5, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.47, "L32_value": 0.47, "L64_holder": 0.28, "L64_value": 0.29, "L128_holder": 0.17, "L128_value": 0.17}
 {"arm": "wean_mixed:1,4", "seed": 6, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.28, "L32_value": 0.28, "L64_holder": 0.22, "L64_value": 0.22, "L128_holder": 0.1, "L128_value": 0.1}
+{"arm": "wean_mixed:1,4", "seed": 7, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 1.0, "L32_value": 1.0, "L64_holder": 0.97, "L64_value": 0.97, "L128_holder": 0.91, "L128_value": 0.91}
