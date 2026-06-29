@@ -98,7 +98,10 @@ is ambiguous (n=30, greedy).
 | deepseek-chat | 1.00 | 0.33 | 0.03 | 0.17 | 0.13 |
 | gpt-4o-mini | 1.00 | 0.37 | 0.07 | 0.14 | 0.13 |
 
-(position-strict exact match at L16; full grid in `docs/openrouter/results-natural.md`.)
+(Each task at its first eval length: recall at pool-6, binding/composite at L16, chain at
+depth-4, s5 at L32. These models are evaluated zero-shot — no task-specific training — so the
+in-distribution/out-of-distribution distinction does not apply. n=30, greedy; full grid in
+`docs/openrouter/results-natural.md`.)
 
 Single-hop recall is solved across the board. Binding and composition separate the
 stronger models. The two hardest tasks — depth-*k* composition (`chain`) and non-abelian
@@ -132,24 +135,25 @@ layers, 8k steps, 5 seeds): a transformer, a weight-tied looped conv+attention b
 (`fprm`), and a recurrent hybrid (`gdp_hybrid` — a `[recurrent, recurrent, attn,
 recurrent]` GatedDeltaProduct stack).
 
-**Capability at L16** (position-strict exact match, mean over seeds):
+**In-distribution capability** (at each task's maximum training length; position-strict exact match, mean over seeds):
 
-| arch | recall | binding | composite | s5 |
+| arch | recall (pool 5) | binding (L16) | composite (L16) | s5 (L32) |
 | --- | --- | --- | --- | --- |
-| gdp_hybrid | 0.62 | 0.99 | 0.50 | 0.20 |
-| fprm | 0.48 | 1.00 | 0.20 | 0.19 |
-| transformer | 0.14 | 0.45 | 0.05 | 0.20 |
+| gdp_hybrid | 0.73 | 0.99 | 0.50 | 0.20 |
+| fprm | 0.50 | 1.00 | 0.20 | 0.19 |
+| transformer | 0.19 | 0.45 | 0.05 | 0.20 |
 
-(recall at pool-6; composite is the learnable k=5 variant; full table in
-`results/sweep_main_*` and `results/recall_arch_*`.)
+All numbers are in-distribution (the longest length seen in training for each task). OOD
+extrapolation is reported separately below. Composite is the learnable k=5 variant.
+Full data in `results/sweep_main_*` and `results/recall_arch_*`.
 
 Two things stand out, and both reproduce takeaways established in the instrument's
 earlier phases.
 
 **Recall is architecture-dependent at this scale; the recurrent hybrid solves it, the
-transformer does not.** On single-hop in-context recall, the recurrent hybrid (gdp_hybrid)
-scores 0.62–1.00 while the transformer scores 0.11–0.48. This is not a new finding: it
-reproduces the Phase 1 data exactly (gdp_hybrid 1.00 in-distribution vs transformer 0.48 at
+transformer does not.** On in-context recall at the max training pool (pool 5), the recurrent
+hybrid scores 0.73 while the transformer scores 0.19 — and the gap widens at larger pools
+(gdp 0.62 vs transformer 0.14 at pool 6, OOD). This is not a new finding: it reproduces the Phase 1 data exactly (gdp_hybrid 1.00 in-distribution vs transformer 0.48 at
 the same scale and step budget), and it is a genuine dissociation, not an artifact of
 undertraining. We checked the obvious alternative explanations for the transformer's weakness:
 training on the eval pool sizes (not just smaller ones) lifted pool-6 only 0.11 → ~0.20;
