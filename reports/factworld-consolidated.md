@@ -157,9 +157,13 @@ hybrid scores 0.73 while the transformer scores 0.19 — and the gap widens at l
 the same scale and step budget), and it is a genuine dissociation, not an artifact of
 undertraining. We checked the obvious alternative explanations for the transformer's weakness:
 training on the eval pool sizes (not just smaller ones) lifted pool-6 only 0.11 → ~0.20;
-quadrupling the data added nothing; and scaling width 16× (d=256 / 4M → d=1024 / 68M) gave no
-improvement and on wide pools made it worse. So at this scale the transformer does not solve
-this recall task, and more compute of the kinds we varied does not change that.
+scaling width 16× (d=256 / 4M → d=1024 / 68M) gave no improvement and on wide pools made
+it worse; and a focused recipe sweep (5× data, 10× weight decay, 3× learning rate, 2× batch)
+left accuracy at 0.18–0.24 — all within noise of the 0.22 baseline. The decisive diagnostic is a
+learning curve: training loss keeps dropping (0.91 → 0.33 over 20k steps) while recall accuracy
+plateaus at ~0.19 from step 2000 and never moves. The model memorizes the training set without
+learning the generalizable retrieval skill, and no hyperparameter we varied changes that. So at
+this scale the transformer does not solve this recall task.
 
 This does not contradict the wider literature. The well-known result that attention solves
 associative recall (MQAR; Arora et al. 2023) is for 1-hop lookup over a *large* key set
