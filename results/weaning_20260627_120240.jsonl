@@ -29,3 +29,4 @@
 {"arm": "wean_mixed", "seed": 4, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.94, "L32_value": 0.94, "L64_holder": 0.77, "L64_value": 0.77}
 {"arm": "wean_mixed", "seed": 5, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.25, "L32_value": 0.25, "L64_holder": 0.12, "L64_value": 0.12}
 {"arm": "wean_mixed", "seed": 6, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.21, "L32_value": 0.21, "L64_holder": 0.24, "L64_value": 0.24}
+{"arm": "wean_mixed", "seed": 7, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.43, "L32_value": 0.43, "L64_holder": 0.18, "L64_value": 0.18}
