@@ -146,22 +146,27 @@ recurrent]` GatedDeltaProduct stack).
 Two things stand out, and both reproduce takeaways established in the instrument's
 earlier phases.
 
-**Transformers solve composition's recall leg; recurrent models solve in-context recall.**
-On single-hop in-context recall, the transformer scores 0.14 while the recurrent models
-score 0.48–0.62. This corrects a tempting overclaim: in-context recall is not free in
-general — it is cheap for attention, and hard for recurrence. (The pretrained grid
-showed recall at ceiling because those models are transformer-based.) A natural reading
-is that the small transformer is simply undertrained or under-exposed, since attention is
-architecturally suited to retrieval; we checked on three axes. (i) Training on the eval pool
-sizes (not just smaller ones) lifted pool-6 accuracy only 0.11 → ~0.20. (ii) Quadrupling the
-data added nothing on top of that. (iii) Scaling width 16×, from d=256 (4M) to d=1024 (68M),
-gave no improvement on narrow pools — and on wide pools the 68M transformer got *worse*
-(0.02–0.04, apparently overfitting the trained pool sizes). So at this step budget the small
-transformer's in-context recall is a genuine limitation, not fixed by width, data, or training
-distribution; pretrained transformers reach ceiling on recall, so it is specific to this
-small-scale regime, not the architecture in principle. Parametric recall — facts stored in
-weights — is the complementary case; we do not validate it for API models here, though
-fine-tuning a fixed fact set into a model and testing recall of it would be a clean way.
+**Recall is architecture-dependent at this scale; the recurrent hybrid solves it, the
+transformer does not.** On single-hop in-context recall, the recurrent hybrid (gdp_hybrid)
+scores 0.62–1.00 while the transformer scores 0.11–0.48. This is not a new finding: it
+reproduces the Phase 1 data exactly (gdp_hybrid 1.00 in-distribution vs transformer 0.48 at
+the same scale and step budget), and it is a genuine dissociation, not an artifact of
+undertraining. We checked the obvious alternative explanations for the transformer's weakness:
+training on the eval pool sizes (not just smaller ones) lifted pool-6 only 0.11 → ~0.20;
+quadrupling the data added nothing; and scaling width 16× (d=256 / 4M → d=1024 / 68M) gave no
+improvement and on wide pools made it worse. So at this scale the transformer does not solve
+this recall task, and more compute of the kinds we varied does not change that.
+
+This does not contradict the wider literature. The well-known result that attention solves
+associative recall (MQAR; Arora et al. 2023) is for 1-hop lookup over a *large* key set
+in-distribution; our `recall_copy_v1` is a small pool (2–8) evaluated out-of-distribution on
+pool size, a binding-load extrapolation the transformer specifically fails. (The pretrained
+grid shows recall at ceiling because those models are far larger and trained on vastly more
+data — a different regime.) We do not claim the transformer cannot do in-context recall in
+principle; we report that, at the matched-compute scale where we can ablate architectures, the
+recurrent hybrid is the one that generalizes recall across pool sizes. Parametric recall —
+facts stored in weights — is the complementary case; we do not validate it for API models here,
+though fine-tuning a fixed fact set into a model and testing recall of it would be a clean way.
 
 **Architecture determines whether a learned circuit generalizes in length.** On S₅ under
 dense supervision (below), all three architectures form the circuit in-distribution. But
