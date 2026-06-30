@@ -83,7 +83,61 @@ The rest of the report uses the decomposition throughout. Three simpler tasks ro
 the suite — single-hop in-context recall, single-hop binding, and a depth-*k* pointer
 chase — and are reported in the capability table.
 
-## 2. Evaluating API models
+## 2. Validating the instrument
+
+Before using the suite to compare architectures or models, we confirm it reproduces the
+field's established single-capability dissociations. If these hold, downstream claims
+inherit their validity; if the positive control fails, there is a setup bug. All three
+are reproduced on the natural-language format, three seeds each
+(`scripts/experiment_canonical_repro.py`).
+
+**1-hop associative recall (MQAR; Arora et al. 2023).** The value is read adjacent to the
+key — the canonical easy regime. This is the positive control: attention is expected to
+solve it.
+
+| arch | 1-hop MQAR (pool 16) |
+| --- | --- |
+| gdp_hybrid | 1.00 |
+| fprm | 1.00 |
+| transformer | 1.00 |
+
+All three architectures solve it. The instrument can show a transformer solving recall
+when the task is the canonical form.
+
+**Deferred read-out recall.** The value must be read at an arbitrary later position, not
+adjacent to the key — the regime composition actually requires. This is harder, and the
+recurrent hybrid is expected to win (the attention-rescue result needs a hybrid here, not
+a bare mixer).
+
+| arch | deferred read-out (pool 5) |
+| --- | --- |
+| gdp_hybrid | 0.73 |
+| fprm | 0.50 |
+| transformer | 0.19 |
+
+The dissociation reproduces: all architectures aced 1-hop, but only the recurrent hybrid
+solves the deferred read-out. This is the distinction that matters for composition, and it
+is why the report treats the transformer's recall as a regime effect, not an architecture
+limitation — a transformer solves 1-hop MQAR perfectly; it struggles on the deferred
+read-out at this scale.
+
+**S₅ length extrapolation under dense supervision (Liu et al. 2023; Siems et al. 2025).**
+Train dense, evaluate free-running past the training length.
+
+| arch | L16 (train) | L64 (4×) | L128 (8×) |
+| --- | --- | --- | --- |
+| gdp_hybrid | 1.00 | 0.90 | 0.82 |
+| fprm | 1.00 | 0.17 | 0.23 |
+| transformer | 0.79 | 0.22 | 0.22 |
+
+The product recurrence extrapolates the learned state circuit past its training horizon;
+the transformer and the looped block solve the trained length and collapse past it — the
+well-documented shortcutting failure. This is the architectural dissociation the rest of
+the report builds on.
+
+All three dissociations reproduce. The instrument is sound on the natural-language format.
+
+## 3. Evaluating API models
 
 We evaluate pretrained models from 3B to ~1T parameters (MoE) via OpenRouter, on the
 natural-language format with output-format instructions appended where the answer shape
@@ -127,7 +181,7 @@ as "test-time compute doesn't help," which was wrong — it does, for compositio
 kimi and glm. The two tasks respond to different levers, and reasoning is not the one
 for S₅.
 
-## 3. Evaluating architectures by training small models
+## 4. Evaluating architectures by training small models
 
 The same tasks, trained from scratch, let us ablate architectures and training regimes
 that an API model hides. We train three architectures at matched compute (d=256, 4
@@ -146,38 +200,26 @@ recurrent]` GatedDeltaProduct stack).
 All numbers are in-distribution (the longest length seen in training for each task). OOD
 extrapolation is reported separately below. **Note: the local composite column uses the
 learnable k=5 variant (`composite_copy_scale_v1`), not the k=32 flagship (`composite_copy_v1`)
-in the §2 API table — they are different difficulties and not directly comparable across the
+in the §3 API table — they are different difficulties and not directly comparable across the
 two tables.** Full data in `results/sweep_main_*` and `results/recall_arch_*`.
 
-Two things stand out, and both reproduce takeaways established in the instrument's
-earlier phases.
+Two things stand out.
 
-**Recall is architecture-dependent at this scale; the recurrent hybrid solves it, the
-transformer does not.** On in-context recall at the max training pool (pool 5), the recurrent
-hybrid scores 0.73 while the transformer scores 0.19 — and the gap widens at larger pools
-(gdp 0.62 vs transformer 0.14 at pool 6, OOD). This is not a new finding: it reproduces
-the Phase 1 data (gdp_hybrid ≈0.85 vs transformer ≈0.18 at pool 5, same scale and step
-budget) — the same dissociation, the same order of magnitude. It is not an artifact of
-undertraining. We checked the obvious alternative explanations for the transformer's weakness:
-training on the eval pool sizes (not just smaller ones) lifted pool-6 only 0.11 → ~0.20;
-scaling width 16× (d=256 / 4M → d=1024 / 68M) gave no improvement and on wide pools made
-it worse; and a focused recipe sweep (5× data, 10× weight decay, 3× learning rate, 2× batch)
-left accuracy at 0.18–0.24 — all within noise of the 0.22 baseline. The decisive diagnostic is a
-learning curve: training loss keeps dropping (0.91 → 0.33 over 20k steps) while recall accuracy
-plateaus at ~0.19 from step 2000 and never moves. The model memorizes the training set without
-learning the generalizable retrieval skill, and no hyperparameter we varied changes that. So at
-this scale the transformer does not solve this recall task.
-
-This does not contradict the wider literature. The well-known result that attention solves
-associative recall (MQAR; Arora et al. 2023) is for 1-hop lookup over a *large* key set
-in-distribution; our `recall_copy_v1` is a small pool (2–8) evaluated out-of-distribution on
-pool size, a binding-load extrapolation the transformer specifically fails. (The pretrained
-grid shows recall at ceiling because those models are far larger and trained on vastly more
-data — a different regime.) We do not claim the transformer cannot do in-context recall in
-principle; we report that, at the matched-compute scale where we can ablate architectures, the
-recurrent hybrid is the one that generalizes recall across pool sizes. Parametric recall —
-facts stored in weights — is the complementary case; we do not validate it for API models here,
-though fine-tuning a fixed fact set into a model and testing recall of it would be a clean way.
+**Recall is regime-dependent; the deferred read-out separates architectures.** §2 showed
+all architectures solve 1-hop MQAR (1.00) but diverge on the deferred read-out — the regime
+composition needs. That divergence is not a training artifact: we ruled out the obvious
+explanations for the transformer's weakness on the deferred task. Training on the eval pool
+sizes lifted pool-6 only 0.11 → ~0.20; scaling width 16× (d=256 / 4M → d=1024 / 68M) gave no
+improvement and on wide pools made it worse; and a focused recipe sweep (5× data, 10× weight
+decay, 3× learning rate, 2× batch) left accuracy at 0.18–0.24 — within noise of baseline. The
+decisive diagnostic is a learning curve: training loss keeps dropping (0.91 → 0.33 over 20k
+steps) while recall accuracy plateaus at ~0.19 from step 2000 and never moves. The model
+memorizes the training set without learning the generalizable deferred-retrieval skill, and no
+hyperparameter we varied changes that. So at this scale the transformer does not solve the
+deferred read-out, even though it aces 1-hop MQAR — a genuine regime effect, consistent with
+the literature's distinction between the two. Parametric recall — facts stored in weights —
+is the complementary case; we do not validate it for API models here, though fine-tuning a
+fixed fact set into a model and testing recall of it would be a clean way.
 
 **Architecture determines whether a learned circuit generalizes in length.** On S₅ under
 dense supervision (below), all three architectures form the circuit in-distribution. But
@@ -192,10 +234,11 @@ evaluated past the training lengths:
 The transformer and the looped block solve the trained length and collapse past it —
 **shortcutting**, the well-documented transformer failure mode on state-tracking (Liu
 et al., 2023). The recurrent hybrid carries the learned state computation far past its
-training horizon. This reproduces the Phase 1 finding: product recurrences extrapolate
-non-abelian state where shortcut-learning mixers collapse.
+training horizon. This is the architectural dissociation §2 established under dense
+supervision: product recurrences extrapolate non-abelian state where shortcut-learning
+mixers collapse.
 
-## 4. S₅ is movable by supervision density
+## 5. S₅ is movable by supervision density
 
 S₅ floors for every architecture under answer-only supervision (the table above). It
 moves when the training signal carries the state. We interleave the oracle's
@@ -212,7 +255,7 @@ model with no oracle at eval. 10 seeds:
 
 The circuit forms reliably in-distribution down to a checkpoint every other step (10/10
 at K=2) and is gone below (0/10 at K≥4). This is a sharp **learnability cliff**, and it
-reproduces the Phase 2 finding: S₅ needs near-dense process supervision to form the
+reproduces the established result: S₅ needs near-dense process supervision to form the
 circuit; the sparse, answer-only signal an agent effectively has gives no traction.
 
 **The circuit survives weaning to label-free deployment.** Dense supervision moves the
@@ -227,17 +270,17 @@ densities including answer-only, and evaluate free-running. 8 seeds:
 
 The weaned circuit converges 8/8 free-running with no deploy-time labels and extrapolates
 on par with dense-only. (Honest negative: weaning does not *improve* extrapolation over
-dense — a prior hint that it would did not reproduce at power. The win is label-free
+dense — a hint that it would did not reproduce at power. The win is label-free
 deployment.) The specific density mix barely matters; the key is some answer-only
 exposure alongside dense.
 
-## 5. Long context
+## 6. Long context
 
 Real sessions are long. We stress both regimes far past their sweet spots — trained
 models (trained at ≤16) evaluated to L512 (32×), pretrained models evaluated from L16 to
 L512.
 
-**Trained recurrent hybrids extrapolate far.** Stressing the §3 comparison to 32× the
+**Trained recurrent hybrids extrapolate far.** Stressing the §4 comparison to 32× the
 trained horizon (8 seeds):
 
 | arch | L64 | L128 | L256 | L512 |
@@ -260,19 +303,20 @@ composition collapses for pretrained models past L128 (llama-3.3-70b: 0.80 @L16 
 | glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
 
 High reasoning effort recovers composition to 0.80–0.97 all the way out to L512 — roughly
-32× the L16 sweet spot and ~3.5k-token prompts. The composition lever (§2) is remarkably
+32× the L16 sweet spot and ~3.5k-token prompts. The composition lever (§3) is remarkably
 horizon-robust when the reasoning budget is there. S₅ does not move: it stays at 0.00 at
 high effort at every length we tested. The two tasks' levers hold their distinct characters
 under horizon stress — reasoning carries composition, supervision density carries S₅.
 
-## 6. Discussion
+## 7. Discussion
 
 The instrument lets the same controlled behavior be measured two ways, and the two ways
 agree where they overlap. At the matched-compute scale where we can ablate architectures,
-recurrent hybrids solve in-context recall where small transformers do not, and a recurrent
-hybrid carries a learned state circuit far past its training horizon where transformers and
-looped blocks shortcut. The pretrained transformers in the API grid solve recall at ceiling
-— a different, much larger regime — and add a third lever: background reasoning moves
+all architectures solve 1-hop MQAR but diverge on the deferred read-out composition needs;
+the recurrent hybrid wins the harder regime. A recurrent hybrid also carries a learned state
+circuit far past its training horizon where transformers and looped blocks shortcut. The
+pretrained transformers in the API grid solve recall at ceiling — a different, much larger
+regime — and add a third lever: background reasoning moves
 composition at inference, including at long context, in a way no training intervention or
 prompting trick reproduced at the small scale.
 
@@ -291,16 +335,17 @@ We state these as results within the regime tested (k=5 S₅; local models ≤45
 pretrained models 3B–~1T). They are not scaling laws. The connection to agentic work is
 a motivating proxy, not a proven mapping.
 
-## 7. Limitations and related work
+## 8. Limitations and related work
 
 **Limitations.** The scale regime is bounded (k=5 S₅; local ≤45M; pretrained to ~1T
 MoE). Composition is 2-hop throughout. In-context recall is validated per-architecture;
 parametric recall is not validated for API models (fine-tuning a fixed fact set into a
 model would close this). The natural-language format differs from the atomic-token
-format of earlier phases; absolute numbers are not comparable across formats, though the
-mechanism conclusions reproduced. Weaning does not improve extrapolation over dense-only.
+format used in prior work on this instrument; absolute numbers are not comparable across
+formats, though the mechanism conclusions reproduced. Weaning does not improve
+extrapolation over dense-only.
 
-**Related work.** Earlier phases of this instrument established the single-capability
+**Related work.** Prior work on this instrument established the single-capability
 dissociations and the non-abelian recipe on the atomic-token format
 ([`phases/`](phases/)); this report reproduces their takeaways on the natural-language
 format and adds the API evaluation and the long-context results. The `fprm` architecture
@@ -309,7 +354,7 @@ shortcut-learning and length-extrapolation results engage a substantial literatu
 transformer state-tracking brittleness (Liu et al., 2023) and recurrent extrapolation,
 which we extend rather than survey.
 
-## 8. Reproducibility
+## 9. Reproducibility
 
 Every headline claim maps to a committed script in `docs/experiments/` or `scripts/`;
 raw results in `results/`; the validity gate (`scripts/validate_suite.py`) certifies the
