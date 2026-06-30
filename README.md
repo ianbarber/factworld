@@ -2,6 +2,14 @@
 
 **Evaluate your own model on a recall × state-tracking × composition benchmark in three commands.**
 
+> **Refactored to a single natural-language format.** The benchmark renders clean natural
+> language (attached punctuation, one fixed phrasing per statement type — see
+> `factworld/render.py`); the earlier atomic-token format and its papers are archived under
+> [`phases/`](phases/). All headline numbers below are on the natural format (OpenRouter grid +
+> local multi-seed sweeps in `results/`). The autoregressive / test-time-compute experiment and
+> its decomposition (binding vs recall vs routing) is written up in
+> [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
+
 FactWorld is a synthetic, oracle-validated evaluation instrument. Every task is a
 frozen, versioned ``TaskSpec`` with deterministic examples and one canonical
 metric — **position-strict exact match** of the answer span. Gold answers come
@@ -28,20 +36,21 @@ python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 32
 > chat models emit the required ``<holder> <value> .`` answer span. Use
 > ``--no-composite-format`` to disable it (e.g. for ablations).
 
-📄 **Tech reports:**
-- [`reports/factworld.md`](reports/factworld.md) · [`reports/factworld.pdf`](reports/factworld.pdf) —
-  *FactWorld: An Oracle-Validated Instrument for Composing Recall, State-Tracking, and Knowledge.*
-- [`reports/non-abelian-state.md`](reports/non-abelian-state.md) ·
-  [`reports/non-abelian-state.pdf`](reports/non-abelian-state.pdf) — *FactWorld: A Recipe for
-  Length-Generalizing Non-Abelian State-Tracking.*
+📄 **Prior tech reports (archived in [`phases/`](phases/)):** these ran on the earlier
+atomic-token format; the benchmark now renders clean natural language.
+- [`phases/01-instrument/factworld.md`](phases/01-instrument/factworld.md) — *FactWorld: An
+  Oracle-Validated Instrument for Composing Recall, State-Tracking, and Knowledge.*
+- [`phases/02-non-abelian-state/report.md`](phases/02-non-abelian-state/report.md) — *FactWorld:
+  A Recipe for Length-Generalizing Non-Abelian State-Tracking* (+ reproduction kit,
+  [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md)).
 
-Reference numbers live in the capability-organized `docs/` folders below. The latest external-LLM
-grid (including Nemotron 3 / Kimi results) is in [`docs/openrouter/results.md`](docs/openrouter/results.md);
-the `s5_v1` grid is in [`docs/openrouter/s5-results.md`](docs/openrouter/s5-results.md).
+A consolidated report on the natural-language format is in progress. Reference numbers live in
+the `docs/` folders below (the OpenRouter grids are pre-refactor, atomic-token format; they are
+being re-run on the natural format — see `docs/openrouter/`).
 
 🔬 **Reproduction code for the non-abelian report:**
-[`followups/non-abelian-state/`](followups/non-abelian-state/) — every claim maps to one script;
-see [`REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md). Scoped to this hybrid and scale
+[`phases/02-non-abelian-state/`](phases/02-non-abelian-state/) — every claim maps to one script;
+see [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md). Scoped to this hybrid and scale
 regime (k=5 S₅, ≤357M), not a claim about model scaling in general.
 
 ## Install
@@ -197,102 +206,132 @@ artifacts from whether the model actually knows the answer.
 
 ### Pretrained open models
 
-OpenRouter grid (n = 30, greedy decoding; format instructions appended where needed).
-The first table shows one eval length per benchmark task; the second shows `s5_v1` across lengths.
+OpenRouter grid (n = 30, greedy decoding, **natural-language format**, output-format
+instructions appended for composite/s5; `--no_reasoning` so reasoning models give a clean
+baseline). Full table in [`docs/openrouter/results-natural.md`](docs/openrouter/results-natural.md).
 
-**Benchmark tasks** — see [`docs/openrouter/results.md`](docs/openrouter/results.md):
-
-| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 |
-| --- | --- | --- | --- | --- | --- |
-| nemotron-3-ultra-550b-a55b | 1.000 | 1.000 | 0.733 | 0.000 | **0.767** |
-| kimi-k2 | 1.000 | 1.000 | **0.900** | 0.300 | 0.733 |
-| kimi-k2.5 | 1.000 | 1.000 | 0.800 | 0.300 | 0.633 |
-| kimi-k2.6 | 1.000 | 1.000 | 0.867 | 0.133 | 0.567 |
-| deepseek-chat | 1.000 | 1.000 | 0.467 | 0.200 | 0.600 |
-| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.700 | 0.167 | 0.200 |
-| gpt-4o-mini | 1.000 | 1.000 | 0.567 | 0.067 | 0.167 |
+| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
+| --- | --- | --- | --- | --- | --- | --- |
+| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | **0.800** | 0.167 |
+| glm-5.2 | 1.000 | 1.000 | **0.767** | 0.133 | **0.800** | 0.167 |
+| kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | 0.400 | 0.200 |
+| gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.133 |
+| deepseek-chat | 1.000 | 1.000 | 0.333 | 0.033 | 0.167 | 0.133 |
+| gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.133 |
+| claude-3-haiku | 0.600 | 0.767 | 0.433 | 0.100 | 0.100 | 0.300 |
 
 Reading the ladder:
 
-- **Single-hop recall and conflict are easy.** Every strong model is at or near ceiling.
-- **Binding is scale-sensitive.** Kimi K2 leads at 0.900; Nemotron 3 Ultra and Llama 3.3 70B follow.
-- **Composition is the bottleneck — with a caveat.** Nemotron 3 Ultra scores 0.767 and Kimi K2 0.733
-  on `composite_copy_v1`, but only after an explicit output-format instruction tells the model to
-  emit `<holder> <value> .`. Without that instruction every model scores 0% because it emits only
-  the value.
-- **Depth extrapolation stays hard.** `chain_v1` peaks at 0.300, consistent with the paper's claim
-  that pointer-chase depth generalization is poor for pretrained chat models.
+- **Single-hop recall and conflict are easy.** Strong models sit at ceiling.
+- **Composition is format-gated and routing-bound.** Only llama-3.3-70b and glm-5.2 clear
+  `composite_copy_v1` (0.80), and only *with* the explicit output-format instruction. The
+  autoregressive experiment below decomposes the residual failure: strong reasoners can do
+  the binding leg and the recall leg *separately* but fail to **route** the resolved holder
+  into the recall lookup.
+- **Depth and non-abelian state stay at floor.** `chain_v1` and `s5_v1` are unsolved by every
+  pretrained model regardless of reasoning — the genuine state-tracking/composition wall.
 
-**`s5_v1` across eval lengths** — see [`docs/openrouter/s5-results.md`](docs/openrouter/s5-results.md):
+**Autoregressive / test-time-compute experiment (E1).** Leg-isolation on `composite_copy_v1@L16`
+(n=30) — full write-up in [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md):
 
-| model | L32 | L64 | L128 | mean |
-| --- | --- | --- | --- | --- |
-| nemotron-3-ultra-550b-a55b | 0.233 | 0.167 | 0.267 | 0.222 |
-| kimi-k2 | 0.067 | 0.200 | 0.233 | 0.167 |
-| kimi-k2.5 | 0.200 | 0.233 | 0.267 | 0.233 |
-| kimi-k2.6 | 0.133 | 0.233 | 0.200 | 0.189 |
-| deepseek-chat | 0.200 | 0.067 | 0.100 | 0.122 |
-| llama-3.3-70b-instruct | 0.300 | 0.167 | 0.067 | 0.178 |
-| gpt-4o-mini | 0.100 | 0.167 | 0.167 | 0.144 |
+| model | binding-only (holder leg) | scaffolded (recall given holder) |
+| --- | --- | --- |
+| glm-5.2 | **0.97** | 0.97 |
+| kimi-k2.6 | **0.73** | 1.00 |
+| deepseek-chat | 0.47 | 0.80 |
+| llama-3.3-70b | 0.40 | 0.97 |
+| gpt-4o-mini | 0.37 | 1.00 |
 
-Every model is at the 0.20 chance floor on `s5_v1`. Even Nemotron 3 Ultra, the strongest composite
-model in the grid, does not lift above it. The format instruction gets the right token *shape*, but
-none of these pretrained models tracks the running S₅ permutation.
+Given the correct holder, every model recalls the value (0.80–1.00) — **recall is not the
+bottleneck**. Reasoning models (kimi/glm) solve the **binding** leg in isolation; weaker models
+don't. But even glm, which writes the correct holder 1.00 of the time under a structured-CoT
+prompt, scores 0.00 on the value — **routing the resolved holder into recall is the wall that
+survives test-time reasoning**. (The `none`/`structured` conditions carry no format instruction, so
+they are a no-format lower bound; the grid above is the format-instructed capability ceiling.)
 
 ### Custom-trained recurrent models
 
-The follow-up study in [`followups/non-abelian-state/`](followups/non-abelian-state/) trains the
-same architecture family from scratch and varies only the supervision and training distribution.
-All rows below use variants of the GatedDeltaProduct (GDP) product-recurrence; the hybrid adds one
-attention layer in a `[recurrent, recurrent, attn, recurrent]` stack (see `factworld/models.py`).
+Local multi-seed sweep (natural-language format, d=256, 4 layers, 8k steps, 5 seeds, holder/value
+decomposition). Full table in [`results/sweep_main_*.md`](results/). `fprm` is a weight-tied looped
+conv+attention block (the architecture the external FPRM work motivates); `gdp_hybrid` is the
+`[recurrent, recurrent, attn, recurrent]` stack from `factworld/models.py`.
 
-| model | supervision / training signal | train length | eval | score |
-| --- | --- | --- | --- | --- |
-| `gdp_hybrid` (baseline) | answer-only, ≤L16 | L4–L16 | `composite_copy_v1` @L16 | 0.02 |
-| `gdp_pure` | dense per-step state trace | L32 | `s5_v1` token-acc @L128 | **0.99** |
-| `gdp_hybrid` | dense process supervision (K=1) | L16 | `s5_v1` composite @L64 | **0.95** |
-| `gdp_hybrid` | mixed-density internalization (no scratchpad) | L16 | answer-only @L16 | **1.00** |
-| `gdp_hybrid` | horizon-extension curriculum | progressive → L64 | answer-only @L64 | **0.94** |
-| `gdp_hybrid` | post-training deep-state coverage, clean base, no labels | L16 base + L64/L128 burn-in | answer-only @L64 / @L128 | **0.99** / **0.86** |
+**`binding_v1` (length extrapolation) — exact match mean±std / p(converge)**
 
-Sources: baseline composite in [`docs/results.md`](docs/results.md); dense-supervised `s5_v1` in
-[`docs/state-tracking/dense-supervised.md`](docs/state-tracking/dense-supervised.md); full recipe and
-controls in [`reports/non-abelian-state.md`](reports/non-abelian-state.md) and
-[`followups/non-abelian-state/REPRODUCE.md`](followups/non-abelian-state/REPRODUCE.md).
+| arch | L16 | L32 | L64 |
+| --- | --- | --- | --- |
+| fprm | 1.00 / 100% | 0.97 / 100% | **0.94 / 100%** |
+| gdp_hybrid | 0.99 / 100% | 0.58 / 0% | 0.55 / 0% |
+| transformer | 0.45 / 0% | 0.35 / 0% | 0.33 / 0% |
 
-What the comparison shows:
+**`composite_copy_scale_v1` (k=5, learnable) @L16 — holder / value leg accuracy**
 
-- **Architecture is not the bottleneck.** The same GDP backbone that floors the small-scale
-  composite under sparse supervision solves `s5_v1` when given dense per-step state supervision.
-- **The strongest trained results are hybrid, not pure.** The 0.94–0.99 L64 numbers come from
-  `gdp_hybrid` trained with dense or curriculum supervision; the pure-recurrence `gdp_pure` result is
-  the dense-supervised state-tracking probe (0.99 token-acc at L128), not the full composite.
-- **Pretrained open models are in the sparse-supervision regime.** They were not trained with the
-  oracle's intermediate role-permutation trace, so they behave like the answer-only baseline of the
-  follow-up: at floor. This matches the follow-up's finding that sparse outcome-level signal —
-  including vanilla RL — cannot climb the `s5_v1` cliff.
-- **Length generalization is a data-distribution problem, not a width problem.** Scaling the hybrid
-  to 357M does not move the internalized horizon wall (answer-only L64 stays at 0.20), but a
-  sufficient density of target-length examples does, and post-training deep-state coverage extends
-  the clean circuit to ≈8× the trained horizon with no labels at the target length.
+| arch | holder | value | converge |
+| --- | --- | --- | --- |
+| gdp_hybrid | 0.95 | **0.51** | 40% |
+| fprm | 0.99 | 0.20 | 0% |
+| transformer | 0.38 | 0.13 | 0% |
+
+The decomposition localizes the composition gap: every recurrent architecture solves the **holder**
+(binding) leg (0.95–0.99) but fails the **value** (recall-of-the-resolved-holder) leg — the same
+routing wall the API models hit. `fprm` dominates `binding_v1` length extrapolation (0.94 vs 0.55 at
+L64); `gdp_hybrid` is the only architecture that converges on composition (40%).
+
+**Trained scratchpad (E2, local) makes it worse.** Supervising the per-step oracle trace
+(`prompt→trace→answer`) collapses the holder leg 0.95→0.08 and value 0.51→0.00 — the model emits a
+structured-but-wrong trace that compounds errors, the opposite of the API scaffolded result where the
+*oracle-provided* holder unlocks recall (0.97–1.00). See
+[`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
+
+**But the s5 / non-abelian wall is movable with the right supervision** (reproduced on the natural
+format, `scripts/experiment_dense_supervision.py`). Per-step state supervision every K events (guided
+free-run eval — events forced, holder/value slots generated):
+
+| K (stride) | value @L16 | value @L64 |
+| --- | --- | --- |
+| 1 (dense) | **1.00** | **0.90** |
+| 2 | 0.96 | 0.50 (bimodal) |
+| 4, 8 | 0.20 | 0.20 (floor) |
+
+Dense K=1 solves s5 and extrapolates to **~8× the trained length** (L128≈0.90 trained at ≤L16); the
+circuit fails to form below a checkpoint every ~2 events. **Inference-time compute (self-consistency,
+up to 30 votes) does not move the wall in either direction** — seeds with the circuit are already
+greedy-optimal; seeds without stay at the floor. The wall is in *learnability/supervision density*,
+not test-time compute — consistent with the API result that only an *oracle-provided* intermediate
+helps.
+
+The prior (atomic-token format) non-abelian recipe and its dense-supervision `s5_v1` results
+(0.94–0.99) are archived in [`phases/02-non-abelian-state/`](phases/02-non-abelian-state/).
 
 **External context.** Movahedi et al. (2026) report strong `s5_v1` length generalization with a
 looped-transformer architecture (FPRM) that uses a causal 1-D convolution / unroll-to-convergence
-mechanism. We did **not** run that model on FactWorld; we cite it only to show that other
-recurrence-side mechanisms can also move the wall once the supervision is right.
+mechanism. Our `fprm` implements a weight-tied variant of that block; on `binding_v1` it is the
+strongest length-extrapolator (0.94 @L64), but like every architecture it floors `s5_v1` under
+answer-only supervision.
 
 In short: the suite climbs from easy single-hop recall, through binding and composition, to the
-`s5_v1` state-tracking wall that pretrained chat models hit at chance. The wall is movable, but the
-lever is the **supervision and training distribution**, not the model name or parameter count.
+`s5_v1` state-tracking wall. Two clean dissociations (full write-up: [`docs/experiments/`](docs/experiments/)):
+
+1. **Composition is movable by test-time compute** for strong reasoning models. A reasoning-effort
+   dose-response sweep shows composite value climbing with effort (kimi 0.22→0.98, glm 0.14→0.81);
+   given the output format, reasoners solve it. Non-reasoners floor. (The earlier "test-time doesn't
+   help" claim was wrong — it held only for explicit CoT *prompting* and for non-reasoning local models.)
+2. **Non-abelian state-tracking (s5) is movable by training-time supervision density, NOT by reasoning.**
+   It floors at every reasoning effort, but dense per-step supervision solves it (10/10 seeds) and the
+   circuit **survives weaning to answer-only** (wean_mixed 7/7) — so it deploys label-free. Only the
+   recurrent hybrid (gdp_hybrid) **extrapolates** the learned circuit (0.64@L128 vs fprm/transformer
+   collapsing past L32).
+
+The levers are **reasoning strength** (composition), **supervision density + weaning** (s5), and
+**recurrent architecture** (s5 length extrapolation). Explicit structured CoT prompting never helps
+(and hurts); recall is trivial once the holder is known.
 
 ## Repository layout
 
 ```
-reports/
-  factworld.md            original FactWorld paper (Markdown source)
-  factworld.pdf           typeset PDF        (rebuild: python scripts/build_pdf.py)
-  non-abelian-state.md    non-abelian state-tracking recipe / learnability map
-  non-abelian-state.pdf   typeset PDF
+phases/                  prior work, archived (ran on the atomic-token format)
+  01-instrument/           original FactWorld paper (.md + .pdf)
+  02-non-abelian-state/    non-abelian state-tracking report + reproduction kit
 docs/
   tasks.md                concrete prompts, gold answers, and real model mistakes for every task
   USAGE.md                backend API reference and custom-backend examples
@@ -318,7 +357,7 @@ factworld/                the instrument (torch-free data/oracle/eval + the mode
   models.py, train.py     transformer / mamba2 / gdp_hybrid / gdn_hybrid / gru on one skeleton
 scripts/                  the runnable suite (run_benchmark, eval_model, validate_suite, …)
 tests/                    oracle, renderer, tokenizer, model-parity, and validity tests
-followups/non-abelian-state/  reproduction scripts + per-claim result tables for the non-abelian report
+phases/02-non-abelian-state/  archived reproduction scripts + per-claim tables (non-abelian report)
 ```
 
 The hybrid configuration (`[recurrent, recurrent, attn, recurrent]`, n_h=4, neg-eig) lives in
@@ -373,7 +412,7 @@ python scripts/gdp_confirm_5e4.py         # gdp 45M @ tuned lr 5e-4, 5 seeds   (
 python scripts/gdn_confirm_3e4.py         # gdn 45M @ lr 3e-4, 5 seeds         (W2: 4/5 converge, 1/5 extrapolate)
 python scripts/fair_config.py             # W3: transformer n_heads=8+resid (floor survives 0/10) + recurrent short-conv
 
-# Non-abelian report (reports/non-abelian-state.md) — see followups/non-abelian-state/REPRODUCE.md
+# Non-abelian report (phases/02-non-abelian-state/report.md) — see phases/02-non-abelian-state/REPRODUCE.md
 ```
 
 </details>

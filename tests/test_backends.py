@@ -187,6 +187,34 @@ def test_api_backend_mock():
     preds = backend.generate(["facts what is a0 of g3 ? : "], max_new_tokens=4, stop_at=None)
     assert preds == ["g3"]
 
+    # Natural-mode prose prefixes are stripped as well.
+    message2 = types.SimpleNamespace(content="Let's track the swaps: r2")
+    choice2 = types.SimpleNamespace(message=message2, finish_reason=None)
+    response2 = types.SimpleNamespace(choices=[choice2])
+    client2 = types.SimpleNamespace(
+        chat=types.SimpleNamespace(
+            completions=types.SimpleNamespace(create=lambda **kwargs: response2)
+        )
+    )
+    with patch.dict(sys.modules, {"openai": fake_openai}):
+        backend2 = B.APIBackend("test-model", client=client2)
+    preds2 = backend2.generate(["prompt"], max_new_tokens=4, stop_at=None)
+    assert preds2 == ["r2"]
+
+    # Listing all holders should normalize to the last one.
+    message3 = types.SimpleNamespace(content="The final holders are g0, g2, g4")
+    choice3 = types.SimpleNamespace(message=message3, finish_reason=None)
+    response3 = types.SimpleNamespace(choices=[choice3])
+    client3 = types.SimpleNamespace(
+        chat=types.SimpleNamespace(
+            completions=types.SimpleNamespace(create=lambda **kwargs: response3)
+        )
+    )
+    with patch.dict(sys.modules, {"openai": fake_openai}):
+        backend3 = B.APIBackend("test-model", client=client3)
+    preds3 = backend3.generate(["prompt"], max_new_tokens=4, stop_at=None)
+    assert preds3 == ["g4"]
+
 
 # --- LocalBackend (torch-dependent) -----------------------------------------
 

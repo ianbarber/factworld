@@ -1,0 +1,12 @@
+{"K": 1, "seed": 0, "L16_holder": 1.0, "L16_value": 1.0, "L16_maj_value": 1.0, "L64_holder": 0.93, "L64_value": 0.93}
+{"K": 1, "seed": 1, "L16_holder": 1.0, "L16_value": 1.0, "L16_maj_value": 1.0, "L64_holder": 0.95, "L64_value": 0.95}
+{"K": 1, "seed": 2, "L16_holder": 1.0, "L16_value": 1.0, "L16_maj_value": 1.0, "L64_holder": 0.81, "L64_value": 0.81}
+{"K": 2, "seed": 0, "L16_holder": 1.0, "L16_value": 1.0, "L16_maj_value": 1.0, "L64_holder": 0.96, "L64_value": 0.96}
+{"K": 2, "seed": 1, "L16_holder": 0.99, "L16_value": 0.99, "L16_maj_value": 0.99, "L64_holder": 0.29, "L64_value": 0.29}
+{"K": 2, "seed": 2, "L16_holder": 0.9, "L16_value": 0.9, "L16_maj_value": 0.89, "L64_holder": 0.25, "L64_value": 0.25}
+{"K": 4, "seed": 0, "L16_holder": 0.22, "L16_value": 0.22, "L16_maj_value": 0.27, "L64_holder": 0.21, "L64_value": 0.21}
+{"K": 4, "seed": 1, "L16_holder": 0.19, "L16_value": 0.19, "L16_maj_value": 0.25, "L64_holder": 0.17, "L64_value": 0.17}
+{"K": 4, "seed": 2, "L16_holder": 0.2, "L16_value": 0.2, "L16_maj_value": 0.23, "L64_holder": 0.2, "L64_value": 0.2}
+{"K": 8, "seed": 0, "L16_holder": 0.22, "L16_value": 0.22, "L16_maj_value": 0.19, "L64_holder": 0.24, "L64_value": 0.24}
+{"K": 8, "seed": 1, "L16_holder": 0.15, "L16_value": 0.15, "L16_maj_value": 0.19, "L64_holder": 0.17, "L64_value": 0.17}
+{"K": 8, "seed": 2, "L16_holder": 0.22, "L16_value": 0.22, "L16_maj_value": 0.2, "L64_holder": 0.15, "L64_value": 0.15}

@@ -1,0 +1,650 @@
+[
+  {
+    "model": "moonshotai/kimi-k2",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_exact": 0.6,
+    "correct_exact": 6,
+    "elapsed": 5.46285080909729,
+    "examples": [
+      {
+        "prompt": "g17 's a0 is v26 . g9 's a0 is v116 . g27 's a0 is v49 . the a0 of g23 is v14 . g20 's a0 is v121 . g2 has a0 v72 . the a0 of g4 is v27 . g30 's a0 is v73 . g19 's a0 is v40 . g6 's a0 is v102 . g15 has a0 v90 . the a0 of g7 is v42 . the a0 of g8 is v52 . the a0 of g28 is v99 . the a0 of g1 is v47 . g5 's a0 is v85 . s0 : o3 is given to g30 . s1 : give o2 to g27 . s2 : o0 is given to g28 . s3 : give o3 to g28 . s4 : give o2 to g28 . s5 : o3 is given to g17 . s6 : give o3 to g7 . s7 : give o0 to g1 . s8 : o0 is given to g1 . s9 : give o1 to g5 . s10 : o3 is given to g2 . s11 : o1 is given to g17 . s12 : give o1 to g4 . s13 : give o2 to g20 . s14 : give o3 to g9 . s15 : give o0 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g30 v73 .",
+        "pred": "g1 v47 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g28 's a0 is v68 . g3 's a0 is v65 . the a0 of g14 is v86 . g5 's a0 is v82 . the a0 of g1 is v48 . g29 has a0 v36 . g31 's a0 is v103 . g24 's a0 is v38 . g20 's a0 is v18 . g15 's a0 is v108 . g30 has a0 v117 . the a0 of g10 is v3 . g0 has a0 v7 . g27 has a0 v106 . g6 's a0 is v78 . g13 's a0 is v30 . s0 : give o1 to g20 . s1 : o2 is given to g15 . s2 : o0 is given to g29 . s3 : o3 is given to g3 . s4 : o2 is given to g30 . s5 : give o1 to g10 . s6 : give o3 to g13 . s7 : give o0 to g29 . s8 : give o0 to g13 . s9 : o2 is given to g1 . s10 : o1 is given to g30 . s11 : o1 is given to g29 . s12 : give o3 to g1 . s13 : o3 is given to g31 . s14 : o2 is given to g10 . s15 : give o3 to g13 . what is a0 of the holder of o1 ? : ",
+        "gold": "g29 v36 .",
+        "pred": "g29 v36 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4 's a0 is v16 . g0 has a0 v30 . g5 's a0 is v11 . g26 has a0 v9 . the a0 of g16 is v120 . g7 has a0 v92 . g29 has a0 v17 . g27 has a0 v46 . g28 's a0 is v82 . g19 has a0 v7 . g14 's a0 is v41 . g6 has a0 v78 . g13 has a0 v88 . g21 's a0 is v118 . g3 's a0 is v121 . g8 has a0 v32 . s0 : o1 is given to g26 . s1 : give o3 to g13 . s2 : give o1 to g7 . s3 : give o0 to g7 . s4 : o2 is given to g13 . s5 : give o2 to g0 . s6 : o3 is given to g3 . s7 : give o1 to g28 . s8 : give o3 to g7 . s9 : give o0 to g3 . s10 : give o1 to g0 . s11 : o0 is given to g16 . s12 : o2 is given to g29 . s13 : o1 is given to g13 . s14 : give o2 to g4 . s15 : give o2 to g27 . what is a0 of the holder of o3 ? : ",
+        "gold": "g7 v92 .",
+        "pred": "g7 v92 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g22 's a0 is v48 . g19 has a0 v115 . the a0 of g29 is v124 . g16 's a0 is v59 . g25 's a0 is v79 . g8 's a0 is v70 . g20 's a0 is v108 . g23 has a0 v76 . g1 's a0 is v85 . the a0 of g7 is v95 . g15 's a0 is v89 . g0 has a0 v38 . g31 's a0 is v87 . g28 's a0 is v27 . the a0 of g11 is v49 . the a0 of g3 is v47 . s0 : o3 is given to g19 . s1 : give o2 to g7 . s2 : o0 is given to g29 . s3 : give o1 to g28 . s4 : o3 is given to g11 . s5 : o1 is given to g22 . s6 : o2 is given to g7 . s7 : o3 is given to g19 . s8 : o2 is given to g20 . s9 : o2 is given to g25 . s10 : o0 is given to g3 . s11 : o1 is given to g15 . s12 : give o3 to g11 . s13 : o0 is given to g19 . s14 : give o2 to g23 . s15 : give o3 to g7 . what is a0 of the holder of o2 ? : ",
+        "gold": "g23 v76 .",
+        "pred": "g25 v79 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "the a0 of g24 is v101 . the a0 of g20 is v8 . the a0 of g0 is v121 . the a0 of g1 is v16 . g30 has a0 v81 . the a0 of g29 is v52 . g12 's a0 is v41 . g31 's a0 is v122 . g26 's a0 is v117 . g27 has a0 v100 . the a0 of g5 is v12 . the a0 of g17 is v62 . g2 has a0 v26 . the a0 of g13 is v64 . g18 's a0 is v48 . g23 has a0 v49 . s0 : o2 is given to g30 . s1 : o3 is given to g29 . s2 : give o2 to g27 . s3 : o1 is given to g30 . s4 : o2 is given to g31 . s5 : give o0 to g27 . s6 : give o2 to g2 . s7 : o1 is given to g1 . s8 : give o3 to g13 . s9 : o2 is given to g0 . s10 : give o1 to g23 . s11 : o3 is given to g20 . s12 : give o0 to g2 . s13 : o3 is given to g26 . s14 : o1 is given to g1 . s15 : give o0 to g30 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v121 .",
+        "pred": "Let me track the holder of o2 after each step .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22 's a0 is v78 . g20 's a0 is v64 . the a0 of g6 is v105 . g3 's a0 is v23 . g10 's a0 is v108 . the a0 of g16 is v79 . g1 has a0 v73 . g31 has a0 v4 . g18 's a0 is v65 . g19 's a0 is v49 . g26 has a0 v126 . the a0 of g2 is v81 . g25 's a0 is v87 . g5 's a0 is v39 . g15 has a0 v89 . the a0 of g12 is v2 . s0 : o1 is given to g5 . s1 : give o2 to g18 . s2 : give o1 to g12 . s3 : o3 is given to g12 . s4 : give o2 to g20 . s5 : give o3 to g6 . s6 : o1 is given to g22 . s7 : give o1 to g6 . s8 : give o0 to g25 . s9 : give o3 to g16 . s10 : o0 is given to g1 . s11 : o1 is given to g2 . s12 : o1 is given to g20 . s13 : o2 is given to g5 . s14 : o3 is given to g10 . s15 : give o3 to g26 . what is a0 of the holder of o2 ? : ",
+        "gold": "g5 v39 .",
+        "pred": "g20 v64 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g31 's a0 is v34 . g6 has a0 v11 . the a0 of g20 is v8 . the a0 of g14 is v118 . the a0 of g0 is v38 . g15 's a0 is v59 . g19 has a0 v85 . the a0 of g13 is v111 . the a0 of g30 is v89 . the a0 of g17 is v65 . g10 has a0 v103 . the a0 of g11 is v116 . the a0 of g12 is v104 . the a0 of g16 is v77 . g4 has a0 v12 . the a0 of g21 is v44 . s0 : o0 is given to g10 . s1 : o1 is given to g0 . s2 : give o3 to g30 . s3 : o2 is given to g11 . s4 : o3 is given to g19 . s5 : give o2 to g12 . s6 : o3 is given to g16 . s7 : give o0 to g21 . s8 : give o3 to g11 . s9 : give o0 to g21 . s10 : give o1 to g15 . s11 : o0 is given to g15 . s12 : give o0 to g13 . s13 : give o3 to g16 . s14 : o2 is given to g30 . s15 : o2 is given to g17 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v59 .",
+        "pred": "g15 v59 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3 has a0 v115 . g25 's a0 is v96 . g27 has a0 v17 . the a0 of g7 is v38 . g23 has a0 v113 . g2 has a0 v34 . g28 's a0 is v44 . g31 's a0 is v27 . the a0 of g29 is v60 . g5 's a0 is v102 . g17 's a0 is v40 . the a0 of g11 is v124 . g0 's a0 is v77 . g13 has a0 v56 . the a0 of g20 is v50 . g21 has a0 v82 . s0 : o1 is given to g7 . s1 : o1 is given to g20 . s2 : give o1 to g31 . s3 : o0 is given to g2 . s4 : o3 is given to g13 . s5 : o2 is given to g17 . s6 : o0 is given to g3 . s7 : give o2 to g29 . s8 : o0 is given to g0 . s9 : o2 is given to g11 . s10 : o1 is given to g7 . s11 : give o1 to g13 . s12 : o0 is given to g23 . s13 : give o1 to g17 . s14 : give o0 to g28 . s15 : o3 is given to g3 . what is a0 of the holder of o1 ? : ",
+        "gold": "g17 v40 .",
+        "pred": "g17 v40 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "the a0 of g26 is v24 . g2 has a0 v118 . g28 has a0 v112 . g19 has a0 v90 . g23 's a0 is v79 . g0 's a0 is v49 . the a0 of g17 is v114 . g13 's a0 is v119 . g9 has a0 v33 . the a0 of g15 is v84 . the a0 of g4 is v52 . the a0 of g25 is v2 . g21 's a0 is v14 . the a0 of g12 is v113 . g24 's a0 is v74 . g16 has a0 v124 . s0 : give o3 to g28 . s1 : give o2 to g12 . s2 : o1 is given to g0 . s3 : o1 is given to g4 . s4 : give o1 to g16 . s5 : o2 is given to g28 . s6 : give o1 to g26 . s7 : o1 is given to g9 . s8 : o0 is given to g2 . s9 : o1 is given to g0 . s10 : give o1 to g2 . s11 : o2 is given to g23 . s12 : give o0 to g24 . s13 : o0 is given to g19 . s14 : give o2 to g28 . s15 : o0 is given to g0 . what is a0 of the holder of o2 ? : ",
+        "gold": "g28 v112 .",
+        "pred": "g28 v112 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "the a0 of g20 is v122 . g21 has a0 v27 . g26 has a0 v87 . g11 's a0 is v17 . g2 's a0 is v76 . g5 's a0 is v107 . g1 's a0 is v86 . g15 's a0 is v98 . g0 's a0 is v43 . g22 has a0 v106 . g14 has a0 v72 . g27 's a0 is v4 . g16 has a0 v101 . the a0 of g4 is v2 . the a0 of g17 is v18 . the a0 of g23 is v124 . s0 : give o3 to g21 . s1 : o3 is given to g16 . s2 : o1 is given to g2 . s3 : o3 is given to g26 . s4 : o2 is given to g1 . s5 : give o2 to g11 . s6 : o1 is given to g4 . s7 : give o1 to g16 . s8 : give o1 to g27 . s9 : give o3 to g2 . s10 : o3 is given to g27 . s11 : o1 is given to g2 . s12 : give o3 to g0 . s13 : give o1 to g16 . s14 : give o0 to g20 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v122 .",
+        "pred": "g20 v122 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 0.6,
+    "accuracy_contains": 0.6,
+    "accuracy_last_n": 0.6,
+    "correct_relaxed": 6,
+    "correct_contains": 6,
+    "correct_last_n": 6
+  },
+  {
+    "model": "moonshotai/kimi-k2",
+    "task": "s5_v1",
+    "length": 32,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For 'what role does ... have?' questions, answer with only a role token (r0, r1, r2, r3, or r4) followed by a period. Example: 'r2 .'",
+    "accuracy_exact": 0.4,
+    "correct_exact": 4,
+    "elapsed": 4.708833694458008,
+    "examples": [
+      {
+        "prompt": "s0 : cycle the roles of g2 g3 g0 g1 g4 . s1 : swap g3 g2 . s2 : swap g3 g0 . s3 : cycle the roles of g3 g4 g1 . s4 : cycle g4 g0 g3 . s5 : swap g2 g0 . s6 : swap g4 g1 . s7 : swap the roles of g0 and g4 . s8 : swap the roles of g0 and g1 . s9 : cycle the roles of g3 g4 g0 g1 . s10 : cycle g3 g4 g0 g1 g2 . s11 : swap the roles of g4 and g3 . s12 : cycle g1 g3 g4 g0 g2 . s13 : swap g2 g0 . s14 : cycle the roles of g3 g1 g4 g0 . s15 : swap g4 g1 . s16 : swap g1 g0 . s17 : swap the roles of g1 and g0 . s18 : cycle g3 g2 g4 g0 . s19 : swap the roles of g4 and g1 . s20 : swap the roles of g3 and g1 . s21 : swap the roles of g1 and g3 . s22 : swap g0 g1 . s23 : swap the roles of g2 and g4 . s24 : swap the roles of g0 and g4 . s25 : cycle the roles of g1 g4 g3 g2 g0 . s26 : swap g4 g1 . s27 : cycle the roles of g0 g4 g3 . s28 : swap g1 g3 . s29 : swap the roles of g4 and g0 . s30 : swap g2 g4 . s31 : cycle the roles of g0 g4 g1 g3 . what role does g0 have ? : ",
+        "gold": "r2 .",
+        "pred": "r2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 : swap the roles of g1 and g4 . s1 : swap the roles of g2 and g0 . s2 : swap the roles of g2 and g3 . s3 : swap g2 g0 . s4 : swap g0 g1 . s5 : cycle the roles of g3 g1 g2 . s6 : swap g1 g2 . s7 : swap the roles of g1 and g3 . s8 : swap g1 g3 . s9 : cycle g0 g4 g3 . s10 : swap the roles of g3 and g1 . s11 : cycle the roles of g0 g2 g1 g4 . s12 : swap the roles of g2 and g3 . s13 : swap the roles of g0 and g1 . s14 : swap g1 g4 . s15 : swap the roles of g0 and g2 . s16 : cycle the roles of g1 g2 g4 . s17 : swap the roles of g2 and g3 . s18 : cycle g1 g4 g3 g0 . s19 : swap the roles of g1 and g2 . s20 : cycle g0 g3 g1 . s21 : swap the roles of g4 and g2 . s22 : cycle the roles of g4 g3 g1 g2 . s23 : swap the roles of g0 and g1 . s24 : cycle the roles of g3 g0 g1 . s25 : swap g0 g4 . s26 : swap the roles of g1 and g4 . s27 : swap the roles of g2 and g0 . s28 : swap the roles of g0 and g1 . s29 : swap g0 g2 . s30 : swap the roles of g1 and g0 . s31 : swap g0 g4 . what role does g4 have ? : ",
+        "gold": "r0 .",
+        "pred": "r0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 : cycle g0 g4 g1 . s1 : swap the roles of g2 and g1 . s2 : cycle g4 g2 g1 g3 g0 . s3 : cycle the roles of g3 g2 g0 g1 g4 . s4 : swap g2 g4 . s5 : cycle the roles of g4 g2 g1 . s6 : swap g1 g2 . s7 : swap g0 g1 . s8 : swap g1 g3 . s9 : cycle g4 g2 g3 g1 . s10 : swap the roles of g3 and g0 . s11 : cycle the roles of g1 g2 g0 g3 . s12 : swap the roles of g2 and g3 . s13 : cycle g4 g3 g0 g1 . s14 : swap the roles of g4 and g1 . s15 : swap g2 g3 . s16 : swap the roles of g0 and g3 . s17 : swap the roles of g2 and g1 . s18 : swap g0 g4 . s19 : swap the roles of g4 and g2 . s20 : swap g4 g2 . s21 : swap the roles of g1 and g2 . s22 : swap the roles of g2 and g1 . s23 : cycle the roles of g1 g2 g0 . s24 : swap the roles of g4 and g3 . s25 : swap g2 g0 . s26 : swap g2 g0 . s27 : cycle the roles of g4 g1 g0 g2 g3 . s28 : swap g1 g3 . s29 : cycle the roles of g2 g1 g4 g0 . s30 : cycle g1 g2 g4 g3 g0 . s31 : swap the roles of g3 and g1 . what role does g2 have ? : ",
+        "gold": "r2 .",
+        "pred": "r3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap g3 g4 . s1 : cycle the roles of g1 g0 g3 g4 g2 . s2 : cycle the roles of g2 g4 g3 g0 g1 . s3 : swap the roles of g0 and g3 . s4 : cycle the roles of g0 g1 g2 g3 g4 . s5 : cycle g3 g4 g2 g0 . s6 : swap the roles of g0 and g3 . s7 : swap g3 g0 . s8 : swap g0 g4 . s9 : swap the roles of g2 and g3 . s10 : swap the roles of g3 and g2 . s11 : swap the roles of g1 and g2 . s12 : swap g0 g1 . s13 : swap g1 g0 . s14 : swap the roles of g4 and g0 . s15 : cycle g2 g3 g1 . s16 : swap the roles of g0 and g2 . s17 : cycle g3 g2 g0 g1 . s18 : swap g4 g1 . s19 : swap the roles of g4 and g3 . s20 : cycle g2 g0 g3 g4 . s21 : swap the roles of g1 and g2 . s22 : swap g1 g4 . s23 : swap g1 g3 . s24 : swap g0 g2 . s25 : swap the roles of g1 and g4 . s26 : swap the roles of g3 and g1 . s27 : cycle g1 g3 g0 . s28 : swap the roles of g0 and g2 . s29 : swap the roles of g3 and g4 . s30 : cycle g2 g0 g4 g1 g3 . s31 : swap g2 g0 . what role does g1 have ? : ",
+        "gold": "r0 .",
+        "pred": "r1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap the roles of g0 and g2 . s1 : swap the roles of g4 and g1 . s2 : cycle the roles of g1 g2 g4 . s3 : cycle g1 g0 g3 g2 g4 . s4 : swap the roles of g2 and g1 . s5 : swap g0 g4 . s6 : cycle g1 g0 g2 g4 g3 . s7 : swap the roles of g4 and g0 . s8 : cycle the roles of g1 g3 g0 g4 . s9 : cycle the roles of g3 g0 g4 g1 . s10 : swap g2 g1 . s11 : swap the roles of g2 and g1 . s12 : swap the roles of g4 and g1 . s13 : swap the roles of g1 and g4 . s14 : swap g2 g4 . s15 : swap g2 g0 . s16 : swap g2 g0 . s17 : cycle the roles of g2 g1 g3 g0 . s18 : swap the roles of g0 and g2 . s19 : swap the roles of g4 and g1 . s20 : cycle g0 g2 g4 . s21 : cycle g1 g3 g2 . s22 : swap g0 g3 . s23 : swap g4 g2 . s24 : swap the roles of g3 and g4 . s25 : swap g3 g4 . s26 : cycle g0 g2 g4 g3 . s27 : cycle g3 g1 g2 g4 g0 . s28 : swap g0 g4 . s29 : swap the roles of g1 and g3 . s30 : swap the roles of g4 and g2 . s31 : swap g0 g4 . what role does g3 have ? : ",
+        "gold": "r0 .",
+        "pred": "r3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap g1 g2 . s1 : cycle g2 g3 g0 g1 . s2 : swap g2 g4 . s3 : swap g2 g1 . s4 : swap the roles of g2 and g0 . s5 : swap g2 g0 . s6 : cycle g2 g4 g0 g3 g1 . s7 : cycle g0 g2 g4 g1 . s8 : swap g1 g2 . s9 : swap g3 g2 . s10 : swap g2 g3 . s11 : swap the roles of g2 and g1 . s12 : swap g0 g3 . s13 : swap g1 g3 . s14 : swap g0 g2 . s15 : swap g1 g0 . s16 : cycle the roles of g0 g3 g1 . s17 : swap the roles of g2 and g1 . s18 : swap g1 g0 . s19 : cycle the roles of g2 g3 g1 g4 . s20 : swap g2 g3 . s21 : swap g0 g3 . s22 : swap the roles of g0 and g4 . s23 : cycle g2 g0 g3 g1 . s24 : cycle the roles of g2 g1 g0 g4 g3 . s25 : cycle the roles of g1 g0 g4 . s26 : swap the roles of g0 and g2 . s27 : cycle g4 g3 g0 g2 g1 . s28 : swap the roles of g3 and g2 . s29 : cycle the roles of g1 g3 g4 g0 g2 . s30 : swap the roles of g4 and g0 . s31 : cycle g1 g0 g2 . what role does g1 have ? : ",
+        "gold": "r4 .",
+        "pred": "r2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap the roles of g2 and g4 . s1 : swap the roles of g4 and g0 . s2 : swap g0 g1 . s3 : swap g1 g2 . s4 : swap g0 g1 . s5 : swap the roles of g0 and g1 . s6 : swap the roles of g3 and g2 . s7 : swap the roles of g4 and g3 . s8 : swap the roles of g2 and g4 . s9 : cycle g3 g0 g4 g1 g2 . s10 : swap g4 g1 . s11 : swap g3 g0 . s12 : swap the roles of g2 and g1 . s13 : cycle g2 g3 g1 g0 . s14 : swap the roles of g4 and g3 . s15 : swap the roles of g2 and g4 . s16 : swap g4 g0 . s17 : swap the roles of g4 and g0 . s18 : cycle g2 g4 g0 g3 g1 . s19 : cycle the roles of g0 g2 g4 g3 . s20 : swap g1 g3 . s21 : swap the roles of g1 and g0 . s22 : swap the roles of g2 and g1 . s23 : cycle g2 g1 g3 g0 . s24 : swap the roles of g2 and g3 . s25 : swap g2 g1 . s26 : swap g3 g4 . s27 : swap g3 g1 . s28 : swap the roles of g3 and g2 . s29 : cycle the roles of g2 g0 g4 g3 . s30 : swap g3 g2 . s31 : cycle the roles of g1 g2 g0 g3 g4 . what role does g3 have ? : ",
+        "gold": "r2 .",
+        "pred": "r2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 : swap g4 g2 . s1 : swap the roles of g2 and g0 . s2 : cycle g3 g2 g4 g0 . s3 : cycle g2 g0 g1 g4 g3 . s4 : swap the roles of g4 and g0 . s5 : swap g4 g0 . s6 : swap g1 g0 . s7 : cycle g2 g3 g0 g1 g4 . s8 : cycle g1 g4 g3 g2 . s9 : swap g0 g1 . s10 : cycle the roles of g3 g2 g1 g0 . s11 : swap g3 g2 . s12 : swap g1 g4 . s13 : swap the roles of g0 and g3 . s14 : swap the roles of g4 and g1 . s15 : swap the roles of g3 and g2 . s16 : cycle g4 g3 g2 . s17 : cycle the roles of g2 g1 g0 g3 . s18 : swap g4 g1 . s19 : swap the roles of g4 and g0 . s20 : swap g3 g4 . s21 : swap the roles of g2 and g3 . s22 : swap g1 g4 . s23 : swap g0 g4 . s24 : swap g3 g1 . s25 : swap the roles of g3 and g2 . s26 : cycle the roles of g1 g4 g0 g2 . s27 : swap the roles of g4 and g1 . s28 : cycle g2 g3 g1 g0 . s29 : swap g1 g4 . s30 : swap g2 g4 . s31 : swap the roles of g3 and g0 . what role does g1 have ? : ",
+        "gold": "r3 .",
+        "pred": "r2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : cycle the roles of g3 g4 g1 . s1 : swap the roles of g3 and g4 . s2 : swap the roles of g1 and g0 . s3 : swap g0 g4 . s4 : cycle g0 g3 g4 . s5 : swap g0 g4 . s6 : swap the roles of g3 and g2 . s7 : swap the roles of g2 and g0 . s8 : swap the roles of g0 and g1 . s9 : cycle g2 g1 g4 . s10 : cycle the roles of g0 g4 g2 g1 g3 . s11 : swap the roles of g1 and g3 . s12 : swap the roles of g3 and g4 . s13 : swap g4 g3 . s14 : cycle g0 g2 g3 . s15 : swap g1 g0 . s16 : swap g3 g4 . s17 : cycle g0 g4 g1 g3 . s18 : swap the roles of g1 and g4 . s19 : cycle g0 g4 g3 . s20 : swap the roles of g0 and g1 . s21 : swap g2 g4 . s22 : swap the roles of g2 and g0 . s23 : swap the roles of g0 and g3 . s24 : swap the roles of g4 and g2 . s25 : swap the roles of g1 and g4 . s26 : swap the roles of g2 and g4 . s27 : swap the roles of g2 and g3 . s28 : swap g4 g0 . s29 : cycle g4 g3 g2 g0 g1 . s30 : swap the roles of g1 and g2 . s31 : swap the roles of g1 and g4 . what role does g2 have ? : ",
+        "gold": "r2 .",
+        "pred": "r2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 : cycle g3 g1 g4 g0 . s1 : swap g0 g1 . s2 : swap the roles of g4 and g1 . s3 : cycle g4 g3 g2 . s4 : swap the roles of g2 and g0 . s5 : swap the roles of g3 and g2 . s6 : swap the roles of g0 and g3 . s7 : swap the roles of g4 and g3 . s8 : cycle the roles of g2 g0 g4 . s9 : swap the roles of g3 and g4 . s10 : swap g4 g0 . s11 : swap g1 g4 . s12 : cycle the roles of g1 g0 g2 . s13 : swap g2 g0 . s14 : swap the roles of g2 and g3 . s15 : swap the roles of g1 and g4 . s16 : cycle g0 g1 g4 g3 g2 . s17 : swap g0 g2 . s18 : swap g1 g3 . s19 : cycle the roles of g3 g1 g2 g0 . s20 : swap g2 g3 . s21 : swap the roles of g2 and g1 . s22 : swap the roles of g4 and g3 . s23 : swap the roles of g0 and g3 . s24 : swap the roles of g1 and g0 . s25 : swap g0 g4 . s26 : swap the roles of g3 and g0 . s27 : cycle g1 g0 g2 g4 . s28 : cycle the roles of g3 g0 g4 g1 g2 . s29 : swap the roles of g3 and g4 . s30 : cycle g0 g2 g4 g1 g3 . s31 : swap the roles of g0 and g1 . what role does g4 have ? : ",
+        "gold": "r4 .",
+        "pred": "r2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.4,
+    "accuracy_contains": 0.4,
+    "accuracy_last_n": 0.4,
+    "correct_relaxed": 4,
+    "correct_contains": 4,
+    "correct_last_n": 4
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_exact": 0.5,
+    "correct_exact": 5,
+    "elapsed": 2.9369313716888428,
+    "examples": [
+      {
+        "prompt": "g17 's a0 is v26 . g9 's a0 is v116 . g27 's a0 is v49 . the a0 of g23 is v14 . g20 's a0 is v121 . g2 has a0 v72 . the a0 of g4 is v27 . g30 's a0 is v73 . g19 's a0 is v40 . g6 's a0 is v102 . g15 has a0 v90 . the a0 of g7 is v42 . the a0 of g8 is v52 . the a0 of g28 is v99 . the a0 of g1 is v47 . g5 's a0 is v85 . s0 : o3 is given to g30 . s1 : give o2 to g27 . s2 : o0 is given to g28 . s3 : give o3 to g28 . s4 : give o2 to g28 . s5 : o3 is given to g17 . s6 : give o3 to g7 . s7 : give o0 to g1 . s8 : o0 is given to g1 . s9 : give o1 to g5 . s10 : o3 is given to g2 . s11 : o1 is given to g17 . s12 : give o1 to g4 . s13 : give o2 to g20 . s14 : give o3 to g9 . s15 : give o0 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g30 v73 .",
+        "pred": "g30 v73 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g28 's a0 is v68 . g3 's a0 is v65 . the a0 of g14 is v86 . g5 's a0 is v82 . the a0 of g1 is v48 . g29 has a0 v36 . g31 's a0 is v103 . g24 's a0 is v38 . g20 's a0 is v18 . g15 's a0 is v108 . g30 has a0 v117 . the a0 of g10 is v3 . g0 has a0 v7 . g27 has a0 v106 . g6 's a0 is v78 . g13 's a0 is v30 . s0 : give o1 to g20 . s1 : o2 is given to g15 . s2 : o0 is given to g29 . s3 : o3 is given to g3 . s4 : o2 is given to g30 . s5 : give o1 to g10 . s6 : give o3 to g13 . s7 : give o0 to g29 . s8 : give o0 to g13 . s9 : o2 is given to g1 . s10 : o1 is given to g30 . s11 : o1 is given to g29 . s12 : give o3 to g1 . s13 : o3 is given to g31 . s14 : o2 is given to g10 . s15 : give o3 to g13 . what is a0 of the holder of o1 ? : ",
+        "gold": "g29 v36 .",
+        "pred": "g30 v117 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4 's a0 is v16 . g0 has a0 v30 . g5 's a0 is v11 . g26 has a0 v9 . the a0 of g16 is v120 . g7 has a0 v92 . g29 has a0 v17 . g27 has a0 v46 . g28 's a0 is v82 . g19 has a0 v7 . g14 's a0 is v41 . g6 has a0 v78 . g13 has a0 v88 . g21 's a0 is v118 . g3 's a0 is v121 . g8 has a0 v32 . s0 : o1 is given to g26 . s1 : give o3 to g13 . s2 : give o1 to g7 . s3 : give o0 to g7 . s4 : o2 is given to g13 . s5 : give o2 to g0 . s6 : o3 is given to g3 . s7 : give o1 to g28 . s8 : give o3 to g7 . s9 : give o0 to g3 . s10 : give o1 to g0 . s11 : o0 is given to g16 . s12 : o2 is given to g29 . s13 : o1 is given to g13 . s14 : give o2 to g4 . s15 : give o2 to g27 . what is a0 of the holder of o3 ? : ",
+        "gold": "g7 v92 .",
+        "pred": "g3 v121 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22 's a0 is v48 . g19 has a0 v115 . the a0 of g29 is v124 . g16 's a0 is v59 . g25 's a0 is v79 . g8 's a0 is v70 . g20 's a0 is v108 . g23 has a0 v76 . g1 's a0 is v85 . the a0 of g7 is v95 . g15 's a0 is v89 . g0 has a0 v38 . g31 's a0 is v87 . g28 's a0 is v27 . the a0 of g11 is v49 . the a0 of g3 is v47 . s0 : o3 is given to g19 . s1 : give o2 to g7 . s2 : o0 is given to g29 . s3 : give o1 to g28 . s4 : o3 is given to g11 . s5 : o1 is given to g22 . s6 : o2 is given to g7 . s7 : o3 is given to g19 . s8 : o2 is given to g20 . s9 : o2 is given to g25 . s10 : o0 is given to g3 . s11 : o1 is given to g15 . s12 : give o3 to g11 . s13 : o0 is given to g19 . s14 : give o2 to g23 . s15 : give o3 to g7 . what is a0 of the holder of o2 ? : ",
+        "gold": "g23 v76 .",
+        "pred": "g25 v79 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "the a0 of g24 is v101 . the a0 of g20 is v8 . the a0 of g0 is v121 . the a0 of g1 is v16 . g30 has a0 v81 . the a0 of g29 is v52 . g12 's a0 is v41 . g31 's a0 is v122 . g26 's a0 is v117 . g27 has a0 v100 . the a0 of g5 is v12 . the a0 of g17 is v62 . g2 has a0 v26 . the a0 of g13 is v64 . g18 's a0 is v48 . g23 has a0 v49 . s0 : o2 is given to g30 . s1 : o3 is given to g29 . s2 : give o2 to g27 . s3 : o1 is given to g30 . s4 : o2 is given to g31 . s5 : give o0 to g27 . s6 : give o2 to g2 . s7 : o1 is given to g1 . s8 : give o3 to g13 . s9 : o2 is given to g0 . s10 : give o1 to g23 . s11 : o3 is given to g20 . s12 : give o0 to g2 . s13 : o3 is given to g26 . s14 : o1 is given to g1 . s15 : give o0 to g30 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v121 .",
+        "pred": "g2 v26 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22 's a0 is v78 . g20 's a0 is v64 . the a0 of g6 is v105 . g3 's a0 is v23 . g10 's a0 is v108 . the a0 of g16 is v79 . g1 has a0 v73 . g31 has a0 v4 . g18 's a0 is v65 . g19 's a0 is v49 . g26 has a0 v126 . the a0 of g2 is v81 . g25 's a0 is v87 . g5 's a0 is v39 . g15 has a0 v89 . the a0 of g12 is v2 . s0 : o1 is given to g5 . s1 : give o2 to g18 . s2 : give o1 to g12 . s3 : o3 is given to g12 . s4 : give o2 to g20 . s5 : give o3 to g6 . s6 : o1 is given to g22 . s7 : give o1 to g6 . s8 : give o0 to g25 . s9 : give o3 to g16 . s10 : o0 is given to g1 . s11 : o1 is given to g2 . s12 : o1 is given to g20 . s13 : o2 is given to g5 . s14 : o3 is given to g10 . s15 : give o3 to g26 . what is a0 of the holder of o2 ? : ",
+        "gold": "g5 v39 .",
+        "pred": "g20 v64 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g31 's a0 is v34 . g6 has a0 v11 . the a0 of g20 is v8 . the a0 of g14 is v118 . the a0 of g0 is v38 . g15 's a0 is v59 . g19 has a0 v85 . the a0 of g13 is v111 . the a0 of g30 is v89 . the a0 of g17 is v65 . g10 has a0 v103 . the a0 of g11 is v116 . the a0 of g12 is v104 . the a0 of g16 is v77 . g4 has a0 v12 . the a0 of g21 is v44 . s0 : o0 is given to g10 . s1 : o1 is given to g0 . s2 : give o3 to g30 . s3 : o2 is given to g11 . s4 : o3 is given to g19 . s5 : give o2 to g12 . s6 : o3 is given to g16 . s7 : give o0 to g21 . s8 : give o3 to g11 . s9 : give o0 to g21 . s10 : give o1 to g15 . s11 : o0 is given to g15 . s12 : give o0 to g13 . s13 : give o3 to g16 . s14 : o2 is given to g30 . s15 : o2 is given to g17 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v59 .",
+        "pred": "g15 v59 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3 has a0 v115 . g25 's a0 is v96 . g27 has a0 v17 . the a0 of g7 is v38 . g23 has a0 v113 . g2 has a0 v34 . g28 's a0 is v44 . g31 's a0 is v27 . the a0 of g29 is v60 . g5 's a0 is v102 . g17 's a0 is v40 . the a0 of g11 is v124 . g0 's a0 is v77 . g13 has a0 v56 . the a0 of g20 is v50 . g21 has a0 v82 . s0 : o1 is given to g7 . s1 : o1 is given to g20 . s2 : give o1 to g31 . s3 : o0 is given to g2 . s4 : o3 is given to g13 . s5 : o2 is given to g17 . s6 : o0 is given to g3 . s7 : give o2 to g29 . s8 : o0 is given to g0 . s9 : o2 is given to g11 . s10 : o1 is given to g7 . s11 : give o1 to g13 . s12 : o0 is given to g23 . s13 : give o1 to g17 . s14 : give o0 to g28 . s15 : o3 is given to g3 . what is a0 of the holder of o1 ? : ",
+        "gold": "g17 v40 .",
+        "pred": "g17 v40 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "the a0 of g26 is v24 . g2 has a0 v118 . g28 has a0 v112 . g19 has a0 v90 . g23 's a0 is v79 . g0 's a0 is v49 . the a0 of g17 is v114 . g13 's a0 is v119 . g9 has a0 v33 . the a0 of g15 is v84 . the a0 of g4 is v52 . the a0 of g25 is v2 . g21 's a0 is v14 . the a0 of g12 is v113 . g24 's a0 is v74 . g16 has a0 v124 . s0 : give o3 to g28 . s1 : give o2 to g12 . s2 : o1 is given to g0 . s3 : o1 is given to g4 . s4 : give o1 to g16 . s5 : o2 is given to g28 . s6 : give o1 to g26 . s7 : o1 is given to g9 . s8 : o0 is given to g2 . s9 : o1 is given to g0 . s10 : give o1 to g2 . s11 : o2 is given to g23 . s12 : give o0 to g24 . s13 : o0 is given to g19 . s14 : give o2 to g28 . s15 : o0 is given to g0 . what is a0 of the holder of o2 ? : ",
+        "gold": "g28 v112 .",
+        "pred": "g28 v112 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "the a0 of g20 is v122 . g21 has a0 v27 . g26 has a0 v87 . g11 's a0 is v17 . g2 's a0 is v76 . g5 's a0 is v107 . g1 's a0 is v86 . g15 's a0 is v98 . g0 's a0 is v43 . g22 has a0 v106 . g14 has a0 v72 . g27 's a0 is v4 . g16 has a0 v101 . the a0 of g4 is v2 . the a0 of g17 is v18 . the a0 of g23 is v124 . s0 : give o3 to g21 . s1 : o3 is given to g16 . s2 : o1 is given to g2 . s3 : o3 is given to g26 . s4 : o2 is given to g1 . s5 : give o2 to g11 . s6 : o1 is given to g4 . s7 : give o1 to g16 . s8 : give o1 to g27 . s9 : give o3 to g2 . s10 : o3 is given to g27 . s11 : o1 is given to g2 . s12 : give o3 to g0 . s13 : give o1 to g16 . s14 : give o0 to g20 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v122 .",
+        "pred": "g20 v122 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 0.5,
+    "accuracy_contains": 0.5,
+    "accuracy_last_n": 0.5,
+    "correct_relaxed": 5,
+    "correct_contains": 5,
+    "correct_last_n": 5
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "task": "s5_v1",
+    "length": 32,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For 'what role does ... have?' questions, answer with only a role token (r0, r1, r2, r3, or r4) followed by a period. Example: 'r2 .'",
+    "accuracy_exact": 0.2,
+    "correct_exact": 2,
+    "elapsed": 3.024160623550415,
+    "examples": [
+      {
+        "prompt": "s0 : cycle the roles of g2 g3 g0 g1 g4 . s1 : swap g3 g2 . s2 : swap g3 g0 . s3 : cycle the roles of g3 g4 g1 . s4 : cycle g4 g0 g3 . s5 : swap g2 g0 . s6 : swap g4 g1 . s7 : swap the roles of g0 and g4 . s8 : swap the roles of g0 and g1 . s9 : cycle the roles of g3 g4 g0 g1 . s10 : cycle g3 g4 g0 g1 g2 . s11 : swap the roles of g4 and g3 . s12 : cycle g1 g3 g4 g0 g2 . s13 : swap g2 g0 . s14 : cycle the roles of g3 g1 g4 g0 . s15 : swap g4 g1 . s16 : swap g1 g0 . s17 : swap the roles of g1 and g0 . s18 : cycle g3 g2 g4 g0 . s19 : swap the roles of g4 and g1 . s20 : swap the roles of g3 and g1 . s21 : swap the roles of g1 and g3 . s22 : swap g0 g1 . s23 : swap the roles of g2 and g4 . s24 : swap the roles of g0 and g4 . s25 : cycle the roles of g1 g4 g3 g2 g0 . s26 : swap g4 g1 . s27 : cycle the roles of g0 g4 g3 . s28 : swap g1 g3 . s29 : swap the roles of g4 and g0 . s30 : swap g2 g4 . s31 : cycle the roles of g0 g4 g1 g3 . what role does g0 have ? : ",
+        "gold": "r2 .",
+        "pred": "r0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap the roles of g1 and g4 . s1 : swap the roles of g2 and g0 . s2 : swap the roles of g2 and g3 . s3 : swap g2 g0 . s4 : swap g0 g1 . s5 : cycle the roles of g3 g1 g2 . s6 : swap g1 g2 . s7 : swap the roles of g1 and g3 . s8 : swap g1 g3 . s9 : cycle g0 g4 g3 . s10 : swap the roles of g3 and g1 . s11 : cycle the roles of g0 g2 g1 g4 . s12 : swap the roles of g2 and g3 . s13 : swap the roles of g0 and g1 . s14 : swap g1 g4 . s15 : swap the roles of g0 and g2 . s16 : cycle the roles of g1 g2 g4 . s17 : swap the roles of g2 and g3 . s18 : cycle g1 g4 g3 g0 . s19 : swap the roles of g1 and g2 . s20 : cycle g0 g3 g1 . s21 : swap the roles of g4 and g2 . s22 : cycle the roles of g4 g3 g1 g2 . s23 : swap the roles of g0 and g1 . s24 : cycle the roles of g3 g0 g1 . s25 : swap g0 g4 . s26 : swap the roles of g1 and g4 . s27 : swap the roles of g2 and g0 . s28 : swap the roles of g0 and g1 . s29 : swap g0 g2 . s30 : swap the roles of g1 and g0 . s31 : swap g0 g4 . what role does g4 have ? : ",
+        "gold": "r0 .",
+        "pred": "r3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : cycle g0 g4 g1 . s1 : swap the roles of g2 and g1 . s2 : cycle g4 g2 g1 g3 g0 . s3 : cycle the roles of g3 g2 g0 g1 g4 . s4 : swap g2 g4 . s5 : cycle the roles of g4 g2 g1 . s6 : swap g1 g2 . s7 : swap g0 g1 . s8 : swap g1 g3 . s9 : cycle g4 g2 g3 g1 . s10 : swap the roles of g3 and g0 . s11 : cycle the roles of g1 g2 g0 g3 . s12 : swap the roles of g2 and g3 . s13 : cycle g4 g3 g0 g1 . s14 : swap the roles of g4 and g1 . s15 : swap g2 g3 . s16 : swap the roles of g0 and g3 . s17 : swap the roles of g2 and g1 . s18 : swap g0 g4 . s19 : swap the roles of g4 and g2 . s20 : swap g4 g2 . s21 : swap the roles of g1 and g2 . s22 : swap the roles of g2 and g1 . s23 : cycle the roles of g1 g2 g0 . s24 : swap the roles of g4 and g3 . s25 : swap g2 g0 . s26 : swap g2 g0 . s27 : cycle the roles of g4 g1 g0 g2 g3 . s28 : swap g1 g3 . s29 : cycle the roles of g2 g1 g4 g0 . s30 : cycle g1 g2 g4 g3 g0 . s31 : swap the roles of g3 and g1 . what role does g2 have ? : ",
+        "gold": "r2 .",
+        "pred": "r2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 : swap g3 g4 . s1 : cycle the roles of g1 g0 g3 g4 g2 . s2 : cycle the roles of g2 g4 g3 g0 g1 . s3 : swap the roles of g0 and g3 . s4 : cycle the roles of g0 g1 g2 g3 g4 . s5 : cycle g3 g4 g2 g0 . s6 : swap the roles of g0 and g3 . s7 : swap g3 g0 . s8 : swap g0 g4 . s9 : swap the roles of g2 and g3 . s10 : swap the roles of g3 and g2 . s11 : swap the roles of g1 and g2 . s12 : swap g0 g1 . s13 : swap g1 g0 . s14 : swap the roles of g4 and g0 . s15 : cycle g2 g3 g1 . s16 : swap the roles of g0 and g2 . s17 : cycle g3 g2 g0 g1 . s18 : swap g4 g1 . s19 : swap the roles of g4 and g3 . s20 : cycle g2 g0 g3 g4 . s21 : swap the roles of g1 and g2 . s22 : swap g1 g4 . s23 : swap g1 g3 . s24 : swap g0 g2 . s25 : swap the roles of g1 and g4 . s26 : swap the roles of g3 and g1 . s27 : cycle g1 g3 g0 . s28 : swap the roles of g0 and g2 . s29 : swap the roles of g3 and g4 . s30 : cycle g2 g0 g4 g1 g3 . s31 : swap g2 g0 . what role does g1 have ? : ",
+        "gold": "r0 .",
+        "pred": "r1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap the roles of g0 and g2 . s1 : swap the roles of g4 and g1 . s2 : cycle the roles of g1 g2 g4 . s3 : cycle g1 g0 g3 g2 g4 . s4 : swap the roles of g2 and g1 . s5 : swap g0 g4 . s6 : cycle g1 g0 g2 g4 g3 . s7 : swap the roles of g4 and g0 . s8 : cycle the roles of g1 g3 g0 g4 . s9 : cycle the roles of g3 g0 g4 g1 . s10 : swap g2 g1 . s11 : swap the roles of g2 and g1 . s12 : swap the roles of g4 and g1 . s13 : swap the roles of g1 and g4 . s14 : swap g2 g4 . s15 : swap g2 g0 . s16 : swap g2 g0 . s17 : cycle the roles of g2 g1 g3 g0 . s18 : swap the roles of g0 and g2 . s19 : swap the roles of g4 and g1 . s20 : cycle g0 g2 g4 . s21 : cycle g1 g3 g2 . s22 : swap g0 g3 . s23 : swap g4 g2 . s24 : swap the roles of g3 and g4 . s25 : swap g3 g4 . s26 : cycle g0 g2 g4 g3 . s27 : cycle g3 g1 g2 g4 g0 . s28 : swap g0 g4 . s29 : swap the roles of g1 and g3 . s30 : swap the roles of g4 and g2 . s31 : swap g0 g4 . what role does g3 have ? : ",
+        "gold": "r0 .",
+        "pred": "r3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap g1 g2 . s1 : cycle g2 g3 g0 g1 . s2 : swap g2 g4 . s3 : swap g2 g1 . s4 : swap the roles of g2 and g0 . s5 : swap g2 g0 . s6 : cycle g2 g4 g0 g3 g1 . s7 : cycle g0 g2 g4 g1 . s8 : swap g1 g2 . s9 : swap g3 g2 . s10 : swap g2 g3 . s11 : swap the roles of g2 and g1 . s12 : swap g0 g3 . s13 : swap g1 g3 . s14 : swap g0 g2 . s15 : swap g1 g0 . s16 : cycle the roles of g0 g3 g1 . s17 : swap the roles of g2 and g1 . s18 : swap g1 g0 . s19 : cycle the roles of g2 g3 g1 g4 . s20 : swap g2 g3 . s21 : swap g0 g3 . s22 : swap the roles of g0 and g4 . s23 : cycle g2 g0 g3 g1 . s24 : cycle the roles of g2 g1 g0 g4 g3 . s25 : cycle the roles of g1 g0 g4 . s26 : swap the roles of g0 and g2 . s27 : cycle g4 g3 g0 g2 g1 . s28 : swap the roles of g3 and g2 . s29 : cycle the roles of g1 g3 g4 g0 g2 . s30 : swap the roles of g4 and g0 . s31 : cycle g1 g0 g2 . what role does g1 have ? : ",
+        "gold": "r4 .",
+        "pred": "r3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap the roles of g2 and g4 . s1 : swap the roles of g4 and g0 . s2 : swap g0 g1 . s3 : swap g1 g2 . s4 : swap g0 g1 . s5 : swap the roles of g0 and g1 . s6 : swap the roles of g3 and g2 . s7 : swap the roles of g4 and g3 . s8 : swap the roles of g2 and g4 . s9 : cycle g3 g0 g4 g1 g2 . s10 : swap g4 g1 . s11 : swap g3 g0 . s12 : swap the roles of g2 and g1 . s13 : cycle g2 g3 g1 g0 . s14 : swap the roles of g4 and g3 . s15 : swap the roles of g2 and g4 . s16 : swap g4 g0 . s17 : swap the roles of g4 and g0 . s18 : cycle g2 g4 g0 g3 g1 . s19 : cycle the roles of g0 g2 g4 g3 . s20 : swap g1 g3 . s21 : swap the roles of g1 and g0 . s22 : swap the roles of g2 and g1 . s23 : cycle g2 g1 g3 g0 . s24 : swap the roles of g2 and g3 . s25 : swap g2 g1 . s26 : swap g3 g4 . s27 : swap g3 g1 . s28 : swap the roles of g3 and g2 . s29 : cycle the roles of g2 g0 g4 g3 . s30 : swap g3 g2 . s31 : cycle the roles of g1 g2 g0 g3 g4 . what role does g3 have ? : ",
+        "gold": "r2 .",
+        "pred": "r4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap g4 g2 . s1 : swap the roles of g2 and g0 . s2 : cycle g3 g2 g4 g0 . s3 : cycle g2 g0 g1 g4 g3 . s4 : swap the roles of g4 and g0 . s5 : swap g4 g0 . s6 : swap g1 g0 . s7 : cycle g2 g3 g0 g1 g4 . s8 : cycle g1 g4 g3 g2 . s9 : swap g0 g1 . s10 : cycle the roles of g3 g2 g1 g0 . s11 : swap g3 g2 . s12 : swap g1 g4 . s13 : swap the roles of g0 and g3 . s14 : swap the roles of g4 and g1 . s15 : swap the roles of g3 and g2 . s16 : cycle g4 g3 g2 . s17 : cycle the roles of g2 g1 g0 g3 . s18 : swap g4 g1 . s19 : swap the roles of g4 and g0 . s20 : swap g3 g4 . s21 : swap the roles of g2 and g3 . s22 : swap g1 g4 . s23 : swap g0 g4 . s24 : swap g3 g1 . s25 : swap the roles of g3 and g2 . s26 : cycle the roles of g1 g4 g0 g2 . s27 : swap the roles of g4 and g1 . s28 : cycle g2 g3 g1 g0 . s29 : swap g1 g4 . s30 : swap g2 g4 . s31 : swap the roles of g3 and g0 . what role does g1 have ? : ",
+        "gold": "r3 .",
+        "pred": "r4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : cycle the roles of g3 g4 g1 . s1 : swap the roles of g3 and g4 . s2 : swap the roles of g1 and g0 . s3 : swap g0 g4 . s4 : cycle g0 g3 g4 . s5 : swap g0 g4 . s6 : swap the roles of g3 and g2 . s7 : swap the roles of g2 and g0 . s8 : swap the roles of g0 and g1 . s9 : cycle g2 g1 g4 . s10 : cycle the roles of g0 g4 g2 g1 g3 . s11 : swap the roles of g1 and g3 . s12 : swap the roles of g3 and g4 . s13 : swap g4 g3 . s14 : cycle g0 g2 g3 . s15 : swap g1 g0 . s16 : swap g3 g4 . s17 : cycle g0 g4 g1 g3 . s18 : swap the roles of g1 and g4 . s19 : cycle g0 g4 g3 . s20 : swap the roles of g0 and g1 . s21 : swap g2 g4 . s22 : swap the roles of g2 and g0 . s23 : swap the roles of g0 and g3 . s24 : swap the roles of g4 and g2 . s25 : swap the roles of g1 and g4 . s26 : swap the roles of g2 and g4 . s27 : swap the roles of g2 and g3 . s28 : swap g4 g0 . s29 : cycle g4 g3 g2 g0 g1 . s30 : swap the roles of g1 and g2 . s31 : swap the roles of g1 and g4 . what role does g2 have ? : ",
+        "gold": "r2 .",
+        "pred": "r4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : cycle g3 g1 g4 g0 . s1 : swap g0 g1 . s2 : swap the roles of g4 and g1 . s3 : cycle g4 g3 g2 . s4 : swap the roles of g2 and g0 . s5 : swap the roles of g3 and g2 . s6 : swap the roles of g0 and g3 . s7 : swap the roles of g4 and g3 . s8 : cycle the roles of g2 g0 g4 . s9 : swap the roles of g3 and g4 . s10 : swap g4 g0 . s11 : swap g1 g4 . s12 : cycle the roles of g1 g0 g2 . s13 : swap g2 g0 . s14 : swap the roles of g2 and g3 . s15 : swap the roles of g1 and g4 . s16 : cycle g0 g1 g4 g3 g2 . s17 : swap g0 g2 . s18 : swap g1 g3 . s19 : cycle the roles of g3 g1 g2 g0 . s20 : swap g2 g3 . s21 : swap the roles of g2 and g1 . s22 : swap the roles of g4 and g3 . s23 : swap the roles of g0 and g3 . s24 : swap the roles of g1 and g0 . s25 : swap g0 g4 . s26 : swap the roles of g3 and g0 . s27 : cycle g1 g0 g2 g4 . s28 : cycle the roles of g3 g0 g4 g1 g2 . s29 : swap the roles of g3 and g4 . s30 : cycle g0 g2 g4 g1 g3 . s31 : swap the roles of g0 and g1 . what role does g4 have ? : ",
+        "gold": "r4 .",
+        "pred": "r4 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 0.2,
+    "accuracy_contains": 0.2,
+    "accuracy_last_n": 0.2,
+    "correct_relaxed": 2,
+    "correct_contains": 2,
+    "correct_last_n": 2
+  },
+  {
+    "model": "openai/gpt-4o-mini",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_exact": 0.1,
+    "correct_exact": 1,
+    "elapsed": 2.2194831371307373,
+    "examples": [
+      {
+        "prompt": "g17 's a0 is v26 . g9 's a0 is v116 . g27 's a0 is v49 . the a0 of g23 is v14 . g20 's a0 is v121 . g2 has a0 v72 . the a0 of g4 is v27 . g30 's a0 is v73 . g19 's a0 is v40 . g6 's a0 is v102 . g15 has a0 v90 . the a0 of g7 is v42 . the a0 of g8 is v52 . the a0 of g28 is v99 . the a0 of g1 is v47 . g5 's a0 is v85 . s0 : o3 is given to g30 . s1 : give o2 to g27 . s2 : o0 is given to g28 . s3 : give o3 to g28 . s4 : give o2 to g28 . s5 : o3 is given to g17 . s6 : give o3 to g7 . s7 : give o0 to g1 . s8 : o0 is given to g1 . s9 : give o1 to g5 . s10 : o3 is given to g2 . s11 : o1 is given to g17 . s12 : give o1 to g4 . s13 : give o2 to g20 . s14 : give o3 to g9 . s15 : give o0 to g30 . what is a0 of the holder of o0 ? : ",
+        "gold": "g30 v73 .",
+        "pred": "g1 v47 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g28 's a0 is v68 . g3 's a0 is v65 . the a0 of g14 is v86 . g5 's a0 is v82 . the a0 of g1 is v48 . g29 has a0 v36 . g31 's a0 is v103 . g24 's a0 is v38 . g20 's a0 is v18 . g15 's a0 is v108 . g30 has a0 v117 . the a0 of g10 is v3 . g0 has a0 v7 . g27 has a0 v106 . g6 's a0 is v78 . g13 's a0 is v30 . s0 : give o1 to g20 . s1 : o2 is given to g15 . s2 : o0 is given to g29 . s3 : o3 is given to g3 . s4 : o2 is given to g30 . s5 : give o1 to g10 . s6 : give o3 to g13 . s7 : give o0 to g29 . s8 : give o0 to g13 . s9 : o2 is given to g1 . s10 : o1 is given to g30 . s11 : o1 is given to g29 . s12 : give o3 to g1 . s13 : o3 is given to g31 . s14 : o2 is given to g10 . s15 : give o3 to g13 . what is a0 of the holder of o1 ? : ",
+        "gold": "g29 v36 .",
+        "pred": "g30 v117 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4 's a0 is v16 . g0 has a0 v30 . g5 's a0 is v11 . g26 has a0 v9 . the a0 of g16 is v120 . g7 has a0 v92 . g29 has a0 v17 . g27 has a0 v46 . g28 's a0 is v82 . g19 has a0 v7 . g14 's a0 is v41 . g6 has a0 v78 . g13 has a0 v88 . g21 's a0 is v118 . g3 's a0 is v121 . g8 has a0 v32 . s0 : o1 is given to g26 . s1 : give o3 to g13 . s2 : give o1 to g7 . s3 : give o0 to g7 . s4 : o2 is given to g13 . s5 : give o2 to g0 . s6 : o3 is given to g3 . s7 : give o1 to g28 . s8 : give o3 to g7 . s9 : give o0 to g3 . s10 : give o1 to g0 . s11 : o0 is given to g16 . s12 : o2 is given to g29 . s13 : o1 is given to g13 . s14 : give o2 to g4 . s15 : give o2 to g27 . what is a0 of the holder of o3 ? : ",
+        "gold": "g7 v92 .",
+        "pred": "g3 v121 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22 's a0 is v48 . g19 has a0 v115 . the a0 of g29 is v124 . g16 's a0 is v59 . g25 's a0 is v79 . g8 's a0 is v70 . g20 's a0 is v108 . g23 has a0 v76 . g1 's a0 is v85 . the a0 of g7 is v95 . g15 's a0 is v89 . g0 has a0 v38 . g31 's a0 is v87 . g28 's a0 is v27 . the a0 of g11 is v49 . the a0 of g3 is v47 . s0 : o3 is given to g19 . s1 : give o2 to g7 . s2 : o0 is given to g29 . s3 : give o1 to g28 . s4 : o3 is given to g11 . s5 : o1 is given to g22 . s6 : o2 is given to g7 . s7 : o3 is given to g19 . s8 : o2 is given to g20 . s9 : o2 is given to g25 . s10 : o0 is given to g3 . s11 : o1 is given to g15 . s12 : give o3 to g11 . s13 : o0 is given to g19 . s14 : give o2 to g23 . s15 : give o3 to g7 . what is a0 of the holder of o2 ? : ",
+        "gold": "g23 v76 .",
+        "pred": "g20 v108 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "the a0 of g24 is v101 . the a0 of g20 is v8 . the a0 of g0 is v121 . the a0 of g1 is v16 . g30 has a0 v81 . the a0 of g29 is v52 . g12 's a0 is v41 . g31 's a0 is v122 . g26 's a0 is v117 . g27 has a0 v100 . the a0 of g5 is v12 . the a0 of g17 is v62 . g2 has a0 v26 . the a0 of g13 is v64 . g18 's a0 is v48 . g23 has a0 v49 . s0 : o2 is given to g30 . s1 : o3 is given to g29 . s2 : give o2 to g27 . s3 : o1 is given to g30 . s4 : o2 is given to g31 . s5 : give o0 to g27 . s6 : give o2 to g2 . s7 : o1 is given to g1 . s8 : give o3 to g13 . s9 : o2 is given to g0 . s10 : give o1 to g23 . s11 : o3 is given to g20 . s12 : give o0 to g2 . s13 : o3 is given to g26 . s14 : o1 is given to g1 . s15 : give o0 to g30 . what is a0 of the holder of o2 ? : ",
+        "gold": "g0 v121 .",
+        "pred": "g2 v26 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22 's a0 is v78 . g20 's a0 is v64 . the a0 of g6 is v105 . g3 's a0 is v23 . g10 's a0 is v108 . the a0 of g16 is v79 . g1 has a0 v73 . g31 has a0 v4 . g18 's a0 is v65 . g19 's a0 is v49 . g26 has a0 v126 . the a0 of g2 is v81 . g25 's a0 is v87 . g5 's a0 is v39 . g15 has a0 v89 . the a0 of g12 is v2 . s0 : o1 is given to g5 . s1 : give o2 to g18 . s2 : give o1 to g12 . s3 : o3 is given to g12 . s4 : give o2 to g20 . s5 : give o3 to g6 . s6 : o1 is given to g22 . s7 : give o1 to g6 . s8 : give o0 to g25 . s9 : give o3 to g16 . s10 : o0 is given to g1 . s11 : o1 is given to g2 . s12 : o1 is given to g20 . s13 : o2 is given to g5 . s14 : o3 is given to g10 . s15 : give o3 to g26 . what is a0 of the holder of o2 ? : ",
+        "gold": "g5 v39 .",
+        "pred": "g18 v65 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g31 's a0 is v34 . g6 has a0 v11 . the a0 of g20 is v8 . the a0 of g14 is v118 . the a0 of g0 is v38 . g15 's a0 is v59 . g19 has a0 v85 . the a0 of g13 is v111 . the a0 of g30 is v89 . the a0 of g17 is v65 . g10 has a0 v103 . the a0 of g11 is v116 . the a0 of g12 is v104 . the a0 of g16 is v77 . g4 has a0 v12 . the a0 of g21 is v44 . s0 : o0 is given to g10 . s1 : o1 is given to g0 . s2 : give o3 to g30 . s3 : o2 is given to g11 . s4 : o3 is given to g19 . s5 : give o2 to g12 . s6 : o3 is given to g16 . s7 : give o0 to g21 . s8 : give o3 to g11 . s9 : give o0 to g21 . s10 : give o1 to g15 . s11 : o0 is given to g15 . s12 : give o0 to g13 . s13 : give o3 to g16 . s14 : o2 is given to g30 . s15 : o2 is given to g17 . what is a0 of the holder of o1 ? : ",
+        "gold": "g15 v59 .",
+        "pred": "g0 v38 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3 has a0 v115 . g25 's a0 is v96 . g27 has a0 v17 . the a0 of g7 is v38 . g23 has a0 v113 . g2 has a0 v34 . g28 's a0 is v44 . g31 's a0 is v27 . the a0 of g29 is v60 . g5 's a0 is v102 . g17 's a0 is v40 . the a0 of g11 is v124 . g0 's a0 is v77 . g13 has a0 v56 . the a0 of g20 is v50 . g21 has a0 v82 . s0 : o1 is given to g7 . s1 : o1 is given to g20 . s2 : give o1 to g31 . s3 : o0 is given to g2 . s4 : o3 is given to g13 . s5 : o2 is given to g17 . s6 : o0 is given to g3 . s7 : give o2 to g29 . s8 : o0 is given to g0 . s9 : o2 is given to g11 . s10 : o1 is given to g7 . s11 : give o1 to g13 . s12 : o0 is given to g23 . s13 : give o1 to g17 . s14 : give o0 to g28 . s15 : o3 is given to g3 . what is a0 of the holder of o1 ? : ",
+        "gold": "g17 v40 .",
+        "pred": "g17 v40 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "the a0 of g26 is v24 . g2 has a0 v118 . g28 has a0 v112 . g19 has a0 v90 . g23 's a0 is v79 . g0 's a0 is v49 . the a0 of g17 is v114 . g13 's a0 is v119 . g9 has a0 v33 . the a0 of g15 is v84 . the a0 of g4 is v52 . the a0 of g25 is v2 . g21 's a0 is v14 . the a0 of g12 is v113 . g24 's a0 is v74 . g16 has a0 v124 . s0 : give o3 to g28 . s1 : give o2 to g12 . s2 : o1 is given to g0 . s3 : o1 is given to g4 . s4 : give o1 to g16 . s5 : o2 is given to g28 . s6 : give o1 to g26 . s7 : o1 is given to g9 . s8 : o0 is given to g2 . s9 : o1 is given to g0 . s10 : give o1 to g2 . s11 : o2 is given to g23 . s12 : give o0 to g24 . s13 : o0 is given to g19 . s14 : give o2 to g28 . s15 : o0 is given to g0 . what is a0 of the holder of o2 ? : ",
+        "gold": "g28 v112 .",
+        "pred": "g12 v113 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "the a0 of g20 is v122 . g21 has a0 v27 . g26 has a0 v87 . g11 's a0 is v17 . g2 's a0 is v76 . g5 's a0 is v107 . g1 's a0 is v86 . g15 's a0 is v98 . g0 's a0 is v43 . g22 has a0 v106 . g14 has a0 v72 . g27 's a0 is v4 . g16 has a0 v101 . the a0 of g4 is v2 . the a0 of g17 is v18 . the a0 of g23 is v124 . s0 : give o3 to g21 . s1 : o3 is given to g16 . s2 : o1 is given to g2 . s3 : o3 is given to g26 . s4 : o2 is given to g1 . s5 : give o2 to g11 . s6 : o1 is given to g4 . s7 : give o1 to g16 . s8 : give o1 to g27 . s9 : give o3 to g2 . s10 : o3 is given to g27 . s11 : o1 is given to g2 . s12 : give o3 to g0 . s13 : give o1 to g16 . s14 : give o0 to g20 . s15 : o2 is given to g20 . what is a0 of the holder of o2 ? : ",
+        "gold": "g20 v122 .",
+        "pred": "g1 v86 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.1,
+    "accuracy_contains": 0.1,
+    "accuracy_last_n": 0.1,
+    "correct_relaxed": 1,
+    "correct_contains": 1,
+    "correct_last_n": 1
+  },
+  {
+    "model": "openai/gpt-4o-mini",
+    "task": "s5_v1",
+    "length": 32,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For 'what role does ... have?' questions, answer with only a role token (r0, r1, r2, r3, or r4) followed by a period. Example: 'r2 .'",
+    "accuracy_exact": 0.0,
+    "correct_exact": 0,
+    "elapsed": 2.872022867202759,
+    "examples": [
+      {
+        "prompt": "s0 : cycle the roles of g2 g3 g0 g1 g4 . s1 : swap g3 g2 . s2 : swap g3 g0 . s3 : cycle the roles of g3 g4 g1 . s4 : cycle g4 g0 g3 . s5 : swap g2 g0 . s6 : swap g4 g1 . s7 : swap the roles of g0 and g4 . s8 : swap the roles of g0 and g1 . s9 : cycle the roles of g3 g4 g0 g1 . s10 : cycle g3 g4 g0 g1 g2 . s11 : swap the roles of g4 and g3 . s12 : cycle g1 g3 g4 g0 g2 . s13 : swap g2 g0 . s14 : cycle the roles of g3 g1 g4 g0 . s15 : swap g4 g1 . s16 : swap g1 g0 . s17 : swap the roles of g1 and g0 . s18 : cycle g3 g2 g4 g0 . s19 : swap the roles of g4 and g1 . s20 : swap the roles of g3 and g1 . s21 : swap the roles of g1 and g3 . s22 : swap g0 g1 . s23 : swap the roles of g2 and g4 . s24 : swap the roles of g0 and g4 . s25 : cycle the roles of g1 g4 g3 g2 g0 . s26 : swap g4 g1 . s27 : cycle the roles of g0 g4 g3 . s28 : swap g1 g3 . s29 : swap the roles of g4 and g0 . s30 : swap g2 g4 . s31 : cycle the roles of g0 g4 g1 g3 . what role does g0 have ? : ",
+        "gold": "r2 .",
+        "pred": "r3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap the roles of g1 and g4 . s1 : swap the roles of g2 and g0 . s2 : swap the roles of g2 and g3 . s3 : swap g2 g0 . s4 : swap g0 g1 . s5 : cycle the roles of g3 g1 g2 . s6 : swap g1 g2 . s7 : swap the roles of g1 and g3 . s8 : swap g1 g3 . s9 : cycle g0 g4 g3 . s10 : swap the roles of g3 and g1 . s11 : cycle the roles of g0 g2 g1 g4 . s12 : swap the roles of g2 and g3 . s13 : swap the roles of g0 and g1 . s14 : swap g1 g4 . s15 : swap the roles of g0 and g2 . s16 : cycle the roles of g1 g2 g4 . s17 : swap the roles of g2 and g3 . s18 : cycle g1 g4 g3 g0 . s19 : swap the roles of g1 and g2 . s20 : cycle g0 g3 g1 . s21 : swap the roles of g4 and g2 . s22 : cycle the roles of g4 g3 g1 g2 . s23 : swap the roles of g0 and g1 . s24 : cycle the roles of g3 g0 g1 . s25 : swap g0 g4 . s26 : swap the roles of g1 and g4 . s27 : swap the roles of g2 and g0 . s28 : swap the roles of g0 and g1 . s29 : swap g0 g2 . s30 : swap the roles of g1 and g0 . s31 : swap g0 g4 . what role does g4 have ? : ",
+        "gold": "r0 .",
+        "pred": "r1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : cycle g0 g4 g1 . s1 : swap the roles of g2 and g1 . s2 : cycle g4 g2 g1 g3 g0 . s3 : cycle the roles of g3 g2 g0 g1 g4 . s4 : swap g2 g4 . s5 : cycle the roles of g4 g2 g1 . s6 : swap g1 g2 . s7 : swap g0 g1 . s8 : swap g1 g3 . s9 : cycle g4 g2 g3 g1 . s10 : swap the roles of g3 and g0 . s11 : cycle the roles of g1 g2 g0 g3 . s12 : swap the roles of g2 and g3 . s13 : cycle g4 g3 g0 g1 . s14 : swap the roles of g4 and g1 . s15 : swap g2 g3 . s16 : swap the roles of g0 and g3 . s17 : swap the roles of g2 and g1 . s18 : swap g0 g4 . s19 : swap the roles of g4 and g2 . s20 : swap g4 g2 . s21 : swap the roles of g1 and g2 . s22 : swap the roles of g2 and g1 . s23 : cycle the roles of g1 g2 g0 . s24 : swap the roles of g4 and g3 . s25 : swap g2 g0 . s26 : swap g2 g0 . s27 : cycle the roles of g4 g1 g0 g2 g3 . s28 : swap g1 g3 . s29 : cycle the roles of g2 g1 g4 g0 . s30 : cycle g1 g2 g4 g3 g0 . s31 : swap the roles of g3 and g1 . what role does g2 have ? : ",
+        "gold": "r2 .",
+        "pred": "r1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap g3 g4 . s1 : cycle the roles of g1 g0 g3 g4 g2 . s2 : cycle the roles of g2 g4 g3 g0 g1 . s3 : swap the roles of g0 and g3 . s4 : cycle the roles of g0 g1 g2 g3 g4 . s5 : cycle g3 g4 g2 g0 . s6 : swap the roles of g0 and g3 . s7 : swap g3 g0 . s8 : swap g0 g4 . s9 : swap the roles of g2 and g3 . s10 : swap the roles of g3 and g2 . s11 : swap the roles of g1 and g2 . s12 : swap g0 g1 . s13 : swap g1 g0 . s14 : swap the roles of g4 and g0 . s15 : cycle g2 g3 g1 . s16 : swap the roles of g0 and g2 . s17 : cycle g3 g2 g0 g1 . s18 : swap g4 g1 . s19 : swap the roles of g4 and g3 . s20 : cycle g2 g0 g3 g4 . s21 : swap the roles of g1 and g2 . s22 : swap g1 g4 . s23 : swap g1 g3 . s24 : swap g0 g2 . s25 : swap the roles of g1 and g4 . s26 : swap the roles of g3 and g1 . s27 : cycle g1 g3 g0 . s28 : swap the roles of g0 and g2 . s29 : swap the roles of g3 and g4 . s30 : cycle g2 g0 g4 g1 g3 . s31 : swap g2 g0 . what role does g1 have ? : ",
+        "gold": "r0 .",
+        "pred": "r2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap the roles of g0 and g2 . s1 : swap the roles of g4 and g1 . s2 : cycle the roles of g1 g2 g4 . s3 : cycle g1 g0 g3 g2 g4 . s4 : swap the roles of g2 and g1 . s5 : swap g0 g4 . s6 : cycle g1 g0 g2 g4 g3 . s7 : swap the roles of g4 and g0 . s8 : cycle the roles of g1 g3 g0 g4 . s9 : cycle the roles of g3 g0 g4 g1 . s10 : swap g2 g1 . s11 : swap the roles of g2 and g1 . s12 : swap the roles of g4 and g1 . s13 : swap the roles of g1 and g4 . s14 : swap g2 g4 . s15 : swap g2 g0 . s16 : swap g2 g0 . s17 : cycle the roles of g2 g1 g3 g0 . s18 : swap the roles of g0 and g2 . s19 : swap the roles of g4 and g1 . s20 : cycle g0 g2 g4 . s21 : cycle g1 g3 g2 . s22 : swap g0 g3 . s23 : swap g4 g2 . s24 : swap the roles of g3 and g4 . s25 : swap g3 g4 . s26 : cycle g0 g2 g4 g3 . s27 : cycle g3 g1 g2 g4 g0 . s28 : swap g0 g4 . s29 : swap the roles of g1 and g3 . s30 : swap the roles of g4 and g2 . s31 : swap g0 g4 . what role does g3 have ? : ",
+        "gold": "r0 .",
+        "pred": "r1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap g1 g2 . s1 : cycle g2 g3 g0 g1 . s2 : swap g2 g4 . s3 : swap g2 g1 . s4 : swap the roles of g2 and g0 . s5 : swap g2 g0 . s6 : cycle g2 g4 g0 g3 g1 . s7 : cycle g0 g2 g4 g1 . s8 : swap g1 g2 . s9 : swap g3 g2 . s10 : swap g2 g3 . s11 : swap the roles of g2 and g1 . s12 : swap g0 g3 . s13 : swap g1 g3 . s14 : swap g0 g2 . s15 : swap g1 g0 . s16 : cycle the roles of g0 g3 g1 . s17 : swap the roles of g2 and g1 . s18 : swap g1 g0 . s19 : cycle the roles of g2 g3 g1 g4 . s20 : swap g2 g3 . s21 : swap g0 g3 . s22 : swap the roles of g0 and g4 . s23 : cycle g2 g0 g3 g1 . s24 : cycle the roles of g2 g1 g0 g4 g3 . s25 : cycle the roles of g1 g0 g4 . s26 : swap the roles of g0 and g2 . s27 : cycle g4 g3 g0 g2 g1 . s28 : swap the roles of g3 and g2 . s29 : cycle the roles of g1 g3 g4 g0 g2 . s30 : swap the roles of g4 and g0 . s31 : cycle g1 g0 g2 . what role does g1 have ? : ",
+        "gold": "r4 .",
+        "pred": "r1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap the roles of g2 and g4 . s1 : swap the roles of g4 and g0 . s2 : swap g0 g1 . s3 : swap g1 g2 . s4 : swap g0 g1 . s5 : swap the roles of g0 and g1 . s6 : swap the roles of g3 and g2 . s7 : swap the roles of g4 and g3 . s8 : swap the roles of g2 and g4 . s9 : cycle g3 g0 g4 g1 g2 . s10 : swap g4 g1 . s11 : swap g3 g0 . s12 : swap the roles of g2 and g1 . s13 : cycle g2 g3 g1 g0 . s14 : swap the roles of g4 and g3 . s15 : swap the roles of g2 and g4 . s16 : swap g4 g0 . s17 : swap the roles of g4 and g0 . s18 : cycle g2 g4 g0 g3 g1 . s19 : cycle the roles of g0 g2 g4 g3 . s20 : swap g1 g3 . s21 : swap the roles of g1 and g0 . s22 : swap the roles of g2 and g1 . s23 : cycle g2 g1 g3 g0 . s24 : swap the roles of g2 and g3 . s25 : swap g2 g1 . s26 : swap g3 g4 . s27 : swap g3 g1 . s28 : swap the roles of g3 and g2 . s29 : cycle the roles of g2 g0 g4 g3 . s30 : swap g3 g2 . s31 : cycle the roles of g1 g2 g0 g3 g4 . what role does g3 have ? : ",
+        "gold": "r2 .",
+        "pred": "r1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : swap g4 g2 . s1 : swap the roles of g2 and g0 . s2 : cycle g3 g2 g4 g0 . s3 : cycle g2 g0 g1 g4 g3 . s4 : swap the roles of g4 and g0 . s5 : swap g4 g0 . s6 : swap g1 g0 . s7 : cycle g2 g3 g0 g1 g4 . s8 : cycle g1 g4 g3 g2 . s9 : swap g0 g1 . s10 : cycle the roles of g3 g2 g1 g0 . s11 : swap g3 g2 . s12 : swap g1 g4 . s13 : swap the roles of g0 and g3 . s14 : swap the roles of g4 and g1 . s15 : swap the roles of g3 and g2 . s16 : cycle g4 g3 g2 . s17 : cycle the roles of g2 g1 g0 g3 . s18 : swap g4 g1 . s19 : swap the roles of g4 and g0 . s20 : swap g3 g4 . s21 : swap the roles of g2 and g3 . s22 : swap g1 g4 . s23 : swap g0 g4 . s24 : swap g3 g1 . s25 : swap the roles of g3 and g2 . s26 : cycle the roles of g1 g4 g0 g2 . s27 : swap the roles of g4 and g1 . s28 : cycle g2 g3 g1 g0 . s29 : swap g1 g4 . s30 : swap g2 g4 . s31 : swap the roles of g3 and g0 . what role does g1 have ? : ",
+        "gold": "r3 .",
+        "pred": "r2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : cycle the roles of g3 g4 g1 . s1 : swap the roles of g3 and g4 . s2 : swap the roles of g1 and g0 . s3 : swap g0 g4 . s4 : cycle g0 g3 g4 . s5 : swap g0 g4 . s6 : swap the roles of g3 and g2 . s7 : swap the roles of g2 and g0 . s8 : swap the roles of g0 and g1 . s9 : cycle g2 g1 g4 . s10 : cycle the roles of g0 g4 g2 g1 g3 . s11 : swap the roles of g1 and g3 . s12 : swap the roles of g3 and g4 . s13 : swap g4 g3 . s14 : cycle g0 g2 g3 . s15 : swap g1 g0 . s16 : swap g3 g4 . s17 : cycle g0 g4 g1 g3 . s18 : swap the roles of g1 and g4 . s19 : cycle g0 g4 g3 . s20 : swap the roles of g0 and g1 . s21 : swap g2 g4 . s22 : swap the roles of g2 and g0 . s23 : swap the roles of g0 and g3 . s24 : swap the roles of g4 and g2 . s25 : swap the roles of g1 and g4 . s26 : swap the roles of g2 and g4 . s27 : swap the roles of g2 and g3 . s28 : swap g4 g0 . s29 : cycle g4 g3 g2 g0 g1 . s30 : swap the roles of g1 and g2 . s31 : swap the roles of g1 and g4 . what role does g2 have ? : ",
+        "gold": "r2 .",
+        "pred": "r3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 : cycle g3 g1 g4 g0 . s1 : swap g0 g1 . s2 : swap the roles of g4 and g1 . s3 : cycle g4 g3 g2 . s4 : swap the roles of g2 and g0 . s5 : swap the roles of g3 and g2 . s6 : swap the roles of g0 and g3 . s7 : swap the roles of g4 and g3 . s8 : cycle the roles of g2 g0 g4 . s9 : swap the roles of g3 and g4 . s10 : swap g4 g0 . s11 : swap g1 g4 . s12 : cycle the roles of g1 g0 g2 . s13 : swap g2 g0 . s14 : swap the roles of g2 and g3 . s15 : swap the roles of g1 and g4 . s16 : cycle g0 g1 g4 g3 g2 . s17 : swap g0 g2 . s18 : swap g1 g3 . s19 : cycle the roles of g3 g1 g2 g0 . s20 : swap g2 g3 . s21 : swap the roles of g2 and g1 . s22 : swap the roles of g4 and g3 . s23 : swap the roles of g0 and g3 . s24 : swap the roles of g1 and g0 . s25 : swap g0 g4 . s26 : swap the roles of g3 and g0 . s27 : cycle g1 g0 g2 g4 . s28 : cycle the roles of g3 g0 g4 g1 g2 . s29 : swap the roles of g3 and g4 . s30 : cycle g0 g2 g4 g1 g3 . s31 : swap the roles of g0 and g1 . what role does g4 have ? : ",
+        "gold": "r4 .",
+        "pred": "r2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.0,
+    "accuracy_contains": 0.0,
+    "accuracy_last_n": 0.0,
+    "correct_relaxed": 0,
+    "correct_contains": 0,
+    "correct_last_n": 0
+  }
+]

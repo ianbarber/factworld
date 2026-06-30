@@ -60,7 +60,7 @@ class TaskSpec:
 
 @dataclass
 class Example:
-    prompt: str        # the model input (everything up to and including ' : ')
+    prompt: str        # the model input (the full query, ending in '?')
     answer: str        # the exact expected continuation (space-separated atomic tokens)
     length: int        # the difficulty coordinate this example was drawn at
     meta: dict = field(default_factory=dict)
@@ -99,6 +99,12 @@ def _param_map(spec: TaskSpec, w: World) -> dict:
     return {a: rng.choice(list(w.value_vocab)) for a in w.agents}
 
 
+def _render_answer(core: str) -> str:
+    """Render the answer span with attached punctuation (e.g. `g4.`, `g0 v109.`) to match the
+    natural-language prompt style."""
+    return f"{core}."
+
+
 # ---------------------------------------------------------------------------
 # per-family example builders
 # ---------------------------------------------------------------------------
@@ -114,7 +120,8 @@ def _ex_recall(spec, w, r, fixed_origins, rng, split, length, idx):
         origins = dict(zip(chosen, rng.sample(list(w.value_vocab), pool)))
     g = rng.choice(chosen)
     facts = " ".join(r.render_fact(a, "a0", origins[a], key=f"{a}|{idx}|{rng.random()}") for a in chosen)
-    return Example(f"{facts} what is a0 of {g} ? : ", f"{origins[g]} .", length)
+    q = r.render_query("recall", entity=g, attribute="a0")
+    return Example(f"{facts} {q}", _render_answer(origins[g]), length)
 
 
 def _ex_binding(spec, w, r, oracle, rng, length):
@@ -124,7 +131,8 @@ def _ex_binding(spec, w, r, oracle, rng, length):
     obj = rng.choice(sorted({e.args[0] for e in ev}))
     holder = oracle.easy_holder(ev, obj)
     hist = " ".join(r.render_history(tuple(ev), with_steps=True))
-    return Example(f"{hist} what is the holder of {obj} ? : ", f"{holder} .", length, {"obj": obj})
+    q = r.render_query("state_easy", target=obj)
+    return Example(f"{hist} {q}", _render_answer(holder), length, {"obj": obj})
 
 
 def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
@@ -139,11 +147,12 @@ def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
     value = origins[holder]
     facts = " ".join(r.render_fact(a, "a0", origins[a], key=f"{a}|{idx}|{rng.random()}") for a in chosen)
     hist = " ".join(r.render_history(tuple(ev), with_steps=True))
-    prompt = f"{facts} {hist} what is a0 of the holder of {obj} ? : "
-    meta = {"holder": holder}
+    q = r.render_query("recall", attribute="a0", entity=f"the holder of {obj}")
+    prompt = f"{facts} {hist} {q}"
+    meta = {"holder": holder, "obj": obj}
     if spec.worked_trace:    # oracle worked-trace = optional TRAINING signal, not part of the scored answer
         meta["trace"] = " ".join(oracle.easy_holder(ev, obj, t=t) for t in range(1, length + 1))
-    return Example(prompt, f"{holder} {value} .", length, meta)   # canonical answer = final (holder value)
+    return Example(prompt, _render_answer(f"{holder} {value}"), length, meta)
 
 
 def _ex_s5(spec, w, r, oracle, rng, length, idx):
@@ -152,11 +161,12 @@ def _ex_s5(spec, w, r, oracle, rng, length, idx):
     agent = rng.choice(w.agents)
     role = oracle.hard_role(events, agent)
     hist = " ".join(r.render_history(tuple(events), with_steps=True))
-    prompt = f"{hist} {r.render_query('state_hard', target=agent)} : "
+    q = r.render_query("state_hard", target=agent)
+    prompt = f"{hist} {q}"
     meta = {}
     if spec.worked_trace:    # oracle role-trajectory = optional TRAINING signal, not the scored answer
         meta["trace"] = " ".join(oracle.hard_role(events, agent, t=t) for t in range(1, length + 1))
-    return Example(prompt, f"{role} .", length, meta)   # canonical answer = final role
+    return Example(prompt, _render_answer(role), length, meta)
 
 
 def _ex_conflict(spec, w, r, pmap, rng, length, idx):
@@ -170,7 +180,8 @@ def _ex_conflict(spec, w, r, pmap, rng, length, idx):
     ctx = {a: (v_ctx if a == g else rng.choice(list(w.value_vocab))) for a in pool}
     present = pool[:]; rng.shuffle(present)                           # scramble order: no first-position shortcut
     facts = " ".join(r.render_fact(a, "a0", ctx[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
-    return Example(f"{facts} what is a0 of {g} ? : ", f"{v_ctx} .", length,
+    q = r.render_query("recall", entity=g, attribute="a0")
+    return Example(f"{facts} {q}", _render_answer(v_ctx), length,
                    {"param_value": pmap[g], "in_context_value": v_ctx})
 
 
@@ -189,8 +200,8 @@ def _ex_chain(spec, w, r, rng, depth, idx):
     cur = start
     for _ in range(depth):
         cur = nxt[cur]
-    query = "what is " + "a0 of " * depth + f"{start} ? : "
-    return Example(f"{facts} {query}", f"{cur} .", depth, {"depth": depth, "start": start})
+    query = "what is " + "a0 of " * depth + f"{start}?"
+    return Example(f"{facts} {query}", _render_answer(cur), depth, {"depth": depth, "start": start})
 
 
 # ---------------------------------------------------------------------------
@@ -209,7 +220,7 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
             out, agents = [], list(w.agents)
             for j in range(n // 2):   # reinforce g→pmap[g] as standalone facts so the model memorizes it
                 a = agents[j % len(agents)]
-                out.append(Example("", f"{a} a0 {pmap[a]} .", 0, {"reinforce": True}))
+                out.append(Example("", f"{a} a0 {pmap[a]}.", 0, {"reinforce": True}))
             for i in range(n - n // 2):
                 L = spec.train_lengths[i % len(spec.train_lengths)]
                 out.append(_ex_conflict(spec, w, r, pmap, _rng(spec, "train", L, i), L, i))
@@ -271,6 +282,69 @@ def score_last_n(pred: str, gold: str) -> int:
     if len(p) < len(g):
         return 0
     return int(p[-len(g) :] == g)
+
+
+def content_tokens(text: str) -> list[str]:
+    """Normalized answer tokens with punctuation stripped: the semantic span.
+
+    Used by the composition decomposition (holder leg vs value leg) and by trace
+    scoring, so both ignore attached/legacy punctuation.
+    """
+    from .render import Renderer
+    return [t for t in Renderer.normalize(text).split() if t != "."]
+
+
+def decompose_composite(pred: str, gold: str) -> dict:
+    """Per-leg accuracy for a 2-content-token composite answer (holder, value).
+
+    Returns:
+        holder_ok: first content token matches (the state-tracking / binding leg)
+        value_ok:  second content token matches, among 2-token answers (the recall leg)
+        prefix:    longest matching prefix length (0/1/2) — a direct read of where
+                   composition breaks (0=neither, 1=holder-only, 2=both)
+    """
+    g = content_tokens(gold)
+    p = content_tokens(pred)
+    k = 0
+    while k < len(g) and k < len(p) and p[k] == g[k]:
+        k += 1
+    return {
+        "holder_ok": int(len(g) >= 1 and len(p) >= 1 and p[0] == g[0]),
+        "value_ok":  int(len(g) >= 2 and len(p) >= 2 and p[1] == g[1]),
+        "prefix":    k,
+    }
+
+
+def trace_accuracy(pred_trace: str, gold_trace: str) -> dict:
+    """Token-level agreement of a self-generated/unrolled trace against the oracle trajectory.
+
+    Used by the autoregressive experiments (E3): for composite/s5 tasks the gold
+    `meta["trace"]` is the oracle's per-step state (holder / role). This scores how
+    far a model's self-produced trace follows the correct trajectory.
+
+    Returns:
+        token_acc: fraction of gold trace tokens matched at the right position
+        first_diverge: index of the first mismatched token (len(gold) if all match)
+        full_match: token_acc == 1.0
+    """
+    g = content_tokens(gold_trace)
+    p = content_tokens(pred_trace)
+    if not g:
+        return {"token_acc": 1.0, "first_diverge": 0, "full_match": True}
+    matched = 0
+    first_div = len(g)
+    for i, gt in enumerate(g):
+        pt = p[i] if i < len(p) else None
+        if pt == gt:
+            matched += 1
+        else:
+            first_div = min(first_div, i)
+            break
+    return {
+        "token_acc": matched / len(g),
+        "first_diverge": first_div,
+        "full_match": matched == len(g),
+    }
 
 
 # canonical frozen reference instances (scale via .scaled(...)). `kind` separates scored benchmark tasks

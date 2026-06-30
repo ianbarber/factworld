@@ -111,6 +111,30 @@ def test_decode_skips_pad():
     assert _TOK.decode(padded) == s
 
 
+def test_rendering_has_no_unk():
+    """Rendered documents must tokenize without <unk>."""
+    r = Renderer()
+    tok = Tokenizer.build([_TARGET, _AUX], r)
+
+    # facts, events, queries
+    e0, a0 = _TARGET.entities[0], _TARGET.attribute_names[0]
+    v0 = _TARGET.value_vocab[0]
+    obj, agent = _TARGET.objects[0], _TARGET.agents[0]
+
+    docs = [
+        r.render_fact(e0, a0, v0),
+        " ".join(r.render_history(_TARGET.sample_easy_chain(8, "nat-e"), with_steps=True)),
+        " ".join(r.render_history(_TARGET.sample_hard_chain(8, "nat-h"), with_steps=True)),
+        r.render_query("recall", entity=e0, attribute=a0),
+        r.render_query("state_easy", target=obj),
+        r.render_query("state_hard", target=agent),
+    ]
+    for s in docs:
+        ids = tok.encode(s)
+        assert tok.unk_id not in ids, f"<unk> in: {s!r}"
+        assert tok.decode(ids) == s
+
+
 def _run() -> int:
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

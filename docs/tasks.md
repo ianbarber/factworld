@@ -259,3 +259,26 @@ A few patterns show up repeatedly:
 These examples are drawn from the OpenRouter grids in
 [`docs/openrouter-results.json`](docs/openrouter-results.json) and
 [`docs/openrouter-s5-results.json`](docs/openrouter-s5-results.json).
+
+---
+
+## Natural-language format experiment
+
+An opt-in `natural=True` renderer variant was piloted to see whether attached punctuation and
+subject-verb event lines ("`s0 gives o0 to g0.`") would improve pretrained-model scores. The clean
+variant uses one fixed phrasing per statement type and a compact arrow cycle notation
+("`s0 cycles roles: g0 -> g1 -> g2.`").
+
+On a small OpenRouter pilot (n=10), the canonical v1 format with format instructions outperformed
+the natural variant on `composite_copy_v1` and was competitive or better on `s5_v1`:
+
+| model | composite_copy_v1 v1 | composite_copy_v1 natural | s5_v1 v1 | s5_v1 natural |
+| --- | --- | --- | --- | --- |
+| moonshotai/kimi-k2 | **0.600** | 0.100 | **0.400** | 0.200 |
+| deepseek/deepseek-chat | **0.500** | 0.000 | 0.200 | 0.200 |
+| openai/gpt-4o-mini | **0.100** | 0.000 | 0.000 | **0.100** |
+
+The natural renderer remains available (`Renderer(natural=True)` and `--natural` in the OpenRouter
+script) for further experiments, but the canonical v1 format stays the default for the benchmark.
+See [`docs/openrouter/natural-format-findings.md`](docs/openrouter/natural-format-findings.md) for
+the full write-up.

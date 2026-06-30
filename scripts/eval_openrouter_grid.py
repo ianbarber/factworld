@@ -75,7 +75,8 @@ def _build_system_prompt(base_prompt: str, task_name: str | None,
 
 
 def run_grid(models, tasks, n, lengths, max_workers, base_url,
-             system_prompt, task_prompts, max_new_tokens, no_reasoning):
+             system_prompt, task_prompts, max_new_tokens, no_reasoning, jsonl_path=None,
+             md_path=None):
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise SystemExit("OPENROUTER_API_KEY not set")
@@ -140,6 +141,13 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
                 row.update({f"accuracy_{name}": m["acc"] for name, m in metrics_agg.items()})
                 row.update({f"correct_{name}": m["correct"] for name, m in metrics_agg.items()})
                 results.append(row)
+                # Crash-safe: append each completed cell to JSONL and re-emit markdown
+                # so a transient upstream error (or interrupt) does not lose the run.
+                if jsonl_path is not None:
+                    with open(jsonl_path, "a") as f:
+                        f.write(json.dumps(row) + "\n")
+                if md_path is not None:
+                    write_markdown(results, md_path)
                 parts = [f"{task_name}@L{L}: exact={row['accuracy_exact']:.3f}"]
                 for name in ("relaxed", "contains", "last_n"):
                     if f"accuracy_{name}" in row:
@@ -191,7 +199,10 @@ def write_markdown(results: list[dict], path: str):
         "| " + " | ".join(["---"] * (len(tasks) + 1)) + " |",
     ]
     for model in model_order:
-        accs = [f"{sum(pivot[model][t]['exact']) / len(pivot[model][t]['exact']):.3f}" for t in tasks]
+        accs = []
+        for t in tasks:
+            vals = pivot[model][t]["exact"]
+            accs.append(f"{sum(vals) / len(vals):.3f}" if vals else "-")
         lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
 
     if any(pivot[m][t]["contains"] for m in model_order for t in tasks):
@@ -286,10 +297,14 @@ def main():
     if a.s5_format:
         task_prompts.setdefault("s5_v1", S5_FORMAT_PROMPT)
 
+    # Crash-safe JSONL alongside the markdown (rewritten after every cell).
+    from pathlib import Path
+    jsonl_path = Path(a.out).with_suffix(".jsonl") if a.out else None
     results = run_grid(
         a.models, a.tasks, a.n, lengths, a.max_workers,
         a.base_url, a.system_prompt, task_prompts, a.max_new_tokens,
-        a.no_reasoning,
+        a.no_reasoning, jsonl_path=str(jsonl_path) if jsonl_path else None,
+        md_path=a.out,
     )
 
     if a.json_out:
