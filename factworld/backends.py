@@ -75,13 +75,14 @@ class LocalBackend(ModelBackend):
         resid_init: bool = False,
         seed: int = 0,
         device: str = "cuda",
+        renderer: Any | None = None,
     ):
         from .render import Renderer
         from .tokenizer import Tokenizer
 
         self.device = device
         self.arch = arch
-        self.tokenizer = tokenizer if tokenizer is not None else Tokenizer.build(worlds, Renderer())
+        self.tokenizer = tokenizer if tokenizer is not None else Tokenizer.build(worlds, renderer or Renderer())
 
         if model is not None:
             self.model = model
@@ -251,6 +252,7 @@ class APIBackend(ModelBackend):
         messages.append({"role": "user", "content": prompt})
 
         max_retries = 5
+        response = None
         for attempt in range(max_retries):
             try:
                 response = self.client.chat.completions.create(
@@ -277,12 +279,28 @@ class APIBackend(ModelBackend):
                 else:
                     wait = 2 ** attempt
                 time.sleep(wait)
+            except (openai.APIError, openai.APIConnectionError, openai.InternalServerError,
+                    ValueError) as exc:
+                # Transient upstream faults: malformed/non-JSON response bodies (JSONDecodeError
+                # is a ValueError), gateway 5xx, connection drops. Retry with backoff rather
+                # than crashing the whole eval grid on a single bad cell.
+                if attempt == max_retries - 1:
+                    return ""          # exhausted retries -> empty prediction (scored as wrong)
+                time.sleep(2 ** attempt)
 
         choices = getattr(response, "choices", None)
         if not choices:
             return ""
         choice = choices[0]
         text = choice.message.content or ""
+        # Reasoning models (e.g. Kimi, GLM) emit a <think>...</think> block before the
+        # answer; keep only the content after the final </think> so scoring sees the
+        # answer, not the scratchpad. (If the model ran out of tokens mid-think, the
+        # block is unclosed and we treat the output as no committed answer.)
+        if "</think>" in text:
+            text = text.rsplit("</think>", 1)[1]
+        elif "<think>" in text:
+            text = ""
         # OpenAI excludes the stop token from the returned text; re-attach it
         # so downstream exact-match scoring sees the same span as local backends.
         if stop_at is not None and getattr(choice, "finish_reason", None) == "stop" and not text.endswith(stop_at):
@@ -292,10 +310,27 @@ class APIBackend(ModelBackend):
         for prefix in (
             r"^the answer is[\s:]+",
             r"^answer[\s:]+",
+            r"^final answer[\s:]+",
             r"^therefore[\s,]+",
             r"^so[\s,]+",
+            r"^let me[\s,]+",
+            r"^let's[\s,]+",
+            r"^to determine[\s,]+.*?,\s*",
+            r"^breaking this down[\s,]+",
+            r"^the final holders? is[\s:]+",
+            r"^the holder is[\s:]+",
+            r"^the role is[\s:]+",
         ):
             text = re.sub(prefix, "", text, flags=re.IGNORECASE)
+        # Natural-language models often emit a preamble such as
+        # "Let's track the swaps: r2". FactWorld's atomic tokenizer has no colon,
+        # so any colon is prose punctuation; discard everything up to it.
+        if ":" in text:
+            text = text.split(":", 1)[1]
+        # Some models list all holders/values (e.g. "g0, g2, g4"). For tasks that
+        # ask for the final single item, keep only the last element.
+        if "," in text:
+            text = text.rsplit(",", 1)[1]
         text = text.strip()
         # Chat-model tokenizers often emit "v56." while FactWorld's atomic
         # tokenizer expects "v56 .". Normalize a trailing period that is glued

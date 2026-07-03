@@ -1,0 +1,204 @@
+{
+  "task": "composite_copy_v1",
+  "spec": {
+    "name": "composite_copy_v1",
+    "family": "composite",
+    "natural": true,
+    "k": 32,
+    "n_objects": 8,
+    "value_vocab_size": 128,
+    "train_lengths": [
+      4,
+      8,
+      16
+    ],
+    "eval_lengths": [
+      16,
+      32,
+      64
+    ]
+  },
+  "timestamp": "2026-06-25T06:53:43.441265+00:00",
+  "rows": [
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 0.12972714006900787,
+      "acc": {
+        "16": 0.005,
+        "32": 0.015,
+        "64": 0.005
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 0.07064201682806015,
+      "acc": {
+        "16": 0.005,
+        "32": 0.005,
+        "64": 0.005
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 0.06253421306610107,
+      "acc": {
+        "16": 0.0,
+        "32": 0.005,
+        "64": 0.005
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": true,
+      "final_loss": 0.06761490553617477,
+      "acc": {
+        "16": 0.01,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": true,
+      "final_loss": 0.0642181858420372,
+      "acc": {
+        "16": 0.0,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": true,
+      "final_loss": 0.05379784107208252,
+      "acc": {
+        "16": 0.005,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "fprm",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 1.0239499807357788,
+      "acc": {
+        "16": 0.005,
+        "32": 0.005,
+        "64": 0.005
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "fprm",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 0.7222661972045898,
+      "acc": {
+        "16": 0.015,
+        "32": 0.005,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "fprm",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 0.8370462656021118,
+      "acc": {
+        "16": 0.005,
+        "32": 0.005,
+        "64": 0.01
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "transformer",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 0.7305094599723816,
+      "acc": {
+        "16": 0.0,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "transformer",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 0.6288283467292786,
+      "acc": {
+        "16": 0.0,
+        "32": 0.0,
+        "64": 0.0
+      }
+    },
+    {
+      "task": "composite_copy_v1",
+      "arch": "transformer",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 4000,
+      "use_short_conv": false,
+      "final_loss": 0.43512964248657227,
+      "acc": {
+        "16": 0.0,
+        "32": 0.0,
+        "64": 0.0
+      }
+    }
+  ]
+}

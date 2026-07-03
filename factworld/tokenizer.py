@@ -64,6 +64,8 @@ _STRUCTURAL_SEED = {
     "scn", *(f"#{d}" for d in range(10)),
     # composite pointer-chasing query: "... a0 of the holder of o3 ?"
     "holder",
+    # clean natural-language renderer v2 (fixed subject-verb templates + arrow cycles)
+    "gives", "receives", "moves", "swaps", "cycles", "holds", "->", "→",
 }
 
 
@@ -111,6 +113,14 @@ class Tokenizer:
                     if classify(tk) is None:  # not a content/step ID
                         tokens.add(tk)
 
+        # Attached-punctuation surface forms (e.g. "g5's", "v107.", "o3?") are emitted by
+        # the natural renderer; include the minimal set so every rendered document tokenizes
+        # without <unk>. As-of-t queries ("who holds o0 at s0?") glue '?' to a step token, so
+        # cover those too. See ``_natural_surface_forms`` (type -> suffix map) for why we do not
+        # use the full content x {'s, ., ?} product.
+        tokens.update(cls._natural_surface_forms(worlds, renderer))
+        tokens.update(f"s{i}?" for i in range(max_step))
+
         # Specials are reserved at fixed ids; never let a probe shadow them.
         tokens.difference_update(_SPECIALS)
 
@@ -118,6 +128,37 @@ class Tokenizer:
         for i, tk in enumerate(sorted(tokens), start=len(_SPECIALS)):
             token_to_id[tk] = i
         return cls(token_to_id)
+
+    # Attached-punctuation suffixes each content TYPE can take in a natural template
+    # (derived from the natural templates in render.py). Adding the full
+    # content x {'s, ., ?} product instead inflates the vocab 3-4x with dead tokens
+    # (e.g. "v107's", "g5?" when g5 is never queried) and measurably hurts length
+    # generalization (binding L64: bloated 0.69 -> minimal 0.81, mean over 3 seeds).
+    _NAT_SUFFIX_BY_TYPE = {
+        "g":   ("'s", "?", "."),   # agent: fact-subject ('s), recall entity (?), give-dest / answer (.)
+        "e":   ("'s", "?", "."),   # entity: same slots as agent
+        "v":   (".",),              # value: fact value + answer
+        "o":   ("?",),              # object: state_easy / composite-holder query target
+        "r":   (".",),              # role: s5 answer
+        "loc": (".",),              # location: move destination
+    }
+
+    @staticmethod
+    def _natural_surface_forms(worlds, renderer):
+        """Exact, minimal set of attached-punctuation surface forms for the natural renderer.
+
+        Each content token is combined only with the suffixes its TYPE can occupy in a natural
+        template (see ``_NAT_SUFFIX_BY_TYPE``), so the vocab stays small while every rendered
+        natural document tokenizes without ``<unk>``."""
+        forms: set[str] = set()
+        for w in worlds:
+            for bucket in (w.entities, w.agents, w.value_vocab, w.objects, w.locations, w.roles):
+                for tk in bucket:
+                    c = classify(tk)
+                    for suf in Tokenizer._NAT_SUFFIX_BY_TYPE.get(c, ()):
+                        forms.add(tk + suf)
+        return forms
+
 
     @staticmethod
     def _probe(world: World, renderer: Renderer):

@@ -1,0 +1,27 @@
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "gdp_hybrid", "seed": 0, "result": 1.0}
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "gdp_hybrid", "seed": 1, "result": 1.0}
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "gdp_hybrid", "seed": 2, "result": 1.0}
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "fprm", "seed": 0, "result": 1.0}
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "fprm", "seed": 1, "result": 1.0}
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "fprm", "seed": 2, "result": 1.0}
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "transformer", "seed": 0, "result": 1.0}
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "transformer", "seed": 1, "result": 1.0}
+{"repro": "R1 1-hop MQAR (pool 16)", "arch": "transformer", "seed": 2, "result": 1.0}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "gdp_hybrid", "seed": 0, "result": {"5": 0.63, "6": 0.62, "8": 0.41}}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "gdp_hybrid", "seed": 1, "result": {"5": 0.76, "6": 0.61, "8": 0.32}}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "gdp_hybrid", "seed": 2, "result": {"5": 0.79, "6": 0.66, "8": 0.37}}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "fprm", "seed": 0, "result": {"5": 0.44, "6": 0.4, "8": 0.22}}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "fprm", "seed": 1, "result": {"5": 0.39, "6": 0.41, "8": 0.19}}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "fprm", "seed": 2, "result": {"5": 0.67, "6": 0.63, "8": 0.36}}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "transformer", "seed": 0, "result": {"5": 0.22, "6": 0.11, "8": 0.11}}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "transformer", "seed": 1, "result": {"5": 0.16, "6": 0.1, "8": 0.11}}
+{"repro": "R2 deferred read-out (FactWorld recall_copy)", "arch": "transformer", "seed": 2, "result": {"5": 0.18, "6": 0.17, "8": 0.16}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "gdp_hybrid", "seed": 0, "result": {"16": 1.0, "64": 0.93, "128": 0.89}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "gdp_hybrid", "seed": 1, "result": {"16": 1.0, "64": 0.95, "128": 0.91}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "gdp_hybrid", "seed": 2, "result": {"16": 1.0, "64": 0.81, "128": 0.67}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "fprm", "seed": 0, "result": {"16": 1.0, "64": 0.19, "128": 0.22}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "fprm", "seed": 1, "result": {"16": 1.0, "64": 0.15, "128": 0.27}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "fprm", "seed": 2, "result": {"16": 1.0, "64": 0.16, "128": 0.2}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "transformer", "seed": 0, "result": {"16": 1.0, "64": 0.22, "128": 0.21}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "transformer", "seed": 1, "result": {"16": 0.97, "64": 0.2, "128": 0.23}}
+{"repro": "R3 S5 dense extrapolation (K=1)", "arch": "transformer", "seed": 2, "result": {"16": 0.39, "64": 0.24, "128": 0.23}}

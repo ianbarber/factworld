@@ -1,0 +1,2702 @@
+[
+  {
+    "model": "moonshotai/kimi-k2",
+    "task": "recall_copy_v1",
+    "length": 6,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 4.848242998123169,
+    "examples": [
+      {
+        "prompt": "g7's a0 is v56. g5's a0 is v18. g1's a0 is v11. g3's a0 is v40. g0's a0 is v41. g4's a0 is v16. what is a0 of g7?",
+        "gold": "v56 .",
+        "pred": "v56 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v43. g4's a0 is v7. g1's a0 is v30. g0's a0 is v58. g5's a0 is v37. g7's a0 is v22. what is a0 of g5?",
+        "gold": "v37 .",
+        "pred": "v37 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v3. g3's a0 is v29. g4's a0 is v23. g6's a0 is v45. g2's a0 is v10. g5's a0 is v15. what is a0 of g6?",
+        "gold": "v45 .",
+        "pred": "v45 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v29. g3's a0 is v48. g0's a0 is v35. g1's a0 is v46. g4's a0 is v4. g2's a0 is v0. what is a0 of g2?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v54. g5's a0 is v23. g6's a0 is v52. g4's a0 is v0. g2's a0 is v30. g7's a0 is v29. what is a0 of g1?",
+        "gold": "v54 .",
+        "pred": "v54 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v5. g6's a0 is v31. g3's a0 is v9. g5's a0 is v50. g0's a0 is v13. g7's a0 is v30. what is a0 of g5?",
+        "gold": "v50 .",
+        "pred": "v50 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v18. g6's a0 is v57. g3's a0 is v33. g1's a0 is v48. g5's a0 is v28. g0's a0 is v14. what is a0 of g1?",
+        "gold": "v48 .",
+        "pred": "v48 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v15. g3's a0 is v28. g2's a0 is v53. g4's a0 is v2. g6's a0 is v10. g0's a0 is v0. what is a0 of g0?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v3. g7's a0 is v23. g3's a0 is v36. g6's a0 is v30. g4's a0 is v24. g5's a0 is v17. what is a0 of g6?",
+        "gold": "v30 .",
+        "pred": "v30 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v19. g5's a0 is v3. g4's a0 is v35. g0's a0 is v15. g7's a0 is v45. g6's a0 is v30. what is a0 of g0?",
+        "gold": "v15 .",
+        "pred": "v15 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "moonshotai/kimi-k2",
+    "task": "binding_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.1,
+    "correct_exact": 1,
+    "elapsed": 5.32471489906311,
+    "examples": [
+      {
+        "prompt": "s0 gives o3 to g0. s1 gives o0 to g0. s2 gives o3 to g3. s3 gives o1 to g1. s4 gives o0 to g2. s5 gives o0 to g2. s6 gives o1 to g0. s7 gives o0 to g0. s8 gives o3 to g2. s9 gives o1 to g0. s10 gives o2 to g0. s11 gives o3 to g4. s12 gives o3 to g1. s13 gives o2 to g2. s14 gives o0 to g4. s15 gives o1 to g4. where is o0?",
+        "gold": "g4 .",
+        "pred": "g0, g2, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o1 to g2. s2 gives o1 to g4. s3 gives o2 to g2. s4 gives o2 to g0. s5 gives o2 to g2. s6 gives o3 to g2. s7 gives o1 to g1. s8 gives o3 to g0. s9 gives o0 to g4. s10 gives o3 to g4. s11 gives o0 to g4. s12 gives o1 to g0. s13 gives o0 to g3. s14 gives o3 to g3. s15 gives o0 to g2. where is o1?",
+        "gold": "g0 .",
+        "pred": "g2, g4, g1, g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o2 to g0. s2 gives o0 to g1. s3 gives o3 to g4. s4 gives o3 to g1. s5 gives o1 to g0. s6 gives o1 to g3. s7 gives o1 to g4. s8 gives o2 to g1. s9 gives o3 to g2. s10 gives o1 to g4. s11 gives o1 to g0. s12 gives o1 to g0. s13 gives o0 to g0. s14 gives o1 to g0. s15 gives o3 to g2. where is o2?",
+        "gold": "g1 .",
+        "pred": "g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o3 to g1. s1 gives o3 to g0. s2 gives o1 to g0. s3 gives o2 to g0. s4 gives o2 to g0. s5 gives o1 to g0. s6 gives o1 to g1. s7 gives o2 to g2. s8 gives o1 to g0. s9 gives o3 to g3. s10 gives o1 to g2. s11 gives o2 to g0. s12 gives o3 to g0. s13 gives o3 to g3. s14 gives o2 to g1. s15 gives o2 to g2. where is o3?",
+        "gold": "g3 .",
+        "pred": "g0, g1, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o0 to g4. s2 gives o0 to g3. s3 gives o0 to g0. s4 gives o1 to g4. s5 gives o3 to g3. s6 gives o2 to g0. s7 gives o3 to g2. s8 gives o1 to g4. s9 gives o1 to g3. s10 gives o3 to g4. s11 gives o1 to g0. s12 gives o1 to g4. s13 gives o0 to g0. s14 gives o1 to g2. s15 gives o1 to g3. where is o1?",
+        "gold": "g3 .",
+        "pred": "g4, g0, g4, g4, g2, g",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o3 to g4. s1 gives o0 to g0. s2 gives o3 to g2. s3 gives o1 to g2. s4 gives o0 to g1. s5 gives o2 to g0. s6 gives o2 to g0. s7 gives o1 to g2. s8 gives o3 to g0. s9 gives o1 to g2. s10 gives o3 to g1. s11 gives o3 to g0. s12 gives o1 to g2. s13 gives o0 to g2. s14 gives o0 to g4. s15 gives o1 to g3. where is o2?",
+        "gold": "g0 .",
+        "pred": "g0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o3 to g2. s2 gives o2 to g3. s3 gives o0 to g1. s4 gives o0 to g3. s5 gives o1 to g3. s6 gives o0 to g2. s7 gives o3 to g2. s8 gives o1 to g1. s9 gives o1 to g3. s10 gives o3 to g3. s11 gives o1 to g1. s12 gives o0 to g2. s13 gives o0 to g0. s14 gives o3 to g1. s15 gives o1 to g2. where is o0?",
+        "gold": "g0 .",
+        "pred": "g0, g1, g2, g3 .",
+        "exact": false,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o0 to g4. s1 gives o1 to g4. s2 gives o2 to g0. s3 gives o2 to g0. s4 gives o1 to g3. s5 gives o0 to g0. s6 gives o2 to g1. s7 gives o0 to g0. s8 gives o1 to g4. s9 gives o2 to g4. s10 gives o1 to g0. s11 gives o1 to g2. s12 gives o1 to g1. s13 gives o1 to g4. s14 gives o3 to g0. s15 gives o3 to g1. where is o3?",
+        "gold": "g1 .",
+        "pred": "g0, g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o1 to g4. s1 gives o2 to g1. s2 gives o0 to g4. s3 gives o1 to g4. s4 gives o1 to g2. s5 gives o2 to g0. s6 gives o1 to g0. s7 gives o1 to g3. s8 gives o0 to g2. s9 gives o0 to g4. s10 gives o3 to g0. s11 gives o2 to g0. s12 gives o2 to g1. s13 gives o3 to g3. s14 gives o0 to g0. s15 gives o1 to g3. where is o3?",
+        "gold": "g3 .",
+        "pred": "g0, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o2 to g4. s1 gives o2 to g1. s2 gives o0 to g2. s3 gives o2 to g2. s4 gives o0 to g0. s5 gives o3 to g0. s6 gives o0 to g4. s7 gives o3 to g1. s8 gives o2 to g0. s9 gives o2 to g4. s10 gives o3 to g2. s11 gives o2 to g4. s12 gives o2 to g4. s13 gives o3 to g4. s14 gives o2 to g1. s15 gives o3 to g0. where is o2?",
+        "gold": "g1 .",
+        "pred": "g0: s8\ng1: s1, s14\ng",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.2,
+    "accuracy_contains": 0.7,
+    "accuracy_last_n": 0.6,
+    "correct_relaxed": 2,
+    "correct_contains": 7,
+    "correct_last_n": 6
+  },
+  {
+    "model": "moonshotai/kimi-k2",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_exact": 0.3,
+    "correct_exact": 3,
+    "elapsed": 4.584287166595459,
+    "examples": [
+      {
+        "prompt": "g17's a0 is v26. g9's a0 is v116. g27's a0 is v49. g23's a0 is v14. g20's a0 is v121. g2's a0 is v72. g4's a0 is v27. g30's a0 is v73. g19's a0 is v40. g6's a0 is v102. g15's a0 is v90. g7's a0 is v42. g8's a0 is v52. g28's a0 is v99. g1's a0 is v47. g5's a0 is v85. s0 gives o3 to g30. s1 gives o2 to g27. s2 gives o0 to g28. s3 gives o3 to g28. s4 gives o2 to g28. s5 gives o3 to g17. s6 gives o3 to g7. s7 gives o0 to g1. s8 gives o0 to g1. s9 gives o1 to g5. s10 gives o3 to g2. s11 gives o1 to g17. s12 gives o1 to g4. s13 gives o2 to g20. s14 gives o3 to g9. s15 gives o0 to g30. what is a0 of the holder of o0?",
+        "gold": "g30 v73 .",
+        "pred": "g1 v47 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g28's a0 is v68. g3's a0 is v65. g14's a0 is v86. g5's a0 is v82. g1's a0 is v48. g29's a0 is v36. g31's a0 is v103. g24's a0 is v38. g20's a0 is v18. g15's a0 is v108. g30's a0 is v117. g10's a0 is v3. g0's a0 is v7. g27's a0 is v106. g6's a0 is v78. g13's a0 is v30. s0 gives o1 to g20. s1 gives o2 to g15. s2 gives o0 to g29. s3 gives o3 to g3. s4 gives o2 to g30. s5 gives o1 to g10. s6 gives o3 to g13. s7 gives o0 to g29. s8 gives o0 to g13. s9 gives o2 to g1. s10 gives o1 to g30. s11 gives o1 to g29. s12 gives o3 to g1. s13 gives o3 to g31. s14 gives o2 to g10. s15 gives o3 to g13. what is a0 of the holder of o1?",
+        "gold": "g29 v36 .",
+        "pred": "g30 v117 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is v16. g0's a0 is v30. g5's a0 is v11. g26's a0 is v9. g16's a0 is v120. g7's a0 is v92. g29's a0 is v17. g27's a0 is v46. g28's a0 is v82. g19's a0 is v7. g14's a0 is v41. g6's a0 is v78. g13's a0 is v88. g21's a0 is v118. g3's a0 is v121. g8's a0 is v32. s0 gives o1 to g26. s1 gives o3 to g13. s2 gives o1 to g7. s3 gives o0 to g7. s4 gives o2 to g13. s5 gives o2 to g0. s6 gives o3 to g3. s7 gives o1 to g28. s8 gives o3 to g7. s9 gives o0 to g3. s10 gives o1 to g0. s11 gives o0 to g16. s12 gives o2 to g29. s13 gives o1 to g13. s14 gives o2 to g4. s15 gives o2 to g27. what is a0 of the holder of o3?",
+        "gold": "g7 v92 .",
+        "pred": "g13 v13 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v48. g19's a0 is v115. g29's a0 is v124. g16's a0 is v59. g25's a0 is v79. g8's a0 is v70. g20's a0 is v108. g23's a0 is v76. g1's a0 is v85. g7's a0 is v95. g15's a0 is v89. g0's a0 is v38. g31's a0 is v87. g28's a0 is v27. g11's a0 is v49. g3's a0 is v47. s0 gives o3 to g19. s1 gives o2 to g7. s2 gives o0 to g29. s3 gives o1 to g28. s4 gives o3 to g11. s5 gives o1 to g22. s6 gives o2 to g7. s7 gives o3 to g19. s8 gives o2 to g20. s9 gives o2 to g25. s10 gives o0 to g3. s11 gives o1 to g15. s12 gives o3 to g11. s13 gives o0 to g19. s14 gives o2 to g23. s15 gives o3 to g7. what is a0 of the holder of o2?",
+        "gold": "g23 v76 .",
+        "pred": "g7 v95 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g24's a0 is v101. g20's a0 is v8. g0's a0 is v121. g1's a0 is v16. g30's a0 is v81. g29's a0 is v52. g12's a0 is v41. g31's a0 is v122. g26's a0 is v117. g27's a0 is v100. g5's a0 is v12. g17's a0 is v62. g2's a0 is v26. g13's a0 is v64. g18's a0 is v48. g23's a0 is v49. s0 gives o2 to g30. s1 gives o3 to g29. s2 gives o2 to g27. s3 gives o1 to g30. s4 gives o2 to g31. s5 gives o0 to g27. s6 gives o2 to g2. s7 gives o1 to g1. s8 gives o3 to g13. s9 gives o2 to g0. s10 gives o1 to g23. s11 gives o3 to g20. s12 gives o0 to g2. s13 gives o3 to g26. s14 gives o1 to g1. s15 gives o0 to g30. what is a0 of the holder of o2?",
+        "gold": "g0 v121 .",
+        "pred": "g30 v81 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v78. g20's a0 is v64. g6's a0 is v105. g3's a0 is v23. g10's a0 is v108. g16's a0 is v79. g1's a0 is v73. g31's a0 is v4. g18's a0 is v65. g19's a0 is v49. g26's a0 is v126. g2's a0 is v81. g25's a0 is v87. g5's a0 is v39. g15's a0 is v89. g12's a0 is v2. s0 gives o1 to g5. s1 gives o2 to g18. s2 gives o1 to g12. s3 gives o3 to g12. s4 gives o2 to g20. s5 gives o3 to g6. s6 gives o1 to g22. s7 gives o1 to g6. s8 gives o0 to g25. s9 gives o3 to g16. s10 gives o0 to g1. s11 gives o1 to g2. s12 gives o1 to g20. s13 gives o2 to g5. s14 gives o3 to g10. s15 gives o3 to g26. what is a0 of the holder of o2?",
+        "gold": "g5 v39 .",
+        "pred": "g5 v39 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g31's a0 is v34. g6's a0 is v11. g20's a0 is v8. g14's a0 is v118. g0's a0 is v38. g15's a0 is v59. g19's a0 is v85. g13's a0 is v111. g30's a0 is v89. g17's a0 is v65. g10's a0 is v103. g11's a0 is v116. g12's a0 is v104. g16's a0 is v77. g4's a0 is v12. g21's a0 is v44. s0 gives o0 to g10. s1 gives o1 to g0. s2 gives o3 to g30. s3 gives o2 to g11. s4 gives o3 to g19. s5 gives o2 to g12. s6 gives o3 to g16. s7 gives o0 to g21. s8 gives o3 to g11. s9 gives o0 to g21. s10 gives o1 to g15. s11 gives o0 to g15. s12 gives o0 to g13. s13 gives o3 to g16. s14 gives o2 to g30. s15 gives o2 to g17. what is a0 of the holder of o1?",
+        "gold": "g15 v59 .",
+        "pred": "g0 v38 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is v115. g25's a0 is v96. g27's a0 is v17. g7's a0 is v38. g23's a0 is v113. g2's a0 is v34. g28's a0 is v44. g31's a0 is v27. g29's a0 is v60. g5's a0 is v102. g17's a0 is v40. g11's a0 is v124. g0's a0 is v77. g13's a0 is v56. g20's a0 is v50. g21's a0 is v82. s0 gives o1 to g7. s1 gives o1 to g20. s2 gives o1 to g31. s3 gives o0 to g2. s4 gives o3 to g13. s5 gives o2 to g17. s6 gives o0 to g3. s7 gives o2 to g29. s8 gives o0 to g0. s9 gives o2 to g11. s10 gives o1 to g7. s11 gives o1 to g13. s12 gives o0 to g23. s13 gives o1 to g17. s14 gives o0 to g28. s15 gives o3 to g3. what is a0 of the holder of o1?",
+        "gold": "g17 v40 .",
+        "pred": "g7 v38 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g26's a0 is v24. g2's a0 is v118. g28's a0 is v112. g19's a0 is v90. g23's a0 is v79. g0's a0 is v49. g17's a0 is v114. g13's a0 is v119. g9's a0 is v33. g15's a0 is v84. g4's a0 is v52. g25's a0 is v2. g21's a0 is v14. g12's a0 is v113. g24's a0 is v74. g16's a0 is v124. s0 gives o3 to g28. s1 gives o2 to g12. s2 gives o1 to g0. s3 gives o1 to g4. s4 gives o1 to g16. s5 gives o2 to g28. s6 gives o1 to g26. s7 gives o1 to g9. s8 gives o0 to g2. s9 gives o1 to g0. s10 gives o1 to g2. s11 gives o2 to g23. s12 gives o0 to g24. s13 gives o0 to g19. s14 gives o2 to g28. s15 gives o0 to g0. what is a0 of the holder of o2?",
+        "gold": "g28 v112 .",
+        "pred": "g28 v112 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g20's a0 is v122. g21's a0 is v27. g26's a0 is v87. g11's a0 is v17. g2's a0 is v76. g5's a0 is v107. g1's a0 is v86. g15's a0 is v98. g0's a0 is v43. g22's a0 is v106. g14's a0 is v72. g27's a0 is v4. g16's a0 is v101. g4's a0 is v2. g17's a0 is v18. g23's a0 is v124. s0 gives o3 to g21. s1 gives o3 to g16. s2 gives o1 to g2. s3 gives o3 to g26. s4 gives o2 to g1. s5 gives o2 to g11. s6 gives o1 to g4. s7 gives o1 to g16. s8 gives o1 to g27. s9 gives o3 to g2. s10 gives o3 to g27. s11 gives o1 to g2. s12 gives o3 to g0. s13 gives o1 to g16. s14 gives o0 to g20. s15 gives o2 to g20. what is a0 of the holder of o2?",
+        "gold": "g20 v122 .",
+        "pred": "g20 v122 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 0.3,
+    "accuracy_contains": 0.3,
+    "accuracy_last_n": 0.3,
+    "correct_relaxed": 3,
+    "correct_contains": 3,
+    "correct_last_n": 3
+  },
+  {
+    "model": "moonshotai/kimi-k2",
+    "task": "conflict_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 4.6832115650177,
+    "examples": [
+      {
+        "prompt": "g1's a0 is v46. g12's a0 is v59. g4's a0 is v14. g3's a0 is v47. what is a0 of g12?",
+        "gold": "v59 .",
+        "pred": "v59 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is v20. g0's a0 is v0. g2's a0 is v39. g10's a0 is v62. what is a0 of g3?",
+        "gold": "v20 .",
+        "pred": "v20 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g13's a0 is v63. g14's a0 is v26. g15's a0 is v8. g6's a0 is v58. what is a0 of g13?",
+        "gold": "v63 .",
+        "pred": "v63 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v50. g2's a0 is v11. g13's a0 is v57. g7's a0 is v4. what is a0 of g13?",
+        "gold": "v57 .",
+        "pred": "v57 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g15's a0 is v12. g0's a0 is v10. g5's a0 is v50. g7's a0 is v50. what is a0 of g15?",
+        "gold": "v12 .",
+        "pred": "v12 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g6's a0 is v6. g7's a0 is v34. g0's a0 is v31. g4's a0 is v49. what is a0 of g6?",
+        "gold": "v6 .",
+        "pred": "v6 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is v19. g7's a0 is v17. g10's a0 is v27. g8's a0 is v8. what is a0 of g8?",
+        "gold": "v8 .",
+        "pred": "v8 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is v11. g9's a0 is v58. g8's a0 is v44. g12's a0 is v23. what is a0 of g12?",
+        "gold": "v23 .",
+        "pred": "v23 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g10's a0 is v59. g12's a0 is v53. g2's a0 is v57. g1's a0 is v2. what is a0 of g1?",
+        "gold": "v2 .",
+        "pred": "v2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v53. g1's a0 is v48. g11's a0 is v21. g2's a0 is v52. what is a0 of g2?",
+        "gold": "v52 .",
+        "pred": "v52 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "moonshotai/kimi-k2",
+    "task": "chain_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.3,
+    "correct_exact": 3,
+    "elapsed": 5.620065450668335,
+    "examples": [
+      {
+        "prompt": "g5's a0 is g2. g4's a0 is g3. g1's a0 is g5. g2's a0 is g4. g0's a0 is g1. g3's a0 is g0. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g3 .",
+        "pred": "g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g5's a0 is g4. g3's a0 is g5. g0's a0 is g3. g1's a0 is g0. g2's a0 is g1. g4's a0 is g2. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g5 .",
+        "pred": "g5 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g4. g2's a0 is g5. g5's a0 is g3. g4's a0 is g2. g1's a0 is g0. g3's a0 is g1. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g4 .",
+        "pred": "g4 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g3. g3's a0 is g4. g4's a0 is g2. g2's a0 is g1. g0's a0 is g5. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g5 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g2. g4's a0 is g5. g3's a0 is g4. g2's a0 is g3. g0's a0 is g1. g5's a0 is g0. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g3 .",
+        "pred": "g3 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g0. g3's a0 is g5. g5's a0 is g2. g2's a0 is g1. g1's a0 is g4. g0's a0 is g3. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g5 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is g1. g0's a0 is g2. g1's a0 is g5. g3's a0 is g0. g2's a0 is g4. g5's a0 is g3. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5 .",
+        "pred": "g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g0's a0 is g2. g1's a0 is g4. g3's a0 is g1. g4's a0 is g5. g5's a0 is g0. g2's a0 is g3. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g3 .",
+        "pred": "g2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is g0. g5's a0 is g1. g1's a0 is g2. g0's a0 is g5. g4's a0 is g3. g2's a0 is g4. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g1 .",
+        "pred": "g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is g1. g4's a0 is g3. g2's a0 is g0. g1's a0 is g5. g0's a0 is g4. g5's a0 is g2. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g4 .",
+        "pred": "g2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.3,
+    "accuracy_contains": 0.3,
+    "accuracy_last_n": 0.3,
+    "correct_relaxed": 3,
+    "correct_contains": 3,
+    "correct_last_n": 3
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "task": "recall_copy_v1",
+    "length": 6,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 3.37459135055542,
+    "examples": [
+      {
+        "prompt": "g7's a0 is v56. g5's a0 is v18. g1's a0 is v11. g3's a0 is v40. g0's a0 is v41. g4's a0 is v16. what is a0 of g7?",
+        "gold": "v56 .",
+        "pred": "v56 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v43. g4's a0 is v7. g1's a0 is v30. g0's a0 is v58. g5's a0 is v37. g7's a0 is v22. what is a0 of g5?",
+        "gold": "v37 .",
+        "pred": "v37 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v3. g3's a0 is v29. g4's a0 is v23. g6's a0 is v45. g2's a0 is v10. g5's a0 is v15. what is a0 of g6?",
+        "gold": "v45 .",
+        "pred": "v45 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v29. g3's a0 is v48. g0's a0 is v35. g1's a0 is v46. g4's a0 is v4. g2's a0 is v0. what is a0 of g2?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v54. g5's a0 is v23. g6's a0 is v52. g4's a0 is v0. g2's a0 is v30. g7's a0 is v29. what is a0 of g1?",
+        "gold": "v54 .",
+        "pred": "v54 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v5. g6's a0 is v31. g3's a0 is v9. g5's a0 is v50. g0's a0 is v13. g7's a0 is v30. what is a0 of g5?",
+        "gold": "v50 .",
+        "pred": "v50 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v18. g6's a0 is v57. g3's a0 is v33. g1's a0 is v48. g5's a0 is v28. g0's a0 is v14. what is a0 of g1?",
+        "gold": "v48 .",
+        "pred": "v48 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v15. g3's a0 is v28. g2's a0 is v53. g4's a0 is v2. g6's a0 is v10. g0's a0 is v0. what is a0 of g0?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v3. g7's a0 is v23. g3's a0 is v36. g6's a0 is v30. g4's a0 is v24. g5's a0 is v17. what is a0 of g6?",
+        "gold": "v30 .",
+        "pred": "v30 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v19. g5's a0 is v3. g4's a0 is v35. g0's a0 is v15. g7's a0 is v45. g6's a0 is v30. what is a0 of g0?",
+        "gold": "v15 .",
+        "pred": "v15 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "task": "binding_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.0,
+    "correct_exact": 0,
+    "elapsed": 4.313452243804932,
+    "examples": [
+      {
+        "prompt": "s0 gives o3 to g0. s1 gives o0 to g0. s2 gives o3 to g3. s3 gives o1 to g1. s4 gives o0 to g2. s5 gives o0 to g2. s6 gives o1 to g0. s7 gives o0 to g0. s8 gives o3 to g2. s9 gives o1 to g0. s10 gives o2 to g0. s11 gives o3 to g4. s12 gives o3 to g1. s13 gives o2 to g2. s14 gives o0 to g4. s15 gives o1 to g4. where is o0?",
+        "gold": "g4 .",
+        "pred": "g0, g2, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o1 to g2. s2 gives o1 to g4. s3 gives o2 to g2. s4 gives o2 to g0. s5 gives o2 to g2. s6 gives o3 to g2. s7 gives o1 to g1. s8 gives o3 to g0. s9 gives o0 to g4. s10 gives o3 to g4. s11 gives o0 to g4. s12 gives o1 to g0. s13 gives o0 to g3. s14 gives o3 to g3. s15 gives o0 to g2. where is o1?",
+        "gold": "g0 .",
+        "pred": "g0, g2, g4 .",
+        "exact": false,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o2 to g0. s2 gives o0 to g1. s3 gives o3 to g4. s4 gives o3 to g1. s5 gives o1 to g0. s6 gives o1 to g3. s7 gives o1 to g4. s8 gives o2 to g1. s9 gives o3 to g2. s10 gives o1 to g4. s11 gives o1 to g0. s12 gives o1 to g0. s13 gives o0 to g0. s14 gives o1 to g0. s15 gives o3 to g2. where is o2?",
+        "gold": "g1 .",
+        "pred": "g0, g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o3 to g1. s1 gives o3 to g0. s2 gives o1 to g0. s3 gives o2 to g0. s4 gives o2 to g0. s5 gives o1 to g0. s6 gives o1 to g1. s7 gives o2 to g2. s8 gives o1 to g0. s9 gives o3 to g3. s10 gives o1 to g2. s11 gives o2 to g0. s12 gives o3 to g0. s13 gives o3 to g3. s14 gives o2 to g1. s15 gives o2 to g2. where is o3?",
+        "gold": "g3 .",
+        "pred": "g0, g1, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o0 to g4. s2 gives o0 to g3. s3 gives o0 to g0. s4 gives o1 to g4. s5 gives o3 to g3. s6 gives o2 to g0. s7 gives o3 to g2. s8 gives o1 to g4. s9 gives o1 to g3. s10 gives o3 to g4. s11 gives o1 to g0. s12 gives o1 to g4. s13 gives o0 to g0. s14 gives o1 to g2. s15 gives o1 to g3. where is o1?",
+        "gold": "g3 .",
+        "pred": "g0, g2, g3, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o3 to g4. s1 gives o0 to g0. s2 gives o3 to g2. s3 gives o1 to g2. s4 gives o0 to g1. s5 gives o2 to g0. s6 gives o2 to g0. s7 gives o1 to g2. s8 gives o3 to g0. s9 gives o1 to g2. s10 gives o3 to g1. s11 gives o3 to g0. s12 gives o1 to g2. s13 gives o0 to g2. s14 gives o0 to g4. s15 gives o1 to g3. where is o2?",
+        "gold": "g0 .",
+        "pred": "The object o2 is given to g0 by s5 and s6 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o3 to g2. s2 gives o2 to g3. s3 gives o0 to g1. s4 gives o0 to g3. s5 gives o1 to g3. s6 gives o0 to g2. s7 gives o3 to g2. s8 gives o1 to g1. s9 gives o1 to g3. s10 gives o3 to g3. s11 gives o1 to g1. s12 gives o0 to g2. s13 gives o0 to g0. s14 gives o3 to g1. s15 gives o1 to g2. where is o0?",
+        "gold": "g0 .",
+        "pred": "g0, g1, g2, g3 .",
+        "exact": false,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o0 to g4. s1 gives o1 to g4. s2 gives o2 to g0. s3 gives o2 to g0. s4 gives o1 to g3. s5 gives o0 to g0. s6 gives o2 to g1. s7 gives o0 to g0. s8 gives o1 to g4. s9 gives o2 to g4. s10 gives o1 to g0. s11 gives o1 to g2. s12 gives o1 to g1. s13 gives o1 to g4. s14 gives o3 to g0. s15 gives o3 to g1. where is o3?",
+        "gold": "g1 .",
+        "pred": "g0, g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o1 to g4. s1 gives o2 to g1. s2 gives o0 to g4. s3 gives o1 to g4. s4 gives o1 to g2. s5 gives o2 to g0. s6 gives o1 to g0. s7 gives o1 to g3. s8 gives o0 to g2. s9 gives o0 to g4. s10 gives o3 to g0. s11 gives o2 to g0. s12 gives o2 to g1. s13 gives o3 to g3. s14 gives o0 to g0. s15 gives o1 to g3. where is o3?",
+        "gold": "g3 .",
+        "pred": "g0, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o2 to g4. s1 gives o2 to g1. s2 gives o0 to g2. s3 gives o2 to g2. s4 gives o0 to g0. s5 gives o3 to g0. s6 gives o0 to g4. s7 gives o3 to g1. s8 gives o2 to g0. s9 gives o2 to g4. s10 gives o3 to g2. s11 gives o2 to g4. s12 gives o2 to g4. s13 gives o3 to g4. s14 gives o2 to g1. s15 gives o3 to g0. where is o2?",
+        "gold": "g1 .",
+        "pred": "g0, g1, g2, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.2,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 0.5,
+    "correct_relaxed": 2,
+    "correct_contains": 10,
+    "correct_last_n": 5
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_exact": 0.1,
+    "correct_exact": 1,
+    "elapsed": 3.0228521823883057,
+    "examples": [
+      {
+        "prompt": "g17's a0 is v26. g9's a0 is v116. g27's a0 is v49. g23's a0 is v14. g20's a0 is v121. g2's a0 is v72. g4's a0 is v27. g30's a0 is v73. g19's a0 is v40. g6's a0 is v102. g15's a0 is v90. g7's a0 is v42. g8's a0 is v52. g28's a0 is v99. g1's a0 is v47. g5's a0 is v85. s0 gives o3 to g30. s1 gives o2 to g27. s2 gives o0 to g28. s3 gives o3 to g28. s4 gives o2 to g28. s5 gives o3 to g17. s6 gives o3 to g7. s7 gives o0 to g1. s8 gives o0 to g1. s9 gives o1 to g5. s10 gives o3 to g2. s11 gives o1 to g17. s12 gives o1 to g4. s13 gives o2 to g20. s14 gives o3 to g9. s15 gives o0 to g30. what is a0 of the holder of o0?",
+        "gold": "g30 v73 .",
+        "pred": "g28 v99 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g28's a0 is v68. g3's a0 is v65. g14's a0 is v86. g5's a0 is v82. g1's a0 is v48. g29's a0 is v36. g31's a0 is v103. g24's a0 is v38. g20's a0 is v18. g15's a0 is v108. g30's a0 is v117. g10's a0 is v3. g0's a0 is v7. g27's a0 is v106. g6's a0 is v78. g13's a0 is v30. s0 gives o1 to g20. s1 gives o2 to g15. s2 gives o0 to g29. s3 gives o3 to g3. s4 gives o2 to g30. s5 gives o1 to g10. s6 gives o3 to g13. s7 gives o0 to g29. s8 gives o0 to g13. s9 gives o2 to g1. s10 gives o1 to g30. s11 gives o1 to g29. s12 gives o3 to g1. s13 gives o3 to g31. s14 gives o2 to g10. s15 gives o3 to g13. what is a0 of the holder of o1?",
+        "gold": "g29 v36 .",
+        "pred": "g20 v18 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is v16. g0's a0 is v30. g5's a0 is v11. g26's a0 is v9. g16's a0 is v120. g7's a0 is v92. g29's a0 is v17. g27's a0 is v46. g28's a0 is v82. g19's a0 is v7. g14's a0 is v41. g6's a0 is v78. g13's a0 is v88. g21's a0 is v118. g3's a0 is v121. g8's a0 is v32. s0 gives o1 to g26. s1 gives o3 to g13. s2 gives o1 to g7. s3 gives o0 to g7. s4 gives o2 to g13. s5 gives o2 to g0. s6 gives o3 to g3. s7 gives o1 to g28. s8 gives o3 to g7. s9 gives o0 to g3. s10 gives o1 to g0. s11 gives o0 to g16. s12 gives o2 to g29. s13 gives o1 to g13. s14 gives o2 to g4. s15 gives o2 to g27. what is a0 of the holder of o3?",
+        "gold": "g7 v92 .",
+        "pred": "g7 v92 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g22's a0 is v48. g19's a0 is v115. g29's a0 is v124. g16's a0 is v59. g25's a0 is v79. g8's a0 is v70. g20's a0 is v108. g23's a0 is v76. g1's a0 is v85. g7's a0 is v95. g15's a0 is v89. g0's a0 is v38. g31's a0 is v87. g28's a0 is v27. g11's a0 is v49. g3's a0 is v47. s0 gives o3 to g19. s1 gives o2 to g7. s2 gives o0 to g29. s3 gives o1 to g28. s4 gives o3 to g11. s5 gives o1 to g22. s6 gives o2 to g7. s7 gives o3 to g19. s8 gives o2 to g20. s9 gives o2 to g25. s10 gives o0 to g3. s11 gives o1 to g15. s12 gives o3 to g11. s13 gives o0 to g19. s14 gives o2 to g23. s15 gives o3 to g7. what is a0 of the holder of o2?",
+        "gold": "g23 v76 .",
+        "pred": "g7 v95  \ng20 v108  \ng23 v76 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g24's a0 is v101. g20's a0 is v8. g0's a0 is v121. g1's a0 is v16. g30's a0 is v81. g29's a0 is v52. g12's a0 is v41. g31's a0 is v122. g26's a0 is v117. g27's a0 is v100. g5's a0 is v12. g17's a0 is v62. g2's a0 is v26. g13's a0 is v64. g18's a0 is v48. g23's a0 is v49. s0 gives o2 to g30. s1 gives o3 to g29. s2 gives o2 to g27. s3 gives o1 to g30. s4 gives o2 to g31. s5 gives o0 to g27. s6 gives o2 to g2. s7 gives o1 to g1. s8 gives o3 to g13. s9 gives o2 to g0. s10 gives o1 to g23. s11 gives o3 to g20. s12 gives o0 to g2. s13 gives o3 to g26. s14 gives o1 to g1. s15 gives o0 to g30. what is a0 of the holder of o2?",
+        "gold": "g0 v121 .",
+        "pred": "g27's a0 is v100 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v78. g20's a0 is v64. g6's a0 is v105. g3's a0 is v23. g10's a0 is v108. g16's a0 is v79. g1's a0 is v73. g31's a0 is v4. g18's a0 is v65. g19's a0 is v49. g26's a0 is v126. g2's a0 is v81. g25's a0 is v87. g5's a0 is v39. g15's a0 is v89. g12's a0 is v2. s0 gives o1 to g5. s1 gives o2 to g18. s2 gives o1 to g12. s3 gives o3 to g12. s4 gives o2 to g20. s5 gives o3 to g6. s6 gives o1 to g22. s7 gives o1 to g6. s8 gives o0 to g25. s9 gives o3 to g16. s10 gives o0 to g1. s11 gives o1 to g2. s12 gives o1 to g20. s13 gives o2 to g5. s14 gives o3 to g10. s15 gives o3 to g26. what is a0 of the holder of o2?",
+        "gold": "g5 v39 .",
+        "pred": "g18 v65\ng20 v64 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g31's a0 is v34. g6's a0 is v11. g20's a0 is v8. g14's a0 is v118. g0's a0 is v38. g15's a0 is v59. g19's a0 is v85. g13's a0 is v111. g30's a0 is v89. g17's a0 is v65. g10's a0 is v103. g11's a0 is v116. g12's a0 is v104. g16's a0 is v77. g4's a0 is v12. g21's a0 is v44. s0 gives o0 to g10. s1 gives o1 to g0. s2 gives o3 to g30. s3 gives o2 to g11. s4 gives o3 to g19. s5 gives o2 to g12. s6 gives o3 to g16. s7 gives o0 to g21. s8 gives o3 to g11. s9 gives o0 to g21. s10 gives o1 to g15. s11 gives o0 to g15. s12 gives o0 to g13. s13 gives o3 to g16. s14 gives o2 to g30. s15 gives o2 to g17. what is a0 of the holder of o1?",
+        "gold": "g15 v59 .",
+        "pred": "g0 v38\ng15 v59 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is v115. g25's a0 is v96. g27's a0 is v17. g7's a0 is v38. g23's a0 is v113. g2's a0 is v34. g28's a0 is v44. g31's a0 is v27. g29's a0 is v60. g5's a0 is v102. g17's a0 is v40. g11's a0 is v124. g0's a0 is v77. g13's a0 is v56. g20's a0 is v50. g21's a0 is v82. s0 gives o1 to g7. s1 gives o1 to g20. s2 gives o1 to g31. s3 gives o0 to g2. s4 gives o3 to g13. s5 gives o2 to g17. s6 gives o0 to g3. s7 gives o2 to g29. s8 gives o0 to g0. s9 gives o2 to g11. s10 gives o1 to g7. s11 gives o1 to g13. s12 gives o0 to g23. s13 gives o1 to g17. s14 gives o0 to g28. s15 gives o3 to g3. what is a0 of the holder of o1?",
+        "gold": "g17 v40 .",
+        "pred": "g7 v38 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g26's a0 is v24. g2's a0 is v118. g28's a0 is v112. g19's a0 is v90. g23's a0 is v79. g0's a0 is v49. g17's a0 is v114. g13's a0 is v119. g9's a0 is v33. g15's a0 is v84. g4's a0 is v52. g25's a0 is v2. g21's a0 is v14. g12's a0 is v113. g24's a0 is v74. g16's a0 is v124. s0 gives o3 to g28. s1 gives o2 to g12. s2 gives o1 to g0. s3 gives o1 to g4. s4 gives o1 to g16. s5 gives o2 to g28. s6 gives o1 to g26. s7 gives o1 to g9. s8 gives o0 to g2. s9 gives o1 to g0. s10 gives o1 to g2. s11 gives o2 to g23. s12 gives o0 to g24. s13 gives o0 to g19. s14 gives o2 to g28. s15 gives o0 to g0. what is a0 of the holder of o2?",
+        "gold": "g28 v112 .",
+        "pred": "g12 v113 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g20's a0 is v122. g21's a0 is v27. g26's a0 is v87. g11's a0 is v17. g2's a0 is v76. g5's a0 is v107. g1's a0 is v86. g15's a0 is v98. g0's a0 is v43. g22's a0 is v106. g14's a0 is v72. g27's a0 is v4. g16's a0 is v101. g4's a0 is v2. g17's a0 is v18. g23's a0 is v124. s0 gives o3 to g21. s1 gives o3 to g16. s2 gives o1 to g2. s3 gives o3 to g26. s4 gives o2 to g1. s5 gives o2 to g11. s6 gives o1 to g4. s7 gives o1 to g16. s8 gives o1 to g27. s9 gives o3 to g2. s10 gives o3 to g27. s11 gives o1 to g2. s12 gives o3 to g0. s13 gives o1 to g16. s14 gives o0 to g20. s15 gives o2 to g20. what is a0 of the holder of o2?",
+        "gold": "g20 v122 .",
+        "pred": "g1 v86, g11 v17, g20 v122 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 0.1,
+    "accuracy_contains": 0.4,
+    "accuracy_last_n": 0.4,
+    "correct_relaxed": 1,
+    "correct_contains": 4,
+    "correct_last_n": 4
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "task": "conflict_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 3.672172784805298,
+    "examples": [
+      {
+        "prompt": "g1's a0 is v46. g12's a0 is v59. g4's a0 is v14. g3's a0 is v47. what is a0 of g12?",
+        "gold": "v59 .",
+        "pred": "v59 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is v20. g0's a0 is v0. g2's a0 is v39. g10's a0 is v62. what is a0 of g3?",
+        "gold": "v20 .",
+        "pred": "v20 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g13's a0 is v63. g14's a0 is v26. g15's a0 is v8. g6's a0 is v58. what is a0 of g13?",
+        "gold": "v63 .",
+        "pred": "v63 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v50. g2's a0 is v11. g13's a0 is v57. g7's a0 is v4. what is a0 of g13?",
+        "gold": "v57 .",
+        "pred": "v57 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g15's a0 is v12. g0's a0 is v10. g5's a0 is v50. g7's a0 is v50. what is a0 of g15?",
+        "gold": "v12 .",
+        "pred": "v12 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g6's a0 is v6. g7's a0 is v34. g0's a0 is v31. g4's a0 is v49. what is a0 of g6?",
+        "gold": "v6 .",
+        "pred": "v6 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is v19. g7's a0 is v17. g10's a0 is v27. g8's a0 is v8. what is a0 of g8?",
+        "gold": "v8 .",
+        "pred": "v8 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is v11. g9's a0 is v58. g8's a0 is v44. g12's a0 is v23. what is a0 of g12?",
+        "gold": "v23 .",
+        "pred": "v23 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g10's a0 is v59. g12's a0 is v53. g2's a0 is v57. g1's a0 is v2. what is a0 of g1?",
+        "gold": "v2 .",
+        "pred": "v2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v53. g1's a0 is v48. g11's a0 is v21. g2's a0 is v52. what is a0 of g2?",
+        "gold": "v52 .",
+        "pred": "v52 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "task": "chain_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.1,
+    "correct_exact": 1,
+    "elapsed": 3.1217446327209473,
+    "examples": [
+      {
+        "prompt": "g5's a0 is g2. g4's a0 is g3. g1's a0 is g5. g2's a0 is g4. g0's a0 is g1. g3's a0 is g0. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g3 .",
+        "pred": "g2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g5's a0 is g4. g3's a0 is g5. g0's a0 is g3. g1's a0 is g0. g2's a0 is g1. g4's a0 is g2. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g5 .",
+        "pred": "g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g0's a0 is g4. g2's a0 is g5. g5's a0 is g3. g4's a0 is g2. g1's a0 is g0. g3's a0 is g1. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g4 .",
+        "pred": "Let's break down the problem step by step to find the answer .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g3. g3's a0 is g4. g4's a0 is g2. g2's a0 is g1. g0's a0 is g5. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g2. g4's a0 is g5. g3's a0 is g4. g2's a0 is g3. g0's a0 is g1. g5's a0 is g0. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g3 .",
+        "pred": "g5 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is g0. g3's a0 is g5. g5's a0 is g2. g2's a0 is g1. g1's a0 is g4. g0's a0 is g3. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is g1. g0's a0 is g2. g1's a0 is g5. g3's a0 is g0. g2's a0 is g4. g5's a0 is g3. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5 .",
+        "pred": "g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g0's a0 is g2. g1's a0 is g4. g3's a0 is g1. g4's a0 is g5. g5's a0 is g0. g2's a0 is g3. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g3 .",
+        "pred": "Let's break this down step by step to find the answer:\n\n1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is g0. g5's a0 is g1. g1's a0 is g2. g0's a0 is g5. g4's a0 is g3. g2's a0 is g4. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g1 .",
+        "pred": "g1 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g1. g4's a0 is g3. g2's a0 is g0. g1's a0 is g5. g0's a0 is g4. g5's a0 is g2. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g4 .",
+        "pred": "g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.1,
+    "accuracy_contains": 0.1,
+    "accuracy_last_n": 0.1,
+    "correct_relaxed": 1,
+    "correct_contains": 1,
+    "correct_last_n": 1
+  },
+  {
+    "model": "openai/gpt-4o-mini",
+    "task": "recall_copy_v1",
+    "length": 6,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 2.1563408374786377,
+    "examples": [
+      {
+        "prompt": "g7's a0 is v56. g5's a0 is v18. g1's a0 is v11. g3's a0 is v40. g0's a0 is v41. g4's a0 is v16. what is a0 of g7?",
+        "gold": "v56 .",
+        "pred": "v56 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v43. g4's a0 is v7. g1's a0 is v30. g0's a0 is v58. g5's a0 is v37. g7's a0 is v22. what is a0 of g5?",
+        "gold": "v37 .",
+        "pred": "v37 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v3. g3's a0 is v29. g4's a0 is v23. g6's a0 is v45. g2's a0 is v10. g5's a0 is v15. what is a0 of g6?",
+        "gold": "v45 .",
+        "pred": "v45 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v29. g3's a0 is v48. g0's a0 is v35. g1's a0 is v46. g4's a0 is v4. g2's a0 is v0. what is a0 of g2?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v54. g5's a0 is v23. g6's a0 is v52. g4's a0 is v0. g2's a0 is v30. g7's a0 is v29. what is a0 of g1?",
+        "gold": "v54 .",
+        "pred": "v54 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v5. g6's a0 is v31. g3's a0 is v9. g5's a0 is v50. g0's a0 is v13. g7's a0 is v30. what is a0 of g5?",
+        "gold": "v50 .",
+        "pred": "v50 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v18. g6's a0 is v57. g3's a0 is v33. g1's a0 is v48. g5's a0 is v28. g0's a0 is v14. what is a0 of g1?",
+        "gold": "v48 .",
+        "pred": "v48 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v15. g3's a0 is v28. g2's a0 is v53. g4's a0 is v2. g6's a0 is v10. g0's a0 is v0. what is a0 of g0?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v3. g7's a0 is v23. g3's a0 is v36. g6's a0 is v30. g4's a0 is v24. g5's a0 is v17. what is a0 of g6?",
+        "gold": "v30 .",
+        "pred": "v30 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v19. g5's a0 is v3. g4's a0 is v35. g0's a0 is v15. g7's a0 is v45. g6's a0 is v30. what is a0 of g0?",
+        "gold": "v15 .",
+        "pred": "v15 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "openai/gpt-4o-mini",
+    "task": "binding_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.1,
+    "correct_exact": 1,
+    "elapsed": 1.9308931827545166,
+    "examples": [
+      {
+        "prompt": "s0 gives o3 to g0. s1 gives o0 to g0. s2 gives o3 to g3. s3 gives o1 to g1. s4 gives o0 to g2. s5 gives o0 to g2. s6 gives o1 to g0. s7 gives o0 to g0. s8 gives o3 to g2. s9 gives o1 to g0. s10 gives o2 to g0. s11 gives o3 to g4. s12 gives o3 to g1. s13 gives o2 to g2. s14 gives o0 to g4. s15 gives o1 to g4. where is o0?",
+        "gold": "g4 .",
+        "pred": "g0, g2, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o1 to g2. s2 gives o1 to g4. s3 gives o2 to g2. s4 gives o2 to g0. s5 gives o2 to g2. s6 gives o3 to g2. s7 gives o1 to g1. s8 gives o3 to g0. s9 gives o0 to g4. s10 gives o3 to g4. s11 gives o0 to g4. s12 gives o1 to g0. s13 gives o0 to g3. s14 gives o3 to g3. s15 gives o0 to g2. where is o1?",
+        "gold": "g0 .",
+        "pred": "g2, g4, g1, g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o2 to g0. s2 gives o0 to g1. s3 gives o3 to g4. s4 gives o3 to g1. s5 gives o1 to g0. s6 gives o1 to g3. s7 gives o1 to g4. s8 gives o2 to g1. s9 gives o3 to g2. s10 gives o1 to g4. s11 gives o1 to g0. s12 gives o1 to g0. s13 gives o0 to g0. s14 gives o1 to g0. s15 gives o3 to g2. where is o2?",
+        "gold": "g1 .",
+        "pred": "g0, g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o3 to g1. s1 gives o3 to g0. s2 gives o1 to g0. s3 gives o2 to g0. s4 gives o2 to g0. s5 gives o1 to g0. s6 gives o1 to g1. s7 gives o2 to g2. s8 gives o1 to g0. s9 gives o3 to g3. s10 gives o1 to g2. s11 gives o2 to g0. s12 gives o3 to g0. s13 gives o3 to g3. s14 gives o2 to g1. s15 gives o2 to g2. where is o3?",
+        "gold": "g3 .",
+        "pred": "g1, g0, g3, g3, g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o0 to g4. s2 gives o0 to g3. s3 gives o0 to g0. s4 gives o1 to g4. s5 gives o3 to g3. s6 gives o2 to g0. s7 gives o3 to g2. s8 gives o1 to g4. s9 gives o1 to g3. s10 gives o3 to g4. s11 gives o1 to g0. s12 gives o1 to g4. s13 gives o0 to g0. s14 gives o1 to g2. s15 gives o1 to g3. where is o1?",
+        "gold": "g3 .",
+        "pred": "g4, g2, g0, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o3 to g4. s1 gives o0 to g0. s2 gives o3 to g2. s3 gives o1 to g2. s4 gives o0 to g1. s5 gives o2 to g0. s6 gives o2 to g0. s7 gives o1 to g2. s8 gives o3 to g0. s9 gives o1 to g2. s10 gives o3 to g1. s11 gives o3 to g0. s12 gives o1 to g2. s13 gives o0 to g2. s14 gives o0 to g4. s15 gives o1 to g3. where is o2?",
+        "gold": "g0 .",
+        "pred": "g0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o3 to g2. s2 gives o2 to g3. s3 gives o0 to g1. s4 gives o0 to g3. s5 gives o1 to g3. s6 gives o0 to g2. s7 gives o3 to g2. s8 gives o1 to g1. s9 gives o1 to g3. s10 gives o3 to g3. s11 gives o1 to g1. s12 gives o0 to g2. s13 gives o0 to g0. s14 gives o3 to g1. s15 gives o1 to g2. where is o0?",
+        "gold": "g0 .",
+        "pred": "g1, g3, g2, g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g4. s1 gives o1 to g4. s2 gives o2 to g0. s3 gives o2 to g0. s4 gives o1 to g3. s5 gives o0 to g0. s6 gives o2 to g1. s7 gives o0 to g0. s8 gives o1 to g4. s9 gives o2 to g4. s10 gives o1 to g0. s11 gives o1 to g2. s12 gives o1 to g1. s13 gives o1 to g4. s14 gives o3 to g0. s15 gives o3 to g1. where is o3?",
+        "gold": "g1 .",
+        "pred": "g0, g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o1 to g4. s1 gives o2 to g1. s2 gives o0 to g4. s3 gives o1 to g4. s4 gives o1 to g2. s5 gives o2 to g0. s6 gives o1 to g0. s7 gives o1 to g3. s8 gives o0 to g2. s9 gives o0 to g4. s10 gives o3 to g0. s11 gives o2 to g0. s12 gives o2 to g1. s13 gives o3 to g3. s14 gives o0 to g0. s15 gives o1 to g3. where is o3?",
+        "gold": "g3 .",
+        "pred": "g0, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o2 to g4. s1 gives o2 to g1. s2 gives o0 to g2. s3 gives o2 to g2. s4 gives o0 to g0. s5 gives o3 to g0. s6 gives o0 to g4. s7 gives o3 to g1. s8 gives o2 to g0. s9 gives o2 to g4. s10 gives o3 to g2. s11 gives o2 to g4. s12 gives o2 to g4. s13 gives o3 to g4. s14 gives o2 to g1. s15 gives o3 to g0. where is o2?",
+        "gold": "g1 .",
+        "pred": "g1, g2, g0, g4 .",
+        "exact": false,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.2,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 0.8,
+    "correct_relaxed": 2,
+    "correct_contains": 10,
+    "correct_last_n": 8
+  },
+  {
+    "model": "openai/gpt-4o-mini",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_exact": 0.0,
+    "correct_exact": 0,
+    "elapsed": 2.276883363723755,
+    "examples": [
+      {
+        "prompt": "g17's a0 is v26. g9's a0 is v116. g27's a0 is v49. g23's a0 is v14. g20's a0 is v121. g2's a0 is v72. g4's a0 is v27. g30's a0 is v73. g19's a0 is v40. g6's a0 is v102. g15's a0 is v90. g7's a0 is v42. g8's a0 is v52. g28's a0 is v99. g1's a0 is v47. g5's a0 is v85. s0 gives o3 to g30. s1 gives o2 to g27. s2 gives o0 to g28. s3 gives o3 to g28. s4 gives o2 to g28. s5 gives o3 to g17. s6 gives o3 to g7. s7 gives o0 to g1. s8 gives o0 to g1. s9 gives o1 to g5. s10 gives o3 to g2. s11 gives o1 to g17. s12 gives o1 to g4. s13 gives o2 to g20. s14 gives o3 to g9. s15 gives o0 to g30. what is a0 of the holder of o0?",
+        "gold": "g30 v73 .",
+        "pred": "g28 v99 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g28's a0 is v68. g3's a0 is v65. g14's a0 is v86. g5's a0 is v82. g1's a0 is v48. g29's a0 is v36. g31's a0 is v103. g24's a0 is v38. g20's a0 is v18. g15's a0 is v108. g30's a0 is v117. g10's a0 is v3. g0's a0 is v7. g27's a0 is v106. g6's a0 is v78. g13's a0 is v30. s0 gives o1 to g20. s1 gives o2 to g15. s2 gives o0 to g29. s3 gives o3 to g3. s4 gives o2 to g30. s5 gives o1 to g10. s6 gives o3 to g13. s7 gives o0 to g29. s8 gives o0 to g13. s9 gives o2 to g1. s10 gives o1 to g30. s11 gives o1 to g29. s12 gives o3 to g1. s13 gives o3 to g31. s14 gives o2 to g10. s15 gives o3 to g13. what is a0 of the holder of o1?",
+        "gold": "g29 v36 .",
+        "pred": "g20 v18 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is v16. g0's a0 is v30. g5's a0 is v11. g26's a0 is v9. g16's a0 is v120. g7's a0 is v92. g29's a0 is v17. g27's a0 is v46. g28's a0 is v82. g19's a0 is v7. g14's a0 is v41. g6's a0 is v78. g13's a0 is v88. g21's a0 is v118. g3's a0 is v121. g8's a0 is v32. s0 gives o1 to g26. s1 gives o3 to g13. s2 gives o1 to g7. s3 gives o0 to g7. s4 gives o2 to g13. s5 gives o2 to g0. s6 gives o3 to g3. s7 gives o1 to g28. s8 gives o3 to g7. s9 gives o0 to g3. s10 gives o1 to g0. s11 gives o0 to g16. s12 gives o2 to g29. s13 gives o1 to g13. s14 gives o2 to g4. s15 gives o2 to g27. what is a0 of the holder of o3?",
+        "gold": "g7 v92 .",
+        "pred": "g3 v121 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v48. g19's a0 is v115. g29's a0 is v124. g16's a0 is v59. g25's a0 is v79. g8's a0 is v70. g20's a0 is v108. g23's a0 is v76. g1's a0 is v85. g7's a0 is v95. g15's a0 is v89. g0's a0 is v38. g31's a0 is v87. g28's a0 is v27. g11's a0 is v49. g3's a0 is v47. s0 gives o3 to g19. s1 gives o2 to g7. s2 gives o0 to g29. s3 gives o1 to g28. s4 gives o3 to g11. s5 gives o1 to g22. s6 gives o2 to g7. s7 gives o3 to g19. s8 gives o2 to g20. s9 gives o2 to g25. s10 gives o0 to g3. s11 gives o1 to g15. s12 gives o3 to g11. s13 gives o0 to g19. s14 gives o2 to g23. s15 gives o3 to g7. what is a0 of the holder of o2?",
+        "gold": "g23 v76 .",
+        "pred": "g7 v95 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g24's a0 is v101. g20's a0 is v8. g0's a0 is v121. g1's a0 is v16. g30's a0 is v81. g29's a0 is v52. g12's a0 is v41. g31's a0 is v122. g26's a0 is v117. g27's a0 is v100. g5's a0 is v12. g17's a0 is v62. g2's a0 is v26. g13's a0 is v64. g18's a0 is v48. g23's a0 is v49. s0 gives o2 to g30. s1 gives o3 to g29. s2 gives o2 to g27. s3 gives o1 to g30. s4 gives o2 to g31. s5 gives o0 to g27. s6 gives o2 to g2. s7 gives o1 to g1. s8 gives o3 to g13. s9 gives o2 to g0. s10 gives o1 to g23. s11 gives o3 to g20. s12 gives o0 to g2. s13 gives o3 to g26. s14 gives o1 to g1. s15 gives o0 to g30. what is a0 of the holder of o2?",
+        "gold": "g0 v121 .",
+        "pred": "g30 v81 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v78. g20's a0 is v64. g6's a0 is v105. g3's a0 is v23. g10's a0 is v108. g16's a0 is v79. g1's a0 is v73. g31's a0 is v4. g18's a0 is v65. g19's a0 is v49. g26's a0 is v126. g2's a0 is v81. g25's a0 is v87. g5's a0 is v39. g15's a0 is v89. g12's a0 is v2. s0 gives o1 to g5. s1 gives o2 to g18. s2 gives o1 to g12. s3 gives o3 to g12. s4 gives o2 to g20. s5 gives o3 to g6. s6 gives o1 to g22. s7 gives o1 to g6. s8 gives o0 to g25. s9 gives o3 to g16. s10 gives o0 to g1. s11 gives o1 to g2. s12 gives o1 to g20. s13 gives o2 to g5. s14 gives o3 to g10. s15 gives o3 to g26. what is a0 of the holder of o2?",
+        "gold": "g5 v39 .",
+        "pred": "g20 v64 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g31's a0 is v34. g6's a0 is v11. g20's a0 is v8. g14's a0 is v118. g0's a0 is v38. g15's a0 is v59. g19's a0 is v85. g13's a0 is v111. g30's a0 is v89. g17's a0 is v65. g10's a0 is v103. g11's a0 is v116. g12's a0 is v104. g16's a0 is v77. g4's a0 is v12. g21's a0 is v44. s0 gives o0 to g10. s1 gives o1 to g0. s2 gives o3 to g30. s3 gives o2 to g11. s4 gives o3 to g19. s5 gives o2 to g12. s6 gives o3 to g16. s7 gives o0 to g21. s8 gives o3 to g11. s9 gives o0 to g21. s10 gives o1 to g15. s11 gives o0 to g15. s12 gives o0 to g13. s13 gives o3 to g16. s14 gives o2 to g30. s15 gives o2 to g17. what is a0 of the holder of o1?",
+        "gold": "g15 v59 .",
+        "pred": "g0 v38 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is v115. g25's a0 is v96. g27's a0 is v17. g7's a0 is v38. g23's a0 is v113. g2's a0 is v34. g28's a0 is v44. g31's a0 is v27. g29's a0 is v60. g5's a0 is v102. g17's a0 is v40. g11's a0 is v124. g0's a0 is v77. g13's a0 is v56. g20's a0 is v50. g21's a0 is v82. s0 gives o1 to g7. s1 gives o1 to g20. s2 gives o1 to g31. s3 gives o0 to g2. s4 gives o3 to g13. s5 gives o2 to g17. s6 gives o0 to g3. s7 gives o2 to g29. s8 gives o0 to g0. s9 gives o2 to g11. s10 gives o1 to g7. s11 gives o1 to g13. s12 gives o0 to g23. s13 gives o1 to g17. s14 gives o0 to g28. s15 gives o3 to g3. what is a0 of the holder of o1?",
+        "gold": "g17 v40 .",
+        "pred": "g7 v38 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g26's a0 is v24. g2's a0 is v118. g28's a0 is v112. g19's a0 is v90. g23's a0 is v79. g0's a0 is v49. g17's a0 is v114. g13's a0 is v119. g9's a0 is v33. g15's a0 is v84. g4's a0 is v52. g25's a0 is v2. g21's a0 is v14. g12's a0 is v113. g24's a0 is v74. g16's a0 is v124. s0 gives o3 to g28. s1 gives o2 to g12. s2 gives o1 to g0. s3 gives o1 to g4. s4 gives o1 to g16. s5 gives o2 to g28. s6 gives o1 to g26. s7 gives o1 to g9. s8 gives o0 to g2. s9 gives o1 to g0. s10 gives o1 to g2. s11 gives o2 to g23. s12 gives o0 to g24. s13 gives o0 to g19. s14 gives o2 to g28. s15 gives o0 to g0. what is a0 of the holder of o2?",
+        "gold": "g28 v112 .",
+        "pred": "g12 v113 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g20's a0 is v122. g21's a0 is v27. g26's a0 is v87. g11's a0 is v17. g2's a0 is v76. g5's a0 is v107. g1's a0 is v86. g15's a0 is v98. g0's a0 is v43. g22's a0 is v106. g14's a0 is v72. g27's a0 is v4. g16's a0 is v101. g4's a0 is v2. g17's a0 is v18. g23's a0 is v124. s0 gives o3 to g21. s1 gives o3 to g16. s2 gives o1 to g2. s3 gives o3 to g26. s4 gives o2 to g1. s5 gives o2 to g11. s6 gives o1 to g4. s7 gives o1 to g16. s8 gives o1 to g27. s9 gives o3 to g2. s10 gives o3 to g27. s11 gives o1 to g2. s12 gives o3 to g0. s13 gives o1 to g16. s14 gives o0 to g20. s15 gives o2 to g20. what is a0 of the holder of o2?",
+        "gold": "g20 v122 .",
+        "pred": "g1 v86 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.0,
+    "accuracy_contains": 0.0,
+    "accuracy_last_n": 0.0,
+    "correct_relaxed": 0,
+    "correct_contains": 0,
+    "correct_last_n": 0
+  },
+  {
+    "model": "openai/gpt-4o-mini",
+    "task": "conflict_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 2.439497709274292,
+    "examples": [
+      {
+        "prompt": "g1's a0 is v46. g12's a0 is v59. g4's a0 is v14. g3's a0 is v47. what is a0 of g12?",
+        "gold": "v59 .",
+        "pred": "v59 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is v20. g0's a0 is v0. g2's a0 is v39. g10's a0 is v62. what is a0 of g3?",
+        "gold": "v20 .",
+        "pred": "v20 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g13's a0 is v63. g14's a0 is v26. g15's a0 is v8. g6's a0 is v58. what is a0 of g13?",
+        "gold": "v63 .",
+        "pred": "v63 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v50. g2's a0 is v11. g13's a0 is v57. g7's a0 is v4. what is a0 of g13?",
+        "gold": "v57 .",
+        "pred": "v57 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g15's a0 is v12. g0's a0 is v10. g5's a0 is v50. g7's a0 is v50. what is a0 of g15?",
+        "gold": "v12 .",
+        "pred": "v12 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g6's a0 is v6. g7's a0 is v34. g0's a0 is v31. g4's a0 is v49. what is a0 of g6?",
+        "gold": "v6 .",
+        "pred": "v6 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is v19. g7's a0 is v17. g10's a0 is v27. g8's a0 is v8. what is a0 of g8?",
+        "gold": "v8 .",
+        "pred": "v8 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is v11. g9's a0 is v58. g8's a0 is v44. g12's a0 is v23. what is a0 of g12?",
+        "gold": "v23 .",
+        "pred": "v23 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g10's a0 is v59. g12's a0 is v53. g2's a0 is v57. g1's a0 is v2. what is a0 of g1?",
+        "gold": "v2 .",
+        "pred": "v2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v53. g1's a0 is v48. g11's a0 is v21. g2's a0 is v52. what is a0 of g2?",
+        "gold": "v52 .",
+        "pred": "v52 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "openai/gpt-4o-mini",
+    "task": "chain_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.1,
+    "correct_exact": 1,
+    "elapsed": 1.9973206520080566,
+    "examples": [
+      {
+        "prompt": "g5's a0 is g2. g4's a0 is g3. g1's a0 is g5. g2's a0 is g4. g0's a0 is g1. g3's a0 is g0. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g3 .",
+        "pred": "g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g5's a0 is g4. g3's a0 is g5. g0's a0 is g3. g1's a0 is g0. g2's a0 is g1. g4's a0 is g2. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g5 .",
+        "pred": "g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g0's a0 is g4. g2's a0 is g5. g5's a0 is g3. g4's a0 is g2. g1's a0 is g0. g3's a0 is g1. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g4 .",
+        "pred": "g2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g3. g3's a0 is g4. g4's a0 is g2. g2's a0 is g1. g0's a0 is g5. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g2. g4's a0 is g5. g3's a0 is g4. g2's a0 is g3. g0's a0 is g1. g5's a0 is g0. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g3 .",
+        "pred": "g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is g0. g3's a0 is g5. g5's a0 is g2. g2's a0 is g1. g1's a0 is g4. g0's a0 is g3. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is g1. g0's a0 is g2. g1's a0 is g5. g3's a0 is g0. g2's a0 is g4. g5's a0 is g3. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5 .",
+        "pred": "g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g0's a0 is g2. g1's a0 is g4. g3's a0 is g1. g4's a0 is g5. g5's a0 is g0. g2's a0 is g3. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g3 .",
+        "pred": "g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is g0. g5's a0 is g1. g1's a0 is g2. g0's a0 is g5. g4's a0 is g3. g2's a0 is g4. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g1 .",
+        "pred": "g1 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g1. g4's a0 is g3. g2's a0 is g0. g1's a0 is g5. g0's a0 is g4. g5's a0 is g2. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g4 .",
+        "pred": "g2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.1,
+    "accuracy_contains": 0.1,
+    "accuracy_last_n": 0.1,
+    "correct_relaxed": 1,
+    "correct_contains": 1,
+    "correct_last_n": 1
+  },
+  {
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "task": "recall_copy_v1",
+    "length": 6,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 1.9573709964752197,
+    "examples": [
+      {
+        "prompt": "g7's a0 is v56. g5's a0 is v18. g1's a0 is v11. g3's a0 is v40. g0's a0 is v41. g4's a0 is v16. what is a0 of g7?",
+        "gold": "v56 .",
+        "pred": "v56 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v43. g4's a0 is v7. g1's a0 is v30. g0's a0 is v58. g5's a0 is v37. g7's a0 is v22. what is a0 of g5?",
+        "gold": "v37 .",
+        "pred": "v37 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v3. g3's a0 is v29. g4's a0 is v23. g6's a0 is v45. g2's a0 is v10. g5's a0 is v15. what is a0 of g6?",
+        "gold": "v45 .",
+        "pred": "v45 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v29. g3's a0 is v48. g0's a0 is v35. g1's a0 is v46. g4's a0 is v4. g2's a0 is v0. what is a0 of g2?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v54. g5's a0 is v23. g6's a0 is v52. g4's a0 is v0. g2's a0 is v30. g7's a0 is v29. what is a0 of g1?",
+        "gold": "v54 .",
+        "pred": "v54 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v5. g6's a0 is v31. g3's a0 is v9. g5's a0 is v50. g0's a0 is v13. g7's a0 is v30. what is a0 of g5?",
+        "gold": "v50 .",
+        "pred": "v50 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v18. g6's a0 is v57. g3's a0 is v33. g1's a0 is v48. g5's a0 is v28. g0's a0 is v14. what is a0 of g1?",
+        "gold": "v48 .",
+        "pred": "v48 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v15. g3's a0 is v28. g2's a0 is v53. g4's a0 is v2. g6's a0 is v10. g0's a0 is v0. what is a0 of g0?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v3. g7's a0 is v23. g3's a0 is v36. g6's a0 is v30. g4's a0 is v24. g5's a0 is v17. what is a0 of g6?",
+        "gold": "v30 .",
+        "pred": "v30 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v19. g5's a0 is v3. g4's a0 is v35. g0's a0 is v15. g7's a0 is v45. g6's a0 is v30. what is a0 of g0?",
+        "gold": "v15 .",
+        "pred": "v15 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "task": "binding_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.1,
+    "correct_exact": 1,
+    "elapsed": 3.9502580165863037,
+    "examples": [
+      {
+        "prompt": "s0 gives o3 to g0. s1 gives o0 to g0. s2 gives o3 to g3. s3 gives o1 to g1. s4 gives o0 to g2. s5 gives o0 to g2. s6 gives o1 to g0. s7 gives o0 to g0. s8 gives o3 to g2. s9 gives o1 to g0. s10 gives o2 to g0. s11 gives o3 to g4. s12 gives o3 to g1. s13 gives o2 to g2. s14 gives o0 to g4. s15 gives o1 to g4. where is o0?",
+        "gold": "g4 .",
+        "pred": "g0, g2, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o1 to g2. s2 gives o1 to g4. s3 gives o2 to g2. s4 gives o2 to g0. s5 gives o2 to g2. s6 gives o3 to g2. s7 gives o1 to g1. s8 gives o3 to g0. s9 gives o0 to g4. s10 gives o3 to g4. s11 gives o0 to g4. s12 gives o1 to g0. s13 gives o0 to g3. s14 gives o3 to g3. s15 gives o0 to g2. where is o1?",
+        "gold": "g0 .",
+        "pred": "g1, g2, g4, g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o2 to g0. s2 gives o0 to g1. s3 gives o3 to g4. s4 gives o3 to g1. s5 gives o1 to g0. s6 gives o1 to g3. s7 gives o1 to g4. s8 gives o2 to g1. s9 gives o3 to g2. s10 gives o1 to g4. s11 gives o1 to g0. s12 gives o1 to g0. s13 gives o0 to g0. s14 gives o1 to g0. s15 gives o3 to g2. where is o2?",
+        "gold": "g1 .",
+        "pred": "g0, g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o3 to g1. s1 gives o3 to g0. s2 gives o1 to g0. s3 gives o2 to g0. s4 gives o2 to g0. s5 gives o1 to g0. s6 gives o1 to g1. s7 gives o2 to g2. s8 gives o1 to g0. s9 gives o3 to g3. s10 gives o1 to g2. s11 gives o2 to g0. s12 gives o3 to g0. s13 gives o3 to g3. s14 gives o2 to g1. s15 gives o2 to g2. where is o3?",
+        "gold": "g3 .",
+        "pred": "g0, g1, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o0 to g4. s2 gives o0 to g3. s3 gives o0 to g0. s4 gives o1 to g4. s5 gives o3 to g3. s6 gives o2 to g0. s7 gives o3 to g2. s8 gives o1 to g4. s9 gives o1 to g3. s10 gives o3 to g4. s11 gives o1 to g0. s12 gives o1 to g4. s13 gives o0 to g0. s14 gives o1 to g2. s15 gives o1 to g3. where is o1?",
+        "gold": "g3 .",
+        "pred": "g4, g3, g2, g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o3 to g4. s1 gives o0 to g0. s2 gives o3 to g2. s3 gives o1 to g2. s4 gives o0 to g1. s5 gives o2 to g0. s6 gives o2 to g0. s7 gives o1 to g2. s8 gives o3 to g0. s9 gives o1 to g2. s10 gives o3 to g1. s11 gives o3 to g0. s12 gives o1 to g2. s13 gives o0 to g2. s14 gives o0 to g4. s15 gives o1 to g3. where is o2?",
+        "gold": "g0 .",
+        "pred": "g0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o3 to g2. s2 gives o2 to g3. s3 gives o0 to g1. s4 gives o0 to g3. s5 gives o1 to g3. s6 gives o0 to g2. s7 gives o3 to g2. s8 gives o1 to g1. s9 gives o1 to g3. s10 gives o3 to g3. s11 gives o1 to g1. s12 gives o0 to g2. s13 gives o0 to g0. s14 gives o3 to g1. s15 gives o1 to g2. where is o0?",
+        "gold": "g0 .",
+        "pred": "g1, g2, g3, g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g4. s1 gives o1 to g4. s2 gives o2 to g0. s3 gives o2 to g0. s4 gives o1 to g3. s5 gives o0 to g0. s6 gives o2 to g1. s7 gives o0 to g0. s8 gives o1 to g4. s9 gives o2 to g4. s10 gives o1 to g0. s11 gives o1 to g2. s12 gives o1 to g1. s13 gives o1 to g4. s14 gives o3 to g0. s15 gives o3 to g1. where is o3?",
+        "gold": "g1 .",
+        "pred": "g0, g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o1 to g4. s1 gives o2 to g1. s2 gives o0 to g4. s3 gives o1 to g4. s4 gives o1 to g2. s5 gives o2 to g0. s6 gives o1 to g0. s7 gives o1 to g3. s8 gives o0 to g2. s9 gives o0 to g4. s10 gives o3 to g0. s11 gives o2 to g0. s12 gives o2 to g1. s13 gives o3 to g3. s14 gives o0 to g0. s15 gives o1 to g3. where is o3?",
+        "gold": "g3 .",
+        "pred": "g0, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o2 to g4. s1 gives o2 to g1. s2 gives o0 to g2. s3 gives o2 to g2. s4 gives o0 to g0. s5 gives o3 to g0. s6 gives o0 to g4. s7 gives o3 to g1. s8 gives o2 to g0. s9 gives o2 to g4. s10 gives o3 to g2. s11 gives o2 to g4. s12 gives o2 to g4. s13 gives o3 to g4. s14 gives o2 to g1. s15 gives o3 to g0. where is o2?",
+        "gold": "g1 .",
+        "pred": "g1, g2, g4, g0 .",
+        "exact": false,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.2,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 0.8,
+    "correct_relaxed": 2,
+    "correct_contains": 10,
+    "correct_last_n": 8
+  },
+  {
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_exact": 0.0,
+    "correct_exact": 0,
+    "elapsed": 3.417383909225464,
+    "examples": [
+      {
+        "prompt": "g17's a0 is v26. g9's a0 is v116. g27's a0 is v49. g23's a0 is v14. g20's a0 is v121. g2's a0 is v72. g4's a0 is v27. g30's a0 is v73. g19's a0 is v40. g6's a0 is v102. g15's a0 is v90. g7's a0 is v42. g8's a0 is v52. g28's a0 is v99. g1's a0 is v47. g5's a0 is v85. s0 gives o3 to g30. s1 gives o2 to g27. s2 gives o0 to g28. s3 gives o3 to g28. s4 gives o2 to g28. s5 gives o3 to g17. s6 gives o3 to g7. s7 gives o0 to g1. s8 gives o0 to g1. s9 gives o1 to g5. s10 gives o3 to g2. s11 gives o1 to g17. s12 gives o1 to g4. s13 gives o2 to g20. s14 gives o3 to g9. s15 gives o0 to g30. what is a0 of the holder of o0?",
+        "gold": "g30 v73 .",
+        "pred": "g28 v99, g1 v47, g30 v73 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g28's a0 is v68. g3's a0 is v65. g14's a0 is v86. g5's a0 is v82. g1's a0 is v48. g29's a0 is v36. g31's a0 is v103. g24's a0 is v38. g20's a0 is v18. g15's a0 is v108. g30's a0 is v117. g10's a0 is v3. g0's a0 is v7. g27's a0 is v106. g6's a0 is v78. g13's a0 is v30. s0 gives o1 to g20. s1 gives o2 to g15. s2 gives o0 to g29. s3 gives o3 to g3. s4 gives o2 to g30. s5 gives o1 to g10. s6 gives o3 to g13. s7 gives o0 to g29. s8 gives o0 to g13. s9 gives o2 to g1. s10 gives o1 to g30. s11 gives o1 to g29. s12 gives o3 to g1. s13 gives o3 to g31. s14 gives o2 to g10. s15 gives o3 to g13. what is a0 of the holder of o1?",
+        "gold": "g29 v36 .",
+        "pred": "g20 v18, g10 v3, g30 v117, g",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is v16. g0's a0 is v30. g5's a0 is v11. g26's a0 is v9. g16's a0 is v120. g7's a0 is v92. g29's a0 is v17. g27's a0 is v46. g28's a0 is v82. g19's a0 is v7. g14's a0 is v41. g6's a0 is v78. g13's a0 is v88. g21's a0 is v118. g3's a0 is v121. g8's a0 is v32. s0 gives o1 to g26. s1 gives o3 to g13. s2 gives o1 to g7. s3 gives o0 to g7. s4 gives o2 to g13. s5 gives o2 to g0. s6 gives o3 to g3. s7 gives o1 to g28. s8 gives o3 to g7. s9 gives o0 to g3. s10 gives o1 to g0. s11 gives o0 to g16. s12 gives o2 to g29. s13 gives o1 to g13. s14 gives o2 to g4. s15 gives o2 to g27. what is a0 of the holder of o3?",
+        "gold": "g7 v92 .",
+        "pred": "g13 v88, g7 v92, g3 v121 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v48. g19's a0 is v115. g29's a0 is v124. g16's a0 is v59. g25's a0 is v79. g8's a0 is v70. g20's a0 is v108. g23's a0 is v76. g1's a0 is v85. g7's a0 is v95. g15's a0 is v89. g0's a0 is v38. g31's a0 is v87. g28's a0 is v27. g11's a0 is v49. g3's a0 is v47. s0 gives o3 to g19. s1 gives o2 to g7. s2 gives o0 to g29. s3 gives o1 to g28. s4 gives o3 to g11. s5 gives o1 to g22. s6 gives o2 to g7. s7 gives o3 to g19. s8 gives o2 to g20. s9 gives o2 to g25. s10 gives o0 to g3. s11 gives o1 to g15. s12 gives o3 to g11. s13 gives o0 to g19. s14 gives o2 to g23. s15 gives o3 to g7. what is a0 of the holder of o2?",
+        "gold": "g23 v76 .",
+        "pred": "g7 v95, g20 v108, g25 v79, g",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g24's a0 is v101. g20's a0 is v8. g0's a0 is v121. g1's a0 is v16. g30's a0 is v81. g29's a0 is v52. g12's a0 is v41. g31's a0 is v122. g26's a0 is v117. g27's a0 is v100. g5's a0 is v12. g17's a0 is v62. g2's a0 is v26. g13's a0 is v64. g18's a0 is v48. g23's a0 is v49. s0 gives o2 to g30. s1 gives o3 to g29. s2 gives o2 to g27. s3 gives o1 to g30. s4 gives o2 to g31. s5 gives o0 to g27. s6 gives o2 to g2. s7 gives o1 to g1. s8 gives o3 to g13. s9 gives o2 to g0. s10 gives o1 to g23. s11 gives o3 to g20. s12 gives o0 to g2. s13 gives o3 to g26. s14 gives o1 to g1. s15 gives o0 to g30. what is a0 of the holder of o2?",
+        "gold": "g0 v121 .",
+        "pred": "g30 v81, g29 v52, g27 v100, g",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v78. g20's a0 is v64. g6's a0 is v105. g3's a0 is v23. g10's a0 is v108. g16's a0 is v79. g1's a0 is v73. g31's a0 is v4. g18's a0 is v65. g19's a0 is v49. g26's a0 is v126. g2's a0 is v81. g25's a0 is v87. g5's a0 is v39. g15's a0 is v89. g12's a0 is v2. s0 gives o1 to g5. s1 gives o2 to g18. s2 gives o1 to g12. s3 gives o3 to g12. s4 gives o2 to g20. s5 gives o3 to g6. s6 gives o1 to g22. s7 gives o1 to g6. s8 gives o0 to g25. s9 gives o3 to g16. s10 gives o0 to g1. s11 gives o1 to g2. s12 gives o1 to g20. s13 gives o2 to g5. s14 gives o3 to g10. s15 gives o3 to g26. what is a0 of the holder of o2?",
+        "gold": "g5 v39 .",
+        "pred": "g5 v39, g18 v65, g20 v64, g",
+        "exact": false,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "g31's a0 is v34. g6's a0 is v11. g20's a0 is v8. g14's a0 is v118. g0's a0 is v38. g15's a0 is v59. g19's a0 is v85. g13's a0 is v111. g30's a0 is v89. g17's a0 is v65. g10's a0 is v103. g11's a0 is v116. g12's a0 is v104. g16's a0 is v77. g4's a0 is v12. g21's a0 is v44. s0 gives o0 to g10. s1 gives o1 to g0. s2 gives o3 to g30. s3 gives o2 to g11. s4 gives o3 to g19. s5 gives o2 to g12. s6 gives o3 to g16. s7 gives o0 to g21. s8 gives o3 to g11. s9 gives o0 to g21. s10 gives o1 to g15. s11 gives o0 to g15. s12 gives o0 to g13. s13 gives o3 to g16. s14 gives o2 to g30. s15 gives o2 to g17. what is a0 of the holder of o1?",
+        "gold": "g15 v59 .",
+        "pred": "g0 v38, g15 v59 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is v115. g25's a0 is v96. g27's a0 is v17. g7's a0 is v38. g23's a0 is v113. g2's a0 is v34. g28's a0 is v44. g31's a0 is v27. g29's a0 is v60. g5's a0 is v102. g17's a0 is v40. g11's a0 is v124. g0's a0 is v77. g13's a0 is v56. g20's a0 is v50. g21's a0 is v82. s0 gives o1 to g7. s1 gives o1 to g20. s2 gives o1 to g31. s3 gives o0 to g2. s4 gives o3 to g13. s5 gives o2 to g17. s6 gives o0 to g3. s7 gives o2 to g29. s8 gives o0 to g0. s9 gives o2 to g11. s10 gives o1 to g7. s11 gives o1 to g13. s12 gives o0 to g23. s13 gives o1 to g17. s14 gives o0 to g28. s15 gives o3 to g3. what is a0 of the holder of o1?",
+        "gold": "g17 v40 .",
+        "pred": "g7 v38, g20 v50, g31 v27, g",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g26's a0 is v24. g2's a0 is v118. g28's a0 is v112. g19's a0 is v90. g23's a0 is v79. g0's a0 is v49. g17's a0 is v114. g13's a0 is v119. g9's a0 is v33. g15's a0 is v84. g4's a0 is v52. g25's a0 is v2. g21's a0 is v14. g12's a0 is v113. g24's a0 is v74. g16's a0 is v124. s0 gives o3 to g28. s1 gives o2 to g12. s2 gives o1 to g0. s3 gives o1 to g4. s4 gives o1 to g16. s5 gives o2 to g28. s6 gives o1 to g26. s7 gives o1 to g9. s8 gives o0 to g2. s9 gives o1 to g0. s10 gives o1 to g2. s11 gives o2 to g23. s12 gives o0 to g24. s13 gives o0 to g19. s14 gives o2 to g28. s15 gives o0 to g0. what is a0 of the holder of o2?",
+        "gold": "g28 v112 .",
+        "pred": "g28 v112, g12 v113, g23 v79 .",
+        "exact": false,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 0
+      },
+      {
+        "prompt": "g20's a0 is v122. g21's a0 is v27. g26's a0 is v87. g11's a0 is v17. g2's a0 is v76. g5's a0 is v107. g1's a0 is v86. g15's a0 is v98. g0's a0 is v43. g22's a0 is v106. g14's a0 is v72. g27's a0 is v4. g16's a0 is v101. g4's a0 is v2. g17's a0 is v18. g23's a0 is v124. s0 gives o3 to g21. s1 gives o3 to g16. s2 gives o1 to g2. s3 gives o3 to g26. s4 gives o2 to g1. s5 gives o2 to g11. s6 gives o1 to g4. s7 gives o1 to g16. s8 gives o1 to g27. s9 gives o3 to g2. s10 gives o3 to g27. s11 gives o1 to g2. s12 gives o3 to g0. s13 gives o1 to g16. s14 gives o0 to g20. s15 gives o2 to g20. what is a0 of the holder of o2?",
+        "gold": "g20 v122 .",
+        "pred": "g20 v122, g1 v86, g11 v17 .",
+        "exact": false,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.3,
+    "accuracy_contains": 0.6,
+    "accuracy_last_n": 0.2,
+    "correct_relaxed": 3,
+    "correct_contains": 6,
+    "correct_last_n": 2
+  },
+  {
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "task": "conflict_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 6.7647621631622314,
+    "examples": [
+      {
+        "prompt": "g1's a0 is v46. g12's a0 is v59. g4's a0 is v14. g3's a0 is v47. what is a0 of g12?",
+        "gold": "v59 .",
+        "pred": "v59 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is v20. g0's a0 is v0. g2's a0 is v39. g10's a0 is v62. what is a0 of g3?",
+        "gold": "v20 .",
+        "pred": "v20 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g13's a0 is v63. g14's a0 is v26. g15's a0 is v8. g6's a0 is v58. what is a0 of g13?",
+        "gold": "v63 .",
+        "pred": "v63 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v50. g2's a0 is v11. g13's a0 is v57. g7's a0 is v4. what is a0 of g13?",
+        "gold": "v57 .",
+        "pred": "v57 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g15's a0 is v12. g0's a0 is v10. g5's a0 is v50. g7's a0 is v50. what is a0 of g15?",
+        "gold": "v12 .",
+        "pred": "v12 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g6's a0 is v6. g7's a0 is v34. g0's a0 is v31. g4's a0 is v49. what is a0 of g6?",
+        "gold": "v6 .",
+        "pred": "v6 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is v19. g7's a0 is v17. g10's a0 is v27. g8's a0 is v8. what is a0 of g8?",
+        "gold": "v8 .",
+        "pred": "v8 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is v11. g9's a0 is v58. g8's a0 is v44. g12's a0 is v23. what is a0 of g12?",
+        "gold": "v23 .",
+        "pred": "v23 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g10's a0 is v59. g12's a0 is v53. g2's a0 is v57. g1's a0 is v2. what is a0 of g1?",
+        "gold": "v2 .",
+        "pred": "v2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v53. g1's a0 is v48. g11's a0 is v21. g2's a0 is v52. what is a0 of g2?",
+        "gold": "v52 .",
+        "pred": "v52 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "task": "chain_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.2,
+    "correct_exact": 2,
+    "elapsed": 1.9016759395599365,
+    "examples": [
+      {
+        "prompt": "g5's a0 is g2. g4's a0 is g3. g1's a0 is g5. g2's a0 is g4. g0's a0 is g1. g3's a0 is g0. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g3 .",
+        "pred": "g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g5's a0 is g4. g3's a0 is g5. g0's a0 is g3. g1's a0 is g0. g2's a0 is g1. g4's a0 is g2. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g5 .",
+        "pred": "g0 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g0's a0 is g4. g2's a0 is g5. g5's a0 is g3. g4's a0 is g2. g1's a0 is g0. g3's a0 is g1. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g4 .",
+        "pred": "g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g3. g3's a0 is g4. g4's a0 is g2. g2's a0 is g1. g0's a0 is g5. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g5 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g2. g4's a0 is g5. g3's a0 is g4. g2's a0 is g3. g0's a0 is g1. g5's a0 is g0. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g3 .",
+        "pred": "g2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is g0. g3's a0 is g5. g5's a0 is g2. g2's a0 is g1. g1's a0 is g4. g0's a0 is g3. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g5 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is g1. g0's a0 is g2. g1's a0 is g5. g3's a0 is g0. g2's a0 is g4. g5's a0 is g3. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5 .",
+        "pred": "g5 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g2. g1's a0 is g4. g3's a0 is g1. g4's a0 is g5. g5's a0 is g0. g2's a0 is g3. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g3 .",
+        "pred": "g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is g0. g5's a0 is g1. g1's a0 is g2. g0's a0 is g5. g4's a0 is g3. g2's a0 is g4. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g1 .",
+        "pred": "g1 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g1. g4's a0 is g3. g2's a0 is g0. g1's a0 is g5. g0's a0 is g4. g5's a0 is g2. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g4 .",
+        "pred": "g2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.2,
+    "accuracy_contains": 0.2,
+    "accuracy_last_n": 0.2,
+    "correct_relaxed": 2,
+    "correct_contains": 2,
+    "correct_last_n": 2
+  },
+  {
+    "model": "qwen/qwen-2.5-7b-instruct",
+    "task": "recall_copy_v1",
+    "length": 6,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 11.199616432189941,
+    "examples": [
+      {
+        "prompt": "g7's a0 is v56. g5's a0 is v18. g1's a0 is v11. g3's a0 is v40. g0's a0 is v41. g4's a0 is v16. what is a0 of g7?",
+        "gold": "v56 .",
+        "pred": "v56 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v43. g4's a0 is v7. g1's a0 is v30. g0's a0 is v58. g5's a0 is v37. g7's a0 is v22. what is a0 of g5?",
+        "gold": "v37 .",
+        "pred": "v37 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v3. g3's a0 is v29. g4's a0 is v23. g6's a0 is v45. g2's a0 is v10. g5's a0 is v15. what is a0 of g6?",
+        "gold": "v45 .",
+        "pred": "v45 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v29. g3's a0 is v48. g0's a0 is v35. g1's a0 is v46. g4's a0 is v4. g2's a0 is v0. what is a0 of g2?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v54. g5's a0 is v23. g6's a0 is v52. g4's a0 is v0. g2's a0 is v30. g7's a0 is v29. what is a0 of g1?",
+        "gold": "v54 .",
+        "pred": "v54 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is v5. g6's a0 is v31. g3's a0 is v9. g5's a0 is v50. g0's a0 is v13. g7's a0 is v30. what is a0 of g5?",
+        "gold": "v50 .",
+        "pred": "v50 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v18. g6's a0 is v57. g3's a0 is v33. g1's a0 is v48. g5's a0 is v28. g0's a0 is v14. what is a0 of g1?",
+        "gold": "v48 .",
+        "pred": "v48 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v15. g3's a0 is v28. g2's a0 is v53. g4's a0 is v2. g6's a0 is v10. g0's a0 is v0. what is a0 of g0?",
+        "gold": "v0 .",
+        "pred": "v0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v3. g7's a0 is v23. g3's a0 is v36. g6's a0 is v30. g4's a0 is v24. g5's a0 is v17. what is a0 of g6?",
+        "gold": "v30 .",
+        "pred": "v30 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is v19. g5's a0 is v3. g4's a0 is v35. g0's a0 is v15. g7's a0 is v45. g6's a0 is v30. what is a0 of g0?",
+        "gold": "v15 .",
+        "pred": "v15 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "qwen/qwen-2.5-7b-instruct",
+    "task": "binding_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.3,
+    "correct_exact": 3,
+    "elapsed": 11.107873916625977,
+    "examples": [
+      {
+        "prompt": "s0 gives o3 to g0. s1 gives o0 to g0. s2 gives o3 to g3. s3 gives o1 to g1. s4 gives o0 to g2. s5 gives o0 to g2. s6 gives o1 to g0. s7 gives o0 to g0. s8 gives o3 to g2. s9 gives o1 to g0. s10 gives o2 to g0. s11 gives o3 to g4. s12 gives o3 to g1. s13 gives o2 to g2. s14 gives o0 to g4. s15 gives o1 to g4. where is o0?",
+        "gold": "g4 .",
+        "pred": "g0, g2, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o1 to g2. s2 gives o1 to g4. s3 gives o2 to g2. s4 gives o2 to g0. s5 gives o2 to g2. s6 gives o3 to g2. s7 gives o1 to g1. s8 gives o3 to g0. s9 gives o0 to g4. s10 gives o3 to g4. s11 gives o0 to g4. s12 gives o1 to g0. s13 gives o0 to g3. s14 gives o3 to g3. s15 gives o0 to g2. where is o1?",
+        "gold": "g0 .",
+        "pred": "g1, g2, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o2 to g0. s2 gives o0 to g1. s3 gives o3 to g4. s4 gives o3 to g1. s5 gives o1 to g0. s6 gives o1 to g3. s7 gives o1 to g4. s8 gives o2 to g1. s9 gives o3 to g2. s10 gives o1 to g4. s11 gives o1 to g0. s12 gives o1 to g0. s13 gives o0 to g0. s14 gives o1 to g0. s15 gives o3 to g2. where is o2?",
+        "gold": "g1 .",
+        "pred": "g1 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o3 to g1. s1 gives o3 to g0. s2 gives o1 to g0. s3 gives o2 to g0. s4 gives o2 to g0. s5 gives o1 to g0. s6 gives o1 to g1. s7 gives o2 to g2. s8 gives o1 to g0. s9 gives o3 to g3. s10 gives o1 to g2. s11 gives o2 to g0. s12 gives o3 to g0. s13 gives o3 to g3. s14 gives o2 to g1. s15 gives o2 to g2. where is o3?",
+        "gold": "g3 .",
+        "pred": "g3 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g0. s1 gives o0 to g4. s2 gives o0 to g3. s3 gives o0 to g0. s4 gives o1 to g4. s5 gives o3 to g3. s6 gives o2 to g0. s7 gives o3 to g2. s8 gives o1 to g4. s9 gives o1 to g3. s10 gives o3 to g4. s11 gives o1 to g0. s12 gives o1 to g4. s13 gives o0 to g0. s14 gives o1 to g2. s15 gives o1 to g3. where is o1?",
+        "gold": "g3 .",
+        "pred": "g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o3 to g4. s1 gives o0 to g0. s2 gives o3 to g2. s3 gives o1 to g2. s4 gives o0 to g1. s5 gives o2 to g0. s6 gives o2 to g0. s7 gives o1 to g2. s8 gives o3 to g0. s9 gives o1 to g2. s10 gives o3 to g1. s11 gives o3 to g0. s12 gives o1 to g2. s13 gives o0 to g2. s14 gives o0 to g4. s15 gives o1 to g3. where is o2?",
+        "gold": "g0 .",
+        "pred": "g0 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o0 to g1. s1 gives o3 to g2. s2 gives o2 to g3. s3 gives o0 to g1. s4 gives o0 to g3. s5 gives o1 to g3. s6 gives o0 to g2. s7 gives o3 to g2. s8 gives o1 to g1. s9 gives o1 to g3. s10 gives o3 to g3. s11 gives o1 to g1. s12 gives o0 to g2. s13 gives o0 to g0. s14 gives o3 to g1. s15 gives o1 to g2. where is o0?",
+        "gold": "g0 .",
+        "pred": "g1, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "s0 gives o0 to g4. s1 gives o1 to g4. s2 gives o2 to g0. s3 gives o2 to g0. s4 gives o1 to g3. s5 gives o0 to g0. s6 gives o2 to g1. s7 gives o0 to g0. s8 gives o1 to g4. s9 gives o2 to g4. s10 gives o1 to g0. s11 gives o1 to g2. s12 gives o1 to g1. s13 gives o1 to g4. s14 gives o3 to g0. s15 gives o3 to g1. where is o3?",
+        "gold": "g1 .",
+        "pred": "g0, g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o1 to g4. s1 gives o2 to g1. s2 gives o0 to g4. s3 gives o1 to g4. s4 gives o1 to g2. s5 gives o2 to g0. s6 gives o1 to g0. s7 gives o1 to g3. s8 gives o0 to g2. s9 gives o0 to g4. s10 gives o3 to g0. s11 gives o2 to g0. s12 gives o2 to g1. s13 gives o3 to g3. s14 gives o0 to g0. s15 gives o1 to g3. where is o3?",
+        "gold": "g3 .",
+        "pred": "g0, g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "s0 gives o2 to g4. s1 gives o2 to g1. s2 gives o0 to g2. s3 gives o2 to g2. s4 gives o0 to g0. s5 gives o3 to g0. s6 gives o0 to g4. s7 gives o3 to g1. s8 gives o2 to g0. s9 gives o2 to g4. s10 gives o3 to g2. s11 gives o2 to g4. s12 gives o2 to g4. s13 gives o3 to g4. s14 gives o2 to g1. s15 gives o3 to g0. where is o2?",
+        "gold": "g1 .",
+        "pred": "g0, g1, g2, g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 1,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.3,
+    "accuracy_contains": 0.7,
+    "accuracy_last_n": 0.6,
+    "correct_relaxed": 3,
+    "correct_contains": 7,
+    "correct_last_n": 6
+  },
+  {
+    "model": "qwen/qwen-2.5-7b-instruct",
+    "task": "composite_copy_v1",
+    "length": 16,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_exact": 0.0,
+    "correct_exact": 0,
+    "elapsed": 11.403711080551147,
+    "examples": [
+      {
+        "prompt": "g17's a0 is v26. g9's a0 is v116. g27's a0 is v49. g23's a0 is v14. g20's a0 is v121. g2's a0 is v72. g4's a0 is v27. g30's a0 is v73. g19's a0 is v40. g6's a0 is v102. g15's a0 is v90. g7's a0 is v42. g8's a0 is v52. g28's a0 is v99. g1's a0 is v47. g5's a0 is v85. s0 gives o3 to g30. s1 gives o2 to g27. s2 gives o0 to g28. s3 gives o3 to g28. s4 gives o2 to g28. s5 gives o3 to g17. s6 gives o3 to g7. s7 gives o0 to g1. s8 gives o0 to g1. s9 gives o1 to g5. s10 gives o3 to g2. s11 gives o1 to g17. s12 gives o1 to g4. s13 gives o2 to g20. s14 gives o3 to g9. s15 gives o0 to g30. what is a0 of the holder of o0?",
+        "gold": "g30 v73 .",
+        "pred": "g1 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g28's a0 is v68. g3's a0 is v65. g14's a0 is v86. g5's a0 is v82. g1's a0 is v48. g29's a0 is v36. g31's a0 is v103. g24's a0 is v38. g20's a0 is v18. g15's a0 is v108. g30's a0 is v117. g10's a0 is v3. g0's a0 is v7. g27's a0 is v106. g6's a0 is v78. g13's a0 is v30. s0 gives o1 to g20. s1 gives o2 to g15. s2 gives o0 to g29. s3 gives o3 to g3. s4 gives o2 to g30. s5 gives o1 to g10. s6 gives o3 to g13. s7 gives o0 to g29. s8 gives o0 to g13. s9 gives o2 to g1. s10 gives o1 to g30. s11 gives o1 to g29. s12 gives o3 to g1. s13 gives o3 to g31. s14 gives o2 to g10. s15 gives o3 to g13. what is a0 of the holder of o1?",
+        "gold": "g29 v36 .",
+        "pred": "g20 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is v16. g0's a0 is v30. g5's a0 is v11. g26's a0 is v9. g16's a0 is v120. g7's a0 is v92. g29's a0 is v17. g27's a0 is v46. g28's a0 is v82. g19's a0 is v7. g14's a0 is v41. g6's a0 is v78. g13's a0 is v88. g21's a0 is v118. g3's a0 is v121. g8's a0 is v32. s0 gives o1 to g26. s1 gives o3 to g13. s2 gives o1 to g7. s3 gives o0 to g7. s4 gives o2 to g13. s5 gives o2 to g0. s6 gives o3 to g3. s7 gives o1 to g28. s8 gives o3 to g7. s9 gives o0 to g3. s10 gives o1 to g0. s11 gives o0 to g16. s12 gives o2 to g29. s13 gives o1 to g13. s14 gives o2 to g4. s15 gives o2 to g27. what is a0 of the holder of o3?",
+        "gold": "g7 v92 .",
+        "pred": "g13 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v48. g19's a0 is v115. g29's a0 is v124. g16's a0 is v59. g25's a0 is v79. g8's a0 is v70. g20's a0 is v108. g23's a0 is v76. g1's a0 is v85. g7's a0 is v95. g15's a0 is v89. g0's a0 is v38. g31's a0 is v87. g28's a0 is v27. g11's a0 is v49. g3's a0 is v47. s0 gives o3 to g19. s1 gives o2 to g7. s2 gives o0 to g29. s3 gives o1 to g28. s4 gives o3 to g11. s5 gives o1 to g22. s6 gives o2 to g7. s7 gives o3 to g19. s8 gives o2 to g20. s9 gives o2 to g25. s10 gives o0 to g3. s11 gives o1 to g15. s12 gives o3 to g11. s13 gives o0 to g19. s14 gives o2 to g23. s15 gives o3 to g7. what is a0 of the holder of o2?",
+        "gold": "g23 v76 .",
+        "pred": "g7 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g24's a0 is v101. g20's a0 is v8. g0's a0 is v121. g1's a0 is v16. g30's a0 is v81. g29's a0 is v52. g12's a0 is v41. g31's a0 is v122. g26's a0 is v117. g27's a0 is v100. g5's a0 is v12. g17's a0 is v62. g2's a0 is v26. g13's a0 is v64. g18's a0 is v48. g23's a0 is v49. s0 gives o2 to g30. s1 gives o3 to g29. s2 gives o2 to g27. s3 gives o1 to g30. s4 gives o2 to g31. s5 gives o0 to g27. s6 gives o2 to g2. s7 gives o1 to g1. s8 gives o3 to g13. s9 gives o2 to g0. s10 gives o1 to g23. s11 gives o3 to g20. s12 gives o0 to g2. s13 gives o3 to g26. s14 gives o1 to g1. s15 gives o0 to g30. what is a0 of the holder of o2?",
+        "gold": "g0 v121 .",
+        "pred": "g27 v52 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g22's a0 is v78. g20's a0 is v64. g6's a0 is v105. g3's a0 is v23. g10's a0 is v108. g16's a0 is v79. g1's a0 is v73. g31's a0 is v4. g18's a0 is v65. g19's a0 is v49. g26's a0 is v126. g2's a0 is v81. g25's a0 is v87. g5's a0 is v39. g15's a0 is v89. g12's a0 is v2. s0 gives o1 to g5. s1 gives o2 to g18. s2 gives o1 to g12. s3 gives o3 to g12. s4 gives o2 to g20. s5 gives o3 to g6. s6 gives o1 to g22. s7 gives o1 to g6. s8 gives o0 to g25. s9 gives o3 to g16. s10 gives o0 to g1. s11 gives o1 to g2. s12 gives o1 to g20. s13 gives o2 to g5. s14 gives o3 to g10. s15 gives o3 to g26. what is a0 of the holder of o2?",
+        "gold": "g5 v39 .",
+        "pred": "g18 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g31's a0 is v34. g6's a0 is v11. g20's a0 is v8. g14's a0 is v118. g0's a0 is v38. g15's a0 is v59. g19's a0 is v85. g13's a0 is v111. g30's a0 is v89. g17's a0 is v65. g10's a0 is v103. g11's a0 is v116. g12's a0 is v104. g16's a0 is v77. g4's a0 is v12. g21's a0 is v44. s0 gives o0 to g10. s1 gives o1 to g0. s2 gives o3 to g30. s3 gives o2 to g11. s4 gives o3 to g19. s5 gives o2 to g12. s6 gives o3 to g16. s7 gives o0 to g21. s8 gives o3 to g11. s9 gives o0 to g21. s10 gives o1 to g15. s11 gives o0 to g15. s12 gives o0 to g13. s13 gives o3 to g16. s14 gives o2 to g30. s15 gives o2 to g17. what is a0 of the holder of o1?",
+        "gold": "g15 v59 .",
+        "pred": "g0 v38 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is v115. g25's a0 is v96. g27's a0 is v17. g7's a0 is v38. g23's a0 is v113. g2's a0 is v34. g28's a0 is v44. g31's a0 is v27. g29's a0 is v60. g5's a0 is v102. g17's a0 is v40. g11's a0 is v124. g0's a0 is v77. g13's a0 is v56. g20's a0 is v50. g21's a0 is v82. s0 gives o1 to g7. s1 gives o1 to g20. s2 gives o1 to g31. s3 gives o0 to g2. s4 gives o3 to g13. s5 gives o2 to g17. s6 gives o0 to g3. s7 gives o2 to g29. s8 gives o0 to g0. s9 gives o2 to g11. s10 gives o1 to g7. s11 gives o1 to g13. s12 gives o0 to g23. s13 gives o1 to g17. s14 gives o0 to g28. s15 gives o3 to g3. what is a0 of the holder of o1?",
+        "gold": "g17 v40 .",
+        "pred": "g7 v38 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g26's a0 is v24. g2's a0 is v118. g28's a0 is v112. g19's a0 is v90. g23's a0 is v79. g0's a0 is v49. g17's a0 is v114. g13's a0 is v119. g9's a0 is v33. g15's a0 is v84. g4's a0 is v52. g25's a0 is v2. g21's a0 is v14. g12's a0 is v113. g24's a0 is v74. g16's a0 is v124. s0 gives o3 to g28. s1 gives o2 to g12. s2 gives o1 to g0. s3 gives o1 to g4. s4 gives o1 to g16. s5 gives o2 to g28. s6 gives o1 to g26. s7 gives o1 to g9. s8 gives o0 to g2. s9 gives o1 to g0. s10 gives o1 to g2. s11 gives o2 to g23. s12 gives o0 to g24. s13 gives o0 to g19. s14 gives o2 to g28. s15 gives o0 to g0. what is a0 of the holder of o2?",
+        "gold": "g28 v112 .",
+        "pred": "g28 v14 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g20's a0 is v122. g21's a0 is v27. g26's a0 is v87. g11's a0 is v17. g2's a0 is v76. g5's a0 is v107. g1's a0 is v86. g15's a0 is v98. g0's a0 is v43. g22's a0 is v106. g14's a0 is v72. g27's a0 is v4. g16's a0 is v101. g4's a0 is v2. g17's a0 is v18. g23's a0 is v124. s0 gives o3 to g21. s1 gives o3 to g16. s2 gives o1 to g2. s3 gives o3 to g26. s4 gives o2 to g1. s5 gives o2 to g11. s6 gives o1 to g4. s7 gives o1 to g16. s8 gives o1 to g27. s9 gives o3 to g2. s10 gives o3 to g27. s11 gives o1 to g2. s12 gives o3 to g0. s13 gives o1 to g16. s14 gives o0 to g20. s15 gives o2 to g20. what is a0 of the holder of o2?",
+        "gold": "g20 v122 .",
+        "pred": "g20 v76 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.0,
+    "accuracy_contains": 0.0,
+    "accuracy_last_n": 0.0,
+    "correct_relaxed": 0,
+    "correct_contains": 0,
+    "correct_last_n": 0
+  },
+  {
+    "model": "qwen/qwen-2.5-7b-instruct",
+    "task": "conflict_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 1.0,
+    "correct_exact": 10,
+    "elapsed": 6.330761671066284,
+    "examples": [
+      {
+        "prompt": "g1's a0 is v46. g12's a0 is v59. g4's a0 is v14. g3's a0 is v47. what is a0 of g12?",
+        "gold": "v59 .",
+        "pred": "v59 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is v20. g0's a0 is v0. g2's a0 is v39. g10's a0 is v62. what is a0 of g3?",
+        "gold": "v20 .",
+        "pred": "v20 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g13's a0 is v63. g14's a0 is v26. g15's a0 is v8. g6's a0 is v58. what is a0 of g13?",
+        "gold": "v63 .",
+        "pred": "v63 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is v50. g2's a0 is v11. g13's a0 is v57. g7's a0 is v4. what is a0 of g13?",
+        "gold": "v57 .",
+        "pred": "v57 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g15's a0 is v12. g0's a0 is v10. g5's a0 is v50. g7's a0 is v50. what is a0 of g15?",
+        "gold": "v12 .",
+        "pred": "v12 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g6's a0 is v6. g7's a0 is v34. g0's a0 is v31. g4's a0 is v49. what is a0 of g6?",
+        "gold": "v6 .",
+        "pred": "v6 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is v19. g7's a0 is v17. g10's a0 is v27. g8's a0 is v8. what is a0 of g8?",
+        "gold": "v8 .",
+        "pred": "v8 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is v11. g9's a0 is v58. g8's a0 is v44. g12's a0 is v23. what is a0 of g12?",
+        "gold": "v23 .",
+        "pred": "v23 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g10's a0 is v59. g12's a0 is v53. g2's a0 is v57. g1's a0 is v2. what is a0 of g1?",
+        "gold": "v2 .",
+        "pred": "v2 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g7's a0 is v53. g1's a0 is v48. g11's a0 is v21. g2's a0 is v52. what is a0 of g2?",
+        "gold": "v52 .",
+        "pred": "v52 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_relaxed": 1.0,
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 10,
+    "correct_contains": 10,
+    "correct_last_n": 10
+  },
+  {
+    "model": "qwen/qwen-2.5-7b-instruct",
+    "task": "chain_v1",
+    "length": 4,
+    "n": 10,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question.",
+    "accuracy_exact": 0.4,
+    "correct_exact": 4,
+    "elapsed": 2.432008743286133,
+    "examples": [
+      {
+        "prompt": "g5's a0 is g2. g4's a0 is g3. g1's a0 is g5. g2's a0 is g4. g0's a0 is g1. g3's a0 is g0. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g3 .",
+        "pred": "g3 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g4. g3's a0 is g5. g0's a0 is g3. g1's a0 is g0. g2's a0 is g1. g4's a0 is g2. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g5 .",
+        "pred": "g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g0's a0 is g4. g2's a0 is g5. g5's a0 is g3. g4's a0 is g2. g1's a0 is g0. g3's a0 is g1. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g4 .",
+        "pred": "g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g3. g3's a0 is g4. g4's a0 is g2. g2's a0 is g1. g0's a0 is g5. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g4 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g1's a0 is g2. g4's a0 is g5. g3's a0 is g4. g2's a0 is g3. g0's a0 is g1. g5's a0 is g0. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g3 .",
+        "pred": "g3 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g0. g3's a0 is g5. g5's a0 is g2. g2's a0 is g1. g1's a0 is g4. g0's a0 is g3. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3 .",
+        "pred": "g5 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g4's a0 is g1. g0's a0 is g2. g1's a0 is g5. g3's a0 is g0. g2's a0 is g4. g5's a0 is g3. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5 .",
+        "pred": "g5 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g2. g1's a0 is g4. g3's a0 is g1. g4's a0 is g5. g5's a0 is g0. g2's a0 is g3. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g3 .",
+        "pred": "g3 .",
+        "exact": true,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g0. g5's a0 is g1. g1's a0 is g2. g0's a0 is g5. g4's a0 is g3. g2's a0 is g4. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g1 .",
+        "pred": "g3 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      },
+      {
+        "prompt": "g3's a0 is g1. g4's a0 is g3. g2's a0 is g0. g1's a0 is g5. g0's a0 is g4. g5's a0 is g2. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g4 .",
+        "pred": "g2 .",
+        "exact": false,
+        "relaxed": 0,
+        "contains": 0,
+        "last_n": 0
+      }
+    ],
+    "accuracy_relaxed": 0.4,
+    "accuracy_contains": 0.4,
+    "accuracy_last_n": 0.4,
+    "correct_relaxed": 4,
+    "correct_contains": 4,
+    "correct_last_n": 4
+  }
+]

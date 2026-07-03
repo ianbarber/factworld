@@ -1,0 +1,204 @@
+{
+  "task": "binding_v1",
+  "spec": {
+    "name": "binding_v1",
+    "family": "binding",
+    "natural": true,
+    "k": 5,
+    "n_objects": 8,
+    "value_vocab_size": 64,
+    "train_lengths": [
+      4,
+      8,
+      16
+    ],
+    "eval_lengths": [
+      16,
+      32,
+      64
+    ]
+  },
+  "timestamp": "2026-06-24T22:32:27.691979+00:00",
+  "rows": [
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.2784906029701233,
+      "acc": {
+        "16": 0.975,
+        "32": 0.345,
+        "64": 0.365
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.32466408610343933,
+      "acc": {
+        "16": 0.975,
+        "32": 0.965,
+        "64": 0.975
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.2925964593887329,
+      "acc": {
+        "16": 1.0,
+        "32": 0.89,
+        "64": 0.91
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": true,
+      "final_loss": 0.13781191408634186,
+      "acc": {
+        "16": 1.0,
+        "32": 0.525,
+        "64": 0.47
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": true,
+      "final_loss": 0.15120162069797516,
+      "acc": {
+        "16": 0.995,
+        "32": 0.99,
+        "64": 0.985
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "gdp_hybrid_shortconv",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": true,
+      "final_loss": 0.358032763004303,
+      "acc": {
+        "16": 1.0,
+        "32": 0.35,
+        "64": 0.43
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "fprm",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.5712190270423889,
+      "acc": {
+        "16": 1.0,
+        "32": 0.985,
+        "64": 0.95
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "fprm",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.573350191116333,
+      "acc": {
+        "16": 1.0,
+        "32": 0.975,
+        "64": 0.905
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "fprm",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.44867008924484253,
+      "acc": {
+        "16": 0.995,
+        "32": 0.97,
+        "64": 0.91
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "transformer",
+      "seed": 0,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.5854190587997437,
+      "acc": {
+        "16": 0.38,
+        "32": 0.4,
+        "64": 0.3
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "transformer",
+      "seed": 1,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.5845992565155029,
+      "acc": {
+        "16": 0.325,
+        "32": 0.315,
+        "64": 0.33
+      }
+    },
+    {
+      "task": "binding_v1",
+      "arch": "transformer",
+      "seed": 2,
+      "d_model": 256,
+      "n_layers": 4,
+      "steps": 10000,
+      "use_short_conv": false,
+      "final_loss": 0.4912914037704468,
+      "acc": {
+        "16": 0.415,
+        "32": 0.37,
+        "64": 0.33
+      }
+    }
+  ]
+}

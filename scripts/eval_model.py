@@ -25,6 +25,7 @@ os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 from factworld import tasks as TK
 from factworld.backends import APIBackend, FunctionBackend, HFBackend, LocalBackend
+from factworld.render import Renderer
 from factworld.runner import evaluate_task
 
 
@@ -46,10 +47,14 @@ def _mock_model(prompts, max_new_tokens, stop_at=None):
 
 
 def build_docs(examples, use_trace):
-    """Training strings: prompt + (optional oracle worked-trace) + final answer."""
+    """Training strings: prompt + (optional oracle worked-trace) + final answer.
+
+    Prompts end with '?' (attached), so a single space separates the query from
+    the answer continuation.
+    """
     docs = []
     for e in examples:
-        trace = f"{e.meta['trace']} " if (use_trace and "trace" in e.meta) else ""
+        trace = f" {e.meta['trace']} " if (use_trace and "trace" in e.meta) else " "
         docs.append(f"{e.prompt}{trace}{e.answer}")
     return docs
 
@@ -60,9 +65,9 @@ def build_local_backend(spec, arch, d_model, n_layers, steps, train_n, batch,
     from factworld import train as T
 
     d_ff = 4 * d_model
-    w, _ = TK.build_world(spec)
+    w, r = TK.build_world(spec)
     train = TK.generate(spec, "train", n=train_n)
-    tok, docs, _ = T.prepare(build_docs(train, use_trace), [], [w])
+    tok, docs, _ = T.prepare(build_docs(train, use_trace), [], [w], renderer=r)
     run = T.run(arch, tok, docs, [], steps=steps, batch=batch, d_model=d_model,
                 n_layers=n_layers, d_ff=d_ff, seed=seed, return_model=True,
                 device=device)
@@ -103,8 +108,12 @@ def main():
     ap.add_argument("--split", default="test", choices=["train", "test"],
                     help="Which split to evaluate.")
     ap.add_argument("--length", type=int, default=None, help="Override the eval length.")
-    ap.add_argument("--max_new_tokens", type=int, default=16,
-                    help="Generation budget per example.")
+    ap.add_argument("--max_new_tokens", type=int, default=2048,
+                    help="Generation budget per example (default: 2048).")
+    ap.add_argument("--stop_at", default=".",
+                    help="Stop generation at this string (default: '.').")
+    ap.add_argument("--no_stop", action="store_true",
+                    help="Disable early stopping; needed for API reasoning models.")
     ap.add_argument("--seed", type=int, default=0, help="Random seed.")
     ap.add_argument("--json_out", default=None,
                     help="Optional JSON output path (same schema as eval_openrouter_grid.py).")
@@ -137,10 +146,11 @@ def main():
     else:
         raise ValueError(f"unknown backend: {a.backend}")
 
+    stop_at = None if a.no_stop else a.stop_at
     lengths = [a.length] if a.length is not None else list(spec.eval_lengths)
     results = {
         L: evaluate_task(backend, spec, split=a.split, n=a.n, length=L,
-                         max_new_tokens=a.max_new_tokens)
+                         max_new_tokens=a.max_new_tokens, stop_at=stop_at)
         for L in lengths
     }
 

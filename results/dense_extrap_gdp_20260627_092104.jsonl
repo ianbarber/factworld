@@ -1,0 +1,9 @@
+{"arch": "gdp_hybrid", "K": 1, "seed": 0, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.98, "L32_value": 0.98, "L64_holder": 0.93, "L64_value": 0.93, "L128_holder": 0.89, "L128_value": 0.89}
+{"arch": "gdp_hybrid", "K": 1, "seed": 1, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 1.0, "L32_value": 1.0, "L64_holder": 0.95, "L64_value": 0.95, "L128_holder": 0.91, "L128_value": 0.91}
+{"arch": "gdp_hybrid", "K": 1, "seed": 2, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.99, "L32_value": 0.99, "L64_holder": 0.81, "L64_value": 0.81, "L128_holder": 0.67, "L128_value": 0.67}
+{"arch": "gdp_hybrid", "K": 1, "seed": 3, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.89, "L32_value": 0.89, "L64_holder": 0.68, "L64_value": 0.68, "L128_holder": 0.49, "L128_value": 0.49}
+{"arch": "gdp_hybrid", "K": 1, "seed": 5, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.81, "L32_value": 0.81, "L64_holder": 0.5, "L64_value": 0.5, "L128_holder": 0.32, "L128_value": 0.32}
+{"arch": "gdp_hybrid", "K": 1, "seed": 6, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.99, "L32_value": 0.99, "L64_holder": 0.99, "L64_value": 0.99, "L128_holder": 0.98, "L128_value": 0.98}
+{"arch": "gdp_hybrid", "K": 1, "seed": 7, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.74, "L32_value": 0.74, "L64_holder": 0.46, "L64_value": 0.46, "L128_holder": 0.32, "L128_value": 0.32}
+{"arch": "gdp_hybrid", "K": 1, "seed": 8, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 1.0, "L32_value": 1.0, "L64_holder": 1.0, "L64_value": 1.0, "L128_holder": 1.0, "L128_value": 1.0}
+{"arch": "gdp_hybrid", "K": 1, "seed": 9, "L16_holder": 1.0, "L16_value": 1.0, "L32_holder": 0.68, "L32_value": 0.67, "L64_holder": 0.36, "L64_value": 0.36, "L128_holder": 0.2, "L128_value": 0.2}

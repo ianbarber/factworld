@@ -18,7 +18,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 
 from factworld import tasks as TK          # noqa: E402
-from factworld.render import classify      # noqa: E402  (atomic-token type by prefix: g/v/r/o/...)
+from factworld.render import Renderer, classify  # noqa: E402  (atomic-token type by prefix: g/v/r/o/...)
 
 N = 500
 
@@ -26,8 +26,9 @@ N = 500
 def positional_pred(prompt: str, ans_type: str, which: str):
     """The first/last token in the prompt whose type matches the answer's type — a fixed-POSITION shortcut.
     `which='last'` is the recency shortcut; `which='first'` catches 'the answer is always the first
-    fact's value' (e.g. a query whose target is always rendered first)."""
-    toks = prompt.split()
+    fact's value'. Operates on the normalized (detached-punctuation) form so attached-punctuation
+    tokens like `v109.` / `g0's` are classified correctly."""
+    toks = Renderer.normalize(prompt).split()
     it = reversed(toks) if which == "last" else toks
     for t in it:
         if classify(t) == ans_type:
@@ -41,8 +42,10 @@ def main():
     all_ok = True
     for name, spec in TK.CANONICAL.items():
         test = TK.generate(spec, "test", n=N, length=spec.eval_lengths[-1])
-        firsts = [e.answer.split()[0] for e in test]
-        assert all(e.answer.split()[-1] == "." for e in test), f"{name}: answer not '.'-terminated"
+        # normalize answers so the check is format-agnostic (attached `.` -> ` .`)
+        ans_norm = [Renderer.normalize(e.answer) for e in test]
+        firsts = [a.split()[0] for a in ans_norm]
+        assert all(a.split()[-1] == "." for a in ans_norm), f"{name}: answer not '.'-terminated"
         atype = classify(firsts[0])                      # answer-token type (g/v/r)
         assert all(classify(f) == atype for f in firsts), f"{name}: inconsistent answer-token type"
         distinct = len(set(firsts))
