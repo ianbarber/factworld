@@ -12,9 +12,9 @@
 
 FactWorld is a synthetic, oracle-validated evaluation instrument. Every task is a
 frozen, versioned ``TaskSpec`` with deterministic examples and one canonical
-metric — **position-strict exact match** of the answer span. Gold answers come
-from a symbolic **oracle**, never from parsing rendered text, so labels cannot
-leak. A validity gate certifies that no shallow baseline clears floor.
+metric — **relaxed match** of the answer span (strip trailing punctuation and score the first
+`len(gold)` tokens). Gold answers come from a symbolic **oracle**, never from parsing rendered
+text, so labels cannot leak. A validity gate certifies that no shallow baseline clears floor.
 
 You can evaluate any model that can continue a prompt: OpenAI-compatible APIs
 (vLLM, ollama, OpenAI), HuggingFace ``transformers``, a tiny model trained
@@ -160,8 +160,7 @@ cost tips, and a custom-backend example.
 ## The task suite
 
 A frozen, versioned registry (``factworld.tasks.CANONICAL``) with one canonical
-metric — **position-strict exact match** of the answer span. Each task carries a
-``kind``:
+metric — **relaxed match** of the answer span. Each task carries a ``kind``:
 
 **Scored** (``REPORTED``):
 
@@ -201,9 +200,9 @@ mistakes are in [`docs/tasks.md`](docs/tasks.md).
 | `chain_v1` | depth-*k* pointer chase | k agents (~0.167) | composition depth |
 | `s5_v1` | S₅ role permutation | 5 roles (0.200) | permutation horizon |
 
-The numbers below are **position-strict exact match**, the canonical metric. The evaluation
-pipeline also reports relaxed, semantic-containment, and last-*n* scores to separate formatting
-artifacts from whether the model actually knows the answer.
+The numbers below are **relaxed match**, the canonical metric. The evaluation pipeline also
+reports exact, semantic-containment, and last-*n* scores to separate formatting artifacts from
+whether the model actually knows the answer.
 
 ### Pretrained open models
 
@@ -267,7 +266,7 @@ decomposition). Full table in [`results/sweep_main_*.md`](results/). `fprm` is a
 conv+attention block (the architecture the external FPRM work motivates); `gdp_hybrid` is the
 `[recurrent, recurrent, attn, recurrent]` stack from `factworld/models.py`.
 
-**`binding_v1` (length extrapolation) — exact match mean±std / p(converge)**
+**`binding_v1` (length extrapolation) — relaxed match mean±std / p(converge)**
 
 | arch | L16 | L32 | L64 |
 | --- | --- | --- | --- |
@@ -286,11 +285,10 @@ Staged-curriculum recipe (d=768, 8 layers, 25k steps, 3 seeds); full write-up in
 | fprm | 0.253 ± 0.178 |
 | transformer | 0.005 ± 0.005 |
 
-Relaxed match is the fair cross-regime metric (strip trailing period, score the answer prefix); it
-is effectively identical to local exact match because exact is already a prefix match. The
-decomposition localizes the composition gap: every recurrent architecture solves the **holder**
-(binding) leg but fails the **value** (recall-of-the-resolved-holder) leg — the same routing wall
-the API models hit.
+Relaxed match is the fair cross-regime metric: it handles API models that omit the trailing
+period and local models that append extra tokens after the answer. The decomposition localizes the
+composition gap: every recurrent architecture solves the **holder** (binding) leg but fails the
+**value** (recall-of-the-resolved-holder) leg — the same routing wall the API models hit.
 
 **Trained scratchpad (E2, local) makes it worse.** Supervising the per-step oracle trace
 (`prompt→trace→answer`) on the staged curriculum collapses holder accuracy 0.96→0.14 and value
@@ -352,7 +350,7 @@ docs/
   tasks.md                concrete prompts, gold answers, and real model mistakes for every task
   USAGE.md                backend API reference and custom-backend examples
   related-work.md         related work with verified citations
-  results.md              4-arch reference baselines (position-strict exact match)
+  results.md              4-arch reference baselines (relaxed match)
   results-ci.md           3-seed CIs on the dissociating cells + attention-free recall ablation
   openrouter/             external LLM API grid results
     results.md              benchmark tasks

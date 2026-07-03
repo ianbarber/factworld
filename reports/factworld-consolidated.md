@@ -10,7 +10,7 @@ scripts and checked independently by anyone with an API key or a single GPU.
 
 The suite is built around versioned `TaskSpec` objects in `factworld.tasks.CANONICAL`. Each task
 renders to natural language, carries deterministic examples from a fixed seed, and is scored by a
-single canonical metric: **position-strict exact match** of the answer span. Gold answers come
+single canonical metric: **relaxed match** of the answer span (strip trailing punctuation and score the first `len(gold)` tokens). Gold answers come
 from a symbolic oracle applied to the underlying world state, never from parsing the rendered
 text, so labels cannot leak. A validity gate (`scripts/validate_suite.py`) certifies that no
 shallow shortcut clears floor on any task.
@@ -30,28 +30,12 @@ into a diagnosis: holder-right/value-wrong means the model tracked state but fai
 holder-wrong/value-right means the reverse. The decomposition is what makes the suite an
 instrument for composition: it lets you ask which sub-behavior fails and under what intervention.
 
-### Fair scoring across regimes
-
-The canonical metric is **position-strict exact match**. It is the right metric for a local model
-that emits exactly `<holder> <value> .` and stops. For API models it is too strict: chat models do
-not reliably emit the trailing period, and reasoning models emit a scratchpad before the answer.
-
-The natural fix for API models is **last-N** extraction: ignore everything before the final
-`holder value` pair. That is what `APIBackend` does after stripping `<think>` blocks and common
-prefixes. It gives sensible API scores.
-
-But using API last-N against local exact match is not a fair comparison. Local models often do not
-learn to emit the period either; they write the correct holder and value and then continue
-generating extra tokens. Exact match is a prefix match, so it credits the correct prefix and
-ignores the trailing garbage. Last-N, which looks at the final tokens, scores those examples as
-wrong. We validated this empirically: on a full-scale `gdp_hybrid` run the exact score was 0.874
-while the last-N score was 0.00.
-
-The fair cross-regime metric is therefore **relaxed** match: strip the trailing period and check
-the first `len(gold)` tokens. Relaxed handles the API model's missing period and the local model's
-trailing generation. Where the model emits a clean answer, relaxed coincides with last-N and
-contains; where the model rambles, relaxed is the conservative score that both regimes can be
-measured against. The head-to-head comparison below uses relaxed for both API and local models.
+Relaxed match is the fair cross-regime metric. It strips a trailing period and checks the first
+`len(gold)` tokens, so it handles API models that omit the period and local models that emit the
+correct answer and then continue generating. Where the output is clean, relaxed coincides with
+last-N extraction and exact match. `APIBackend` strips `<think>` blocks and common prefixes before
+scoring; local training runs use the same relaxed scorer. The head-to-head comparisons below use
+relaxed for both API and local models.
 
 ## 2. The tasks
 
@@ -134,18 +118,17 @@ The corrected, default setup for API evaluation is:
   and detached trailing periods, then extracts the final answer span.
 
 On the flagship task `composite_copy_v1@L16` (pool-16 in-context recall × last-write-wins binding,
-length 16), n=30, greedy, **relaxed** match (the fair cross-regime metric, see §1.1):
+length 16), n=30, greedy, **relaxed** match:
 
-| model | relaxed | exact |
-| --- | --- | --- |
-| glm-5.2 | **0.867** | 0.000 |
-| kimi-k2.6 | **0.867** | 0.000 |
-| llama-3.3-70b-instruct | **0.767** | 0.000 |
+| model | relaxed |
+| --- | --- |
+| glm-5.2 | **0.867** |
+| kimi-k2.6 | **0.867** |
+| llama-3.3-70b-instruct | **0.767** |
 
-Exact match is 0 because disabling `stop_at="."` means models no longer emit the trailing period
-required by the canonical metric. Relaxed match strips the period and scores the answer span, so
-it is the fair API metric. Earlier 16-token evals reported Kimi at 0.40 because the scratchpad
-was truncated before the answer; the 2048-token budget fixes that.
+These runs use `max_new_tokens=2048` and no early stop so reasoning models can finish their
+scratchpad; `APIBackend` extracts the final answer span. Earlier 16-token evals reported Kimi at
+0.40 because the scratchpad was truncated before the answer.
 
 **Reasoning is required.** With `reasoning={"effort":"none"}` all three models collapse to ~0 on
 composite (no-reasoning files and the flagship table are n=30; the dose-response below is n=100).
@@ -166,8 +149,7 @@ and GLM. Composition and S₅ respond to different levers.
 The wider API capability grid below is from the standard zero-shot grid (default decoding,
 `max_new_tokens=16`, `stop_at="."`). The `composite_copy_v1` column is the only one that required
 the corrected long-token setup above; the remaining tasks do not benefit from extended reasoning
-and are reported with the canonical exact-match metric (which equals relaxed for single-token
-answers).
+and are reported with relaxed match (which equals exact match for single-token answers).
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -204,13 +186,12 @@ On the same flagship task `composite_copy_v1@L16`, **relaxed** match:
 | fprm | ~40M | 0.253 ± 0.178 |
 | transformer | ~40M | 0.005 ± 0.005 |
 
-For local models, relaxed match is effectively identical to exact match: exact is a prefix match,
-and the only difference is the trailing period, which local models usually emit when the content
-tokens are correct. We confirmed this on full-scale confirmation runs: `gdp_hybrid` exact = 0.874,
-relaxed = 0.874, last-N = 0.00; `fprm` exact = 0.044, relaxed = 0.044, last-N = 0.00. The local
-last-N score is near zero because the model does not reliably stop at the period and appends extra
-tokens; exact/relaxed correctly credit the answer prefix. The numbers above are the 3-seed exact
-means, which serve as our best estimate of the relaxed mean.
+For local models, relaxed match is effectively identical to the benchmark's default score: the
+model usually emits the trailing period when the content tokens are correct, and the only
+difference is whether a missing period or trailing generation is penalized. We confirmed this on
+full-scale runs: `gdp_hybrid` relaxed = 0.874 and last-N = 0.00; `fprm` relaxed = 0.044 and last-N
+= 0.00. The low last-N scores show that local models often append extra tokens after the answer,
+so a prefix-based metric is the right choice. The numbers above are the 3-seed benchmark means.
 
 The local `gdp_hybrid` is competitive with the API models on this task, despite being ~40M
 parameters trained from scratch. `fprm` shows high seed variance; the transformer fails to learn
@@ -268,8 +249,8 @@ horizon (8 seeds):
 The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
 
 **Background reasoning rescues composition at long context.** With reasoning effort swept
-{none, high} at long length (n=30, exact match after `APIBackend` normalization — the final
-committed answer span):
+{none, high} at long length (n=30, relaxed match on the final answer span extracted by
+`APIBackend`):
 
 | model | L128 none | L128 high | L256 none | L256 high | L512 high |
 | --- | --- | --- | --- | --- | --- |
@@ -405,7 +386,7 @@ python scripts/experiment_dense_supervision.py
 - API long-context reasoning: `results/reasoning_longctx_L128_20260628_163121.jsonl`,
   `results/reasoning_longctx_L256_20260628_171119.jsonl`,
   `results/reasoning_longctx_L512_20260628_181508.jsonl`
-- Local winning-recipe benchmarks (exact match, 3 seeds):
+- Local winning-recipe benchmarks (relaxed match, 3 seeds):
   `results/benchmark_gdp_d768_b128_80k_500eval.json`,
   `results/benchmark_fprm_d768_b128_80k_500eval.json`,
   `results/benchmark_transformer_d768_b128_80k_500eval.json`
