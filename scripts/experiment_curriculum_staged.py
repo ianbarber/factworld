@@ -217,7 +217,11 @@ def eval_task(backend, spec, *, eval_n: int, length: int, scaffolded: bool = Fal
         res = evaluate_task(backend, spec, split="test", n=eval_n, length=length,
                             max_new_tokens=max_new)
         dec = prefix_decomp(res["examples"], trace_mode=use_trace)
-        return {"overall": res["overall"], **dec}
+        out = {"overall": res["overall"], **dec}
+        for name in ("last_n", "relaxed", "contains"):
+            if name in res.get("metrics", {}):
+                out[name] = res["metrics"][name]["overall"]
+        return out
     examples = TK.generate(spec, "test", n=eval_n, length=length)
     prompts = [scaffold_prompt(e.prompt, e.meta.get("holder")) for e in examples]
     max_new = (length + 6) if use_trace else 8
@@ -313,6 +317,9 @@ def flatten_eval(evals: dict) -> dict[str, float]:
             flat[f"{key}_overall"] = val["overall"]
             flat[f"{key}_holder"] = val.get("holder_acc", 0.0)
             flat[f"{key}_value"] = val.get("value_acc", 0.0)
+            for name in ("last_n", "relaxed", "contains"):
+                if name in val:
+                    flat[f"{key}_{name}"] = val[name]
     return flat
 
 
@@ -342,8 +349,8 @@ def write_markdown(summary, cfg, path: Path):
         "",
         "## Final per-task eval (mean over seeds)",
         "",
-        "| arch | bind L16 | recall easy | recall med | recall hard | comp p5 | comp p16 | p16 holder | p16 value | p16 scaffold |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| arch | bind L16 | recall easy | recall med | recall hard | comp p5 | comp p16 | p16 last-N | p16 holder | p16 value | p16 scaffold |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for arch, m in sorted(summary.items()):
         def g(key):
@@ -352,8 +359,8 @@ def write_markdown(summary, cfg, path: Path):
             f"| {arch} | {g('binding_L16_overall'):.2f} | {g('recall_easy_L4_overall'):.2f} | "
             f"{g('recall_med_L8_overall'):.2f} | {g('recall_hard_L16_overall'):.2f} | "
             f"{g('composite_p5_L16_overall'):.2f} | {g('composite_p16_L16_overall'):.2f} | "
-            f"{g('composite_p16_L16_holder'):.2f} | {g('composite_p16_L16_value'):.2f} | "
-            f"{g('composite_p16_scaffolded'):.2f} |"
+            f"{g('composite_p16_L16_last_n'):.2f} | {g('composite_p16_L16_holder'):.2f} | "
+            f"{g('composite_p16_L16_value'):.2f} | {g('composite_p16_scaffolded'):.2f} |"
         )
     lines += [
         "",

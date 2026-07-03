@@ -212,13 +212,14 @@ instructions appended for composite/s5). Full table in [`docs/openrouter/results
 
 > **Update:** the original 16-token eval truncated reasoning models and under-reported Kimi.
 > The corrected `composite_copy_v1@L16` numbers below use `max_new_tokens=2048`, no early
-> stop, and last-N extraction so reasoning models can finish their scratchpad. The primary
-> write-up — combining API and local-architecture results into one reproducible instrument —
-> is [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
+> stop, and **relaxed** match (strip trailing period, score the answer span) so reasoning
+> models can finish their scratchpad and local trailing-generation artifacts are treated
+> consistently. The primary write-up is
+> [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
-| glm-5.2 | 1.000 | 1.000 | **0.767** | 0.133 | **0.933** | 0.167 |
+| glm-5.2 | 1.000 | 1.000 | **0.767** | 0.133 | **0.867** | 0.167 |
 | kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | 0.867 | 0.200 |
 | llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | 0.767 | 0.167 |
 | gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.133 |
@@ -270,18 +271,19 @@ conv+attention block (the architecture the external FPRM work motivates); `gdp_h
 | gdp_hybrid | 0.99 / 100% | 0.58 / 0% | 0.55 / 0% |
 | transformer | 0.45 / 0% | 0.35 / 0% | 0.33 / 0% |
 
-**`composite_copy_scale_v1` (k=5, learnable) @L16 — holder / value leg accuracy**
+**`composite_copy_v1` (k=32) @L16 — relaxed match mean±std**
 
-| arch | holder | value | converge |
-| --- | --- | --- | --- |
-| gdp_hybrid | 0.95 | **0.51** | 40% |
-| fprm | 0.99 | 0.20 | 0% |
-| transformer | 0.38 | 0.13 | 0% |
+| arch | composite_p16@L16 relaxed |
+| --- | --- |
+| gdp_hybrid | **0.747 ± 0.174** |
+| fprm | 0.253 ± 0.178 |
+| transformer | 0.005 ± 0.005 |
 
-The decomposition localizes the composition gap: every recurrent architecture solves the **holder**
-(binding) leg (0.95–0.99) but fails the **value** (recall-of-the-resolved-holder) leg — the same
-routing wall the API models hit. `fprm` dominates `binding_v1` length extrapolation (0.94 vs 0.55 at
-L64); `gdp_hybrid` is the only architecture that converges on composition (40%).
+Relaxed match is the fair cross-regime metric (strip trailing period, score the answer prefix); it
+is effectively identical to local exact match because exact is already a prefix match. The
+decomposition localizes the composition gap: every recurrent architecture solves the **holder**
+(binding) leg but fails the **value** (recall-of-the-resolved-holder) leg — the same routing wall
+the API models hit.
 
 **Trained scratchpad (E2, local) makes it worse.** Supervising the per-step oracle trace
 (`prompt→trace→answer`) collapses the holder leg 0.95→0.08 and value 0.51→0.00 — the model emits a
