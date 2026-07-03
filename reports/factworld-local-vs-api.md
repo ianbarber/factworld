@@ -17,7 +17,7 @@ Trained with the staged curriculum winning recipe:
 
 ## API models
 
-Evaluated via OpenRouter. Two scoring regimes are shown because the original short-token eval unfairly truncated reasoning models.
+Evaluated via OpenRouter. The original eval used only 16 output tokens, which cut off reasoning models before they could emit the final answer.
 
 ### Original 0-shot eval (`max_new_tokens=16`, `stop_at="."`)
 
@@ -27,7 +27,7 @@ Evaluated via OpenRouter. Two scoring regimes are shown because the original sho
 | glm-5.2 | **0.800** | — | — |
 | kimi-k2.6 | 0.400 | 0.633 | 0.467 |
 
-This table made Kimi look much weaker. Investigation showed the 16-token budget cut off its reasoning scratchpad before it could emit the final answer.
+The 16-token budget hides Kimi's capability: it runs out of tokens mid-reasoning and returns the truncated scratchpad.
 
 ### Fair eval (`max_new_tokens=2048`, no `stop_at`, composite format instruction)
 
@@ -38,7 +38,7 @@ This table made Kimi look much weaker. Investigation showed the 16-token budget 
 | llama-3.3-70b | 0.000 | 0.767 | 0.767 | **0.767** |
 
 - Exact is 0 because disabling `stop_at="."` means models no longer emit the trailing period required by exact match.
-- `last_n` extracts the final `holder value` pair and is the fair comparison metric for API models that may list intermediate holders or produce reasoning preamble.
+- `last_n` extracts the final `holder value` pair. It is the fair metric for API models that may list intermediate holders or emit a reasoning trace before the answer.
 - With adequate token budget, **Kimi is competitive with GLM** (0.867 vs. 0.933), and both beat llama-3.3-70b.
 
 ## Key findings
@@ -60,7 +60,7 @@ This table made Kimi look much weaker. Investigation showed the 16-token budget 
 | fprm (local) | 0.253 | exact | 500 |
 | transformer (local) | 0.005 | exact | 500 |
 
-The local `gdp_hybrid` model, despite being ~40M parameters and trained from scratch, lands in the same ballpark as the 70B/parameter-equivalent API models on this task.
+The local `gdp_hybrid` model is ~40M parameters trained from scratch; on this task it scores close to the API models.
 
 ## Files
 

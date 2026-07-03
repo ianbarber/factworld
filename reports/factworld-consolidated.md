@@ -6,14 +6,11 @@ it on demand. We can't prove this pattern is exactly what agents do — but it i
 controllable, interesting proxy for some of the things that happen in agentic sessions,
 and it is sharp enough to separate models and architectures.
 
-The instrument fills a gap. Frontier API models can be evaluated end-to-end, but you
-cannot ablate an architecture inside one — you cannot ask "does the attention pattern
-or the recurrence carry the state?" of a model you only call over HTTP. Small models
-trained from scratch let you ablate architectures freely, but it is hard to know whether
-their behaviors reflect general mechanisms or the idiosyncrasies of a tiny run.
-FactWorld runs the same controlled tasks in both regimes, so a finding can be checked
-both ways. This is not a recipe to train a frontier model; it is a way to close the eval
-gap between the two.
+FactWorld runs the same controlled tasks on both frontier API models and small models
+trained from scratch. That lets a finding be checked both ways: API models give an
+end-to-end capability readout, while small trained models let you ablate architectures
+and ask whether attention or recurrence carries the state. This is not a recipe for a
+frontier model; it is a way to compare the two evaluation regimes on the same task.
 
 Three findings carry the report:
 
