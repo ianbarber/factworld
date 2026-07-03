@@ -76,12 +76,44 @@ def evaluate(model, tok, encoded, device, token_budget=8192, max_bs=256):
 def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e-3, warmup=1000,
         weight_decay=0.01, clip=1.0, d_model=320, n_layers=4, n_heads=4, d_ff=1280, use_forget_gate=True,
         seed=0, return_model=False, num_householder=4, allow_neg_eigval=True,
-        use_short_conv=False, resid_init=False):
+        use_short_conv=False, resid_init=False, model=None, loss_log_interval=0,
+        wandb_project=None, wandb_run_name=None, wandb_log_every=1, wandb_config=None,
+        prompt_lens=None):
+    """Train a model from scratch or continue from an existing one.
+
+    Args:
+        model: optional ``nn.Module`` to keep training. If None, a fresh model is built.
+        loss_log_interval: if > 0, record the training loss every N steps in ``loss_curve``.
+        wandb_project: if set and ``wandb`` is installed, log training metrics live.
+        wandb_run_name: optional run name; defaults to ``arch_seed{N}``.
+        wandb_log_every: log wandb metrics every N steps (1 = every step).
+        wandb_config: optional dict of config values to log to wandb.
+        prompt_lens: optional list aligned with ``docs``. If provided, loss is computed only
+            on tokens at positions >= prompt_len - 1 in each doc (i.e., answer tokens).
+            Use this for instruction/output-only fine-tuning.
+    """
+    wandb = None
+    if wandb_project is not None:
+        try:
+            import wandb
+        except Exception:  # noqa: BLE001
+            wandb = None
+            print("WARNING: wandb requested but not installed; continuing without logging.")
+
+    run_name = wandb_run_name or f"{arch}_seed{seed}"
+    if wandb is not None:
+        cfg = {"arch": arch, "d_model": d_model, "n_layers": n_layers, "steps": steps,
+               "batch": batch, "lr": lr, "warmup": warmup, "seed": seed}
+        if wandb_config:
+            cfg.update(wandb_config)
+        wandb.init(project=wandb_project, name=run_name, config=cfg, reinit=True)
+
     torch.manual_seed(seed)
-    model = build_model(arch, tok.vocab_size, d_model=d_model, n_layers=n_layers, n_heads=n_heads, d_ff=d_ff,
-                        use_forget_gate=use_forget_gate, num_householder=num_householder,
-                        allow_neg_eigval=allow_neg_eigval, use_short_conv=use_short_conv,
-                        resid_init=resid_init).to(device)
+    if model is None:
+        model = build_model(arch, tok.vocab_size, d_model=d_model, n_layers=n_layers, n_heads=n_heads, d_ff=d_ff,
+                            use_forget_gate=use_forget_gate, num_householder=num_householder,
+                            allow_neg_eigval=allow_neg_eigval, use_short_conv=use_short_conv,
+                            resid_init=resid_init).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
 
     def lr_mult(step):
@@ -94,6 +126,9 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
     ndoc, pad = len(docs), tok.pad_id
     model.train()
     last = float("nan")
+    loss_curve = []
+    log_every = max(1, loss_log_interval)
+    wb_every = max(1, wandb_log_every)
     for step in range(steps):
         for pg in opt.param_groups:
             pg["lr"] = lr * lr_mult(step)
@@ -107,17 +142,37 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
             logits = model(inp[:, :-1])
             tgt = inp[:, 1:]
             ce = F.cross_entropy(logits.reshape(-1, tok.vocab_size), tgt.reshape(-1), reduction="none")
-            mask = (tgt != pad).float().reshape(-1)             # next-token loss on real tokens only
-            loss = (ce * mask).sum() / mask.sum().clamp(min=1)
+            mask = (tgt != pad).float()                          # next-token loss on real tokens only
+            if prompt_lens is not None:
+                pls = [max(1, prompt_lens[start + ri]) for ri in range(len(chunk))]
+                pl = torch.tensor(pls, device=device).unsqueeze(1)
+                pos = torch.arange(tgt.size(1), device=device).unsqueeze(0)
+                answer_mask = (pos >= (pl - 1)).float()          # keep answer tokens and first token after prompt
+                mask = mask * answer_mask
+            mask_flat = mask.reshape(-1)
+            loss = (ce * mask_flat).sum() / mask_flat.sum().clamp(min=1)
         opt.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+        gnorm = torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
         opt.step()
         last = loss.detach().item()
+        if loss_log_interval and (step + 1) % log_every == 0:
+            loss_curve.append((step + 1, last))
+        if wandb is not None and (step + 1) % wb_every == 0:
+            wandb.log({"train/loss": last, "train/lr": lr * lr_mult(step), "train/grad_norm": float(gnorm)}, step=step + 1)
 
     acc, n = evaluate(model, tok, encoded, device) if encoded else ({}, {})
+    out = {"arch": arch, "final_loss": last, "acc": acc, "n": n}
+    if loss_log_interval:
+        out["loss_curve"] = loss_curve
+    if wandb is not None:
+        # Summarize final eval accuracies (keyed by condition/family/length tuples).
+        for key, val in acc.items():
+            wandb.log({f"eval/{'_'.join(str(k) for k in key)}": val}, step=steps)
+        wandb.finish()
     if return_model:
-        return {"arch": arch, "final_loss": last, "acc": acc, "n": n, "model": model}
+        out["model"] = model
+        return out
     del model
     torch.cuda.empty_cache()
-    return {"arch": arch, "final_loss": last, "acc": acc, "n": n}
+    return out

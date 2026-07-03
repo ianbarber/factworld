@@ -50,7 +50,10 @@ DEFAULT_TASKS = list(TK.REPORTED)
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are taking a short test. Answer each question with only the requested "
-    "value or values, no explanation. Use the same spelling as in the question."
+    "value or values, no explanation. Use the same spelling as in the question. "
+    "For questions that ask 'what is a0 of the holder of ...', "
+    "answer with the holder's name followed by the requested value, "
+    "like 'g3 v9'."
 )
 
 COMPOSITE_FORMAT_PROMPT = (
@@ -75,8 +78,8 @@ def _build_system_prompt(base_prompt: str, task_name: str | None,
 
 
 def run_grid(models, tasks, n, lengths, max_workers, base_url,
-             system_prompt, task_prompts, max_new_tokens, no_reasoning, jsonl_path=None,
-             md_path=None):
+             system_prompt, task_prompts, max_new_tokens, no_reasoning, n_shot=0,
+             stop_at=None, jsonl_path=None, md_path=None):
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise SystemExit("OPENROUTER_API_KEY not set")
@@ -106,6 +109,8 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
                     n=n,
                     length=L,
                     max_new_tokens=max_new_tokens,
+                    n_shot=n_shot,
+                    stop_at=stop_at,
                 )
                 elapsed = time.time() - t0
                 examples = []
@@ -224,12 +229,36 @@ def write_markdown(results: list[dict], path: str):
                 accs.append(f"{sum(vals) / len(vals):.3f}" if vals else "—")
             lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
 
+    if any(pivot[m][t]["last_n"] for m in model_order for t in tasks):
+        lines += [
+            "",
+            "## Last-N results (answer-extraction robust)",
+            "",
+            "Match the last len(gold) tokens of the prediction to the gold answer. This is the "
+            "fair metric for reasoning/chat models that may emit a scratchpad or list intermediate "
+            "holders before the final answer, and for runs without `stop_at='.'` where the model "
+            "does not emit a trailing period.",
+            "",
+            "| model | " + " | ".join(tasks) + " |",
+            "| " + " | ".join(["---"] * (len(tasks) + 1)) + " |",
+        ]
+        for model in model_order:
+            accs = []
+            for t in tasks:
+                vals = pivot[model][t]["last_n"]
+                accs.append(f"{sum(vals) / len(vals):.3f}" if vals else "—")
+            lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
+
     lines += [
         "",
         "## Notes",
         "",
-        "- Exact match is the canonical metric; semantic containment is reported to separate "
-        "formatting/tokenizer artifacts from whether the model knows the answer.",
+        "- Exact match is the canonical metric for local models that stop at the answer period.",
+        "- For API reasoning models, `last_n` is the recommended fair metric because the default "
+        "run does not use `stop_at='.'`, allowing the model to finish its reasoning scratchpad. "
+        "Without the stop token the model usually omits the trailing period, so exact match is 0 "
+        "even when the answer is correct.",
+        "- Semantic containment reports whether the correct holder and value appear anywhere in the output.",
         "- `APIBackend` normalizes common answer prefixes ('The answer is...') and a trailing "
         "period glued to the preceding token (e.g. `v56.` → `v56 .`).",
         "",
@@ -274,8 +303,14 @@ def main():
                     help="Shorthand: append the composite two-token format instruction.")
     ap.add_argument("--s5_format", action="store_true",
                     help="Shorthand: append the S5 role-output format instruction.")
-    ap.add_argument("--max_new_tokens", type=int, default=16,
-                    help="Generation budget per example (default: 16).")
+    ap.add_argument("--max_new_tokens", type=int, default=2048,
+                    help="Generation budget per example (default: 2048).")
+    ap.add_argument("--n_shot", type=int, default=0,
+                    help="Number of train demonstrations to prepend to each test prompt (default: 0).")
+    ap.add_argument("--stop_at", default=None,
+                    help="Stop generation at this string (default: none, so reasoning models can finish).")
+    ap.add_argument("--no_stop", action="store_true",
+                    help="Deprecated: no-stop is now the default.")
     ap.add_argument("--no_reasoning", action="store_true",
                     help="Pass reasoning={\"effort\":\"none\"} to disable chain-of-thought (OpenRouter).")
     ap.add_argument("--out", default="docs/openrouter/results.md",
@@ -300,10 +335,14 @@ def main():
     # Crash-safe JSONL alongside the markdown (rewritten after every cell).
     from pathlib import Path
     jsonl_path = Path(a.out).with_suffix(".jsonl") if a.out else None
+    stop_at = a.stop_at
+    if a.no_stop:
+        stop_at = None
     results = run_grid(
         a.models, a.tasks, a.n, lengths, a.max_workers,
         a.base_url, a.system_prompt, task_prompts, a.max_new_tokens,
-        a.no_reasoning, jsonl_path=str(jsonl_path) if jsonl_path else None,
+        a.no_reasoning, n_shot=a.n_shot, stop_at=stop_at,
+        jsonl_path=str(jsonl_path) if jsonl_path else None,
         md_path=a.out,
     )
 
