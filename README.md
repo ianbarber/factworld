@@ -47,7 +47,7 @@ atomic-token format; the benchmark now renders clean natural language.
 The primary report on the natural-language format is
 [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md). It treats FactWorld as
 one reproducible instrument for both frontier-model evaluation and local-architecture
-experimentation, with the corrected API numbers and the latest local multi-seed results.
+experimentation, with the API numbers and local multi-seed results.
 
 🔬 **Reproduction code for the non-abelian report:**
 [`phases/02-non-abelian-state/`](phases/02-non-abelian-state/) — every claim maps to one script;
@@ -209,12 +209,10 @@ whether the model actually knows the answer.
 OpenRouter grid (n = 30, greedy decoding, **natural-language format**, output-format
 instructions appended for composite/s5). Full table in [`docs/openrouter/results-natural.md`](docs/openrouter/results-natural.md).
 
-> **Update:** the original 16-token eval truncated reasoning models and under-reported Kimi.
-> The corrected `composite_copy_v1@L16` numbers below use `max_new_tokens=2048`, no early
-> stop, and **relaxed** match (strip trailing period, score the answer span) so reasoning
-> models can finish their scratchpad and local trailing-generation artifacts are treated
-> consistently. The primary write-up is
-> [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
+`composite_copy_v1@L16` uses `max_new_tokens=2048`, no early stop, and **relaxed** match
+(strip trailing period, score the answer span) so reasoning models can finish their scratchpad
+and trailing-generation artifacts are treated consistently across API and local evals. The
+primary write-up is [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -328,8 +326,8 @@ In short: the suite climbs from easy single-hop recall, through binding and comp
 
 1. **Composition is movable by test-time compute** for strong reasoning models. A reasoning-effort
    dose-response sweep shows composite value climbing with effort (kimi 0.22→0.98, glm 0.14→0.81);
-   given the output format, reasoners solve it. Non-reasoners floor. (The earlier "test-time doesn't
-   help" claim was wrong — it held only for explicit CoT *prompting* and for non-reasoning local models.)
+   given the output format, reasoners solve it. Non-reasoners floor. Explicit CoT prompting does
+   not help; background reasoning effort does.
 2. **Non-abelian state-tracking (s5) is movable by training-time supervision density, NOT by reasoning.**
    It floors at every reasoning effort, but dense per-step supervision solves it (10/10 seeds at L16)
    and the circuit **survives weaning to answer-only** (wean_mixed 8/8) — so it deploys label-free.

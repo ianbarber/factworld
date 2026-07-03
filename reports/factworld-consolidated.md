@@ -108,11 +108,11 @@ length. The instrument is sound on the natural-language format.
 
 ## 4. Evaluating frontier models
 
-The corrected, default setup for API evaluation is:
+The default setup for API evaluation is:
 
 - `max_new_tokens=2048` — enough for reasoning models to finish a scratchpad.
-- No early stop (`stop_at=None`) — truncating at `.` cut off reasoning traces and under-reported
-  Kimi in earlier runs.
+- No early stop (`stop_at=None`) — truncating at `.` would cut off reasoning traces before the
+  answer.
 - Composite format instruction in the system prompt — tells the model to emit `<holder> <value>`.
 - `APIBackend` normalizes the output before scoring: it strips `<think>` blocks, common prefixes,
   and detached trailing periods, then extracts the final answer span.
@@ -127,8 +127,8 @@ length 16), n=30, greedy, **relaxed** match:
 | llama-3.3-70b-instruct | **0.767** |
 
 These runs use `max_new_tokens=2048` and no early stop so reasoning models can finish their
-scratchpad; `APIBackend` extracts the final answer span. Earlier 16-token evals reported Kimi at
-0.40 because the scratchpad was truncated before the answer.
+scratchpad; `APIBackend` extracts the final answer span. A short generation budget would truncate
+the scratchpad before the answer.
 
 **Reasoning is required.** With `reasoning={"effort":"none"}` all three models collapse to ~0 on
 composite (no-reasoning files and the flagship table are n=30; the dose-response below is n=100).
@@ -146,10 +146,9 @@ including the reasoners that score 0.8–0.98 under a plain prompt.
 **S₅ is not moved by reasoning.** At every effort, value accuracy stays at floor for both Kimi
 and GLM. Composition and S₅ respond to different levers.
 
-The wider API capability grid below is from the standard zero-shot grid (default decoding,
-`max_new_tokens=16`, `stop_at="."`). The `composite_copy_v1` column is the only one that required
-the corrected long-token setup above; the remaining tasks do not benefit from extended reasoning
-and are reported with relaxed match (which equals exact match for single-token answers).
+The wider API capability grid below uses the standard zero-shot grid (default decoding,
+`max_new_tokens=16`, `stop_at="."`) for all tasks except `composite_copy_v1`, which uses the
+long-token setup above; the remaining tasks do not benefit from extended reasoning.
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
