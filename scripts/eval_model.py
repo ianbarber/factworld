@@ -108,8 +108,12 @@ def main():
     ap.add_argument("--split", default="test", choices=["train", "test"],
                     help="Which split to evaluate.")
     ap.add_argument("--length", type=int, default=None, help="Override the eval length.")
-    ap.add_argument("--max_new_tokens", type=int, default=16,
-                    help="Generation budget per example.")
+    ap.add_argument("--max_new_tokens", type=int, default=2048,
+                    help="Generation budget per example (default: 2048).")
+    ap.add_argument("--stop_at", default=".",
+                    help="Stop generation at this string (default: '.').")
+    ap.add_argument("--no_stop", action="store_true",
+                    help="Disable early stopping; needed for API reasoning models.")
     ap.add_argument("--seed", type=int, default=0, help="Random seed.")
     ap.add_argument("--json_out", default=None,
                     help="Optional JSON output path (same schema as eval_openrouter_grid.py).")
@@ -142,10 +146,11 @@ def main():
     else:
         raise ValueError(f"unknown backend: {a.backend}")
 
+    stop_at = None if a.no_stop else a.stop_at
     lengths = [a.length] if a.length is not None else list(spec.eval_lengths)
     results = {
         L: evaluate_task(backend, spec, split=a.split, n=a.n, length=L,
-                         max_new_tokens=a.max_new_tokens)
+                         max_new_tokens=a.max_new_tokens, stop_at=stop_at)
         for L in lengths
     }
 

@@ -21,8 +21,8 @@ You can evaluate any model that can continue a prompt: OpenAI-compatible APIs
 from-scratch locally, or your own Python callable.
 
 ```bash
-# API (composite format instruction is appended automatically for composite tasks)
-python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50
+# API fair eval for reasoning models (2048 tokens, no early stop)
+python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50 --no_stop
 
 # HuggingFace
 python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
@@ -44,9 +44,10 @@ atomic-token format; the benchmark now renders clean natural language.
   A Recipe for Length-Generalizing Non-Abelian State-Tracking* (+ reproduction kit,
   [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md)).
 
-A consolidated report on the natural-language format is in progress. Reference numbers live in
-the `docs/` folders below (the OpenRouter grids are pre-refactor, atomic-token format; they are
-being re-run on the natural format — see `docs/openrouter/`).
+The primary report on the natural-language format is
+[`reports/factworld-consolidated.md`](reports/factworld-consolidated.md). It treats FactWorld as
+one reproducible instrument for both frontier-model evaluation and local-architecture
+experimentation, with the corrected API numbers and the latest local multi-seed results.
 
 🔬 **Reproduction code for the non-abelian report:**
 [`phases/02-non-abelian-state/`](phases/02-non-abelian-state/) — every claim maps to one script;
@@ -86,8 +87,8 @@ print(result["overall"])
 ```
 
 ```bash
-# API (auto-appends composite format instruction for composite tasks)
-python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50
+# API fair eval for reasoning models (2048 tokens, no early stop)
+python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50 --no_stop
 
 # HuggingFace
 python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
@@ -211,9 +212,9 @@ instructions appended for composite/s5). Full table in [`docs/openrouter/results
 
 > **Update:** the original 16-token eval truncated reasoning models and under-reported Kimi.
 > The corrected `composite_copy_v1@L16` numbers below use `max_new_tokens=2048`, no early
-> stop, and last-N extraction so reasoning models can finish their scratchpad. See
-> [`reports/factworld-local-vs-api.md`](reports/factworld-local-vs-api.md) for the full
-> comparison to local models.
+> stop, and last-N extraction so reasoning models can finish their scratchpad. The primary
+> write-up — combining API and local-architecture results into one reproducible instrument —
+> is [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |

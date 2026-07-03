@@ -1,45 +1,40 @@
-# FactWorld: Evaluating State-Tracking and Recall
+# FactWorld: A Reproducible Instrument for Composing State-Tracking and Recall
 
-FactWorld is an evaluation for a pattern of behavior we think is connected to agentic
-work: maintaining an evolving world state across a long context and recalling facts about
-it on demand. We can't prove this pattern is exactly what agents do — but it is a
-controllable, interesting proxy for some of the things that happen in agentic sessions,
-and it is sharp enough to separate models and architectures.
+FactWorld is a single, frozen benchmark suite that can evaluate frontier models through an API and
+training local architectures from scratch. The same tasks, oracle, and decomposition metrics are
+used in both modes. The goal is to give the field one instrument for studying how recall,
+state-tracking, and composition interact, with numbers that can be reproduced from committed
+scripts and checked independently by anyone with an API key or a single GPU.
 
-FactWorld runs the same controlled tasks on both frontier API models and small models
-trained from scratch. That lets a finding be checked both ways: API models give an
-end-to-end capability readout, while small trained models let you ablate architectures
-and ask whether attention or recurrence carries the state. This is not a recipe for a
-frontier model; it is a way to compare the two evaluation regimes on the same task.
+## 1. What the instrument is
 
-> **Note:** the API-model comparison numbers in this report are from an earlier 16-token
-> eval that truncated reasoning models. The corrected comparison — using enough tokens for
-> reasoning and scoring with last-N extraction — is in
-> [`factworld-local-vs-api.md`](factworld-local-vs-api.md).
+The suite is built around versioned `TaskSpec` objects in `factworld.tasks.CANONICAL`. Each task
+renders to natural language, carries deterministic examples from a fixed seed, and is scored by a
+single canonical metric: **position-strict exact match** of the answer span. Gold answers come
+from a symbolic oracle applied to the underlying world state, never from parsing the rendered
+text, so labels cannot leak. A validity gate (`scripts/validate_suite.py`) certifies that no
+shallow shortcut clears floor on any task.
 
-Three findings carry the report:
+Two evaluation modes share the same specs:
 
-- **A. Composition is movable by background reasoning.** On the 2-hop composition task,
-  accuracy climbs with reasoning effort (GLM-5.2: 0.14 → 0.81; Kimi-K2.6: 0.22 → 0.98),
-  and the benefit survives long context (0.80–0.97 at L256–L512 with high effort).
-- **B. Non-abelian state-tracking (S₅) is movable by training-time supervision that
-  develops a circuit.** Dense per-step state supervision solves S₅ (10/10 seeds); the
-  circuit forms down to a checkpoint every other step and is gone below. It survives
-  weaning to label-free deployment.
-- **C. Architecture determines whether a learned circuit generalizes in length.**
-  Transformers and weight-tied looped blocks shortcut — they solve the trained length
-  and collapse past it. A recurrent hybrid carries the learned state computation to
-  ~32× the trained horizon.
+- **Frontier models:** any model with an OpenAI-compatible API, including OpenRouter, vLLM,
+  ollama, or OpenAI. `scripts/eval_model.py` and `scripts/eval_openrouter_grid.py` run the same
+  `evaluate_task` call against the public backend.
+- **Local architectures:** models trained from scratch on the same tasks, using
+  `scripts/run_benchmark.py` or the staged-curriculum scripts. The architectures live in
+  `factworld/models.py`; the data and eval layer is pure-stdlib.
 
-## 1. The tasks
+Both modes report the same per-leg decomposition on composite tasks. A composite answer is two
+tokens — a holder and a value — so we score each leg independently. This turns an aggregate score
+into a diagnosis: holder-right/value-wrong means the model tracked state but failed recall;
+holder-wrong/value-right means the reverse. The decomposition is what makes the suite an
+instrument for composition: it lets you ask which sub-behavior fails and under what intervention.
 
-Two task families do the work of this report. They look similar — both ask the model to
-maintain state across a stream of events — but they test different mechanisms and, as
-the results show, respond to different levers.
+## 2. The tasks
 
-**Composition** combines last-write-wins state-tracking with in-context recall. A set of
-facts maps each agent to a value, and a stream of `give` events moves objects between
-agents. The query asks for the value of whichever agent currently holds a given object:
+**Composition (`composite_copy_v1`)** is the flagship probe. A set of facts maps agents to values,
+and a stream of `give` events moves objects between agents. The query asks for the value of the
+agent that currently holds a given object:
 
 ```
 g2's a0 is v70. g4's a0 is v24. g0's a0 is v109. g1's a0 is v48.
@@ -48,54 +43,31 @@ what is a0 of the holder of o3?
 gold: g2 v70 .
 ```
 
-The model must resolve the holder of `o3` by tracking the give-stream (last write wins),
-then look up that holder's value in the facts. The facts are resampled every example and
-appear in the prompt, so this is **in-context recall** — the value is read from the
-context, not from weights. (A parametric variant fixes the map across training so the
-model can memorize it; we use the in-context form here unless stated.)
+The model must resolve the holder by tracking the give-stream (last write wins), then look up
+that holder's value in the facts. The facts are resampled every example and appear in the prompt,
+so the value is read from context, not from weights.
 
-**S₅** is non-abelian state-tracking. A stream of `swap` and `cycle` events permutes the
-roles of a set of agents, and the query asks for one agent's final role:
+**S₅ (`s5_v1`)** is non-abelian state-tracking. A stream of `swap` and `cycle` events permutes the
+roles of a set of agents, and the query asks for one agent's final role. Unlike last-write-wins,
+the running permutation must be carried step by step.
 
-```
-s0 swaps g3 and g0. s1 swaps g3 and g1. s2 swaps g1 and g2.
-s3 cycles roles: g3 -> g2 -> g1 -> g0 -> g4.
-what role does g3 have?
-gold: r4 .
-```
+**Simpler tasks** round out the suite and act as positive controls:
 
-Unlike last-write-wins, the running permutation cannot be recovered by scanning the
-history for the last write — it must be carried step by step. This is the harder,
-non-abelian case.
+| task | behavior | difficulty axis |
+| --- | --- | --- |
+| `recall_copy_v1` | 1-of-N in-context-copy recall | distractor pool |
+| `binding_v1` | last-write-wins state tracking | give-stream length |
+| `chain_v1` | depth-*k* pointer chase | composition depth |
+| `conflict_v1` | parametric ↔ in-context override | memorized map vs. context |
 
-**How eval works.** Every example's gold answer comes from a symbolic solver applied to
-the underlying world state — never from parsing the rendered text — so labels cannot
-leak. The renderer and its parser are exact inverses, and a validity gate certifies that
-no shallow shortcut (majority, recency, or first-position) clears floor on any task.
-Answers are scored by position-strict exact match of the answer span.
+## 3. Validating the instrument
 
-**The per-leg decomposition.** A composition answer is two tokens — a holder and a value
-— corresponding to the two steps. We score each leg independently. This turns an
-ambiguous aggregate score into a diagnosis: a model that gets the holder right and the
-value wrong failed recall; the reverse failed state-tracking. The decomposition also
-admits a ceiling probe: tell the model the correct holder and ask only for the value. If
-recall is then perfect, the wall is state-tracking, not recall.
+Before using the suite to compare architectures or models, we confirm it reproduces the field's
+established single-capability dissociations. All three are reproduced on the natural-language
+format, three seeds each (`scripts/experiment_canonical_repro.py`).
 
-The rest of the report uses the decomposition throughout. Three simpler tasks round out
-the suite — single-hop in-context recall, single-hop binding, and a depth-*k* pointer
-chase — and are reported in the capability table.
-
-## 2. Validating the instrument
-
-Before using the suite to compare architectures or models, we confirm it reproduces the
-field's established single-capability dissociations. If these hold, downstream claims
-inherit their validity; if the positive control fails, there is a setup bug. All three
-are reproduced on the natural-language format, three seeds each
-(`scripts/experiment_canonical_repro.py`).
-
-**1-hop associative recall (MQAR; Arora et al. 2023).** The value is read adjacent to the
-key — the canonical easy regime. This is the positive control: attention is expected to
-solve it.
+**1-hop associative recall (MQAR).** The value is read adjacent to the key — the canonical easy
+regime. Attention is expected to solve it.
 
 | arch | 1-hop MQAR (pool 16) |
 | --- | --- |
@@ -103,13 +75,8 @@ solve it.
 | fprm | 1.00 |
 | transformer | 1.00 |
 
-All three architectures solve it. The instrument can show a transformer solving recall
-when the task is the canonical form.
-
-**Deferred read-out recall.** The value must be read at an arbitrary later position, not
-adjacent to the key — the regime composition actually requires. This is harder, and the
-recurrent hybrid is expected to win (the attention-rescue result needs a hybrid here, not
-a bare mixer).
+**Deferred read-out recall.** The value must be read at an arbitrary later position, not adjacent
+to the key — the regime composition actually requires.
 
 | arch | deferred read-out (pool 5) |
 | --- | --- |
@@ -117,14 +84,11 @@ a bare mixer).
 | fprm | 0.50 |
 | transformer | 0.19 |
 
-The dissociation reproduces: all architectures aced 1-hop, but only the recurrent hybrid
-solves the deferred read-out. This is the distinction that matters for composition, and it
-is why the report treats the transformer's recall as a regime effect, not an architecture
-limitation — a transformer solves 1-hop MQAR perfectly; it struggles on the deferred
-read-out at this scale.
+The dissociation reproduces: all architectures ace 1-hop, but only the recurrent hybrid solves the
+deferred read-out.
 
-**S₅ length extrapolation under dense supervision (Liu et al. 2023; Siems et al. 2025).**
-Train dense, evaluate free-running past the training length.
+**S₅ length extrapolation under dense supervision.** Train dense, evaluate free-running past the
+training length.
 
 | arch | L16 (train) | L64 (4×) | L128 (8×) |
 | --- | --- | --- | --- |
@@ -132,121 +96,160 @@ Train dense, evaluate free-running past the training length.
 | fprm | 1.00 | 0.17 | 0.23 |
 | transformer | 0.79 | 0.22 | 0.22 |
 
-The product recurrence extrapolates the learned state circuit past its training horizon;
-the transformer and the looped block solve the trained length and collapse past it — the
-well-documented shortcutting failure. This is the architectural dissociation the rest of
-the report builds on.
+The product recurrence extrapolates; the transformer and looped block shortcut past the trained
+length. The instrument is sound on the natural-language format.
 
-All three dissociations reproduce. The instrument is sound on the natural-language format.
+## 4. Evaluating frontier models
 
-## 3. Evaluating API models
+The corrected, default setup for API evaluation is:
 
-We evaluate pretrained models from 3B to ~1T parameters (MoE) via OpenRouter, on the
-natural-language format with output-format instructions appended where the answer shape
-is ambiguous (n=30, greedy).
+- `max_new_tokens=2048` — enough for reasoning models to finish a scratchpad.
+- No early stop (`stop_at=None`) — truncating at `.` cut off reasoning traces and under-reported
+  Kimi in earlier runs.
+- Composite format instruction in the system prompt — tells the model to emit `<holder> <value>`.
+- Last-N extraction for scoring — takes the final `holder value` pair from the model's output,
+  ignoring any intermediate reasoning or listed holders.
 
-| model | recall | binding | chain | composite | s5 |
-| --- | --- | --- | --- | --- | --- |
-| glm-5.2 | 1.00 | 0.77 | 0.13 | 0.80 | 0.17 |
-| llama-3.3-70b | 1.00 | 0.63 | 0.00 | 0.80 | 0.17 |
-| kimi-k2.6 | 1.00 | 0.63 | 0.03 | 0.40 | 0.20 |
-| gemini-2.5-flash | 1.00 | 0.30 | 0.10 | 0.23 | 0.13 |
-| deepseek-chat | 1.00 | 0.33 | 0.03 | 0.17 | 0.13 |
-| gpt-4o-mini | 1.00 | 0.37 | 0.07 | 0.14 | 0.13 |
+On the flagship task `composite_copy_v1@L16` (pool-16 in-context recall × last-write-wins binding,
+length 16), n=30, greedy:
 
-(Each task at its first eval length: recall at pool-6, binding/composite at L16, chain at
-depth-4, s5 at L32. These models are evaluated zero-shot — no task-specific training — so the
-in-distribution/out-of-distribution distinction does not apply. n=30, greedy; full grid in
-`docs/openrouter/results-natural.md`.)
+| model | last-N | exact | notes |
+| --- | --- | --- | --- |
+| glm-5.2 | **0.933** | 0.000 | needs reasoning |
+| kimi-k2.6 | **0.867** | 0.000 | needs reasoning |
+| llama-3.3-70b-instruct | **0.767** | 0.000 | needs reasoning |
 
-Single-hop recall is solved across the board. Binding and composition separate the
-stronger models. The two hardest tasks — depth-*k* composition (`chain`) and non-abelian
-state-tracking (`s5`) — sit near floor for everyone.
+Exact match is 0 because disabling `stop_at="."` means models no longer emit the trailing period
+required by the canonical metric. Last-N is the fair API metric: it accepts the final holder/value
+pair regardless of preceding reasoning or formatting. Earlier 16-token evals reported Kimi at
+0.40 because the scratchpad was truncated before the answer; the 2048-token budget fixes that.
 
-**Composition is movable by background reasoning.** The grid above uses default
-decoding. Sweeping reasoning effort {none, low, medium, high} on the reasoning models
-gives a clear dose-response on composition (n=100/40, value accuracy):
+**Reasoning is required.** With `reasoning={"effort":"none"}` all three models collapse to ~0 on
+composite. Reasoning effort gives a clear dose-response:
 
 | model | none | low | medium | high |
 | --- | --- | --- | --- | --- |
 | kimi-k2.6 | 0.22 | 0.94 | 0.98 | 0.96 |
 | glm-5.2 | 0.14 | 0.74 | 0.78 | 0.81 |
 
-Composition climbs from floor to ~0.8–0.98 as reasoning budget rises. The lever is
-*implicit* reasoning: an explicit "write the holder, then the value" instruction hurts
-every model (value drops to ~0.00), including the reasoners that score 0.8–0.98 under a
-plain prompt. Forcing an explicit intermediate disrupts models that reason better
-implicitly. (This was a correction: an earlier draft read the implicit-reasoning result
-as "test-time compute doesn't help," which was wrong — it does, for composition.)
+Composition climbs from floor to ~0.8–0.98 as reasoning budget rises. The lever is implicit
+reasoning: an explicit "write the holder, then the value" instruction hurts every model,
+including the reasoners that score 0.8–0.98 under a plain prompt.
 
-**S₅ is not moved by reasoning.** At every effort, value accuracy stays at 0.00 for both
-kimi and glm. The two tasks respond to different levers, and reasoning is not the one
-for S₅.
+**S₅ is not moved by reasoning.** At every effort, value accuracy stays at floor for both Kimi
+and GLM. Composition and S₅ respond to different levers.
 
-## 4. Evaluating architectures by training small models
+The wider API capability grid below is from the standard zero-shot grid (default decoding,
+`max_new_tokens=16`, `stop_at="."`). The `composite_copy_v1` column is the only one that required
+the corrected long-token setup above; the remaining tasks do not benefit from extended reasoning
+and are reported with the canonical exact-match metric.
 
-The same tasks, trained from scratch, let us ablate architectures and training regimes
-that an API model hides. We train three architectures at matched compute (d=256, 4
-layers, 8k steps, 5 seeds): a transformer, a weight-tied looped conv+attention block
-(`fprm`), and a recurrent hybrid (`gdp_hybrid` — a `[recurrent, recurrent, attn,
-recurrent]` GatedDeltaProduct stack).
+| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
+| --- | --- | --- | --- | --- | --- | --- |
+| glm-5.2 | 1.000 | 1.000 | 0.767 | 0.133 | **0.933** | 0.167 |
+| kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | **0.867** | 0.200 |
+| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | **0.767** | 0.167 |
+| gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.133 |
+| deepseek-chat | 1.000 | 1.000 | 0.333 | 0.033 | 0.167 | 0.133 |
+| gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.133 |
 
-**In-distribution capability** (at each task's maximum training length; position-strict exact match, mean over seeds):
+Single-hop recall and conflict are solved across the board. Binding and composition separate the
+stronger models. Depth-*k* composition (`chain_v1`) and non-abelian state-tracking (`s5_v1`) sit
+near floor for everyone.
 
-| arch | recall (pool 5) | binding (L16) | composite (L16) | s5 (L32) |
-| --- | --- | --- | --- | --- |
-| gdp_hybrid | 0.73 | 0.99 | 0.50 | 0.20 |
-| fprm | 0.50 | 1.00 | 0.20 | 0.19 |
-| transformer | 0.19 | 0.45 | 0.05 | 0.20 |
+## 5. Evaluating local architectures
 
-All numbers are in-distribution (the longest length seen in training for each task). OOD
-extrapolation is reported separately below. **Note: the local composite column uses the
-learnable k=5 variant (`composite_copy_scale_v1`), not the k=32 flagship (`composite_copy_v1`)
-in the §3 API table — they are different difficulties and not directly comparable across the
-two tables.** Full data in `results/sweep_main_*` and `results/recall_arch_*`.
+The same tasks, trained from scratch, let us ablate architectures and training regimes that an
+API model hides. We use a staged curriculum that we found to be the winning recipe for local
+composition:
 
-Two things stand out.
+- `gdp_hybrid`, `fprm`, and `transformer`
+- d_model=768, n_layers=8, batch=128
+- 25k steps total, 80k docs/phase, 3 seeds
+- evaluated on n=500 test examples per seed
 
-**Recall is regime-dependent; the deferred read-out separates architectures.** §2 showed
-all architectures solve 1-hop MQAR (1.00) but diverge on the deferred read-out — the regime
-composition needs. That divergence is not a training artifact: we ruled out the obvious
-explanations for the transformer's weakness on the deferred task. Training on the eval pool
-sizes lifted pool-6 only 0.11 → ~0.20; scaling width 16× (d=256 / 4M → d=1024 / 68M) gave no
-improvement and on wide pools made it worse; and a focused recipe sweep (5× data, 10× weight
-decay, 3× learning rate, 2× batch) left accuracy at 0.18–0.24 — within noise of baseline. The
-decisive diagnostic is a learning curve: training loss keeps dropping (0.91 → 0.33 over 20k
-steps) while recall accuracy plateaus at ~0.19 from step 2000 and never moves. The model
-memorizes the training set without learning the generalizable deferred-retrieval skill, and no
-hyperparameter we varied changes that. So at this scale the transformer does not solve the
-deferred read-out, even though it aces 1-hop MQAR — a genuine regime effect, consistent with
-the literature's distinction between the two. Parametric recall — facts stored in weights —
-is the complementary case; we do not validate it for API models here, though fine-tuning a
-fixed fact set into a model and testing recall of it would be a clean way.
+`gdp_hybrid` is a `[recurrent, recurrent, attn, recurrent]` GatedDeltaProduct stack. `fprm` is a
+weight-tied looped conv+attention block. The transformer is a standard decoder-only model.
 
-**Architecture determines whether a learned circuit generalizes in length.** On S₅ under
-dense supervision (below), all three architectures form the circuit in-distribution. But
-evaluated past the training lengths:
+On the same flagship task `composite_copy_v1@L16`:
 
-| arch | L16 | L64 | L128 |
+| model | params | composite_p16@L16 exact |
+| --- | --- | --- |
+| **gdp_hybrid** | ~40M | **0.747 ± 0.174** |
+| fprm | ~40M | 0.253 ± 0.178 |
+| transformer | ~40M | 0.005 ± 0.005 |
+
+The local `gdp_hybrid` is competitive with the API models on this task, despite being ~40M
+parameters trained from scratch. `fprm` shows high seed variance; the transformer fails to learn
+the task even with the winning recipe.
+
+**Per-leg decomposition** explains the ranking:
+
+| arch | holder (binding) | value (recall) | overall |
 | --- | --- | --- | --- |
-| gdp_hybrid | 1.00 | 0.74 | 0.64 |
-| fprm | 1.00 | 0.20 | 0.23 |
-| transformer | 0.83 | 0.19 | — |
+| gdp_hybrid | 0.969 | 0.747 | 0.747 |
+| fprm | 0.603 | 0.263 | 0.253 |
+| transformer | 0.206 | 0.026 | 0.005 |
 
-The transformer and the looped block solve the trained length and collapse past it —
-**shortcutting**, the well-documented transformer failure mode on state-tracking (Liu
-et al., 2023). The recurrent hybrid carries the learned state computation far past its
-training horizon. This is the architectural dissociation §2 established under dense
-supervision: product recurrences extrapolate non-abelian state where shortcut-learning
-mixers collapse.
+`gdp_hybrid` solves the binding leg and does most of the recall leg. `fprm` partially tracks
+holders but fails to recall the value of the resolved holder. The transformer fails both legs.
+This is the same routing wall the API models hit: even when the holder is correct, the model
+must route that holder into the in-context recall lookup.
 
-## 5. S₅ is movable by supervision density
+## 6. Composition of behaviors
 
-S₅ floors for every architecture under answer-only supervision (the table above). It
-moves when the training signal carries the state. We interleave the oracle's
-holder-of-the-queried-role every *K* events into the training stream (K=1 is dense), and
-evaluate free-running — events forced, the holder slots and final value generated by the
-model with no oracle at eval. 10 seeds:
+The central design choice that makes FactWorld an instrument, not just a benchmark, is the
+per-leg decomposition. A composite example requires two distinct computations:
+
+1. Track the give-stream to resolve the holder (state-tracking / binding).
+2. Read the holder's value from the fact list (in-context recall).
+
+By scoring each leg independently, the suite can localize failures and test interventions:
+
+- **Ceiling probe:** give the model the correct holder and ask only for the value. If recall is
+then perfect, the wall is state-tracking, not recall.
+- **Scaffolded eval:** the oracle provides the holder; the model generates only the value. This
+measures recall-of-the-resolved-holder in isolation.
+- **Binding-only eval:** ask only "who holds the object?" to measure state-tracking without recall.
+
+On the local `gdp_hybrid` model, the scaffolded value score is low (0.147–0.264 across seeds),
+which suggests the routing problem is real even when binding is solved. On API models, the
+scaffolded result is much stronger: given the correct holder, models recall the value at
+0.80–1.00. The difference is that the API models can do each leg when the problem is split for
+them, but struggle to compose the two legs in the end-to-end prompt.
+
+## 7. Long context
+
+Real sessions are long. We stress both regimes far past their sweet spots — trained models
+evaluated to 32× their training length, pretrained models evaluated from L16 to L512.
+
+**Trained recurrent hybrids extrapolate far.** Stressing the §5 comparison to 32× the trained
+horizon (8 seeds):
+
+| arch | L64 | L128 | L256 | L512 |
+| --- | --- | --- | --- | --- |
+| gdp_hybrid | 0.62 | 0.59 | 0.51 | 0.46 |
+| fprm | 0.26 | 0.18 | 0.20 | 0.15 |
+
+The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
+
+**Background reasoning rescues composition at long context.** With reasoning effort swept
+{none, high} at long length (n=30, exact match):
+
+| model | L128 none | L128 high | L256 none | L256 high | L512 high |
+| --- | --- | --- | --- | --- | --- |
+| kimi-k2.6 | 0.47 | **0.97** | 0.73 | **0.97** | **0.93** |
+| glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
+
+High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ does not
+move: it stays at floor at high effort at every length tested. The two tasks' levers hold their
+distinct characters under horizon stress.
+
+## 8. S₅ is movable by supervision density
+
+S₅ floors for every architecture under answer-only supervision. It moves when the training signal
+carries the state. We interleave the oracle's holder-of-the-queried-role every *K* events into
+the training stream (K=1 is dense), and evaluate free-running. 10 seeds:
 
 | K (stride) | value @L16 | value @L64 | converge @L16 |
 | --- | --- | --- | --- |
@@ -255,14 +258,11 @@ model with no oracle at eval. 10 seeds:
 | 4 | 0.19 | 0.20 | 0/10 |
 | 8 | 0.21 | 0.20 | 0/10 |
 
-The circuit forms reliably in-distribution down to a checkpoint every other step (10/10
-at K=2) and is gone below (0/10 at K≥4). This is a sharp **learnability cliff**, and it
-reproduces the established result: S₅ needs near-dense process supervision to form the
-circuit; the sparse, answer-only signal an agent effectively has gives no traction.
+The circuit forms reliably down to a checkpoint every other step and is gone below. This is a
+sharp learnability cliff.
 
-**The circuit survives weaning to label-free deployment.** Dense supervision moves the
-wall but cannot ship with per-step labels. We train dense, then fine-tune on a mix of
-densities including answer-only, and evaluate free-running. 8 seeds:
+**The circuit survives weaning to label-free deployment.** Train dense, then fine-tune on a mix
+of densities including answer-only, and evaluate free-running. 8 seeds:
 
 | arm | L16 | L64 | L128 | converge |
 | --- | --- | --- | --- | --- |
@@ -270,97 +270,106 @@ densities including answer-only, and evaluate free-running. 8 seeds:
 | weaned (mixed density) | 1.00 | 0.50–0.54 | 0.46–0.48 | 8/8 |
 | answer-only (never dense) | 0.19 | 0.19 | — | 0/8 |
 
-The weaned circuit converges 8/8 free-running with no deploy-time labels and extrapolates
-on par with dense-only. (Honest negative: weaning does not *improve* extrapolation over
-dense — a hint that it would did not reproduce at power. The win is label-free
-deployment.) The specific density mix barely matters; the key is some answer-only
-exposure alongside dense.
+The weaned circuit converges 8/8 free-running with no deploy-time labels and extrapolates on par
+with dense-only.
 
-## 6. Long context
+## 9. Discussion
 
-Real sessions are long. We stress both regimes far past their sweet spots — trained
-models (trained at ≤16) evaluated to L512 (32×), pretrained models evaluated from L16 to
-L512.
+FactWorld is one instrument with two uses. The same `composite_copy_v1` task that separates GLM,
+Kimi, and llama-3.3-70b via API also separates `gdp_hybrid`, `fprm`, and `transformer` when
+trained locally. The per-leg decomposition is what lets the two regimes talk to each other: a
+finding about "routing the resolved holder into recall" can be checked in both settings.
 
-**Trained recurrent hybrids extrapolate far.** Stressing the §4 comparison to 32× the
-trained horizon (8 seeds):
+The takeaways are:
 
-| arch | L64 | L128 | L256 | L512 |
-| --- | --- | --- | --- | --- |
-| gdp_hybrid | 0.62 | 0.59 | 0.51 | 0.46 |
-| fprm | 0.26 | 0.18 | 0.20 | 0.15 |
+- **Composition responds to reasoning.** It is movable at inference by background reasoning,
+including at long context, for models that can reason. Explicit prompting does not substitute.
+- **Non-abelian state-tracking responds to training signal.** It is movable by dense per-step
+supervision that develops a circuit, and that circuit can be weaned to label-free deployment.
+Reasoning does not move it.
+- **Architecture carries length generalization.** A learned state circuit generalizes in length
+only on a recurrent hybrid; transformers and looped blocks shortcut.
 
-The recurrent hybrid holds ~0.5 out to L512 — a graceful tail, not a cliff. The looped
-block stays at floor throughout. The architecture's length-generalization role is
-durable under stress.
+These are results within the regime tested (k=5 S₅; local models ~40M; pretrained models 3B–~1T
+MoE). They are not scaling laws. The connection to agentic work is a motivating proxy, not a
+proven mapping.
 
-**Background reasoning rescues composition at long context.** At default decoding,
-composition collapses for pretrained models past L128 (llama-3.3-70b: 0.80 @L16 → 0.07
-@L128). But that collapse is a default-effort artifact. With reasoning effort swept
-{none, high} at long length (n=30, value accuracy):
+## 10. Limitations and related work
 
-| model | L128 none | L128 high | L256 none | L256 high | L512 high |
-| --- | --- | --- | --- | --- | --- |
-| kimi-k2.6 | 0.03 | **0.97** | 0.00 | **0.97** | **0.93** |
-| glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
+**Limitations.** The scale regime is bounded (k=5 S₅; local ~40M; pretrained to ~1T MoE).
+Composition is 2-hop throughout. The API eval is on a small sample (n=30) because API costs
+scale with reasoning tokens. The natural-language format differs from the atomic-token format
+used in prior work on this instrument; absolute numbers are not comparable across formats, though
+the mechanism conclusions reproduced.
 
-High reasoning effort recovers composition to 0.80–0.97 all the way out to L512 — roughly
-32× the L16 sweet spot and ~3.5k-token prompts. The composition lever (§3) is remarkably
-horizon-robust when the reasoning budget is there. S₅ does not move: it stays at 0.00 at
-high effort at every length we tested. The two tasks' levers hold their distinct characters
-under horizon stress — reasoning carries composition, supervision density carries S₅.
+**Related work.** Prior work on this instrument established the single-capability dissociations
+and the non-abelian recipe on the atomic-token format ([`phases/`](phases/)); this report
+reproduces their takeaways on the natural-language format and adds the API evaluation and the
+long-context results. The `fprm` architecture is a probe inspired by Movahedi et al. (2026); we
+did not run their model. The shortcut-learning and length-extrapolation results engage a
+substantial literature on transformer state-tracking brittleness (Liu et al., 2023) and recurrent
+extrapolation, which we extend rather than survey.
 
-## 7. Discussion
+## 11. Reproducibility
 
-The instrument lets the same controlled behavior be measured two ways, and the two ways
-agree where they overlap. At the matched-compute scale where we can ablate architectures,
-all architectures solve 1-hop MQAR but diverge on the deferred read-out composition needs;
-the recurrent hybrid wins the harder regime. A recurrent hybrid also carries a learned state
-circuit far past its training horizon where transformers and looped blocks shortcut. The
-pretrained transformers in the API grid solve recall at ceiling — a different, much larger
-regime — and add a third lever: background reasoning moves
-composition at inference, including at long context, in a way no training intervention or
-prompting trick reproduced at the small scale.
+Every headline claim maps to a committed script and raw results in `results/` or
+`docs/openrouter/`. The data/oracle/eval layer is pure-stdlib; training runs need one CUDA GPU.
 
-The takeaways we want a reader to carry:
+**Run the validity gate:**
 
-- **Composition responds to reasoning.** It is movable at inference by background
-  reasoning, including at long context, for models that can reason. Explicit prompting
-  does not substitute.
-- **Non-abelian state-tracking responds to training signal.** It is movable by dense
-  per-step supervision that develops a circuit, and that circuit can be weaned to
-  label-free deployment. Reasoning does not move it.
-- **Architecture carries length generalization.** A learned state circuit generalizes in
-  length only on a recurrent hybrid; transformers and looped blocks shortcut.
+```bash
+python scripts/validate_suite.py
+```
 
-We state these as results within the regime tested (k=5 S₅; local models ≤45M;
-pretrained models 3B–~1T). They are not scaling laws. The connection to agentic work is
-a motivating proxy, not a proven mapping.
+**Evaluate frontier models:**
 
-## 8. Limitations and related work
+```bash
+# Single-model API fair eval (2048 tokens, no early stop, composite format)
+python scripts/eval_model.py composite_copy_v1 --backend api \
+    --model z-ai/glm-5.2 --n 30 --no_stop
 
-**Limitations.** The scale regime is bounded (k=5 S₅; local ≤45M; pretrained to ~1T
-MoE). Composition is 2-hop throughout. In-context recall is validated per-architecture;
-parametric recall is not validated for API models (fine-tuning a fixed fact set into a
-model would close this). The natural-language format differs from the atomic-token
-format used in prior work on this instrument; absolute numbers are not comparable across
-formats, though the mechanism conclusions reproduced. Weaning does not improve
-extrapolation over dense-only.
+# Grid of OpenRouter models (set OPENROUTER_API_KEY)
+python scripts/eval_openrouter_grid.py --n 30
 
-**Related work.** Prior work on this instrument established the single-capability
-dissociations and the non-abelian recipe on the atomic-token format
-([`phases/`](phases/)); this report reproduces their takeaways on the natural-language
-format and adds the API evaluation and the long-context results. The `fprm` architecture
-is a probe inspired by Movahedi et al. (2026); we did not run their model. The
-shortcut-learning and length-extrapolation results engage a substantial literature on
-transformer state-tracking brittleness (Liu et al., 2023) and recurrent extrapolation,
-which we extend rather than survey.
+# Disable reasoning to confirm the collapse
+python scripts/eval_openrouter_grid.py \
+    --models moonshotai/kimi-k2.6 z-ai/glm-5.2 meta-llama/llama-3.3-70b-instruct \
+    --tasks composite_copy_v1 --n 30 --no_reasoning
+```
 
-## 9. Reproducibility
+**Train and evaluate local architectures with the winning recipe:**
 
-Every headline claim maps to a committed script in `docs/experiments/` or `scripts/`;
-raw results in `results/`; the validity gate (`scripts/validate_suite.py`) certifies the
-suite. The recall ablations (training-distribution, width, recipe sweep) are
-`scripts/experiment_recall_ablation.py`, `experiment_recall_width.py`, and
-`experiment_recipe_sweep.py`. The data and eval layer is pure-stdlib (no GPU); training
-runs need a single CUDA GPU.
+```bash
+python scripts/experiment_curriculum_staged.py \
+    --archs gdp_hybrid --seeds 0 1 2 \
+    --d_model 768 --n_layers 8 --batch 128 --train_n 80000 --eval_n 500 \
+    --schedule "binding:0.5,recall_easy:0.5:10000;binding:0.25,recall_med:0.35,composite_p5:0.4:7500;binding:0.15,recall_hard:0.25,composite_p5:0.25,composite_p16:0.35:7500"
+```
+
+`scripts/run_benchmark.py` provides a simpler single-task entry point for quick checks.
+
+**Reproduce the canonical dissociations:**
+
+```bash
+python scripts/experiment_canonical_repro.py
+```
+
+**Reproduce the S₅ supervision-density result:**
+
+```bash
+python scripts/experiment_dense_supervision.py
+```
+
+**Key result files:**
+
+- API fair eval: `docs/openrouter/results-natural-longctx2k-composite.jsonl`
+- API no-reasoning collapse: `docs/openrouter/results-natural-kimi-noreasoning.jsonl`,
+  `docs/openrouter/results-natural-llama-glm-noreasoning.jsonl`
+- API reasoning-effort sweep: `results/reasoning_sweep_20260627_092034.jsonl`,
+  `results/reasoning_glm_20260627_114244.jsonl`
+- API long-context reasoning: `results/reasoning_longctx_L128_20260628_163121.jsonl`,
+  `results/reasoning_longctx_L256_20260628_171119.jsonl`,
+  `results/reasoning_longctx_L512_20260628_181508.jsonl`
+- Local winning-recipe benchmarks: `results/benchmark_gdp_d768_b128_80k_500eval.json`,
+  `results/benchmark_fprm_d768_b128_80k_500eval.json`,
+  `results/benchmark_transformer_d768_b128_80k_500eval.json`
