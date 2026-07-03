@@ -1,0 +1,542 @@
+{
+  "cfg": {
+    "schedule_str": "binding:0.5,recall_easy:0.5:24;binding:0.25,recall_med:0.35,composite_p5:0.4:18;binding:0.15,recall_hard:0.25,composite_p5:0.3,composite_p16:0.3:18",
+    "schedule": [
+      [
+        {
+          "binding": 0.5,
+          "recall_easy": 0.5
+        },
+        24
+      ],
+      [
+        {
+          "binding": 0.25,
+          "recall_med": 0.35,
+          "composite_p5": 0.4
+        },
+        18
+      ],
+      [
+        {
+          "binding": 0.15,
+          "recall_hard": 0.25,
+          "composite_p5": 0.3,
+          "composite_p16": 0.3
+        },
+        18
+      ]
+    ],
+    "archs": [
+      "transformer"
+    ],
+    "seeds": [
+      0
+    ],
+    "d_model": 128,
+    "n_layers": 2,
+    "batch": 8,
+    "train_n": 200,
+    "eval_n": 20,
+    "loss_log_interval": 10,
+    "use_trace": true,
+    "dense_format": "interleaved"
+  },
+  "summary": {
+    "transformer": {
+      "binding_L16_overall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "binding_L16_holder": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "binding_L16_value": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_easy_L4_overall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_easy_L4_holder": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_easy_L4_value": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_med_L8_overall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_med_L8_holder": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_med_L8_value": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_hard_L16_overall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_hard_L16_holder": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "recall_hard_L16_value": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "composite_p5_L16_overall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "composite_p5_L16_holder": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "composite_p5_L16_value": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "composite_p16_L16_overall": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "composite_p16_L16_holder": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "composite_p16_L16_value": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      },
+      "composite_p16_scaffolded": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 1
+      }
+    }
+  },
+  "runs": [
+    {
+      "arch": "transformer",
+      "seed": 0,
+      "schedule_str": "binding:0.5,recall_easy:0.5:24;binding:0.25,recall_med:0.35,composite_p5:0.4:18;binding:0.15,recall_hard:0.25,composite_p5:0.3,composite_p16:0.3:18",
+      "schedule": [
+        [
+          {
+            "binding": 0.5,
+            "recall_easy": 0.5
+          },
+          24
+        ],
+        [
+          {
+            "binding": 0.25,
+            "recall_med": 0.35,
+            "composite_p5": 0.4
+          },
+          18
+        ],
+        [
+          {
+            "binding": 0.15,
+            "recall_hard": 0.25,
+            "composite_p5": 0.3,
+            "composite_p16": 0.3
+          },
+          18
+        ]
+      ],
+      "archs": [
+        "transformer"
+      ],
+      "seeds": [
+        0
+      ],
+      "d_model": 128,
+      "n_layers": 2,
+      "batch": 8,
+      "train_n": 200,
+      "eval_n": 20,
+      "loss_log_interval": 10,
+      "use_trace": true,
+      "dense_format": "interleaved",
+      "stage_records": [
+        {
+          "phase": 0,
+          "weights": {
+            "binding": 0.5,
+            "recall_easy": 0.5
+          },
+          "steps": 24,
+          "arm_counts": {
+            "binding": 100,
+            "recall_easy": 100
+          },
+          "final_loss": 6.9559149742126465,
+          "loss_curve": [
+            [
+              10,
+              6.964444160461426
+            ],
+            [
+              20,
+              6.916585445404053
+            ]
+          ],
+          "eval": {
+            "binding_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "recall_easy_L4": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 0.95,
+                "1": 0.05,
+                "2": 0.0
+              },
+              "holder_acc": 0.05,
+              "value_acc": 0.0
+            },
+            "recall_med_L8": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "recall_hard_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "composite_p5_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.05
+            },
+            "composite_p16_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "composite_p16_scaffolded": {
+              "scaffolded_value": 0.0
+            }
+          }
+        },
+        {
+          "phase": 1,
+          "weights": {
+            "binding": 0.25,
+            "recall_med": 0.35,
+            "composite_p5": 0.4
+          },
+          "steps": 18,
+          "arm_counts": {
+            "binding": 50,
+            "recall_med": 70,
+            "composite_p5": 80
+          },
+          "final_loss": 6.809988975524902,
+          "loss_curve": [
+            [
+              10,
+              6.931830406188965
+            ]
+          ],
+          "eval": {
+            "binding_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "recall_easy_L4": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "recall_med_L8": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "recall_hard_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "composite_p5_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.05
+            },
+            "composite_p16_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "composite_p16_scaffolded": {
+              "scaffolded_value": 0.0
+            }
+          }
+        },
+        {
+          "phase": 2,
+          "weights": {
+            "binding": 0.15,
+            "recall_hard": 0.25,
+            "composite_p5": 0.3,
+            "composite_p16": 0.3
+          },
+          "steps": 18,
+          "arm_counts": {
+            "binding": 30,
+            "recall_hard": 50,
+            "composite_p5": 60,
+            "composite_p16": 60
+          },
+          "final_loss": 6.713252544403076,
+          "loss_curve": [
+            [
+              10,
+              6.856046676635742
+            ]
+          ],
+          "eval": {
+            "binding_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "recall_easy_L4": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "recall_med_L8": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "recall_hard_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "composite_p5_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "composite_p16_L16": {
+              "overall": 0.0,
+              "prefix": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 0.0
+              },
+              "holder_acc": 0.0,
+              "value_acc": 0.0
+            },
+            "composite_p16_scaffolded": {
+              "scaffolded_value": 0.0
+            }
+          }
+        }
+      ],
+      "final_loss": 6.713252544403076,
+      "final_eval": {
+        "binding_L16": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "holder_acc": 0.0,
+          "value_acc": 0.0
+        },
+        "recall_easy_L4": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "holder_acc": 0.0,
+          "value_acc": 0.0
+        },
+        "recall_med_L8": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "holder_acc": 0.0,
+          "value_acc": 0.0
+        },
+        "recall_hard_L16": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "holder_acc": 0.0,
+          "value_acc": 0.0
+        },
+        "composite_p5_L16": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "holder_acc": 0.0,
+          "value_acc": 0.0
+        },
+        "composite_p16_L16": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 1.0,
+            "1": 0.0,
+            "2": 0.0
+          },
+          "holder_acc": 0.0,
+          "value_acc": 0.0
+        },
+        "composite_p16_scaffolded": {
+          "scaffolded_value": 0.0
+        }
+      },
+      "flat_final": {
+        "binding_L16_overall": 0.0,
+        "binding_L16_holder": 0.0,
+        "binding_L16_value": 0.0,
+        "recall_easy_L4_overall": 0.0,
+        "recall_easy_L4_holder": 0.0,
+        "recall_easy_L4_value": 0.0,
+        "recall_med_L8_overall": 0.0,
+        "recall_med_L8_holder": 0.0,
+        "recall_med_L8_value": 0.0,
+        "recall_hard_L16_overall": 0.0,
+        "recall_hard_L16_holder": 0.0,
+        "recall_hard_L16_value": 0.0,
+        "composite_p5_L16_overall": 0.0,
+        "composite_p5_L16_holder": 0.0,
+        "composite_p5_L16_value": 0.0,
+        "composite_p16_L16_overall": 0.0,
+        "composite_p16_L16_holder": 0.0,
+        "composite_p16_L16_value": 0.0,
+        "composite_p16_scaffolded": 0.0
+      }
+    }
+  ]
+}
