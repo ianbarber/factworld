@@ -90,8 +90,8 @@ reasoners is tested directly in the reasoning on/off sweep below.
 
 | wall | what it is | what moves it | what doesn't |
 | --- | --- | --- | --- |
-| **composition** | generating the holder (last-write-wins over objects) | **background reasoning + format** (kimi/glm: dose-response 0.14→0.81 with effort) | explicit CoT prompting (hurts), dense holder supervision, local self-correction |
-| **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision → wean to answer-only** (wean_mixed 7/7), then gdp_hybrid extrapolates 8× | reasoning effort (floor at all levels), sparse/answer-only |
+| **composition** | generating the holder (last-write-wins over objects) | **background reasoning + format** (kimi 0.22→0.98, glm 0.14→0.81 with effort) | explicit CoT prompting (hurts), dense holder supervision, local self-correction |
+| **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision → wean to answer-only** (wean_mixed 8/8), then gdp_hybrid extrapolates 4–8× | reasoning effort (floor at all levels), sparse/answer-only |
 | **recall (value)** | — | given the holder, trivially solved (0.93–1.00) | — |
 
 **Two dissociations, both now clean:**

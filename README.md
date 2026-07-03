@@ -238,23 +238,27 @@ Reading the ladder:
 - **Depth and non-abelian state stay at floor.** `chain_v1` and `s5_v1` are unsolved by every
   pretrained model regardless of reasoning — the genuine state-tracking/composition wall.
 
-**Autoregressive / test-time-compute experiment (E1).** Leg-isolation on `composite_copy_v1@L16`
-(n=30) — full write-up in [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md):
+**Autoregressive / test-time-compute experiment (E1b).** Format-fair leg-isolation on
+`composite_copy_v1@L16` (n=100) — full write-up in
+[`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md):
 
 | model | binding-only (holder leg) | scaffolded (recall given holder) |
 | --- | --- | --- |
-| glm-5.2 | **0.97** | 0.97 |
-| kimi-k2.6 | **0.73** | 1.00 |
-| deepseek-chat | 0.47 | 0.80 |
-| llama-3.3-70b | 0.40 | 0.97 |
-| gpt-4o-mini | 0.37 | 1.00 |
+| kimi-k2.6 | **0.99** | 1.00 |
+| glm-5.2 | **0.98** | 1.00 |
+| deepseek-chat | 0.60 | 0.99 |
+| llama-3.3-70b | 0.34 | 0.93 |
+| gpt-4o-mini | 0.28 | 1.00 |
 
-Given the correct holder, every model recalls the value (0.80–1.00) — **recall is not the
-bottleneck**. Reasoning models (kimi/glm) solve the **binding** leg in isolation; weaker models
-don't. But even glm, which writes the correct holder 1.00 of the time under a structured-CoT
-prompt, scores 0.00 on the value — **routing the resolved holder into recall is the wall that
-survives test-time reasoning**. (The `none`/`structured` conditions carry no format instruction, so
-they are a no-format lower bound; the grid above is the format-instructed capability ceiling.)
+Given the correct holder, every model recalls the value (0.93–1.00) — **recall is not the
+bottleneck**. Reasoning models (kimi/glm) also solve the **binding** leg in isolation (0.98–0.99).
+The residual failure in the end-to-end prompt is **routing** the resolved holder into the recall
+lookup: without an oracle-provided holder, the same models that recall perfectly when the holder is
+given still fail to produce the correct value. Explicit structured CoT does not fix this; in the
+format-fair ablation it drops the strong reasoners to ~0 (see
+[`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md)).
+Background reasoning effort, not explicit step-by-step prompting, is the inference-time lever that
+lifts end-to-end composition (kimi 0.22→0.98, glm 0.14→0.81).
 
 ### Custom-trained recurrent models
 
@@ -273,6 +277,9 @@ conv+attention block (the architecture the external FPRM work motivates); `gdp_h
 
 **`composite_copy_v1` (k=32) @L16 — relaxed match mean±std**
 
+Staged-curriculum recipe (d=768, 8 layers, 25k steps, 3 seeds); full write-up in
+[`reports/factworld-consolidated.md`](reports/factworld-consolidated.md) §5.
+
 | arch | composite_p16@L16 relaxed |
 | --- | --- |
 | gdp_hybrid | **0.747 ± 0.174** |
@@ -286,9 +293,10 @@ decomposition localizes the composition gap: every recurrent architecture solves
 the API models hit.
 
 **Trained scratchpad (E2, local) makes it worse.** Supervising the per-step oracle trace
-(`prompt→trace→answer`) collapses the holder leg 0.95→0.08 and value 0.51→0.00 — the model emits a
-structured-but-wrong trace that compounds errors, the opposite of the API scaffolded result where the
-*oracle-provided* holder unlocks recall (0.97–1.00). See
+(`prompt→trace→answer`) on the staged curriculum collapses holder accuracy 0.96→0.14 and value
+accuracy 0.79→0.02 — the model emits a structured-but-wrong trace that compounds errors, the
+opposite of the API scaffolded result where the *oracle-provided* holder unlocks recall
+(0.93–1.00). See `results/curriculum_staged_d768_b64_80k_trace.md` and
 [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
 
 **But the s5 / non-abelian wall is movable with the right supervision** (reproduced on the natural
@@ -297,16 +305,16 @@ free-run eval — events forced, holder/value slots generated):
 
 | K (stride) | value @L16 | value @L64 |
 | --- | --- | --- |
-| 1 (dense) | **1.00** | **0.90** |
-| 2 | 0.96 | 0.50 (bimodal) |
-| 4, 8 | 0.20 | 0.20 (floor) |
+| 1 (dense) | **1.00** | **0.75** |
+| 2 | 0.98 | 0.40 (bimodal) |
+| 4, 8 | ~0.20 | ~0.20 (floor) |
 
-Dense K=1 solves s5 and extrapolates to **~8× the trained length** (L128≈0.90 trained at ≤L16); the
-circuit fails to form below a checkpoint every ~2 events. **Inference-time compute (self-consistency,
-up to 30 votes) does not move the wall in either direction** — seeds with the circuit are already
-greedy-optimal; seeds without stay at the floor. The wall is in *learnability/supervision density*,
-not test-time compute — consistent with the API result that only an *oracle-provided* intermediate
-helps.
+Dense K=1 solves s5 in-distribution (1.00) and extrapolates to 4× the trained length (L64 = 0.75);
+K=2 is bimodal at L64 (0.40). The circuit fails to form below a checkpoint every ~2 events.
+**Inference-time compute (self-consistency, up to 30 votes) does not move the wall in either
+direction** — seeds with the circuit are already greedy-optimal; seeds without stay at the floor.
+The wall is in *learnability/supervision density*, not test-time compute — consistent with the API
+result that only an *oracle-provided* intermediate helps.
 
 The prior (atomic-token format) non-abelian recipe and its dense-supervision `s5_v1` results
 (0.94–0.99) are archived in [`phases/02-non-abelian-state/`](phases/02-non-abelian-state/).
@@ -325,10 +333,10 @@ In short: the suite climbs from easy single-hop recall, through binding and comp
    given the output format, reasoners solve it. Non-reasoners floor. (The earlier "test-time doesn't
    help" claim was wrong — it held only for explicit CoT *prompting* and for non-reasoning local models.)
 2. **Non-abelian state-tracking (s5) is movable by training-time supervision density, NOT by reasoning.**
-   It floors at every reasoning effort, but dense per-step supervision solves it (10/10 seeds) and the
-   circuit **survives weaning to answer-only** (wean_mixed 7/7) — so it deploys label-free. Only the
-   recurrent hybrid (gdp_hybrid) **extrapolates** the learned circuit (0.64@L128 vs fprm/transformer
-   collapsing past L32).
+   It floors at every reasoning effort, but dense per-step supervision solves it (10/10 seeds at L16)
+   and the circuit **survives weaning to answer-only** (wean_mixed 8/8) — so it deploys label-free.
+   Only the recurrent hybrid (`gdp_hybrid`) **extrapolates** the learned circuit in length (L64 0.75,
+   L128 0.50–0.59; `fprm` and `transformer` collapse past the train length).
 
 The levers are **reasoning strength** (composition), **supervision density + weaning** (s5), and
 **recurrent architecture** (s5 length extrapolation). Explicit structured CoT prompting never helps

@@ -148,7 +148,8 @@ it is the fair API metric. Earlier 16-token evals reported Kimi at 0.40 because 
 was truncated before the answer; the 2048-token budget fixes that.
 
 **Reasoning is required.** With `reasoning={"effort":"none"}` all three models collapse to ~0 on
-composite. Reasoning effort gives a clear dose-response:
+composite (no-reasoning files and the flagship table are n=30; the dose-response below is n=100).
+Reasoning effort gives a clear dose-response:
 
 | model | none | low | medium | high |
 | --- | --- | --- | --- | --- |
@@ -189,7 +190,7 @@ composition:
 
 - `gdp_hybrid`, `fprm`, and `transformer`
 - d_model=768, n_layers=8, batch=128
-- 25k steps total, 80k docs/phase, 3 seeds
+- 25k steps total, 80k docs total, 3 seeds
 - evaluated on n=500 test examples per seed
 
 `gdp_hybrid` is a `[recurrent, recurrent, attn, recurrent]` GatedDeltaProduct stack. `fprm` is a
@@ -245,8 +246,8 @@ then perfect, the wall is state-tracking, not recall.
 measures recall-of-the-resolved-holder in isolation.
 - **Binding-only eval:** ask only "who holds the object?" to measure state-tracking without recall.
 
-On the local `gdp_hybrid` model, the scaffolded value score is low (0.147–0.264 across seeds),
-which suggests the routing problem is real even when binding is solved. On API models, the
+On the local `gdp_hybrid` model, the scaffolded value score is low (mean 0.147, range
+0.076–0.264 across seeds), which suggests the routing problem is real even when binding is solved. On API models, the
 scaffolded result is much stronger: given the correct holder, models recall the value at
 0.80–1.00. The difference is that the API models can do each leg when the problem is split for
 them, but struggle to compose the two legs in the end-to-end prompt.
@@ -267,7 +268,8 @@ horizon (8 seeds):
 The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
 
 **Background reasoning rescues composition at long context.** With reasoning effort swept
-{none, high} at long length (n=30, exact match):
+{none, high} at long length (n=30, exact match after `APIBackend` normalization — the final
+committed answer span):
 
 | model | L128 none | L128 high | L256 none | L256 high | L512 high |
 | --- | --- | --- | --- | --- | --- |

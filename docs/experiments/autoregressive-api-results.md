@@ -4,9 +4,11 @@ Two API experiments: **E1** (no-format leg-isolation, the decomposition) and **E
 re-run, the honest comparison). Both n=30–100, composite_copy_v1@L16 + s5_v1@L32. Scoring:
 `last_n` + holder/value decomposition. `scripts/experiment_autoregressive.py`.
 
-## E1b — Format-fair (the headline, n=100, output-format instruction given)
+## E1b — Format-fair (n=100, output-format instruction given)
 
 All conditions carry the composite format instruction, so the only variable is the reasoning regime.
+This is a format-fair ablation, not the headline cross-model comparison; the headline
+`composite_copy_v1@L16` numbers are in `reports/factworld-consolidated.md` §4.
 
 `composite_copy_v1 @ L16` — value accuracy (binding column = holder accuracy):
 
