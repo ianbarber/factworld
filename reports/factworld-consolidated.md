@@ -12,6 +12,11 @@ end-to-end capability readout, while small trained models let you ablate archite
 and ask whether attention or recurrence carries the state. This is not a recipe for a
 frontier model; it is a way to compare the two evaluation regimes on the same task.
 
+> **Note:** the API-model comparison numbers in this report are from an earlier 16-token
+> eval that truncated reasoning models. The corrected comparison — using enough tokens for
+> reasoning and scoring with last-N extraction — is in
+> [`factworld-local-vs-api.md`](factworld-local-vs-api.md).
+
 Three findings carry the report:
 
 - **A. Composition is movable by background reasoning.** On the 2-hop composition task,

@@ -207,14 +207,19 @@ artifacts from whether the model actually knows the answer.
 ### Pretrained open models
 
 OpenRouter grid (n = 30, greedy decoding, **natural-language format**, output-format
-instructions appended for composite/s5; `--no_reasoning` so reasoning models give a clean
-baseline). Full table in [`docs/openrouter/results-natural.md`](docs/openrouter/results-natural.md).
+instructions appended for composite/s5). Full table in [`docs/openrouter/results-natural.md`](docs/openrouter/results-natural.md).
+
+> **Update:** the original 16-token eval truncated reasoning models and under-reported Kimi.
+> The corrected `composite_copy_v1@L16` numbers below use `max_new_tokens=2048`, no early
+> stop, and last-N extraction so reasoning models can finish their scratchpad. See
+> [`reports/factworld-local-vs-api.md`](reports/factworld-local-vs-api.md) for the full
+> comparison to local models.
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
-| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | **0.800** | 0.167 |
-| glm-5.2 | 1.000 | 1.000 | **0.767** | 0.133 | **0.800** | 0.167 |
-| kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | 0.400 | 0.200 |
+| glm-5.2 | 1.000 | 1.000 | **0.767** | 0.133 | **0.933** | 0.167 |
+| kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | 0.867 | 0.200 |
+| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | 0.767 | 0.167 |
 | gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.133 |
 | deepseek-chat | 1.000 | 1.000 | 0.333 | 0.033 | 0.167 | 0.133 |
 | gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.133 |
@@ -223,11 +228,11 @@ baseline). Full table in [`docs/openrouter/results-natural.md`](docs/openrouter/
 Reading the ladder:
 
 - **Single-hop recall and conflict are easy.** Strong models sit at ceiling.
-- **Composition is format-gated and routing-bound.** Only llama-3.3-70b and glm-5.2 clear
-  `composite_copy_v1` (0.80), and only *with* the explicit output-format instruction. The
-  autoregressive experiment below decomposes the residual failure: strong reasoners can do
-  the binding leg and the recall leg *separately* but fail to **route** the resolved holder
-  into the recall lookup.
+- **Composition is format-gated and reasoning-bounded.** With enough tokens for reasoning,
+  glm-5.2, kimi-k2.6, and llama-3.3-70b all clear `composite_copy_v1`. The autoregressive
+  experiment below decomposes the residual failure: strong reasoners can do the binding leg
+  and the recall leg *separately* but fail to **route** the resolved holder into the recall
+  lookup without scaffolding.
 - **Depth and non-abelian state stay at floor.** `chain_v1` and `s5_v1` are unsolved by every
   pretrained model regardless of reasoning — the genuine state-tracking/composition wall.
 
