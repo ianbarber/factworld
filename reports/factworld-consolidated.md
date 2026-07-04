@@ -449,3 +449,69 @@ python scripts/experiment_dense_supervision.py
 - Local last-N/relaxed confirmation runs:
   `results/benchmark_lastn_gdp_full_1seed.jsonl`,
   `results/benchmark_lastn_fprm_full_1seed.jsonl`
+
+## Appendix A. Why frontier models floor on S₅
+
+S₅ (`s5_v1`) is the one task every frontier model fails regardless of reasoning (§4, §7). This
+appendix characterizes *how* it fails, with a worked example and a length sweep. Data:
+`docs/openrouter/s5-length-sweep.{md,jsonl}`; analysis: `scripts/analyze_s5_tracking.py`.
+
+### A.1 The computation
+
+State is an assignment `{agent → role}` (g0=r0 … g4=r4). Each event is a permutation on roles:
+`swap gX and gY` transposes two agents' roles; `cycle gA -> gB -> …` rotates roles one step along
+the arrow. The query asks for one agent's final role after *L* events. Swaps and cycles do not
+commute, so the running permutation must be carried step by step — there is no algebraic shortcut.
+
+### A.2 Per-example failure mode: track-then-stall
+
+On individual examples the models do real step-by-step tracking, then **stall** — they report a role
+the queried agent genuinely held at a recent step rather than the final one. Worked example
+(GLM-5.2, L16; the queried agent g2's correct role changes 7 times):
+
+```
+init r2 · s1 r1 · s3 r3 · s7 r4 · s8 r0 · s9 r4 · s12 r1 · s14 r2(final)
+```
+
+GLM answered **r0** — exactly g2's role at **s8**; it then missed the three later updates
+(r0→r4→r1→r2). Three failures, same shape (GLM's answer = a role the agent held recently, not the
+final):
+
+| queried | GLM said | that role was the agent's state at… | gold |
+| --- | --- | --- | --- |
+| g2 | r0 | s8 (then g2 moved r0→r4→r1→r2) | r2 |
+| g2 | r3 | s8 / s12 (last held s12; missed s13) | r4 |
+| g4 | r0 | s14 (missed only the final s15) | r1 |
+
+A second mode shows up at short lengths: when the model disengages it defaults to a favored token
+rather than tracking — GLM emits **r0 on 18/30 (60%)** of L4 examples.
+
+### A.3 Length sweep — no degradation gradient, because it never rises above chance
+
+If models could track *some* ops and then degrade, accuracy would start high at small *L* and fall.
+It does not. `s5_v1`, no reasoning, n=30/cell, relaxed match (chance floor = 0.20 over 5 roles):
+
+| model | L4 | L8 | L16 | L32 | L64 | L128 | mean |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| glm-5.2 | 0.07 | 0.10 | 0.30 | 0.20 | 0.30 | 0.30 | 0.21 |
+| kimi-k2.6 | 0.13 | 0.07 | 0.20 | 0.33 | 0.10 | 0.10 | 0.16 |
+| llama-3.3-70b | 0.10 | 0.10 | 0.23 | 0.13 | 0.10 | 0.03 | 0.12 |
+| deepseek-chat | 0.17 | 0.20 | 0.10 | 0.37 | 0.20 | 0.20 | 0.21 |
+| gpt-4o-mini | 0.10 | 0.20 | 0.17 | 0.17 | 0.13 | 0.23 | 0.17 |
+| gemini-2.5-flash-lite | 0.23 | 0.13 | 0.03 | 0.20 | 0.13 | 0.17 | 0.15 |
+| **mean** | **0.13** | **0.13** | **0.17** | **0.23** | **0.16** | **0.17** | **0.17** |
+
+Every model sits at chance from **L4 (4 ops) through L128**, with no downward trend (cell-to-cell
+scatter is n=30 binomial noise, ±~0.07). So there is **no aggregate tracking horizon to measure**:
+frontier models cannot reliably compose even a few non-commutative ops. The "fraction of answers
+matching the final *or* penultimate role" (a stall-tolerant re-score) averages only ~26% — barely
+above chance — confirming they are not tracking faithfully to the end either. The per-example
+tracking in A.2 is real but inconsistent: it lands on the right final role at chance rates.
+
+### A.4 Why this is the supervision lever, not the reasoning lever
+
+The stall is a *faithful-execution* failure, not a *scratchpad-length* failure: more reasoning
+tokens give more opportunities to drop an update, which is why reasoning effort does not move S₅
+(§4, §7) while dense per-step state supervision does (§8) — the latter trains the update circuit the
+former lacks. This is the clean dissociation from composition, where the value is a single
+in-context lookup that reasoning can hold.
