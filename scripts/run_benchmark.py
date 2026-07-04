@@ -2,7 +2,7 @@
 
 This is the single entry point that makes the frozen task suite (`factworld.tasks`) *runnable*: pick a
 canonical task (or a scaled variant), train a model on its `train` split, and score its `test` splits at
-each OOD length with the one canonical metric (position-strict exact match of the final answer).
+each OOD length with the one canonical metric (relaxed match of the final answer span).
 
   .venv/bin/python scripts/run_benchmark.py composite_v1 --arch gdp_hybrid --d_model 256 --steps 4000
   # programmatic:
@@ -39,7 +39,7 @@ def build_docs(examples, use_trace):
 
 def run_task(name, *, spec=None, arch="gdp_hybrid", d_model=256, n_layers=4, d_ff=None, steps=4000,
              batch=32, train_n=8000, eval_n=200, seed=0, use_trace=False, device="cuda"):
-    """Train on the task's `train` split; return {eval_length: canonical position-strict accuracy}."""
+    """Train on the task's `train` split; return {eval_length: canonical relaxed-match accuracy}."""
     import torch
 
     from factworld import train as T
@@ -77,7 +77,7 @@ def main():
     a = ap.parse_args()
     acc = run_task(a.task, arch=a.arch, d_model=a.d_model, n_layers=a.n_layers, steps=a.steps,
                    seed=a.seed, use_trace=a.use_trace)
-    print(f"\n{a.task} [{a.arch} d{a.d_model} x{a.n_layers}, {a.steps} steps] — position-strict exact match:")
+    print(f"\n{a.task} [{a.arch} d{a.d_model} x{a.n_layers}, {a.steps} steps] — relaxed match (canonical):")
     for L, v in acc.items():
         print(f"  test@L{L}: {v:.3f}")
 

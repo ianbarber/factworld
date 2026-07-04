@@ -2,9 +2,11 @@
 
 This is the layer that turns the bespoke experiment scripts into a *benchmark*: each task is a FROZEN
 `TaskSpec` (pinned seed, version, explicit difficulty knobs and train/OOD-length splits), examples are
-generated deterministically, and there is ONE canonical metric — **position-strict exact match** of the
-answer span. Difficulty knobs (k, n_objects, recall pool, lengths) are exposed so a task can be scaled
-to genuinely stress larger models; the canonical registry pins reference instances.
+generated deterministically, and there is ONE canonical metric — **relaxed match** of the answer span
+(whitespace / trailing-period invariant; see ``score_relaxed``). Exact match, semantic containment,
+and last-*n* extraction are reported as diagnostics, not headline scores. Difficulty knobs (k,
+n_objects, recall pool, lengths) are exposed so a task can be scaled to genuinely stress larger
+models; the canonical registry pins reference instances.
 
 Label discipline (inherited from the instrument): every example's gold answer comes from the symbolic
 **oracle**, never from parsing rendered text — so labels cannot leak. This module is torch-free (data
@@ -27,6 +29,11 @@ from .render import Renderer
 from .world import Event, World
 
 SUITE_VERSION = "1.0"
+
+# The one canonical metric reported as the headline score (see ``score_relaxed``). The other scorers
+# (exact / contains / last_n) are diagnostics. ``runner.evaluate_task`` reads this so the runner,
+# the CLI, and the reports all agree on what "the score" means.
+CANONICAL_METRIC = "relaxed"
 
 
 @dataclass(frozen=True)
@@ -249,17 +256,25 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
 
 
 def score_exact(pred: str, gold: str) -> int:
-    """THE canonical metric: position-strict exact match of the full answer span (whitespace tokens).
-    `pred` is the model's continuation after the prompt; it must match `gold` token-for-token over
-    gold's length (extra trailing generation is ignored, so '.'-termination is not required of the model)."""
+    """Position-strict exact match of the full answer span (a diagnostic, NOT the canonical metric).
+
+    ``pred`` is the model's continuation after the prompt; it must match ``gold`` token-for-token over
+    gold's length (extra trailing generation is ignored, so '.'-termination is not required of the
+    model). The canonical headline metric is ``score_relaxed``; this is reported alongside it to expose
+    pure formatting differences (e.g. a chat model emitting ``v56.`` instead of ``v56 .``)."""
     g = gold.split()
     p = pred.split()[:len(g)]
     return int(p == g)
 
 
 def score_relaxed(pred: str, gold: str) -> int:
-    """Whitespace / trailing-period invariant exact match. Useful when comparing across tokenizers
-    (e.g. chat-model tokenizers that emit `v56.` instead of `v56 .`)."""
+    """THE canonical metric: whitespace / trailing-period invariant match of the answer span.
+
+    Strips a trailing period from each side and compares the first ``len(gold)`` whitespace tokens.
+    This is the fair cross-regime metric: it handles API models that omit the trailing period and local
+    models that emit the correct answer and then continue generating, so chat-model tokenizers that
+    glue punctuation (``v56.`` vs the atomic ``v56 .``) do not change the score. See
+    ``CANONICAL_METRIC``."""
     g = gold.strip().rstrip(".").split()
     p = pred.strip().rstrip(".").split()
     return int(p[: len(g)] == g)

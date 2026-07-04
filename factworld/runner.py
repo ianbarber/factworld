@@ -3,8 +3,10 @@
 The runner glues the frozen task suite (``factworld.tasks``) to any backend that
 implements the ``ModelBackend`` interface in ``factworld.backends``. It is
 intentionally thin: deterministically generate examples, ask the backend for
-greedy continuations, and score them with the one canonical metric
-(position-strict exact match of the answer span).
+greedy continuations, and score them. The headline fields (``overall`` /
+``by_length`` / the inspected ``correct`` flag) use the one canonical metric —
+**relaxed match** (``tasks.CANONICAL_METRIC``); ``exact`` / ``contains`` /
+``last_n`` are reported as diagnostics under ``metrics``.
 """
 from __future__ import annotations
 
@@ -14,6 +16,7 @@ from .backends import ModelBackend
 from .render import Renderer
 from .tasks import (
     CANONICAL,
+    CANONICAL_METRIC,
     Example,
     TaskSpec,
     generate,
@@ -52,9 +55,10 @@ def evaluate_task(
     Returns:
         A dictionary with task name, backend name, evaluation parameters,
         per-length accuracy, overall accuracy, a list of inspected examples
-        as ``(prompt, gold, pred, correct)`` tuples, and a ``metrics`` dict
-        with canonical (``exact``) and tokenizer-robust (``relaxed``,
-        ``contains``, ``last_n``) scores.
+        as ``(prompt, gold, pred, correct)`` tuples (``correct`` reflects the
+        canonical relaxed match), and a ``metrics`` dict with the canonical
+        (``relaxed``) score plus diagnostics (``exact``, ``contains``,
+        ``last_n``).
     """
     if isinstance(task, str):
         spec = CANONICAL[task]
@@ -105,8 +109,11 @@ def evaluate_task(
         scores = {name: fn(pred_norm, gold_norm) for name, fn in scorers.items()}
         for name, val in scores.items():
             totals[name] += val
-        inspected.append((example.prompt, example.answer, pred, bool(scores["exact"])))
-        example_metrics.append({name: scores[name] for name in scorers if name != "exact"})
+        # `correct` reflects the canonical (relaxed) metric so the inspected examples and the
+        # headline `overall` agree on what "right" means; per-example exact/contains/last_n are
+        # still available in `example_metrics` for diagnostics.
+        inspected.append((example.prompt, example.answer, pred, bool(scores[CANONICAL_METRIC])))
+        example_metrics.append(dict(scores))
         by_length.setdefault(example.length, {name: [] for name in scorers})
         for name, val in scores.items():
             by_length[example.length][name].append(val)
@@ -126,8 +133,9 @@ def evaluate_task(
         "n": n,
         "split": split,
         "length": length,
-        "by_length": metrics["exact"].get("by_length", {}),
-        "overall": metrics["exact"]["overall"],
+        "canonical_metric": CANONICAL_METRIC,
+        "by_length": metrics[CANONICAL_METRIC].get("by_length", {}),
+        "overall": metrics[CANONICAL_METRIC]["overall"],
         "examples": inspected,
         "example_metrics": example_metrics,
         "metrics": metrics,
