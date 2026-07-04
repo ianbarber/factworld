@@ -16,6 +16,15 @@ metric — **relaxed match** of the answer span (strip trailing punctuation and 
 `len(gold)` tokens). Gold answers come from a symbolic **oracle**, never from parsing rendered
 text, so labels cannot leak. A validity gate certifies that no shallow baseline clears floor.
 
+> **What this is — and isn't.** FactWorld is a **mechanism probe for the component capabilities that
+> agent workloads depend on** — working-memory recall, state tracking, and multi-step composition —
+> measured rigorously (oracle labels, validity gate, per-leg decomposition) and identically across
+> frontier API models and local from-scratch architectures. It is **not** an end-to-end agent
+> benchmark: every task is single-turn, single-answer-span, with no tool use, planning, or
+> multi-turn action. The component→agent mapping is a motivating analogy, not a proven one. Closing
+> the explicit agentic-behavior gap (tool use, multi-turn carry-over) is tracked separately in
+> [#6](https://github.com/ianbarber/factworld/issues/6).
+
 You can evaluate any model that can continue a prompt: OpenAI-compatible APIs
 (vLLM, ollama, OpenAI), HuggingFace ``transformers``, a tiny model trained
 from-scratch locally, or your own Python callable.
@@ -359,7 +368,7 @@ docs/
     results.md              small-scale composite diagnostic + decomposition
   state-tracking/         state-tracking-capability results
     dense-supervised.md     dense-supervised S5/A5 word problem (§3.1 probe)
-    scale.md                §5 ~45M scale + matched LR sweeps
+    scale.md                archived k=5 ~45M param-matched scale + LR sweeps (composite_copy_scale_v1; distinct from the report's §5 composite scale sweep)
 factworld/                the instrument (torch-free data/oracle/eval + the model zoo)
   world.py, oracle.py     deterministic KB + symbolic ground-truth solver
   render.py               template renderer + its exact inverse parser (no-leak contract)
@@ -414,6 +423,7 @@ python scripts/collect_baselines.py       # 4-arch from-scratch reference baseli
 python scripts/sk_composite.py            # memorization diagnostic + the n_h in {1,2,4} fixed-param mechanism control
 python scripts/iso.py                      # the n_h ∈ {1,2,4} product-structure ablation at fixed params (neg-eig on/off)
 python scripts/decompose.py               # the gap decomposed: state leg vs recall leg + routing on holder-wrong examples
+python scripts/experiment_composite_scale.py  # compute-matched scale sweep: small/medium/large × gdp/fprm/transformer
 
 # Section 5 — scale + the matched LR sweeps                  -> docs/state-tracking/scale.md
 python scripts/scale_confirm.py           # 45M multi-seed confirmation: gdp 5 / transformer 5 / gdn 3 seeds (default recipe)

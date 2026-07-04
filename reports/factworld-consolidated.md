@@ -6,6 +6,13 @@ used in both modes. The goal is to give the field one instrument for studying ho
 state-tracking, and composition interact, with numbers that can be reproduced from committed
 scripts and checked independently by anyone with an API key or a single GPU.
 
+**Scope.** FactWorld is a *mechanism probe for the component capabilities that agent workloads
+depend on* — working-memory recall, state tracking, and multi-step composition — not an end-to-end
+agent benchmark. Every task is single-turn and single-answer-span, with no tool use, planning, or
+multi-turn action. The component→agent mapping is a motivating analogy, not a proven one (§9);
+closing the explicit agentic-behavior gap is tracked in
+[#6](https://github.com/ianbarber/factworld/issues/6).
+
 ## 1. What the instrument is
 
 The suite is built around versioned `TaskSpec` objects in `factworld.tasks.CANONICAL`. Each task
@@ -179,22 +186,33 @@ weight-tied looped conv+attention block. The transformer is a standard decoder-o
 
 On the same flagship task `composite_copy_v1@L16`, **relaxed** match:
 
-| model | params | composite_p16@L16 relaxed |
-| --- | --- | --- |
-| **gdp_hybrid** | ~40M | **0.747 ± 0.174** |
-| fprm | ~40M | 0.253 ± 0.178 |
-| transformer | ~40M | 0.005 ± 0.005 |
+| model | params | per-tok FLOPs | composite_p16@L16 relaxed |
+| --- | --- | --- | --- |
+| **gdp_hybrid** | 101M | 204 GFLOP | **0.747 ± 0.174** |
+| fprm | 10M | 159 GFLOP | 0.253 ± 0.178 |
+| transformer | 76M | 159 GFLOP | 0.005 ± 0.005 |
 
-For local models, relaxed match is effectively identical to the benchmark's default score: the
-model usually emits the trailing period when the content tokens are correct, and the only
-difference is whether a missing period or trailing generation is penalized. We confirmed this on
-full-scale runs: `gdp_hybrid` relaxed = 0.874 and last-N = 0.00; `fprm` relaxed = 0.044 and last-N
-= 0.00. The low last-N scores show that local models often append extra tokens after the answer,
-so a prefix-based metric is the right choice. The numbers above are the 3-seed benchmark means.
+All three share `(d_model=768, depth=8)`; the match is on **compute, not parameters**. `fprm` is a
+weight-tied looped block (one `FPRMBlock` applied `n_loops` times — see `factworld/models.py`), so
+at matched `(d_model, depth)` its per-token FLOPs equal the transformer's (~159 GFLOP) while its
+parameter count is ~8× lower at this medium scale (10M vs 76M). `gdp_hybrid`'s Householder-product recurrence costs
+~1.25× the transformer's FLOPs (204 vs 159 GFLOP). Params are measured with the tied head/embed
+counted once; per-token FLOPs are forward-pass, measured with torch's flop counter (it captures the
+`fla` layers). The "~40M for all three" label used in earlier drafts was inaccurate on both reads:
+the comparison was compute-matched, and the actual params were 10M / 76M / 101M. A compute-matched
+scale sweep that scales `(d_model, depth)` together across small/medium/large for all three
+architectures is in `results/composite_scale_*.md`.
 
-The local `gdp_hybrid` is competitive with the API models on this task, despite being ~40M
-parameters trained from scratch. `fprm` shows high seed variance; the transformer fails to learn
-the task even with the winning recipe.
+For local models, relaxed match differs from the exact and last-N diagnostics only on formatting
+(a missing trailing period or extra trailing generation). We confirmed this on full-scale runs:
+`gdp_hybrid` relaxed = 0.874 vs last-N = 0.00; `fprm` relaxed = 0.044 vs last-N = 0.00. The low
+last-N scores show that local models often append extra tokens after the answer, so the
+prefix-based relaxed metric is the right canonical choice. The numbers above are the 3-seed
+benchmark means.
+
+The local `gdp_hybrid` is competitive with the API models on this task, despite being trained from
+scratch at ~100M params / 204 GFLOP/token. `fprm` shows high seed variance; the transformer fails
+to learn the task even with the winning recipe.
 
 **Per-leg decomposition** explains the ranking (content-token accuracy, independent of the
 period issue):
@@ -209,6 +227,41 @@ period issue):
 holders but fails to recall the value of the resolved holder. The transformer fails both legs.
 This is the same routing wall the API models hit: even when the holder is correct, the model
 must route that holder into the in-context recall lookup.
+
+### Scale robustness (compute-matched sweep)
+
+A natural objection to §5 is that the transformer was never given a fair size. We test that
+directly: the same staged curriculum and eval at three sizes, with the comparison **matched on
+compute, not parameters** (all architectures share `(d_model, depth)`; `fprm` is weight-tied so its
+FLOPs match the transformer's at ~5–11× fewer params across scales — see the size table in
+`results/composite_scale_*.md`). `composite_copy_v1` pool-16 @L16, relaxed match, 2 seeds, `train_n=80000`
+(the medium cell is a fresh 2-seed/eval_n=200 re-run of the §5 config; it lands higher than §5's
+3-seed/eval_n=500 mean of 0.747, so the sweep corroborates the ranking, not the absolute):
+
+| arch | small (384×6) | medium (768×8) | large (1024×12) |
+| --- | --- | --- | --- |
+| **gdp_hybrid** | **0.98 ± 0.01** | **0.85 ± 0.01** | 0.28 ± 0.28 |
+| fprm | 0.23 ± 0.05 | 0.53 ± 0.47 | 0.03 ± 0.00 |
+| transformer | 0.01 ± 0.00 | 0.01 ± 0.01 | 0.00 ± 0.00 |
+
+(Per-scale params/FLOPs: small ~3–19M / ~31–38 GFLOP·tok; medium ~10–101M / ~159–204;
+large ~18–269M / ~418–540. Raw runs + the holder/value decomposition are in
+`results/composite_scale_*.md`.)
+
+- **The §5 ranking is scale-robust at top and bottom.** `gdp_hybrid` is the only architecture that
+  reliably solves the task — both seeds at small (0.98) and medium (0.85). `fprm` is bimodal
+  throughout (medium: 0.06 vs 0.99 across seeds). The **transformer floors at every scale,
+  including 202M params / 417 GFLOP·tok** — so §5's "transformer fails" is not a small-model
+  artifact; compute-matching does not rescue it.
+- **The routing wall is scale-invariant.** Wherever an architecture fails, the holder (binding) leg
+  holds and the value (recall-of-resolved-holder) leg collapses — the same wall §6 localizes. This
+  includes `gdp_hybrid` at large: both seeds solve binding (0.85 / 0.84) but one seed's value leg
+  collapses to 0.00.
+- **Caveat at the largest size.** `gdp_hybrid` itself goes bimodal at large (per-seed value 0.56 /
+  0.00), so its absolute margin shrinks there even though the ranking holds (0.28 ≫ 0.03 ≫ 0.00).
+  With 2 seeds this is a flag, not a measurement: characterizing the large regime (more seeds, an
+  LR study at 269M) is the open follow-up. It is *not* the transformer catching up — the transformer
+  remains at floor (0.00).
 
 ## 6. Composition of behaviors
 
@@ -229,7 +282,7 @@ measures recall-of-the-resolved-holder in isolation.
 On the local `gdp_hybrid` model, the scaffolded value score is low (mean 0.147, range
 0.076–0.264 across seeds), which suggests the routing problem is real even when binding is solved. On API models, the
 scaffolded result is much stronger: given the correct holder, models recall the value at
-0.80–1.00. The difference is that the API models can do each leg when the problem is split for
+0.93–1.00. The difference is that the API models can do each leg when the problem is split for
 them, but struggle to compose the two legs in the end-to-end prompt.
 
 ## 7. Long context
@@ -305,13 +358,17 @@ Reasoning does not move it.
 - **Architecture carries length generalization.** A learned state circuit generalizes in length
 only on a recurrent hybrid; transformers and looped blocks shortcut.
 
-These are results within the regime tested (k=5 S₅; local models ~40M; pretrained models 3B–~1T
-MoE). They are not scaling laws. The connection to agentic work is a motivating proxy, not a
-proven mapping.
+These are results within the regime tested (k=5 S₅; local models ~3–269M params, compute-matched
+at ~32–540 GFLOP/token — see §5; pretrained models from a few B to ~1T params, MoE and dense).
+They are not scaling laws. FactWorld is a mechanism probe for the component capabilities agents depend on, not
+an agent benchmark: the component→agent connection is a motivating proxy, not a proven mapping,
+and no task here exercises tool use, planning, or multi-turn action. Closing that gap is tracked
+in [#6](https://github.com/ianbarber/factworld/issues/6).
 
 ## 10. Limitations and related work
 
-**Limitations.** The scale regime is bounded (k=5 S₅; local ~40M; pretrained to ~1T MoE).
+**Limitations.** The scale regime is bounded (k=5 S₅; local models ~3–269M params, matched on
+compute at ~32–540 GFLOP/token rather than on parameters — §5; pretrained to ~1T params).
 Composition is 2-hop throughout. The API eval is on a small sample (n=30) because API costs
 scale with reasoning tokens. The natural-language format differs from the atomic-token format
 used in prior work on this instrument; absolute numbers are not comparable across formats, though
