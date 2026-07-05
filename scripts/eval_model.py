@@ -180,7 +180,8 @@ def main():
             "length": L,
             "n": len(examples),
             "system_prompt": system_prompt,
-            "accuracy_exact": result["overall"],
+            "accuracy_relaxed": result["overall"],   # canonical metric (tasks.CANONICAL_METRIC)
+            "accuracy_exact": result["metrics"]["exact"]["overall"],
             "correct_exact": correct_exact,
             "elapsed": 0.0,
             "examples": examples,
@@ -195,15 +196,16 @@ def main():
         print(f"\nWrote JSON to {a.json_out}")
 
     length_label = f"L{a.length}" if a.length is not None else "canonical lengths"
-    print(f"\n{a.task} [{label}] @ {length_label} — position-strict exact match:")
+    print(f"\n{a.task} [{label}] @ {length_label} — relaxed match (canonical); exact/contains/last_n are diagnostics:")
     for L, result in results.items():
         total = len(result["examples"])
         correct = sum(1 for _, _, _, ok in result["examples"] if ok)
-        extra = ""
-        for name in ("relaxed", "contains", "last_n"):
-            if name in result.get("metrics", {}):
-                extra += f" {name}={result['metrics'][name]['overall']:.3f}"
-        print(f"  test@L{L}: exact={result['overall']:.3f}{extra} ({correct}/{total})")
+        m = result.get("metrics", {})
+        diag = ""
+        for name in ("exact", "contains", "last_n"):
+            if name in m:
+                diag += f" {name}={m[name]['overall']:.3f}"
+        print(f"  test@L{L}: relaxed={result['overall']:.3f}{diag} ({correct}/{total})")
 
 
 if __name__ == "__main__":

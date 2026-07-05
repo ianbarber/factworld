@@ -138,7 +138,8 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
                     "length": L,
                     "n": n,
                     "system_prompt": prompt,
-                    "accuracy_exact": result["overall"],
+                    "accuracy_relaxed": result["overall"],   # canonical metric (tasks.CANONICAL_METRIC)
+                    "accuracy_exact": result["metrics"]["exact"]["overall"],
                     "correct_exact": correct_exact,
                     "elapsed": elapsed,
                     "examples": examples,
@@ -153,8 +154,8 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
                         f.write(json.dumps(row) + "\n")
                 if md_path is not None:
                     write_markdown(results, md_path)
-                parts = [f"{task_name}@L{L}: exact={row['accuracy_exact']:.3f}"]
-                for name in ("relaxed", "contains", "last_n"):
+                parts = [f"{task_name}@L{L}: relaxed={row['accuracy_relaxed']:.3f}"]
+                for name in ("exact", "contains", "last_n"):
                     if f"accuracy_{name}" in row:
                         parts.append(f"{name}={row[f'accuracy_{name}']:.3f}")
                 parts.append(f"({correct_exact}/{n}) [{elapsed:.1f}s]")
@@ -192,13 +193,18 @@ def write_markdown(results: list[dict], path: str):
         "# FactWorld OpenRouter Model Grid",
         "",
         f"Evaluated at {datetime.now(timezone.utc).isoformat()}.",
-        f"n = {results[0]['n'] if results else 0} examples per task/length; position-strict exact match.",
+        f"n = {results[0]['n'] if results else 0} examples per task/length; relaxed match is the "
+        "canonical metric (exact / semantic-containment / last-N are reported below as diagnostics).",
         "",
         "System prompt:",
         "",
         f"> {prompt}",
         "",
-        "## Exact-match results",
+        "## Relaxed-match results (canonical)",
+        "",
+        "Strip a trailing period and score the first `len(gold)` tokens. This is the fair "
+        "cross-regime metric: it handles reasoning scratchpads (`APIBackend` drops `<think>` blocks "
+        "and common prefixes) and models that omit or glue the trailing period.",
         "",
         "| model | " + " | ".join(tasks) + " |",
         "| " + " | ".join(["---"] * (len(tasks) + 1)) + " |",
@@ -206,9 +212,27 @@ def write_markdown(results: list[dict], path: str):
     for model in model_order:
         accs = []
         for t in tasks:
-            vals = pivot[model][t]["exact"]
+            vals = pivot[model][t]["relaxed"]
             accs.append(f"{sum(vals) / len(vals):.3f}" if vals else "-")
         lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
+
+    if any(pivot[m][t]["exact"] for m in model_order for t in tasks):
+        lines += [
+            "",
+            "## Exact-match results (diagnostic)",
+            "",
+            "Position-strict token-for-token match. Under-counts models that omit or glue the "
+            "trailing period, so read this as a formatting artifact check, not the score.",
+            "",
+            "| model | " + " | ".join(tasks) + " |",
+            "| " + " | ".join(["---"] * (len(tasks) + 1)) + " |",
+        ]
+        for model in model_order:
+            accs = []
+            for t in tasks:
+                vals = pivot[model][t]["exact"]
+                accs.append(f"{sum(vals) / len(vals):.3f}" if vals else "—")
+            lines.append(f"| {_model_label(model)} | " + " | ".join(accs) + " |")
 
     if any(pivot[m][t]["contains"] for m in model_order for t in tasks):
         lines += [
@@ -253,11 +277,14 @@ def write_markdown(results: list[dict], path: str):
         "",
         "## Notes",
         "",
-        "- Exact match is the canonical metric for local models that stop at the answer period.",
-        "- For API reasoning models, `last_n` is the recommended fair metric because the default "
-        "run does not use `stop_at='.'`, allowing the model to finish its reasoning scratchpad. "
-        "Without the stop token the model usually omits the trailing period, so exact match is 0 "
-        "even when the answer is correct.",
+        "- Relaxed match is the canonical metric (see `factworld.tasks.CANONICAL_METRIC`). It strips a "
+        "trailing period and scores the first `len(gold)` tokens, so it is fair across local models "
+        "(which may append extra tokens after the answer) and API models (which often omit or glue "
+        "the trailing period).",
+        "- Exact match is a diagnostic: it under-counts any model that does not emit the answer span "
+        "verbatim, so it can read 0 even when the relaxed score is high.",
+        "- For API reasoning models run without `stop_at='.'`, `last_n` is a useful cross-check: it "
+        "matches the last `len(gold)` tokens, tolerating a scratchpad before the final answer.",
         "- Semantic containment reports whether the correct holder and value appear anywhere in the output.",
         "- `APIBackend` normalizes common answer prefixes ('The answer is...') and a trailing "
         "period glued to the preceding token (e.g. `v56.` → `v56 .`).",

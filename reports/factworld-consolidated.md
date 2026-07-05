@@ -6,6 +6,13 @@ used in both modes. The goal is to give the field one instrument for studying ho
 state-tracking, and composition interact, with numbers that can be reproduced from committed
 scripts and checked independently by anyone with an API key or a single GPU.
 
+**Scope.** FactWorld is a *mechanism probe for the component capabilities that agent workloads
+depend on* — working-memory recall, state tracking, and multi-step composition — not an end-to-end
+agent benchmark. Every task is single-turn and single-answer-span, with no tool use, planning, or
+multi-turn action. The component→agent mapping is a motivating analogy, not a proven one (§9);
+closing the explicit agentic-behavior gap is tracked in
+[#6](https://github.com/ianbarber/factworld/issues/6).
+
 ## 1. What the instrument is
 
 The suite is built around versioned `TaskSpec` objects in `factworld.tasks.CANONICAL`. Each task
@@ -143,25 +150,32 @@ Composition climbs from floor to ~0.8–0.98 as reasoning budget rises. The leve
 reasoning: an explicit "write the holder, then the value" instruction hurts every model,
 including the reasoners that score 0.8–0.98 under a plain prompt.
 
-**S₅ is not moved by reasoning.** At every effort, value accuracy stays at floor for both Kimi
-and GLM. Composition and S₅ respond to different levers.
+**S₅ is movable by reasoning — under a concrete rendering.** In the standard grid below (token
+rendering, no reasoning) S₅ sits at floor (~0.18). Allow reasoning *and* render the problem
+concretely (people and jobs, initial assignment stated), and a strong reasoner solves it: GLM-5.2
+holds 0.93–1.00 from L4 through L32, then hits a sharp cliff at L64 (0.10). The lever is the
+combination — reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering
+without reasoning leaves it at chance. Appendix A gives the full curve, the reasoning × rendering
+interaction, and the per-example failure mode.
 
 The wider API capability grid below uses the standard zero-shot grid (default decoding,
-`max_new_tokens=16`, `stop_at="."`) for all tasks except `composite_copy_v1`, which uses the
-long-token setup above; the remaining tasks do not benefit from extended reasoning.
+`max_new_tokens=16`, `stop_at="."`) — no reasoning — for all tasks except `composite_copy_v1`,
+which uses the long-token setup above. S₅ floors in this no-reasoning grid but is movable by
+reasoning under a concrete rendering (paragraph above; Appendix A).
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
-| glm-5.2 | 1.000 | 1.000 | 0.767 | 0.133 | **0.867** | 0.167 |
+| glm-5.2 | 1.000 | 1.000 | 0.767 | 0.133 | **0.867** | 0.200 |
 | kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | **0.867** | 0.200 |
-| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | **0.767** | 0.167 |
-| gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.133 |
+| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | **0.767** | 0.200 |
+| gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.167 |
 | deepseek-chat | 1.000 | 1.000 | 0.333 | 0.033 | 0.167 | 0.133 |
-| gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.133 |
+| gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.200 |
 
 Single-hop recall and conflict are solved across the board. Binding and composition separate the
-stronger models. Depth-*k* composition (`chain_v1`) and non-abelian state-tracking (`s5_v1`) sit
-near floor for everyone.
+stronger models. Depth-*k* composition (`chain_v1`) sits near floor for everyone; non-abelian
+state-tracking (`s5_v1`) floors in this no-reasoning grid but is movable by reasoning under a
+concrete rendering (Appendix A).
 
 ## 5. Evaluating local architectures
 
@@ -179,22 +193,33 @@ weight-tied looped conv+attention block. The transformer is a standard decoder-o
 
 On the same flagship task `composite_copy_v1@L16`, **relaxed** match:
 
-| model | params | composite_p16@L16 relaxed |
-| --- | --- | --- |
-| **gdp_hybrid** | ~40M | **0.747 ± 0.174** |
-| fprm | ~40M | 0.253 ± 0.178 |
-| transformer | ~40M | 0.005 ± 0.005 |
+| model | params | per-tok FLOPs | composite_p16@L16 relaxed |
+| --- | --- | --- | --- |
+| **gdp_hybrid** | 101M | 204 GFLOP | **0.747 ± 0.174** |
+| fprm | 10M | 159 GFLOP | 0.253 ± 0.178 |
+| transformer | 76M | 159 GFLOP | 0.005 ± 0.005 |
 
-For local models, relaxed match is effectively identical to the benchmark's default score: the
-model usually emits the trailing period when the content tokens are correct, and the only
-difference is whether a missing period or trailing generation is penalized. We confirmed this on
-full-scale runs: `gdp_hybrid` relaxed = 0.874 and last-N = 0.00; `fprm` relaxed = 0.044 and last-N
-= 0.00. The low last-N scores show that local models often append extra tokens after the answer,
-so a prefix-based metric is the right choice. The numbers above are the 3-seed benchmark means.
+All three share `(d_model=768, depth=8)`; the match is on **compute, not parameters**. `fprm` is a
+weight-tied looped block (one `FPRMBlock` applied `n_loops` times — see `factworld/models.py`), so
+at matched `(d_model, depth)` its per-token FLOPs equal the transformer's (~159 GFLOP) while its
+parameter count is ~8× lower at this medium scale (10M vs 76M). `gdp_hybrid`'s Householder-product recurrence costs
+~1.25× the transformer's FLOPs (204 vs 159 GFLOP). Params are measured with the tied head/embed
+counted once; per-token FLOPs are forward-pass, measured with torch's flop counter (it captures the
+`fla` layers). The "~40M for all three" label used in earlier drafts was inaccurate on both reads:
+the comparison was compute-matched, and the actual params were 10M / 76M / 101M. A compute-matched
+scale sweep that scales `(d_model, depth)` together across small/medium/large for all three
+architectures is in `results/composite_scale_*.md`.
 
-The local `gdp_hybrid` is competitive with the API models on this task, despite being ~40M
-parameters trained from scratch. `fprm` shows high seed variance; the transformer fails to learn
-the task even with the winning recipe.
+For local models, relaxed match differs from the exact and last-N diagnostics only on formatting
+(a missing trailing period or extra trailing generation). We confirmed this on full-scale runs:
+`gdp_hybrid` relaxed = 0.874 vs last-N = 0.00; `fprm` relaxed = 0.044 vs last-N = 0.00. The low
+last-N scores show that local models often append extra tokens after the answer, so the
+prefix-based relaxed metric is the right canonical choice. The numbers above are the 3-seed
+benchmark means.
+
+The local `gdp_hybrid` is competitive with the API models on this task, despite being trained from
+scratch at ~100M params / 204 GFLOP/token. `fprm` shows high seed variance; the transformer fails
+to learn the task even with the winning recipe.
 
 **Per-leg decomposition** explains the ranking (content-token accuracy, independent of the
 period issue):
@@ -209,6 +234,41 @@ period issue):
 holders but fails to recall the value of the resolved holder. The transformer fails both legs.
 This is the same routing wall the API models hit: even when the holder is correct, the model
 must route that holder into the in-context recall lookup.
+
+### Scale robustness (compute-matched sweep)
+
+A natural objection to §5 is that the transformer was never given a fair size. We test that
+directly: the same staged curriculum and eval at three sizes, with the comparison **matched on
+compute, not parameters** (all architectures share `(d_model, depth)`; `fprm` is weight-tied so its
+FLOPs match the transformer's at ~5–11× fewer params across scales — see the size table in
+`results/composite_scale_*.md`). `composite_copy_v1` pool-16 @L16, relaxed match, 2 seeds, `train_n=80000`
+(the medium cell is a fresh 2-seed/eval_n=200 re-run of the §5 config; it lands higher than §5's
+3-seed/eval_n=500 mean of 0.747, so the sweep corroborates the ranking, not the absolute):
+
+| arch | small (384×6) | medium (768×8) | large (1024×12) |
+| --- | --- | --- | --- |
+| **gdp_hybrid** | **0.98 ± 0.01** | **0.85 ± 0.01** | 0.28 ± 0.28 |
+| fprm | 0.23 ± 0.05 | 0.53 ± 0.47 | 0.03 ± 0.00 |
+| transformer | 0.01 ± 0.00 | 0.01 ± 0.01 | 0.00 ± 0.00 |
+
+(Per-scale params/FLOPs: small ~3–19M / ~31–38 GFLOP·tok; medium ~10–101M / ~159–204;
+large ~18–269M / ~418–540. Raw runs + the holder/value decomposition are in
+`results/composite_scale_*.md`.)
+
+- **The §5 ranking is scale-robust at top and bottom.** `gdp_hybrid` is the only architecture that
+  reliably solves the task — both seeds at small (0.98) and medium (0.85). `fprm` is bimodal
+  throughout (medium: 0.06 vs 0.99 across seeds). The **transformer floors at every scale,
+  including 202M params / 417 GFLOP·tok** — so §5's "transformer fails" is not a small-model
+  artifact; compute-matching does not rescue it.
+- **The routing wall is scale-invariant.** Wherever an architecture fails, the holder (binding) leg
+  holds and the value (recall-of-resolved-holder) leg collapses — the same wall §6 localizes. This
+  includes `gdp_hybrid` at large: both seeds solve binding (0.85 / 0.84) but one seed's value leg
+  collapses to 0.00.
+- **Caveat at the largest size.** `gdp_hybrid` itself goes bimodal at large (per-seed value 0.56 /
+  0.00), so its absolute margin shrinks there even though the ranking holds (0.28 ≫ 0.03 ≫ 0.00).
+  With 2 seeds this is a flag, not a measurement: characterizing the large regime (more seeds, an
+  LR study at 269M) is the open follow-up. It is *not* the transformer catching up — the transformer
+  remains at floor (0.00).
 
 ## 6. Composition of behaviors
 
@@ -229,7 +289,7 @@ measures recall-of-the-resolved-holder in isolation.
 On the local `gdp_hybrid` model, the scaffolded value score is low (mean 0.147, range
 0.076–0.264 across seeds), which suggests the routing problem is real even when binding is solved. On API models, the
 scaffolded result is much stronger: given the correct holder, models recall the value at
-0.80–1.00. The difference is that the API models can do each leg when the problem is split for
+0.93–1.00. The difference is that the API models can do each leg when the problem is split for
 them, but struggle to compose the two legs in the end-to-end prompt.
 
 ## 7. Long context
@@ -257,14 +317,17 @@ The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
 | glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
 
 High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ does not
-move: it stays at floor at high effort at every length tested. The two tasks' levers hold their
-distinct characters under horizon stress.
+follow it: even under a concrete rendering with reasoning, S₅ cliffs at ~L64 (Appendix A), so at
+these lengths (L128+) it is at floor. The two tasks hold distinct characters under horizon stress
+— composition is reasoning-recoverable at long context, S₅ is not.
 
-## 8. S₅ is movable by supervision density
+## 8. S₅ is movable by supervision density (the local, from-scratch regime)
 
-S₅ floors for every architecture under answer-only supervision. It moves when the training signal
-carries the state. We interleave the oracle's holder-of-the-queried-role every *K* events into
-the training stream (K=1 is dense), and evaluate free-running. 10 seeds:
+This section is about *training a small model from scratch* on S₅. Frontier inference is a
+different regime — there S₅ is movable by reasoning under a concrete rendering (§4, Appendix A).
+Here, S₅ floors for every architecture under answer-only supervision. It moves when the training
+signal carries the state. We interleave the oracle's holder-of-the-queried-role every *K* events
+into the training stream (K=1 is dense), and evaluate free-running. 10 seeds:
 
 | K (stride) | value @L16 | value @L64 | converge @L16 |
 | --- | --- | --- | --- |
@@ -298,20 +361,30 @@ finding about "routing the resolved holder into recall" can be checked in both s
 The takeaways are:
 
 - **Composition responds to reasoning.** It is movable at inference by background reasoning,
-including at long context, for models that can reason. Explicit prompting does not substitute.
-- **Non-abelian state-tracking responds to training signal.** It is movable by dense per-step
-supervision that develops a circuit, and that circuit can be weaned to label-free deployment.
-Reasoning does not move it.
+including at long context (recovered to 0.80–0.97 at L512), for models that can reason. Explicit
+prompting does not substitute.
+- **Non-abelian state-tracking also responds to reasoning — but only under a concrete rendering,
+and with a sharp length cliff.** GLM-5.2 solves `s5_v1` at 0.93–1.00 from L4 to L32 with reasoning
+plus a concrete (people/jobs) rendering, then collapses at L64 (0.10). Neither reasoning under the
+token rendering (~0.33) nor a concrete rendering without reasoning (~chance) suffices — the
+combination does, up to the cliff. Composition, by contrast, recovers out to L512.
+- **For local from-scratch models, S₅'s lever is supervision density.** Dense per-step state
+supervision develops a length-extrapolating circuit that weans to label-free deployment (§8) — a
+distinct regime from frontier inference.
 - **Architecture carries length generalization.** A learned state circuit generalizes in length
 only on a recurrent hybrid; transformers and looped blocks shortcut.
 
-These are results within the regime tested (k=5 S₅; local models ~40M; pretrained models 3B–~1T
-MoE). They are not scaling laws. The connection to agentic work is a motivating proxy, not a
-proven mapping.
+These are results within the regime tested (k=5 S₅; local models ~3–269M params, compute-matched
+at ~32–540 GFLOP/token — see §5; pretrained models from a few B to ~1T params, MoE and dense).
+They are not scaling laws. FactWorld is a mechanism probe for the component capabilities agents depend on, not
+an agent benchmark: the component→agent connection is a motivating proxy, not a proven mapping,
+and no task here exercises tool use, planning, or multi-turn action. Closing that gap is tracked
+in [#6](https://github.com/ianbarber/factworld/issues/6).
 
 ## 10. Limitations and related work
 
-**Limitations.** The scale regime is bounded (k=5 S₅; local ~40M; pretrained to ~1T MoE).
+**Limitations.** The scale regime is bounded (k=5 S₅; local models ~3–269M params, matched on
+compute at ~32–540 GFLOP/token rather than on parameters — §5; pretrained to ~1T params).
 Composition is 2-hop throughout. The API eval is on a small sample (n=30) because API costs
 scale with reasoning tokens. The natural-language format differs from the atomic-token format
 used in prior work on this instrument; absolute numbers are not comparable across formats, though
@@ -392,3 +465,100 @@ python scripts/experiment_dense_supervision.py
 - Local last-N/relaxed confirmation runs:
   `results/benchmark_lastn_gdp_full_1seed.jsonl`,
   `results/benchmark_lastn_fprm_full_1seed.jsonl`
+
+## Appendix A. S₅ — what frontier models can track, and where it breaks
+
+S₅ (`s5_v1`) is non-abelian state tracking (§2). Without reasoning it floors at every length; with
+reasoning under a concrete rendering a strong model solves it through L32, then hits a sharp cliff
+at L64. This appendix gives the no-reasoning failure mode, the reasoning × rendering interaction
+that unlocks the task, and the length cliff. Data: `docs/openrouter/s5-{length-sweep,framing,
+framing-reasoning,horizon}.jsonl`; scripts: `scripts/experiment_s5_framing.py`,
+`scripts/analyze_s5_tracking.py`. All cells n=30, relaxed match, chance floor 0.20.
+
+### A.1 The computation
+
+State is an assignment `{agent → role}`. Each event is a permutation on roles: `swap gX and gY`
+transposes two agents' roles; `cycle gA -> gB -> …` rotates roles one step along the arrow. The
+query asks for one agent's final role after *L* events. Swaps and cycles do not commute, so the
+running permutation must be carried step by step — there is no algebraic shortcut. Two renderings
+are used below: the **token** rendering (`g`/`r` IDs, "swaps"/"cycles roles", initial assignment
+stated) and a **concrete** rendering (people and jobs: "Eva and Bob swap jobs", "Cara takes Eva's
+job, …", "what job does Cara have?"). Both encode the *same* permutation sequences and the same
+oracle gold.
+
+### A.2 Without reasoning: track-then-stall, then chance
+
+Without reasoning, models do real step-by-step tracking on individual examples, then **stall** —
+they report a role the queried agent held at a recent step rather than the final one. Worked
+example (GLM-5.2, L16; the queried agent g2's correct role changes 7 times):
+
+```
+init r2 · s1 r1 · s3 r3 · s7 r4 · s8 r0 · s9 r4 · s12 r1 · s14 r2 (final)
+```
+
+GLM answered **r0** — exactly g2's role at **s8** — missing the three later updates. Three failures,
+same shape (GLM's answer = a recently-held role, not the final):
+
+| queried | GLM said | that role was the agent's state at… | gold |
+| --- | --- | --- | --- |
+| g2 | r0 | s8 (then g2 moved r0→r4→r1→r2) | r2 |
+| g2 | r3 | s8 / s12 (last held s12; missed s13) | r4 |
+| g4 | r0 | s14 (missed only the final s15) | r1 |
+
+In aggregate this is chance at every length — there is no degradation gradient because accuracy
+never rises above it. No reasoning, token rendering:
+
+| model | L4 | L8 | L16 | L32 | L64 | L128 | mean |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| glm-5.2 | 0.07 | 0.10 | 0.30 | 0.20 | 0.30 | 0.30 | 0.21 |
+| kimi-k2.6 | 0.13 | 0.07 | 0.20 | 0.33 | 0.10 | 0.10 | 0.16 |
+| llama-3.3-70b | 0.10 | 0.10 | 0.23 | 0.13 | 0.10 | 0.03 | 0.12 |
+| deepseek-chat | 0.17 | 0.20 | 0.10 | 0.37 | 0.20 | 0.20 | 0.21 |
+| gpt-4o-mini | 0.10 | 0.20 | 0.17 | 0.17 | 0.13 | 0.23 | 0.17 |
+| gemini-2.5-flash-lite | 0.23 | 0.13 | 0.03 | 0.20 | 0.13 | 0.17 | 0.15 |
+| **mean** | **0.13** | **0.13** | **0.17** | **0.23** | **0.16** | **0.17** | **0.17** |
+
+So the no-reasoning floor is genuine — but it is not the whole story.
+
+### A.3 The reasoning × rendering interaction
+
+Turn reasoning on and the two renderings split sharply. Relaxed accuracy, reasoning on:
+
+| model | rendering | L4 | L8 | L16 |
+| --- | --- | --- | --- | --- |
+| glm-5.2 | token | 0.60 | 0.33 | 0.33 |
+| glm-5.2 | concrete | **0.97** | **1.00** | **0.93** |
+| kimi-k2.6 | token | 0.37 | 0.27 | 0.20 |
+| kimi-k2.6 | concrete | 0.67 | 0.67 | 0.33 |
+
+(Without reasoning, both renderings are at chance — A.2 / §4 grid.) Neither lever alone works:
+reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering without reasoning
+leaves it at chance. **The combination** — reasoning plus a concrete rendering — solves S₅ at
+short lengths. The token rendering is the bottleneck on the reasoning arm: it is hard for the model
+to track abstract IDs through a scratchpad, where named people and jobs are not.
+
+### A.4 The length cliff
+
+Where does the reasoning-plus-concrete advantage give out? Sweeping GLM-5.2 (reasoning on) to long
+lengths:
+
+| rendering | L4 | L8 | L16 | L32 | L64 | L128 |
+| --- | --- | --- | --- | --- | --- | --- |
+| concrete | 0.97 | 1.00 | 0.93 | **0.97** | **0.10** | 0.00 |
+| token | 0.60 | 0.33 | 0.33 | 0.13 | 0.00 | 0.00 |
+
+GLM solves S₅ at 0.93–1.00 from L4 through **L32**, then collapses at **L64** (0.10) — a sharp
+cliff, not a gradual decay. This ~32-op horizon is the real capability frontier for non-abelian
+tracking here, and it is only visible under the concrete+reasoning setting; under the token
+rendering or without reasoning the task looks unsolvable at every length (A.2). Kimi-2.6 (A.3)
+tracks less far (~through L8) — the cliff is model-dependent as well as length-dependent.
+
+### A.5 Two regimes, two levers
+
+For **frontier inference**, S₅ is movable by reasoning under a concrete rendering, up to the L64
+cliff (A.3–A.4). For **local from-scratch training**, the lever is supervision density: dense
+per-step state supervision develops a length-extrapolating circuit that weans to label-free
+deployment (§8). These are different questions — what a frontier reasoner can do at inference vs.
+what a small model can learn from scratch — and both hold. The clean dissociation from composition
+(§9) is that composition is reasoning-recoverable out to L512, while S₅ cliffs at ~L64 even under
+its most favorable setting.
