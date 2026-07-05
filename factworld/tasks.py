@@ -167,9 +167,16 @@ def _ex_s5(spec, w, r, oracle, rng, length, idx):
     events = w.sample_hard_chain(length, episode_seed=f"{spec.name}|{idx}")
     agent = rng.choice(w.agents)
     role = oracle.hard_role(events, agent)
+    # State the initial role assignment explicitly. The answer depends on it, but the g_k=r_k
+    # convention is otherwise unstated — a presentation defect (see Appendix A.5: stating it
+    # recovers a few points but does not crack the wall). The other families state their initial
+    # conditions (recall/conflict/chain via the facts, binding/composite via the give-stream), so
+    # this makes s5 consistent with the rest of the suite. Rendered via ``render_role`` so it is
+    # part of the canonical grammar and applies uniformly to train and test.
+    init = " ".join(r.render_role(a, w.initial_assignment[a]) for a in w.agents)
     hist = " ".join(r.render_history(tuple(events), with_steps=True))
     q = r.render_query("state_hard", target=agent)
-    prompt = f"{hist} {q}"
+    prompt = f"{init} {hist} {q}"
     meta = {}
     if spec.worked_trace:    # oracle role-trajectory = optional TRAINING signal, not the scored answer
         meta["trace"] = " ".join(oracle.hard_role(events, agent, t=t) for t in range(1, length + 1))

@@ -138,6 +138,9 @@ def main():
     ap.add_argument("--lengths", nargs="+", type=int, default=[4, 8, 16])
     ap.add_argument("--n", type=int, default=30)
     ap.add_argument("--max_new_tokens", type=int, default=16)
+    ap.add_argument("--stop_at", default=".",
+                    help="Stop string; 'none' or '' disables it (needed for reasoning models so the "
+                         "<think> scratchpad is not truncated before the answer).")
     ap.add_argument("--no_reasoning", action="store_true", default=True)
     ap.add_argument("--reasoning", dest="no_reasoning", action="store_false")
     ap.add_argument("--out", default="docs/openrouter/s5-framing.jsonl")
@@ -162,6 +165,7 @@ def main():
         raise SystemExit("OPENROUTER_API_KEY not set")
     from factworld.backends import APIBackend
 
+    stop_at = None if a.stop_at.lower() in ("", "none") else a.stop_at
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     print(f"=== s5 framing sweep: {len(a.models)} models x {len(a.framings)} framings x "
           f"{len(a.lengths)} lengths x n={a.n} -> {a.out} ===", flush=True)
@@ -176,7 +180,7 @@ def main():
             for framing in a.framings:
                 t0 = time.time()
                 acc_r, acc_c, rows = run_cell(backend, framing, examples,
-                                              a.max_new_tokens, stop_at=".")
+                                              a.max_new_tokens, stop_at=stop_at)
                 rec = {"model": model, "framing": framing, "length": length, "n": a.n,
                        "acc_relaxed": acc_r, "acc_contains": acc_c,
                        "no_reasoning": a.no_reasoning, "elapsed": time.time() - t0,
