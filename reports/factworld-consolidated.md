@@ -515,3 +515,36 @@ tokens give more opportunities to drop an update, which is why reasoning effort 
 (§4, §7) while dense per-step state supervision does (§8) — the latter trains the update circuit the
 former lacks. This is the clean dissociation from composition, where the value is a single
 in-context lookup that reasoning can hold.
+
+### A.5 Is the wall presentation or capability? (a framing control)
+
+The abstract rendering never states the initial role assignment (it relies on the `g_k = r_k`
+naming convention) and uses opaque tokens, so it is fair to ask whether the floor is an
+intelligibility artifact rather than a capability wall. To check, the *same* S₅ problems (same
+oracle, same permutation sequences, same gold) were rendered three ways and evaluated on four
+frontier models (no reasoning, n=30/cell):
+
+- **V0 abstract** (baseline): `g`/`r` tokens, "swaps"/"cycles roles", initial assignment unstated.
+- **V0′ abstract + stated initial**: as V0, but prefixed with "Initially g0 has role r0, …".
+- **V1 concrete English**: people + jobs ("Eva and Bob swap jobs", "Cara takes Eva's job, …",
+  "what job does Cara have?"), initial stated, cycles spelled out so there is no arrow ambiguity.
+
+Relaxed accuracy, mean over L4/L8/L16 (chance = 0.20):
+
+| model | V0 abstract | V0′ +init | V1 concrete |
+| --- | --- | --- | --- |
+| glm-5.2 | 0.12 | 0.24 | 0.27 |
+| kimi-k2.6 | 0.18 | 0.21 | 0.22 |
+| llama-3.3-70b | 0.19 | 0.22 | 0.19 |
+| gpt-4o-mini | 0.22 | 0.18 | 0.23 |
+| **mean** | **0.18** | **0.21** | **0.23** |
+
+Per length (mean over models): V0 0.17 / 0.21 / 0.16, V0′ 0.24 / 0.21 / 0.19, V1 0.29 / 0.21 / 0.18
+(L4 / L8 / L16). Presentation matters, but only marginally and only at short lengths: stating the
+initial assignment recovers ~3 points in aggregate (~12 for GLM, which sat below chance on V0), and
+concreteness adds ~2 more; by L16 all three framings are indistinguishable at ~0.18. No framing
+lifts any model meaningfully above chance. **The S₅ wall is a capability wall, not a presentation
+wall** — the abstract rendering cost a few points (mostly the unstated initial), but maximally
+concrete, unambiguous English does not let these models track a non-commutative permutation. The
+construct holds: `s5_v1` measures non-abelian state tracking, and the frontier-model floor is
+genuine. Data: `docs/openrouter/s5-framing.jsonl`; script: `scripts/experiment_s5_framing.py`.
