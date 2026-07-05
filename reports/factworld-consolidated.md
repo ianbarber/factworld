@@ -150,25 +150,32 @@ Composition climbs from floor to ~0.8–0.98 as reasoning budget rises. The leve
 reasoning: an explicit "write the holder, then the value" instruction hurts every model,
 including the reasoners that score 0.8–0.98 under a plain prompt.
 
-**S₅ is not moved by reasoning.** At every effort, value accuracy stays at floor for both Kimi
-and GLM. Composition and S₅ respond to different levers.
+**S₅ is movable by reasoning — under a concrete rendering.** In the standard grid below (token
+rendering, no reasoning) S₅ sits at floor (~0.18). Allow reasoning *and* render the problem
+concretely (people and jobs, initial assignment stated), and a strong reasoner solves it: GLM-5.2
+holds 0.93–1.00 from L4 through L32, then hits a sharp cliff at L64 (0.10). The lever is the
+combination — reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering
+without reasoning leaves it at chance. Appendix A gives the full curve, the reasoning × rendering
+interaction, and the per-example failure mode.
 
 The wider API capability grid below uses the standard zero-shot grid (default decoding,
-`max_new_tokens=16`, `stop_at="."`) for all tasks except `composite_copy_v1`, which uses the
-long-token setup above; the remaining tasks do not benefit from extended reasoning.
+`max_new_tokens=16`, `stop_at="."`) — no reasoning — for all tasks except `composite_copy_v1`,
+which uses the long-token setup above. S₅ floors in this no-reasoning grid but is movable by
+reasoning under a concrete rendering (paragraph above; Appendix A).
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
-| glm-5.2 | 1.000 | 1.000 | 0.767 | 0.133 | **0.867** | 0.167 |
+| glm-5.2 | 1.000 | 1.000 | 0.767 | 0.133 | **0.867** | 0.200 |
 | kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | **0.867** | 0.200 |
-| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | **0.767** | 0.167 |
-| gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.133 |
+| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | **0.767** | 0.200 |
+| gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.167 |
 | deepseek-chat | 1.000 | 1.000 | 0.333 | 0.033 | 0.167 | 0.133 |
-| gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.133 |
+| gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.200 |
 
 Single-hop recall and conflict are solved across the board. Binding and composition separate the
-stronger models. Depth-*k* composition (`chain_v1`) and non-abelian state-tracking (`s5_v1`) sit
-near floor for everyone.
+stronger models. Depth-*k* composition (`chain_v1`) sits near floor for everyone; non-abelian
+state-tracking (`s5_v1`) floors in this no-reasoning grid but is movable by reasoning under a
+concrete rendering (Appendix A).
 
 ## 5. Evaluating local architectures
 
@@ -310,14 +317,17 @@ The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
 | glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
 
 High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ does not
-move: it stays at floor at high effort at every length tested. The two tasks' levers hold their
-distinct characters under horizon stress.
+follow it: even under a concrete rendering with reasoning, S₅ cliffs at ~L64 (Appendix A), so at
+these lengths (L128+) it is at floor. The two tasks hold distinct characters under horizon stress
+— composition is reasoning-recoverable at long context, S₅ is not.
 
-## 8. S₅ is movable by supervision density
+## 8. S₅ is movable by supervision density (the local, from-scratch regime)
 
-S₅ floors for every architecture under answer-only supervision. It moves when the training signal
-carries the state. We interleave the oracle's holder-of-the-queried-role every *K* events into
-the training stream (K=1 is dense), and evaluate free-running. 10 seeds:
+This section is about *training a small model from scratch* on S₅. Frontier inference is a
+different regime — there S₅ is movable by reasoning under a concrete rendering (§4, Appendix A).
+Here, S₅ floors for every architecture under answer-only supervision. It moves when the training
+signal carries the state. We interleave the oracle's holder-of-the-queried-role every *K* events
+into the training stream (K=1 is dense), and evaluate free-running. 10 seeds:
 
 | K (stride) | value @L16 | value @L64 | converge @L16 |
 | --- | --- | --- | --- |
@@ -351,10 +361,16 @@ finding about "routing the resolved holder into recall" can be checked in both s
 The takeaways are:
 
 - **Composition responds to reasoning.** It is movable at inference by background reasoning,
-including at long context, for models that can reason. Explicit prompting does not substitute.
-- **Non-abelian state-tracking responds to training signal.** It is movable by dense per-step
-supervision that develops a circuit, and that circuit can be weaned to label-free deployment.
-Reasoning does not move it.
+including at long context (recovered to 0.80–0.97 at L512), for models that can reason. Explicit
+prompting does not substitute.
+- **Non-abelian state-tracking also responds to reasoning — but only under a concrete rendering,
+and with a sharp length cliff.** GLM-5.2 solves `s5_v1` at 0.93–1.00 from L4 to L32 with reasoning
+plus a concrete (people/jobs) rendering, then collapses at L64 (0.10). Neither reasoning under the
+token rendering (~0.33) nor a concrete rendering without reasoning (~chance) suffices — the
+combination does, up to the cliff. Composition, by contrast, recovers out to L512.
+- **For local from-scratch models, S₅'s lever is supervision density.** Dense per-step state
+supervision develops a length-extrapolating circuit that weans to label-free deployment (§8) — a
+distinct regime from frontier inference.
 - **Architecture carries length generalization.** A learned state circuit generalizes in length
 only on a recurrent hybrid; transformers and looped blocks shortcut.
 
@@ -450,32 +466,38 @@ python scripts/experiment_dense_supervision.py
   `results/benchmark_lastn_gdp_full_1seed.jsonl`,
   `results/benchmark_lastn_fprm_full_1seed.jsonl`
 
-## Appendix A. Why frontier models floor on S₅
+## Appendix A. S₅ — what frontier models can track, and where it breaks
 
-S₅ (`s5_v1`) is the one task every frontier model fails regardless of reasoning (§4, §7). This
-appendix characterizes *how* it fails, with a worked example and a length sweep. Data:
-`docs/openrouter/s5-length-sweep.{md,jsonl}`; analysis: `scripts/analyze_s5_tracking.py`.
+S₅ (`s5_v1`) is non-abelian state tracking (§2). Without reasoning it floors at every length; with
+reasoning under a concrete rendering a strong model solves it through L32, then hits a sharp cliff
+at L64. This appendix gives the no-reasoning failure mode, the reasoning × rendering interaction
+that unlocks the task, and the length cliff. Data: `docs/openrouter/s5-{length-sweep,framing,
+framing-reasoning,horizon}.jsonl`; scripts: `scripts/experiment_s5_framing.py`,
+`scripts/analyze_s5_tracking.py`. All cells n=30, relaxed match, chance floor 0.20.
 
 ### A.1 The computation
 
-State is an assignment `{agent → role}` (g0=r0 … g4=r4). Each event is a permutation on roles:
-`swap gX and gY` transposes two agents' roles; `cycle gA -> gB -> …` rotates roles one step along
-the arrow. The query asks for one agent's final role after *L* events. Swaps and cycles do not
-commute, so the running permutation must be carried step by step — there is no algebraic shortcut.
+State is an assignment `{agent → role}`. Each event is a permutation on roles: `swap gX and gY`
+transposes two agents' roles; `cycle gA -> gB -> …` rotates roles one step along the arrow. The
+query asks for one agent's final role after *L* events. Swaps and cycles do not commute, so the
+running permutation must be carried step by step — there is no algebraic shortcut. Two renderings
+are used below: the **token** rendering (`g`/`r` IDs, "swaps"/"cycles roles", initial assignment
+stated) and a **concrete** rendering (people and jobs: "Eva and Bob swap jobs", "Cara takes Eva's
+job, …", "what job does Cara have?"). Both encode the *same* permutation sequences and the same
+oracle gold.
 
-### A.2 Per-example failure mode: track-then-stall
+### A.2 Without reasoning: track-then-stall, then chance
 
-On individual examples the models do real step-by-step tracking, then **stall** — they report a role
-the queried agent genuinely held at a recent step rather than the final one. Worked example
-(GLM-5.2, L16; the queried agent g2's correct role changes 7 times):
+Without reasoning, models do real step-by-step tracking on individual examples, then **stall** —
+they report a role the queried agent held at a recent step rather than the final one. Worked
+example (GLM-5.2, L16; the queried agent g2's correct role changes 7 times):
 
 ```
-init r2 · s1 r1 · s3 r3 · s7 r4 · s8 r0 · s9 r4 · s12 r1 · s14 r2(final)
+init r2 · s1 r1 · s3 r3 · s7 r4 · s8 r0 · s9 r4 · s12 r1 · s14 r2 (final)
 ```
 
-GLM answered **r0** — exactly g2's role at **s8**; it then missed the three later updates
-(r0→r4→r1→r2). Three failures, same shape (GLM's answer = a role the agent held recently, not the
-final):
+GLM answered **r0** — exactly g2's role at **s8** — missing the three later updates. Three failures,
+same shape (GLM's answer = a recently-held role, not the final):
 
 | queried | GLM said | that role was the agent's state at… | gold |
 | --- | --- | --- | --- |
@@ -483,13 +505,8 @@ final):
 | g2 | r3 | s8 / s12 (last held s12; missed s13) | r4 |
 | g4 | r0 | s14 (missed only the final s15) | r1 |
 
-A second mode shows up at short lengths: when the model disengages it defaults to a favored token
-rather than tracking — GLM emits **r0 on 18/30 (60%)** of L4 examples.
-
-### A.3 Length sweep — no degradation gradient, because it never rises above chance
-
-If models could track *some* ops and then degrade, accuracy would start high at small *L* and fall.
-It does not. `s5_v1`, no reasoning, n=30/cell, relaxed match (chance floor = 0.20 over 5 roles):
+In aggregate this is chance at every length — there is no degradation gradient because accuracy
+never rises above it. No reasoning, token rendering:
 
 | model | L4 | L8 | L16 | L32 | L64 | L128 | mean |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -501,50 +518,47 @@ It does not. `s5_v1`, no reasoning, n=30/cell, relaxed match (chance floor = 0.2
 | gemini-2.5-flash-lite | 0.23 | 0.13 | 0.03 | 0.20 | 0.13 | 0.17 | 0.15 |
 | **mean** | **0.13** | **0.13** | **0.17** | **0.23** | **0.16** | **0.17** | **0.17** |
 
-Every model sits at chance from **L4 (4 ops) through L128**, with no downward trend (cell-to-cell
-scatter is n=30 binomial noise, ±~0.07). So there is **no aggregate tracking horizon to measure**:
-frontier models cannot reliably compose even a few non-commutative ops. The "fraction of answers
-matching the final *or* penultimate role" (a stall-tolerant re-score) averages only ~26% — barely
-above chance — confirming they are not tracking faithfully to the end either. The per-example
-tracking in A.2 is real but inconsistent: it lands on the right final role at chance rates.
+So the no-reasoning floor is genuine — but it is not the whole story.
 
-### A.4 Why this is the supervision lever, not the reasoning lever
+### A.3 The reasoning × rendering interaction
 
-The stall is a *faithful-execution* failure, not a *scratchpad-length* failure: more reasoning
-tokens give more opportunities to drop an update, which is why reasoning effort does not move S₅
-(§4, §7) while dense per-step state supervision does (§8) — the latter trains the update circuit the
-former lacks. This is the clean dissociation from composition, where the value is a single
-in-context lookup that reasoning can hold.
+Turn reasoning on and the two renderings split sharply. Relaxed accuracy, reasoning on:
 
-### A.5 Is the wall presentation or capability? (a framing control)
+| model | rendering | L4 | L8 | L16 |
+| --- | --- | --- | --- | --- |
+| glm-5.2 | token | 0.60 | 0.33 | 0.33 |
+| glm-5.2 | concrete | **0.97** | **1.00** | **0.93** |
+| kimi-k2.6 | token | 0.37 | 0.27 | 0.20 |
+| kimi-k2.6 | concrete | 0.67 | 0.67 | 0.33 |
 
-The abstract rendering never states the initial role assignment (it relies on the `g_k = r_k`
-naming convention) and uses opaque tokens, so it is fair to ask whether the floor is an
-intelligibility artifact rather than a capability wall. To check, the *same* S₅ problems (same
-oracle, same permutation sequences, same gold) were rendered three ways and evaluated on four
-frontier models (no reasoning, n=30/cell):
+(Without reasoning, both renderings are at chance — A.2 / §4 grid.) Neither lever alone works:
+reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering without reasoning
+leaves it at chance. **The combination** — reasoning plus a concrete rendering — solves S₅ at
+short lengths. The token rendering is the bottleneck on the reasoning arm: it is hard for the model
+to track abstract IDs through a scratchpad, where named people and jobs are not.
 
-- **V0 abstract** (baseline): `g`/`r` tokens, "swaps"/"cycles roles", initial assignment unstated.
-- **V0′ abstract + stated initial**: as V0, but prefixed with "Initially g0 has role r0, …".
-- **V1 concrete English**: people + jobs ("Eva and Bob swap jobs", "Cara takes Eva's job, …",
-  "what job does Cara have?"), initial stated, cycles spelled out so there is no arrow ambiguity.
+### A.4 The length cliff
 
-Relaxed accuracy, mean over L4/L8/L16 (chance = 0.20):
+Where does the reasoning-plus-concrete advantage give out? Sweeping GLM-5.2 (reasoning on) to long
+lengths:
 
-| model | V0 abstract | V0′ +init | V1 concrete |
-| --- | --- | --- | --- |
-| glm-5.2 | 0.12 | 0.24 | 0.27 |
-| kimi-k2.6 | 0.18 | 0.21 | 0.22 |
-| llama-3.3-70b | 0.19 | 0.22 | 0.19 |
-| gpt-4o-mini | 0.22 | 0.18 | 0.23 |
-| **mean** | **0.18** | **0.21** | **0.23** |
+| rendering | L4 | L8 | L16 | L32 | L64 | L128 |
+| --- | --- | --- | --- | --- | --- | --- |
+| concrete | 0.97 | 1.00 | 0.93 | **0.97** | **0.10** | 0.00 |
+| token | 0.60 | 0.33 | 0.33 | 0.13 | 0.00 | 0.00 |
 
-Per length (mean over models): V0 0.17 / 0.21 / 0.16, V0′ 0.24 / 0.21 / 0.19, V1 0.29 / 0.21 / 0.18
-(L4 / L8 / L16). Presentation matters, but only marginally and only at short lengths: stating the
-initial assignment recovers ~3 points in aggregate (~12 for GLM, which sat below chance on V0), and
-concreteness adds ~2 more; by L16 all three framings are indistinguishable at ~0.18. No framing
-lifts any model meaningfully above chance. **The S₅ wall is a capability wall, not a presentation
-wall** — the abstract rendering cost a few points (mostly the unstated initial), but maximally
-concrete, unambiguous English does not let these models track a non-commutative permutation. The
-construct holds: `s5_v1` measures non-abelian state tracking, and the frontier-model floor is
-genuine. Data: `docs/openrouter/s5-framing.jsonl`; script: `scripts/experiment_s5_framing.py`.
+GLM solves S₅ at 0.93–1.00 from L4 through **L32**, then collapses at **L64** (0.10) — a sharp
+cliff, not a gradual decay. This ~32-op horizon is the real capability frontier for non-abelian
+tracking here, and it is only visible under the concrete+reasoning setting; under the token
+rendering or without reasoning the task looks unsolvable at every length (A.2). Kimi-2.6 (A.3)
+tracks less far (~through L8) — the cliff is model-dependent as well as length-dependent.
+
+### A.5 Two regimes, two levers
+
+For **frontier inference**, S₅ is movable by reasoning under a concrete rendering, up to the L64
+cliff (A.3–A.4). For **local from-scratch training**, the lever is supervision density: dense
+per-step state supervision develops a length-extrapolating circuit that weans to label-free
+deployment (§8). These are different questions — what a frontier reasoner can do at inference vs.
+what a small model can learn from scratch — and both hold. The clean dissociation from composition
+(§9) is that composition is reasoning-recoverable out to L512, while S₅ cliffs at ~L64 even under
+its most favorable setting.
