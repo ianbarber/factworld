@@ -241,8 +241,10 @@ Reading the ladder:
   experiment below decomposes the residual failure: strong reasoners can do the binding leg
   and the recall leg *separately* but fail to **route** the resolved holder into the recall
   lookup without scaffolding.
-- **Depth and non-abelian state stay at floor.** `chain_v1` and `s5_v1` are unsolved by every
-  pretrained model regardless of reasoning — the genuine state-tracking/composition wall.
+- **Depth stays at floor; non-abelian state is reasoning-movable under a concrete rendering.**
+  `chain_v1` floors for every pretrained model. `s5_v1` floors under the standard token rendering,
+  but a strong reasoner solves it under a concrete (people/jobs) rendering — glm-5.2 holds
+  0.93–1.00 from L4 to L32, then cliffs at L64 (Appendix A).
 
 **Autoregressive / test-time-compute experiment (E1b).** Format-fair leg-isolation on
 `composite_copy_v1@L16` (n=100) — full write-up in
@@ -330,22 +332,28 @@ mechanism. Our `fprm` implements a weight-tied variant of that block; on `bindin
 strongest length-extrapolator (0.94 @L64), but like every architecture it floors `s5_v1` under
 answer-only supervision.
 
-In short: the suite climbs from easy single-hop recall, through binding and composition, to the
-`s5_v1` state-tracking wall. Two clean dissociations (full write-up: [`docs/experiments/`](docs/experiments/)):
+In short: the suite climbs from easy single-hop recall, through binding and composition, to
+non-abelian state tracking — solvable by strong reasoners under a concrete rendering up to a ~L64
+cliff. The dissociations (full write-up: [`docs/experiments/`](docs/experiments/), Appendix A):
 
 1. **Composition is movable by test-time compute** for strong reasoning models. A reasoning-effort
    dose-response sweep shows composite value climbing with effort (kimi 0.22→0.98, glm 0.14→0.81);
    given the output format, reasoners solve it. Non-reasoners floor. Explicit CoT prompting does
    not help; background reasoning effort does.
-2. **Non-abelian state-tracking (s5) is movable by training-time supervision density, NOT by reasoning.**
-   It floors at every reasoning effort, but dense per-step supervision solves it (10/10 seeds at L16)
-   and the circuit **survives weaning to answer-only** (wean_mixed 8/8) — so it deploys label-free.
-   Only the recurrent hybrid (`gdp_hybrid`) **extrapolates** the learned circuit in length (L64 0.75,
-   L128 0.50–0.59; `fprm` and `transformer` collapse past the train length).
+2. **Non-abelian state-tracking (s5) is movable by reasoning under a concrete rendering, with a
+   length cliff.** glm-5.2 solves `s5_v1` at 0.93–1.00 from L4 to L32 with reasoning plus a
+   concrete (people/jobs) rendering, then collapses at L64 (0.10). Neither reasoning under the
+   token rendering (~0.33) nor a concrete rendering without reasoning (~chance) suffices — the
+   combination does, up to the cliff.
+3. **For local from-scratch models, s5's lever is supervision density.** Dense per-step supervision
+   solves it (10/10 seeds at L16), the circuit **survives weaning to answer-only** (wean_mixed 8/8),
+   and only the recurrent hybrid (`gdp_hybrid`) **extrapolates** the learned circuit in length
+   (L64 0.75, L128 0.50–0.59; `fprm` and `transformer` collapse past the train length).
 
-The levers are **reasoning strength** (composition), **supervision density + weaning** (s5), and
-**recurrent architecture** (s5 length extrapolation). Explicit structured CoT prompting never helps
-(and hurts); recall is trivial once the holder is known.
+The levers are **reasoning strength + a concrete rendering** (composition and frontier s5, the
+latter to a ~L64 cliff), **supervision density + weaning** (local s5), and **recurrent
+architecture** (s5 length extrapolation). Explicit structured CoT prompting never helps (and hurts);
+recall is trivial once the holder is known.
 
 ## Repository layout
 
