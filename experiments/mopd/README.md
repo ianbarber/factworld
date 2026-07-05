@@ -18,9 +18,10 @@ We RL-specialise a pretrained **Qwen3-1.7B** on two distinct FactWorld abilities
 pool) — then MOPD-distil both specialists into one model. Every model is a LoRA adapter on one
 frozen Qwen3 backbone, so the same-origin condition the paper shows is load-bearing is *literal*
 (initial student↔teacher KL ≈ 0). Outcome-RL lifts each domain sharply (binding 0.34→0.99, recall
-0.34→1.00), and a **single distilled adapter matches or exceeds both specialist teachers on both
-domains** (normalised score 1.05 avg for the policy-gradient form, 1.03 for exact reverse-KL),
-whereas each teacher is strong only on its own domain. A from-scratch control shows why a
+0.34→1.00), and across 3 seeds a **single distilled adapter matches or exceeds both specialist
+teachers on both domains** (normalised score 1.07±0.12 avg for the policy-gradient form,
+1.06±0.09 for exact reverse-KL), whereas no single teacher reliably does both. A from-scratch
+control shows why a
 pretrained base matters: outcome-RL barely specialises a small from-scratch transformer on these
 tasks (they are supervision-density-limited), and `chain`/`s5` are outright RL walls.
 
@@ -82,22 +83,30 @@ pool≈16, where the base drops to ≈0.3–0.5). Thinking raises `contains` acc
 Reward climbs cleanly and monotonically (binding 0.55→0.99, recall 0.93→1.00 in ~150 steps), and
 the binding teacher even extrapolates to lengths it was not trained on.
 
-**Stage 3 — one student holds BOTH abilities** (`hf_evaluate.md`, n=500, normalised score):
+**Stage 3 — one student holds BOTH abilities**, across 3 seeds (`hf_seeds.md`, normalised score,
+mean±std over seeds 0/1/2; each seed = fresh teachers + fresh students):
 
 | model | binding | recall | avg |
 |---|---|---|---|
 | base | 0.00 | 0.00 | 0.00 |
-| teacher_binding | **1.00** | 0.25 | 0.62 |
-| teacher_recall | 0.03 | **1.00** | 0.52 |
-| **mopd_pg** | **1.09** | **1.01** | **1.05** |
-| **mopd_kl** | **1.05** | **1.01** | **1.03** |
+| teacher_binding | 1.00±0.00 | 0.85±0.15 | 0.92±0.13 |
+| teacher_recall | 0.03±0.03 | 1.00±0.00 | 0.51±0.49 |
+| **mopd_pg** | **1.14±0.14** | **1.00±0.02** | **1.07±0.12** |
+| **mopd_kl** | **1.11±0.11** | **1.01±0.01** | **1.06±0.09** |
 
-Each teacher is a specialist — strong only on its own domain — but the **single MOPD adapter
-matches or slightly exceeds both on both domains** from one set of weights (binding 0.34→0.99,
-recall 0.34→1.00 in raw accuracy). The two loss forms are comparable (PG 1.05, KL 1.03),
-reproducing the paper's finding that policy-gradient and reverse-KL distillation perform alike
-under same-origin teachers. Distillation is stable: the per-token reverse KL starts low and
-converges (`hf_mopd.md`), the expected consequence of the ≈0 initial same-origin KL.
+Every seed, the **single MOPD adapter matches or exceeds both teachers on both domains** (binding
+0.34→0.99, recall 0.34→1.00 raw; recall norm is rock-steady at 1.00±0.02, binding ranges 1.02–1.33
+and always beats the binding teacher because it extrapolates better to L24/L32). The two loss forms
+are comparable (PG 1.07, KL 1.06), reproducing the paper's finding that policy-gradient and
+reverse-KL distillation perform alike under same-origin teachers. Distillation is stable: the
+per-token reverse KL starts low and converges (`hf_mopd.md`), the expected consequence of the ≈0
+initial same-origin KL.
+
+One honest wrinkle the seeds expose: `teacher_binding` also **transfers to recall** (0.85±0.15) —
+GRPO on binding incidentally teaches the clean single-token output format, and recall was
+format-limited on the base (`contains`=0.95 but `relaxed`=0.34). But that transfer is unstable and
+below MOPD, and `teacher_recall` still cannot do binding (0.03), so *no single teacher reliably
+does both* while the MOPD student does — every seed.
 
 ## 4. Why a pretrained base — the from-scratch control
 
@@ -114,14 +123,16 @@ them, which it does cleanly. The from-scratch path is preserved as a control
 
 ## 5. Limitations
 
-- One base (Qwen3-1.7B), two domains, single seed — a demonstration, not a scaling study.
+- One base (Qwen3-1.7B), two domains, 3 seeds — a demonstration, not a scaling study.
 - Reward = relaxed match on a short span with thinking off; the harder reasoning-gated tasks
   (`composite`, `s5`) are out of scope here (they need thinking / dense supervision).
-- The student slightly *exceeds* the teachers (avg >1): a small multi-teacher synergy, but also
-  within eval noise at these lengths — read it as "fully recovers both," not "reliably beats."
+- The student *exceeds* the teachers on binding (norm >1 every seed): it extrapolates to longer
+  give-streams better than the binding teacher — a small but consistent multi-teacher effect rather
+  than a within-noise blip (recall std is ±0.01–0.02).
 
 ## Reproduce
 
-See [`REPRODUCE.md`](REPRODUCE.md). Order: `bench_qwen.py` → `hf_teachers.py` → `hf_mopd.py
---loss pg` / `--loss kl` → `hf_evaluate.py`. Needs a CUDA GPU + `transformers`, `peft`,
-`accelerate`; the data/oracle/eval layer is pure-stdlib.
+See [`REPRODUCE.md`](REPRODUCE.md). Single seed: `bench_qwen.py` → `hf_teachers.py` → `hf_mopd.py
+--loss pg` / `--loss kl` → `hf_evaluate.py`. Multi-seed robustness (the headline table):
+`hf_seeds.py --seeds 0 1 2`. Needs a CUDA GPU + `transformers`, `peft`, `accelerate`; the
+data/oracle/eval layer is pure-stdlib.

@@ -202,6 +202,7 @@ def grpo_train(pmodel: Any, tok: Any, adapter: str, spec: TK.TaskSpec, *, steps:
                device: str = "cuda", log_every: int = 20) -> dict:
     """GRPO-train ``adapter`` on ``spec`` (verifiable reward). Fresh prompts each step."""
     import torch
+    torch.manual_seed(seed)                          # reproducible rollouts (do_sample) per seed
     activate(pmodel, adapter, train=True)
     opt = torch.optim.AdamW([p for p in pmodel.parameters() if p.requires_grad], lr=lr)
     pool = prompt_pool(spec, pool_n)
@@ -264,6 +265,7 @@ def mopd_train(pmodel: Any, tok: Any, student: str, teachers: dict[str, str],
     Adapter is swapped to the teacher for its (no-grad) scoring forward pass.
     """
     import torch
+    torch.manual_seed(seed)                          # reproducible rollouts (do_sample) per seed
     activate(pmodel, student, train=True)
     opt = torch.optim.AdamW([p for p in pmodel.parameters() if p.requires_grad], lr=lr)
     pools = {d: prompt_pool(s, pool_n) for d, s in domain_specs.items()}

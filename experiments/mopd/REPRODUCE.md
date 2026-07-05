@@ -22,7 +22,8 @@ literal (identical backbone). Run in order:
 | Outcome-RL genuinely specialises the pretrained base | `hf_teachers.py --steps 300` | teacher ≫ base per domain (binding +~0.6, recall→1.0) → `hf_teachers.md` |
 | MOPD distils both teachers into one student (PG form) | `hf_mopd.py --loss pg` | reverse-KL starts low, converges; adapter saved → `hf_mopd.md` |
 | Same with exact reverse-KL form | `hf_mopd.py --loss kl` | comparable dynamics → `hf_mopd.md` |
-| **One student holds BOTH abilities (headline)** | `hf_evaluate.py` | MOPD avg normalised score ≈ 1 on both domains → `hf_evaluate.md` |
+| One student holds BOTH abilities (single seed) | `hf_evaluate.py` | MOPD avg normalised score ≈ 1 on both domains → `hf_evaluate.md` |
+| **Robust across seeds (headline)** | `hf_seeds.py --seeds 0 1 2` | MOPD ≥1 on both domains every seed; mopd_pg 1.07±0.12, mopd_kl 1.06±0.09 avg → `hf_seeds.md` |
 
 Infra smoke (loads the model; needs GPU): `python experiments/mopd/mopd_hf.py`.
 
