@@ -15,6 +15,9 @@ dist/
 *.pt
 *.ckpt
 *.log
+# MOPD experiment checkpoints/adapters (weights are large; result .md tables ARE tracked)
+experiments/mopd/ckpts/
+experiments/mopd/ckpts_hf/
 .DS_Store
 .env
 

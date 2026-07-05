@@ -49,6 +49,13 @@ The primary report on the natural-language format is
 one reproducible instrument for both frontier-model evaluation and local-architecture
 experimentation, with the API numbers and local multi-seed results.
 
+🧪 **Experiments using FactWorld as an RL/distillation testbed** live under
+[`experiments/`](experiments/):
+- [`experiments/mopd/`](experiments/mopd/README.md) — *Multi-teacher On-Policy Distillation*
+  (MOPD) on FactWorld: RL-specialise Qwen3-1.7B on two abilities (binding, recall) with a
+  verifiable reward, then distil both into one model that holds both (LoRA adapters on a shared
+  backbone). See [`REPRODUCE.md`](experiments/mopd/REPRODUCE.md).
+
 🔬 **Reproduction code for the non-abelian report:**
 [`phases/02-non-abelian-state/`](phases/02-non-abelian-state/) — every claim maps to one script;
 see [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md). Scoped to this hybrid and scale
