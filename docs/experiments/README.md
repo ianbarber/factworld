@@ -91,12 +91,14 @@ reasoners is tested directly in the reasoning on/off sweep below.
 | wall | what it is | what moves it | what doesn't |
 | --- | --- | --- | --- |
 | **composition** | generating the holder (last-write-wins over objects) | **background reasoning + format** (kimi 0.22→0.98, glm 0.14→0.81 with effort) | explicit CoT prompting (hurts), dense holder supervision, local self-correction |
-| **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision → wean to answer-only** (wean_mixed 8/8), then gdp_hybrid extrapolates 4–8× | reasoning effort (floor at all levels), sparse/answer-only |
+| **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision → wean to answer-only** (wean_mixed 8/8), then gdp_hybrid extrapolates 4–8×; at the frontier, **reasoning + a concrete rendering** (consolidated report Appendix A) | reasoning effort under the token rendering (floor at all levels), sparse/answer-only |
 | **recall (value)** | — | given the holder, trivially solved (0.93–1.00) | — |
 
 **Two dissociations, both now clean:**
-- **Composition is movable by test-time compute** (reasoning) for strong models; **s5 is not** — it
-  needs training-time supervision density, and that circuit can be *weaned* to label-free deployment.
+- **Composition is movable by test-time compute** (reasoning) for strong models; **s5 under the
+  token rendering is not** — locally it needs training-time supervision density, and that circuit
+  can be *weaned* to label-free deployment; at the frontier the lever is reasoning plus a concrete
+  rendering (consolidated report Appendix A).
 - Architecture (gdp_hybrid vs fprm vs transformer) gates **length extrapolation** of a learned s5
   circuit, not its formation.
 
@@ -107,10 +109,12 @@ and **recurrent architecture** (s5 extrapolation).
 **Open question (the confound) — RESOLVED by the reasoning sweep.** kimi/glm solving
 composition *was* test-time compute working. The reasoning on/off/levels sweep
 (`reasoning-results.md`) shows a clear dose-response: composite value climbs with effort
-(kimi 0.22→0.96→0.98; glm 0.14→0.74→0.81) while **s5 stays at floor regardless of effort**.
-So the corrected statement: **background reasoning (test-time compute) IS a lever for
-composition; it is NOT for s5.** What does not help either wall: explicit structured CoT
-prompting (hurts), and sampling/self-correction on non-reasoning local models.
+(kimi 0.22→0.96→0.98; glm 0.14→0.74→0.81) while **s5 under the token rendering stays at floor
+regardless of effort** (under a concrete rendering with an 8192-token budget, reasoning solves it
+— `results/s5_horizon_recheck_20260705.jsonl`). So: **background reasoning (test-time compute)
+IS a lever for composition; for s5 it works only combined with a concrete rendering.** What does
+not help either wall: explicit structured CoT prompting (hurts), and sampling/self-correction on
+non-reasoning local models.
 
 ## 5. Weaning bridge — deep-dive (8 seeds) — `experiment_weaning.py`
 
@@ -131,6 +135,6 @@ Can a dense-learned s5 circuit survive weaning to answer-only, and does weaning 
  exposure alongside dense. Deployment recipe: train dense → fine-tune on any mix including answer-only
  → deploy answer-only. Doc: `weaning_deep_results.md`.
 
-Two clean dissociations, neither movable by test-time compute; one movable by supervision density
-(s5), one movable by base-model reasoning strength (composition). Architecture matters only for
-length extrapolation of a *learned* s5 circuit (gdp_hybrid wins).
+Two clean dissociations: one movable by supervision density (s5, local), one movable by
+base-model reasoning strength (composition). Architecture matters only for length extrapolation
+of a *learned* s5 circuit (gdp_hybrid wins).

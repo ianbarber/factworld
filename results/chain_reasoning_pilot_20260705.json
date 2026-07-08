@@ -1,0 +1,866 @@
+[
+  {
+    "model": "z-ai/glm-5.2",
+    "task": "chain_v1",
+    "length": 4,
+    "n": 30,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_relaxed": 1.0,
+    "accuracy_exact": 0.0,
+    "correct_exact": 0,
+    "elapsed": 20.701644897460938,
+    "examples": [
+      {
+        "prompt": "g5's a0 is g2. g4's a0 is g3. g1's a0 is g5. g2's a0 is g4. g0's a0 is g1. g3's a0 is g0. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g4. g3's a0 is g5. g0's a0 is g3. g1's a0 is g0. g2's a0 is g1. g4's a0 is g2. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g4. g2's a0 is g5. g5's a0 is g3. g4's a0 is g2. g1's a0 is g0. g3's a0 is g1. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g3. g3's a0 is g4. g4's a0 is g2. g2's a0 is g1. g0's a0 is g5. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g2. g4's a0 is g5. g3's a0 is g4. g2's a0 is g3. g0's a0 is g1. g5's a0 is g0. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g0. g3's a0 is g5. g5's a0 is g2. g2's a0 is g1. g1's a0 is g4. g0's a0 is g3. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g1. g0's a0 is g2. g1's a0 is g5. g3's a0 is g0. g2's a0 is g4. g5's a0 is g3. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g2. g1's a0 is g4. g3's a0 is g1. g4's a0 is g5. g5's a0 is g0. g2's a0 is g3. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g0. g5's a0 is g1. g1's a0 is g2. g0's a0 is g5. g4's a0 is g3. g2's a0 is g4. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g1. g4's a0 is g3. g2's a0 is g0. g1's a0 is g5. g0's a0 is g4. g5's a0 is g2. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g3. g4's a0 is g0. g1's a0 is g4. g2's a0 is g1. g3's a0 is g2. g0's a0 is g5. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g3. g2's a0 is g0. g4's a0 is g5. g5's a0 is g2. g0's a0 is g1. g3's a0 is g4. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g5. g5's a0 is g0. g2's a0 is g1. g3's a0 is g4. g0's a0 is g3. g4's a0 is g2. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g0. g0's a0 is g2. g2's a0 is g3. g1's a0 is g4. g3's a0 is g5. g5's a0 is g1. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g4. g2's a0 is g5. g0's a0 is g3. g4's a0 is g1. g3's a0 is g2. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g1. g5's a0 is g4. g1's a0 is g5. g4's a0 is g3. g3's a0 is g2. g2's a0 is g0. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g3. g4's a0 is g5. g2's a0 is g4. g3's a0 is g1. g0's a0 is g2. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g0. g1's a0 is g2. g3's a0 is g5. g0's a0 is g3. g4's a0 is g1. g5's a0 is g4. what is a0 of a0 of a0 of a0 of g3?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g1. g2's a0 is g0. g4's a0 is g2. g3's a0 is g5. g1's a0 is g4. g0's a0 is g3. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g4. g5's a0 is g2. g4's a0 is g3. g3's a0 is g5. g1's a0 is g0. g2's a0 is g1. what is a0 of a0 of a0 of a0 of g1?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g2. g1's a0 is g5. g0's a0 is g3. g4's a0 is g0. g3's a0 is g1. g2's a0 is g4. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g0. g3's a0 is g2. g4's a0 is g3. g0's a0 is g4. g2's a0 is g1. g1's a0 is g5. what is a0 of a0 of a0 of a0 of g2?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g5. g1's a0 is g0. g0's a0 is g3. g4's a0 is g2. g3's a0 is g4. g5's a0 is g1. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g4. g3's a0 is g5. g5's a0 is g0. g4's a0 is g3. g0's a0 is g2. g2's a0 is g1. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g2. g1's a0 is g5. g0's a0 is g1. g3's a0 is g0. g2's a0 is g4. g4's a0 is g3. what is a0 of a0 of a0 of a0 of g3?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g3. g0's a0 is g1. g2's a0 is g4. g3's a0 is g2. g4's a0 is g5. g5's a0 is g0. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g3. g1's a0 is g4. g4's a0 is g2. g2's a0 is g5. g3's a0 is g0. g0's a0 is g1. what is a0 of a0 of a0 of a0 of g5?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g0. g1's a0 is g2. g5's a0 is g4. g0's a0 is g5. g3's a0 is g1. g4's a0 is g3. what is a0 of a0 of a0 of a0 of g0?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g5. g1's a0 is g4. g0's a0 is g1. g3's a0 is g2. g5's a0 is g3. g2's a0 is g0. what is a0 of a0 of a0 of a0 of g3?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g1. g4's a0 is g5. g1's a0 is g3. g2's a0 is g4. g3's a0 is g0. g0's a0 is g2. what is a0 of a0 of a0 of a0 of g4?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 30,
+    "correct_contains": 30,
+    "correct_last_n": 30
+  },
+  {
+    "model": "z-ai/glm-5.2",
+    "task": "chain_v1",
+    "length": 6,
+    "n": 30,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_relaxed": 1.0,
+    "accuracy_exact": 0.0,
+    "correct_exact": 0,
+    "elapsed": 28.62609601020813,
+    "examples": [
+      {
+        "prompt": "g2's a0 is g0. g1's a0 is g3. g5's a0 is g4. g0's a0 is g5. g3's a0 is g2. g4's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g5. g4's a0 is g1. g1's a0 is g0. g2's a0 is g3. g5's a0 is g4. g0's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g5. g2's a0 is g0. g1's a0 is g4. g5's a0 is g1. g0's a0 is g3. g4's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g4. g3's a0 is g0. g5's a0 is g1. g4's a0 is g5. g1's a0 is g2. g2's a0 is g3. what is a0 of a0 of a0 of a0 of a0 of a0 of g5?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g5. g2's a0 is g4. g3's a0 is g2. g4's a0 is g1. g0's a0 is g3. g5's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g5. g5's a0 is g1. g0's a0 is g4. g1's a0 is g3. g2's a0 is g0. g3's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of g1?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g1. g5's a0 is g3. g4's a0 is g5. g1's a0 is g0. g0's a0 is g2. g2's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of g1?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g5. g0's a0 is g1. g4's a0 is g2. g5's a0 is g0. g3's a0 is g4. g1's a0 is g3. what is a0 of a0 of a0 of a0 of a0 of a0 of g0?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g3. g0's a0 is g2. g2's a0 is g4. g5's a0 is g0. g1's a0 is g5. g3's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g3. g4's a0 is g0. g0's a0 is g5. g5's a0 is g1. g3's a0 is g4. g1's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of g5?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g3. g2's a0 is g4. g4's a0 is g5. g0's a0 is g2. g5's a0 is g1. g3's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g4. g1's a0 is g0. g5's a0 is g2. g2's a0 is g3. g4's a0 is g1. g0's a0 is g5. what is a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g2. g5's a0 is g1. g3's a0 is g5. g4's a0 is g3. g0's a0 is g4. g2's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of g0?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g1. g2's a0 is g4. g4's a0 is g3. g0's a0 is g5. g5's a0 is g2. g1's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g0. g5's a0 is g2. g3's a0 is g4. g0's a0 is g3. g2's a0 is g1. g4's a0 is g5. what is a0 of a0 of a0 of a0 of a0 of a0 of g1?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g5. g3's a0 is g0. g4's a0 is g2. g1's a0 is g4. g0's a0 is g1. g5's a0 is g3. what is a0 of a0 of a0 of a0 of a0 of a0 of g0?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g3. g2's a0 is g5. g0's a0 is g2. g4's a0 is g0. g5's a0 is g1. g3's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of g1?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g2. g5's a0 is g3. g2's a0 is g0. g1's a0 is g4. g0's a0 is g1. g4's a0 is g5. what is a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g3. g3's a0 is g1. g2's a0 is g4. g1's a0 is g2. g4's a0 is g5. g5's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g4. g0's a0 is g5. g1's a0 is g3. g2's a0 is g0. g3's a0 is g2. g4's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g4. g4's a0 is g1. g1's a0 is g2. g2's a0 is g0. g0's a0 is g3. g3's a0 is g5. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g5. g4's a0 is g3. g2's a0 is g0. g5's a0 is g1. g1's a0 is g4. g3's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g0. g2's a0 is g4. g0's a0 is g2. g5's a0 is g1. g4's a0 is g3. g3's a0 is g5. what is a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g1. g5's a0 is g0. g1's a0 is g4. g4's a0 is g2. g3's a0 is g5. g2's a0 is g3. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g1. g3's a0 is g5. g5's a0 is g2. g2's a0 is g4. g4's a0 is g0. g1's a0 is g3. what is a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g1. g3's a0 is g0. g4's a0 is g2. g2's a0 is g3. g0's a0 is g5. g1's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g1. g2's a0 is g0. g1's a0 is g2. g4's a0 is g3. g5's a0 is g4. g0's a0 is g5. what is a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g2. g4's a0 is g1. g5's a0 is g3. g3's a0 is g4. g0's a0 is g5. g2's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g5. g4's a0 is g3. g3's a0 is g1. g5's a0 is g2. g2's a0 is g4. g1's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g5. g2's a0 is g4. g1's a0 is g0. g5's a0 is g3. g3's a0 is g2. g4's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 30,
+    "correct_contains": 30,
+    "correct_last_n": 30
+  },
+  {
+    "model": "z-ai/glm-5.2",
+    "task": "chain_v1",
+    "length": 8,
+    "n": 30,
+    "system_prompt": "You are taking a short test. Answer each question with only the requested value or values, no explanation. Use the same spelling as in the question. For questions that ask 'what is a0 of the holder of ...', answer with the holder's name followed by the requested value, like 'g3 v9'.",
+    "accuracy_relaxed": 1.0,
+    "accuracy_exact": 0.0,
+    "correct_exact": 0,
+    "elapsed": 33.53721785545349,
+    "examples": [
+      {
+        "prompt": "g5's a0 is g3. g3's a0 is g4. g0's a0 is g1. g4's a0 is g0. g2's a0 is g5. g1's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g1. g5's a0 is g4. g2's a0 is g5. g0's a0 is g3. g1's a0 is g0. g3's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g3. g3's a0 is g1. g1's a0 is g2. g0's a0 is g5. g2's a0 is g0. g5's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g5. g3's a0 is g0. g4's a0 is g3. g0's a0 is g1. g2's a0 is g4. g5's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g5?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g2. g5's a0 is g4. g4's a0 is g3. g3's a0 is g0. g2's a0 is g5. g0's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g5?",
+        "gold": "g3.",
+        "pred": "g3",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g2. g2's a0 is g0. g3's a0 is g1. g5's a0 is g3. g0's a0 is g5. g1's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g2. g0's a0 is g4. g1's a0 is g5. g4's a0 is g1. g2's a0 is g0. g5's a0 is g3. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g5?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g1. g5's a0 is g4. g3's a0 is g2. g1's a0 is g0. g4's a0 is g3. g0's a0 is g5. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g1. g1's a0 is g3. g4's a0 is g0. g2's a0 is g5. g0's a0 is g2. g3's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g4. g3's a0 is g2. g2's a0 is g1. g5's a0 is g0. g0's a0 is g3. g4's a0 is g5. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g4.",
+        "pred": "g4",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g4. g0's a0 is g3. g1's a0 is g5. g2's a0 is g0. g5's a0 is g2. g4's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g1. g5's a0 is g3. g2's a0 is g4. g0's a0 is g5. g1's a0 is g0. g3's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g5?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g0. g4's a0 is g1. g0's a0 is g5. g3's a0 is g4. g2's a0 is g3. g5's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g1. g5's a0 is g4. g1's a0 is g3. g4's a0 is g0. g2's a0 is g5. g3's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g1. g4's a0 is g2. g0's a0 is g5. g1's a0 is g3. g3's a0 is g0. g5's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g5. g1's a0 is g2. g4's a0 is g3. g3's a0 is g1. g2's a0 is g0. g5's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g1's a0 is g0. g3's a0 is g5. g5's a0 is g4. g4's a0 is g2. g0's a0 is g3. g2's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g0. g0's a0 is g1. g2's a0 is g5. g4's a0 is g3. g5's a0 is g4. g1's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g4. g2's a0 is g3. g0's a0 is g2. g1's a0 is g5. g5's a0 is g0. g4's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g3's a0 is g5. g4's a0 is g0. g1's a0 is g3. g2's a0 is g1. g0's a0 is g2. g5's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g1?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g2's a0 is g0. g4's a0 is g1. g5's a0 is g2. g0's a0 is g3. g1's a0 is g5. g3's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g4. g1's a0 is g2. g3's a0 is g5. g0's a0 is g1. g4's a0 is g0. g2's a0 is g3. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g0?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g5. g2's a0 is g0. g3's a0 is g1. g1's a0 is g2. g0's a0 is g4. g5's a0 is g3. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g4's a0 is g3. g0's a0 is g2. g5's a0 is g4. g1's a0 is g5. g3's a0 is g0. g2's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g3. g1's a0 is g5. g3's a0 is g2. g5's a0 is g4. g2's a0 is g1. g4's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g2. g3's a0 is g1. g1's a0 is g0. g2's a0 is g3. g4's a0 is g5. g0's a0 is g4. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g0?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g1. g1's a0 is g3. g2's a0 is g0. g4's a0 is g5. g3's a0 is g4. g5's a0 is g2. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g4?",
+        "gold": "g2.",
+        "pred": "g2",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g5. g1's a0 is g0. g5's a0 is g3. g3's a0 is g4. g4's a0 is g2. g2's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g2?",
+        "gold": "g0.",
+        "pred": "g0",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g5's a0 is g3. g3's a0 is g2. g0's a0 is g5. g4's a0 is g1. g2's a0 is g4. g1's a0 is g0. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g1?",
+        "gold": "g5.",
+        "pred": "g5",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      },
+      {
+        "prompt": "g0's a0 is g3. g5's a0 is g0. g3's a0 is g2. g4's a0 is g5. g1's a0 is g4. g2's a0 is g1. what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g3?",
+        "gold": "g1.",
+        "pred": "g1",
+        "exact": 0,
+        "relaxed": 1,
+        "contains": 1,
+        "last_n": 1
+      }
+    ],
+    "accuracy_contains": 1.0,
+    "accuracy_last_n": 1.0,
+    "correct_relaxed": 30,
+    "correct_contains": 30,
+    "correct_last_n": 30
+  }
+]

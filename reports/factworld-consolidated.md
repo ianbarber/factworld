@@ -153,7 +153,8 @@ including the reasoners that score 0.8–0.98 under a plain prompt.
 **S₅ is movable by reasoning — under a concrete rendering.** In the standard grid below (token
 rendering, no reasoning) S₅ sits at floor (~0.18). Allow reasoning *and* render the problem
 concretely (people and jobs, initial assignment stated), and a strong reasoner solves it: GLM-5.2
-holds 0.93–1.00 from L4 through L32, then hits a sharp cliff at L64 (0.10). The lever is the
+holds 1.00 at L32, 0.97 at L64, and 0.90 at L128, degrading gradually with length
+(`results/s5_horizon_recheck_20260705.jsonl`, 8192-token budget). The lever is the
 combination — reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering
 without reasoning leaves it at chance. Appendix A gives the full curve, the reasoning × rendering
 interaction, and the per-example failure mode.
@@ -161,7 +162,8 @@ interaction, and the per-example failure mode.
 The wider API capability grid below uses the standard zero-shot grid (default decoding,
 `max_new_tokens=16`, `stop_at="."`) — no reasoning — for all tasks except `composite_copy_v1`,
 which uses the long-token setup above. S₅ floors in this no-reasoning grid but is movable by
-reasoning under a concrete rendering (paragraph above; Appendix A).
+reasoning under a concrete rendering (paragraph above; Appendix A); `chain_v1` floors here but
+is reasoning-solvable to ~depth 12 under an 8192-token budget (below).
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -173,9 +175,13 @@ reasoning under a concrete rendering (paragraph above; Appendix A).
 | gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.200 |
 
 Single-hop recall and conflict are solved across the board. Binding and composition separate the
-stronger models. Depth-*k* composition (`chain_v1`) sits near floor for everyone; non-abelian
-state-tracking (`s5_v1`) floors in this no-reasoning grid but is movable by reasoning under a
-concrete rendering (Appendix A).
+stronger models. Depth-*k* composition (`chain_v1`) sits near floor in this no-reasoning grid,
+but with reasoning and `max_new_tokens=8192` glm-5.2 solves it to depth 12 (1.00 at depths 4–8,
+0.967 at 12, 0.733 at 16–24) with a real collapse at depth 32 (0.033, only 3/30 empty —
+`results/chain_reasoning_pilot_20260705.json`, `results/chain_reasoning_pilot2_20260705.json`).
+Non-abelian state-tracking (`s5_v1`) floors here but is movable by reasoning under a concrete
+rendering (Appendix A). Reasoning-model cells require a large completion budget: a short budget
+truncates the reasoning trace before the answer and reads as an empty prediction.
 
 ## 5. Evaluating local architectures
 
@@ -316,10 +322,11 @@ The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
 | kimi-k2.6 | 0.47 | **0.97** | 0.73 | **0.97** | **0.93** |
 | glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
 
-High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ does not
-follow it: even under a concrete rendering with reasoning, S₅ cliffs at ~L64 (Appendix A), so at
-these lengths (L128+) it is at floor. The two tasks hold distinct characters under horizon stress
-— composition is reasoning-recoverable at long context, S₅ is not.
+High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ under a
+concrete rendering with reasoning holds 0.90 at L128 (Appendix A), degrading gradually rather
+than at a wall; its concrete-rendering sweep so far extends to L128, short of composition's
+L512. Both tasks are reasoning-recoverable under horizon stress, with task- and model-dependent
+horizons.
 
 ## 8. S₅ is movable by supervision density (the local, from-scratch regime)
 
@@ -361,13 +368,15 @@ finding about "routing the resolved holder into recall" can be checked in both s
 The takeaways are:
 
 - **Composition responds to reasoning.** It is movable at inference by background reasoning,
-including at long context (recovered to 0.80–0.97 at L512), for models that can reason. Explicit
-prompting does not substitute.
+including at long context (recovered to 0.80–0.97 at L512), for models that can reason. Depth-*k*
+composition (`chain_v1`) follows: with reasoning and an 8192-token budget glm-5.2 solves it to
+depth 12 and collapses by depth 32 (0.033). Explicit prompting does not substitute.
 - **Non-abelian state-tracking also responds to reasoning — but only under a concrete rendering,
-and with a sharp length cliff.** GLM-5.2 solves `s5_v1` at 0.93–1.00 from L4 to L32 with reasoning
-plus a concrete (people/jobs) rendering, then collapses at L64 (0.10). Neither reasoning under the
-token rendering (~0.33) nor a concrete rendering without reasoning (~chance) suffices — the
-combination does, up to the cliff. Composition, by contrast, recovers out to L512.
+and with a model-dependent horizon.** GLM-5.2 solves `s5_v1` with reasoning plus a concrete
+(people/jobs) rendering — 1.00 at L32, 0.97 at L64, 0.90 at L128 — while kimi-k2.6 degrades
+sooner (1.00 at L16, 0.83 at L32). Neither reasoning under the token rendering (~0.33) nor a
+concrete rendering without reasoning (~chance) suffices — the combination does. Composition
+recovers out to L512.
 - **For local from-scratch models, S₅'s lever is supervision density.** Dense per-step state
 supervision develops a length-extrapolating circuit that weans to label-free deployment (§8) — a
 distinct regime from frontier inference.
@@ -469,10 +478,11 @@ python scripts/experiment_dense_supervision.py
 ## Appendix A. S₅ — what frontier models can track, and where it breaks
 
 S₅ (`s5_v1`) is non-abelian state tracking (§2). Without reasoning it floors at every length; with
-reasoning under a concrete rendering a strong model solves it through L32, then hits a sharp cliff
-at L64. This appendix gives the no-reasoning failure mode, the reasoning × rendering interaction
-that unlocks the task, and the length cliff. Data: `docs/openrouter/s5-{length-sweep,framing,
-framing-reasoning,horizon}.jsonl`; scripts: `scripts/experiment_s5_framing.py`,
+reasoning under a concrete rendering a strong model solves it, degrading gradually with length
+(GLM-5.2 holds 0.90 at L128). This appendix gives the no-reasoning failure mode, the reasoning ×
+rendering interaction that unlocks the task, and the length horizon. Data:
+`docs/openrouter/s5-{length-sweep,framing,framing-reasoning,horizon}.jsonl`,
+`results/s5_horizon_recheck_20260705.jsonl`; scripts: `scripts/experiment_s5_framing.py`,
 `scripts/analyze_s5_tracking.py`. All cells n=30, relaxed match, chance floor 0.20.
 
 ### A.1 The computation
@@ -535,30 +545,47 @@ Turn reasoning on and the two renderings split sharply. Relaxed accuracy, reason
 reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering without reasoning
 leaves it at chance. **The combination** — reasoning plus a concrete rendering — solves S₅ at
 short lengths. The token rendering is the bottleneck on the reasoning arm: it is hard for the model
-to track abstract IDs through a scratchpad, where named people and jobs are not.
+to track abstract IDs through a scratchpad, where named people and jobs are not. One caveat on
+the reasoning-on cells: they use the framing script's 16-token completion budget, which
+undercounts models that emit long traces — kimi's concrete L16 cell reads 0.33 here (20/30
+empty predictions) but is 1.00 under an 8192-token budget, with 0.83 at L32
+(`results/s5_horizon_recheck_20260705.jsonl`). A.4 gives the budget-controlled horizon for the
+concrete arm.
 
-### A.4 The length cliff
+### A.4 The length horizon
 
-Where does the reasoning-plus-concrete advantage give out? Sweeping GLM-5.2 (reasoning on) to long
-lengths:
+How far does the reasoning-plus-concrete advantage track? Budget matters here: reasoning traces
+grow with sequence length, and cells measured under the framing script's 16-token completion
+budget undercount reasoning models — the concrete L64 cell below is 27/30 empty predictions
+(`docs/openrouter/s5-horizon.jsonl`). Sweeping GLM-5.2 (reasoning on) under that 16-token budget:
 
 | rendering | L4 | L8 | L16 | L32 | L64 | L128 |
 | --- | --- | --- | --- | --- | --- | --- |
 | concrete | 0.97 | 1.00 | 0.93 | **0.97** | **0.10** | 0.00 |
 | token | 0.60 | 0.33 | 0.33 | 0.13 | 0.00 | 0.00 |
 
-GLM solves S₅ at 0.93–1.00 from L4 through **L32**, then collapses at **L64** (0.10) — a sharp
-cliff, not a gradual decay. This ~32-op horizon is the real capability frontier for non-abelian
-tracking here, and it is only visible under the concrete+reasoning setting; under the token
-rendering or without reasoning the task looks unsolvable at every length (A.2). Kimi-2.6 (A.3)
-tracks less far (~through L8) — the cliff is model-dependent as well as length-dependent.
+Under an 8192-token budget (`max_new_tokens=8192`, no early stop, n=30;
+`results/s5_horizon_recheck_20260705.jsonl`) the concrete+reasoning curve degrades gradually:
+
+| model | L16 | L32 | L64 | L128 |
+| --- | --- | --- | --- | --- |
+| glm-5.2 | — | **1.00** | **0.97** | **0.90** |
+| kimi-k2.6 | 1.00 | 0.83 | — | — |
+
+GLM's empty-prediction rate under the large budget is 0/30 at L32 and L64 and 2/30 at L128 — the
+residual errors are genuine wrong answers, not truncation. Kimi's 0.83 at L32 carries 5/30 empty
+predictions (it emits very long traces, so 0.83 is an underestimate). The horizon is
+model-dependent (glm ≫ kimi), and the degradation is gradual — GLM holds 0.90 at L128 — not a
+wall. The capability is only visible under the concrete+reasoning setting; under the token
+rendering or without reasoning the task looks unsolvable at every length (A.2).
 
 ### A.5 Two regimes, two levers
 
-For **frontier inference**, S₅ is movable by reasoning under a concrete rendering, up to the L64
-cliff (A.3–A.4). For **local from-scratch training**, the lever is supervision density: dense
-per-step state supervision develops a length-extrapolating circuit that weans to label-free
-deployment (§8). These are different questions — what a frontier reasoner can do at inference vs.
-what a small model can learn from scratch — and both hold. The clean dissociation from composition
-(§9) is that composition is reasoning-recoverable out to L512, while S₅ cliffs at ~L64 even under
-its most favorable setting.
+For **frontier inference**, S₅ is movable by reasoning under a concrete rendering, degrading
+gradually in length with a model-dependent horizon (A.3–A.4). For **local from-scratch training**,
+the lever is supervision density: dense per-step state supervision develops a length-extrapolating
+circuit that weans to label-free deployment (§8). These are different questions — what a frontier
+reasoner can do at inference vs. what a small model can learn from scratch — and both hold.
+Composition, chain depth, and S₅ are all reasoning-movable at inference (§9); what differs is the
+horizon — composition recovers out to L512, chain collapses by depth 32, and S₅ holds 0.90 at
+L128 for GLM.

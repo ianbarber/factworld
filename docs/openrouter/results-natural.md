@@ -45,6 +45,7 @@ Every non-punctuation token in the gold answer appears somewhere in the predicti
 
 - Exact match is the canonical metric; semantic containment is reported to separate formatting/tokenizer artifacts from whether the model knows the answer.
 - `APIBackend` normalizes common answer prefixes ('The answer is...') and a trailing period glued to the preceding token (e.g. `v56.` → `v56 .`).
+- `chain_v1` and `s5_v1` cells here are measured without reasoning under a short completion budget. Reasoning-model cells require a large budget (`max_new_tokens=8192`, no early stop): with reasoning, glm-5.2 solves `chain_v1` to depth 12 (`results/chain_reasoning_pilot*_20260705.json`) and s5 under a concrete rendering holds 0.90 at L128 (`results/s5_horizon_recheck_20260705.jsonl`).
 
 
 ## Raw data

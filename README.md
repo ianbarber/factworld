@@ -2,19 +2,13 @@
 
 **Evaluate your own model on a recall × state-tracking × composition benchmark in three commands.**
 
-> **Refactored to a single natural-language format.** The benchmark renders clean natural
-> language (attached punctuation, one fixed phrasing per statement type — see
-> `factworld/render.py`); the earlier atomic-token format and its papers are archived under
-> [`phases/`](phases/). All headline numbers below are on the natural format (OpenRouter grid +
-> local multi-seed sweeps in `results/`). The autoregressive / test-time-compute experiment and
-> its decomposition (binding vs recall vs routing) is written up in
-> [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
-
 FactWorld is a synthetic, oracle-validated evaluation instrument. Every task is a
 frozen, versioned ``TaskSpec`` with deterministic examples and one canonical
 metric — **relaxed match** of the answer span (strip trailing punctuation and score the first
-`len(gold)` tokens). Gold answers come from a symbolic **oracle**, never from parsing rendered
-text, so labels cannot leak. A validity gate certifies that no shallow baseline clears floor.
+`len(gold)` tokens). Tasks render as clean natural language (attached punctuation, one fixed
+phrasing per statement type — see `factworld/render.py`). Gold answers come from a symbolic
+**oracle**, never from parsing rendered text, so labels cannot leak. A validity gate certifies
+that no shallow baseline clears floor.
 
 > **What this is — and isn't.** FactWorld is a **mechanism probe for the component capabilities that
 > agent workloads depend on** — working-memory recall, state tracking, and multi-step composition —
@@ -45,8 +39,8 @@ python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 32
 > chat models emit the required ``<holder> <value> .`` answer span. Use
 > ``--no-composite-format`` to disable it (e.g. for ablations).
 
-📄 **Prior tech reports (archived in [`phases/`](phases/)):** these ran on the earlier
-atomic-token format; the benchmark now renders clean natural language.
+📄 **Prior tech reports (archived in [`phases/`](phases/)):** these used an earlier
+atomic-token rendering.
 - [`phases/01-instrument/factworld.md`](phases/01-instrument/factworld.md) — *FactWorld: An
   Oracle-Validated Instrument for Composing Recall, State-Tracking, and Knowledge.*
 - [`phases/02-non-abelian-state/report.md`](phases/02-non-abelian-state/report.md) — *FactWorld:
@@ -222,12 +216,16 @@ whether the model actually knows the answer.
 
 ### Pretrained open models
 
-OpenRouter grid (n = 30, greedy decoding, **natural-language format**, output-format
+OpenRouter grid (n = 30, greedy decoding, natural-language format, output-format
 instructions appended for composite/s5). Full table in [`docs/openrouter/results-natural.md`](docs/openrouter/results-natural.md).
 
 `composite_copy_v1@L16` uses `max_new_tokens=2048`, no early stop, and **relaxed** match
 (strip trailing period, score the answer span) so reasoning models can finish their scratchpad
 and trailing-generation artifacts are treated consistently across API and local evals. The
+`chain_v1` column is depth-16 under the same 2048-token budget; a depth-16 reasoning trace can
+exceed that, so this column undercounts reasoning models. Reasoning cells need
+`max_new_tokens=8192`, no early stop — see `results/chain_reasoning_pilot*_20260705.json` and
+`results/s5_horizon_recheck_20260705.jsonl` for budget-controlled chain and s5 numbers. The
 primary write-up is [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
 
 | model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
@@ -248,10 +246,13 @@ Reading the ladder:
   experiment below decomposes the residual failure: strong reasoners can do the binding leg
   and the recall leg *separately* but fail to **route** the resolved holder into the recall
   lookup without scaffolding.
-- **Depth stays at floor; non-abelian state is reasoning-movable under a concrete rendering.**
-  `chain_v1` floors for every pretrained model. `s5_v1` floors under the standard token rendering,
-  but a strong reasoner solves it under a concrete (people/jobs) rendering — glm-5.2 holds
-  0.93–1.00 from L4 to L32, then cliffs at L64 (Appendix A).
+- **Depth and non-abelian state are reasoning-movable, with model-dependent horizons.** With
+  reasoning and an 8192-token budget, glm-5.2 solves `chain_v1` to depth 12 (1.00 at depths 4–8,
+  0.967 at 12) and collapses by depth 32 (0.033 — genuine wrong answers, only 3/30 empty;
+  `results/chain_reasoning_pilot*_20260705.json`). `s5_v1` floors under the standard token
+  rendering, but a strong reasoner solves it under a concrete (people/jobs) rendering — glm-5.2
+  holds 1.00 at L32, 0.97 at L64, and 0.90 at L128
+  (`results/s5_horizon_recheck_20260705.jsonl`; Appendix A).
 
 **Autoregressive / test-time-compute experiment (E1b).** Format-fair leg-isolation on
 `composite_copy_v1@L16` (n=100) — full write-up in
@@ -313,8 +314,8 @@ opposite of the API scaffolded result where the *oracle-provided* holder unlocks
 (0.93–1.00). See `results/curriculum_staged_d768_b64_80k_trace.md` and
 [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
 
-**But the s5 / non-abelian wall is movable with the right supervision** (reproduced on the natural
-format, `scripts/experiment_dense_supervision.py`). Per-step state supervision every K events (guided
+**But the s5 / non-abelian wall is movable with the right supervision**
+(`scripts/experiment_dense_supervision.py`). Per-step state supervision every K events (guided
 free-run eval — events forced, holder/value slots generated):
 
 | K (stride) | value @L16 | value @L64 |
@@ -340,27 +341,32 @@ strongest length-extrapolator (0.94 @L64), but like every architecture it floors
 answer-only supervision.
 
 In short: the suite climbs from easy single-hop recall, through binding and composition, to
-non-abelian state tracking — solvable by strong reasoners under a concrete rendering up to a ~L64
-cliff. The dissociations (full write-up: [`docs/experiments/`](docs/experiments/), Appendix A):
+non-abelian state tracking — solvable by strong reasoners under a concrete rendering, degrading
+gradually with length. The dissociations (full write-up:
+[`docs/experiments/`](docs/experiments/), Appendix A):
 
-1. **Composition is movable by test-time compute** for strong reasoning models. A reasoning-effort
-   dose-response sweep shows composite value climbing with effort (kimi 0.22→0.98, glm 0.14→0.81);
-   given the output format, reasoners solve it. Non-reasoners floor. Explicit CoT prompting does
-   not help; background reasoning effort does.
+1. **Composition and chain depth are movable by test-time compute** for strong reasoning models.
+   A reasoning-effort dose-response sweep shows composite value climbing with effort
+   (kimi 0.22→0.98, glm 0.14→0.81); given the output format, reasoners solve it. Non-reasoners
+   floor. `chain_v1` follows: glm-5.2 with reasoning solves it to depth 12 and collapses by
+   depth 32. Explicit CoT prompting does not help; background reasoning effort does.
 2. **Non-abelian state-tracking (s5) is movable by reasoning under a concrete rendering, with a
-   length cliff.** glm-5.2 solves `s5_v1` at 0.93–1.00 from L4 to L32 with reasoning plus a
-   concrete (people/jobs) rendering, then collapses at L64 (0.10). Neither reasoning under the
-   token rendering (~0.33) nor a concrete rendering without reasoning (~chance) suffices — the
-   combination does, up to the cliff.
+   model-dependent horizon.** glm-5.2 solves `s5_v1` with reasoning plus a concrete (people/jobs)
+   rendering — 1.00 at L32, 0.97 at L64, 0.90 at L128 — while kimi-k2.6 degrades sooner (1.00 at
+   L16, 0.83 at L32). Neither reasoning under the token rendering (~0.33) nor a concrete
+   rendering without reasoning (~chance) suffices — the combination does. Reasoning cells need a
+   large completion budget: cells measured under a 16-token budget undercount reasoning models
+   (27/30 empty predictions at L64); the horizon numbers here use an 8192-token budget
+   (`results/s5_horizon_recheck_20260705.jsonl`).
 3. **For local from-scratch models, s5's lever is supervision density.** Dense per-step supervision
    solves it (10/10 seeds at L16), the circuit **survives weaning to answer-only** (wean_mixed 8/8),
    and only the recurrent hybrid (`gdp_hybrid`) **extrapolates** the learned circuit in length
    (L64 0.75, L128 0.50–0.59; `fprm` and `transformer` collapse past the train length).
 
-The levers are **reasoning strength + a concrete rendering** (composition and frontier s5, the
-latter to a ~L64 cliff), **supervision density + weaning** (local s5), and **recurrent
-architecture** (s5 length extrapolation). Explicit structured CoT prompting never helps (and hurts);
-recall is trivial once the holder is known.
+The levers are **reasoning strength + a concrete rendering** (composition, chain depth, and
+frontier s5, each with a model-dependent horizon), **supervision density + weaning** (local s5),
+and **recurrent architecture** (s5 length extrapolation). Explicit structured CoT prompting never
+helps (and hurts); recall is trivial once the holder is known.
 
 ## Repository layout
 

@@ -48,9 +48,10 @@ scores are not comparable to the format-fair grid.
 | kimi-k2.6 | 0.73 / 0.73 / 0.00 | 0.00 / 0.00 / 0.00 | 1.00 / 1.00 / 1.00 | 0.60 / 0.60 / 0.00 |
 | glm-5.2 | 0.97 / 0.97 / 0.00 | 0.00 / 0.00 / 0.00 | 0.97 / 1.00 / 0.97 | 1.00 / 1.00 / 0.00 |
 
-`s5_v1 @ L32`: every model floors (0.00) under every condition, including scaffolded — s5 is a
-genuine non-abelian state-tracking wall with no decoupled single leg (see dense-supervision-results.md
-for what does move it).
+`s5_v1 @ L32`: every model floors (0.00) under every condition, including scaffolded — under this
+token rendering s5 is a non-abelian state-tracking wall with no decoupled single leg (see
+dense-supervision-results.md for the local lever; reasoning plus a concrete rendering moves it at
+the frontier — consolidated report Appendix A).
 
 ## Synthesis
 
@@ -60,7 +61,9 @@ for what does move it).
 - **Explicit self-produced intermediates don't help** — they hurt. This matches the local E2 result
   (a trained scratchpad collapses the holder leg) and the local self-correction probe (iterative
   refinement gives zero lift). Implicit reasoning works; explicit step-by-step does not.
-- **s5 is a different, deeper wall** — floored even for reasoners, movable only by dense supervision.
+- **s5 is a different wall** — floored under the token rendering even for reasoners; movable by
+  dense supervision locally and by reasoning plus a concrete rendering at the frontier
+  (`results/s5_horizon_recheck_20260705.jsonl`; consolidated report Appendix A).
 
 ## Files
 
