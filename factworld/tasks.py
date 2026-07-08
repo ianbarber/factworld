@@ -59,6 +59,11 @@ class TaskSpec:
     train_lengths: tuple = (4, 8, 16)  # binding-chain / permutation-history lengths in training
     eval_lengths: tuple = (16, 32, 64) # held-out OOD lengths
     worked_trace: bool = False         # s5/composite: emit the oracle state trajectory as a scratchpad
+    # chain-only: explicit opt-in to depth >= k WRAP semantics. The pointer map is a single k-cycle, so
+    # at depth >= k gold collapses to nxt^(depth mod k)(start) — depth is NOT being measured (depth ≡ 0
+    # mod k is the identity). Off by default: generate() raises ValueError. The no-wrap deep-chain
+    # protocol is spec.scaled(k=depth + 2).
+    chain_allow_wrap: bool = False
 
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
@@ -205,7 +210,20 @@ def _ex_chain(spec, w, r, rng, depth, idx):
     it is genuinely in-context) is presented as a0-facts pointing agent→agent; the query nests `a0 of`
     `depth` times. Gold = nxt^depth(start). Facts are presented in scrambled order so adjacency does not
     leak the chain, and the cycle has no fixed points so every hop is load-bearing for any depth<k.
-    `length` is reinterpreted as the chain DEPTH for this family."""
+    `length` is reinterpreted as the chain DEPTH for this family.
+
+    VALIDITY GATE (enforced): depth >= k wraps the cycle and gold collapses to nxt^(depth mod k)(start)
+    — at depth ≡ 0 (mod k) the task degenerates to the identity — so such an example does not measure
+    depth. Raises ValueError unless the caller explicitly opts into wrap semantics via
+    spec.scaled(chain_allow_wrap=True). The no-wrap protocol for deep chains is spec.scaled(k=depth+2)."""
+    if depth >= spec.k and not spec.chain_allow_wrap:
+        raise ValueError(
+            f"{spec.name}: chain depth {depth} >= k={spec.k} wraps the single {spec.k}-cycle, so gold "
+            f"collapses to nxt^({depth} mod {spec.k})(start) and depth is no longer measured (design "
+            f"gate: depths stay < k so every hop is load-bearing and the cycle never wraps). For a "
+            f"no-wrap deep chain use spec.scaled(k={depth + 2}); to accept wrap semantics explicitly "
+            f"use spec.scaled(chain_allow_wrap=True)."
+        )
     cyc = rng.sample(list(w.agents), spec.k)                          # the hidden cycle order
     nxt = {cyc[i]: cyc[(i + 1) % len(cyc)] for i in range(len(cyc))}  # single k-cycle (no fixed point)
     present = cyc[:]; rng.shuffle(present)                            # render facts in scrambled order
@@ -226,7 +244,9 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
     (one OOD/ID coordinate). Same (spec,split,length,idx) -> identical example, forever."""
     assert split in ("train", "test")
     w, r, oracle = _world(spec)
-    fixed = _fixed_origins(spec, w)
+    # fixed origins sample spec.k values from the value vocab, so only build them for the families that
+    # use them — a chain scaled to k > value_vocab_size (the no-wrap deep protocol) must not crash here.
+    fixed = _fixed_origins(spec, w) if spec.family in ("recall", "composite") else None
 
     if spec.family == "conflict":     # special train protocol: reinforce the in-weights map, then conflict
         pmap = _param_map(spec, w)
@@ -423,7 +443,9 @@ CANONICAL = {
     # n_objects_active cliff), and DEPTH = composition (a sharp extrapolation cliff: in-distribution depths
     # solve, depth+1 floors). The scored default fixes binding low (k=6) so depth is read cleanly; the
     # harder, scale-gated k>=16 variant is available via .scaled(k=16). Depths stay < k so the cycle never
-    # wraps to a recency shortcut (validity gate confirms majority/recency at floor).
+    # wraps to a recency shortcut (validity gate confirms majority/recency at floor). ENFORCED: generating
+    # at depth >= k raises ValueError (gold collapses to nxt^(depth mod k)); deep chains must use the
+    # no-wrap protocol .scaled(k=depth+2), or opt into wrap explicitly via .scaled(chain_allow_wrap=True).
     "chain_v1":         TaskSpec("chain_v1", "chain", k=6, train_lengths=(2, 3), eval_lengths=(4, 5)),
     # experimental: binding under a LARGER working set (m=8 active objects) to expose the interference
     # cliff a load probe found (m>=8 floors). Flagged not-yet-a-score: needs the dense regime + a
