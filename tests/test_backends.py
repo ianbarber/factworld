@@ -269,6 +269,66 @@ def test_api_backend_words_mode():
     assert backend3.generate(["p"], max_new_tokens=4, stop_at=None) == [""]
 
 
+def test_api_backend_raw_mode():
+    # Raw mode: visible output untouched except <think> stripping — the caller
+    # (the zero-budget contract battery) owns extraction.
+    content = "Let me work through the swaps...\ng3 has o2.\nAnswer: g3 v9"
+    message = types.SimpleNamespace(content=f"<think>hmm: a, b</think>{content}")
+    choice = types.SimpleNamespace(message=message, finish_reason="stop")
+    response = types.SimpleNamespace(choices=[choice])
+    backend = _make_backend(response, answer_mode="raw")
+    assert backend.generate(["p"], max_new_tokens=96, stop_at=None) == [content]
+
+    # Unclosed think block -> no committed answer, even in raw mode.
+    message2 = types.SimpleNamespace(content="<think>still going")
+    choice2 = types.SimpleNamespace(message=message2, finish_reason="length")
+    response2 = types.SimpleNamespace(choices=[choice2])
+    backend2 = _make_backend(response2, answer_mode="raw")
+    assert backend2.generate(["p"], max_new_tokens=96, stop_at=None) == [""]
+
+
+def test_api_backend_pop_example_meta_order_aligned():
+    """Per-example metadata comes back in PROMPT order even when later-submitted
+    calls finish first on the thread pool (futures collected by position)."""
+    import time as _time
+
+    def create(**kwargs):
+        i = int(kwargs["messages"][-1]["content"])
+        _time.sleep(0.002 * (8 - i))  # later prompts finish earlier
+        usage = types.SimpleNamespace(prompt_tokens=10, completion_tokens=100 + i,
+                                      reasoning_tokens=i)
+        message = types.SimpleNamespace(content=f"g{i}")
+        finish = "stop" if i % 2 == 0 else "length"
+        choice = types.SimpleNamespace(message=message, finish_reason=finish)
+        return types.SimpleNamespace(choices=[choice], usage=usage, model="m")
+
+    client = types.SimpleNamespace(
+        chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=create))
+    )
+    with patch.dict(sys.modules, {"openai": _FAKE_OPENAI}):
+        import factworld.backends as B
+        backend = B.APIBackend("test-model", client=client, max_workers=4)
+
+    preds = backend.generate([str(i) for i in range(8)], max_new_tokens=4, stop_at=None)
+    assert preds == [f"g{i}" for i in range(8)]
+    metas = backend.pop_example_meta()
+    assert [m["completion_tokens"] for m in metas] == [100 + i for i in range(8)]
+    assert [m["reasoning_tokens"] for m in metas] == list(range(8))
+    assert [m["finish_reason"] for m in metas] == ["stop" if i % 2 == 0 else "length"
+                                                   for i in range(8)]
+    # pop clears; the aggregate view is unaffected by the per-example pop.
+    assert backend.pop_example_meta() == []
+    meta = backend.pop_call_meta()
+    assert meta["calls"] == 8
+    assert meta["usage"]["completion_tokens"] == sum(100 + i for i in range(8))
+    assert meta["finish_reasons"] == {"stop": 4, "length": 4}
+
+    # Successive generate calls accumulate in call order until popped.
+    backend.generate(["3"], max_new_tokens=4, stop_at=None)
+    backend.generate(["5"], max_new_tokens=4, stop_at=None)
+    assert [m["reasoning_tokens"] for m in backend.pop_example_meta()] == [3, 5]
+
+
 def test_api_backend_tokens_mode_unchanged_with_explicit_kwarg():
     # answer_mode="tokens" must be byte-identical to the historical default path.
     message = types.SimpleNamespace(content="The final holders are g0, g2, g4")
@@ -341,6 +401,10 @@ def test_api_backend_error_path_records_meta():
     with patch("time.sleep"):  # skip retry backoff
         preds = backend.generate(["p"], max_new_tokens=4, stop_at=None)
     assert preds == [""]  # retry exhaustion still yields an empty prediction
+    # the failed call still contributes an aligned per-example entry (zeros/None)
+    assert backend.pop_example_meta() == [
+        {"completion_tokens": 0, "reasoning_tokens": 0, "finish_reason": None}
+    ]
     meta = backend.pop_call_meta()
     assert meta["calls"] == 1
     assert meta["errors"] == 1

@@ -4,8 +4,9 @@ This module is the single source of truth for WHAT the recurring benchmark runs:
 
   - ``MODELS``: OpenRouter slug -> tier, per-million pricing, open_weights flag.
   - ``TIERS``: how much of the reasoning-effort sweep each tier gets.
-  - ``FACETS``: the five scored facets plus the sanity and floor-control rows —
-    task, lengths/depths, default n, and per-facet arm policy.
+  - ``FACETS``: the scored facets plus the sanity rows — task, lengths/depths,
+    default n, and per-facet arm policy (v2 roster 2026-07-08: zero_budget
+    answer-contract battery, s5_concrete mid-band, chain_nowrap staircase, sanity).
   - ``arms_for(model_slug)``: the exact list of cell dicts the runner executes.
   - ``settings_hash(cell)``: stable resume key for a cell's settings.
   - ``cost_estimate(model_slug, cells)``: price a cell plan before running it.
@@ -33,6 +34,14 @@ from functools import lru_cache
 REASONING_EFFORTS = ("low", "medium", "high")   # arms that actually think
 REASONING_MAX_NEW_TOKENS = 8192                 # protocol rule: never truncate thinking
 DEFAULT_MAX_NEW_TOKENS = 2048                   # non-thinking arms (grid-script default)
+# zero-budget battery: tight completion budget + hard answer contract. The runner
+# escalates a cell once (to a larger budget) when finish=length exceeds 10% of its
+# calls, so a fixed cap never silently zeros a verbose model.
+ZERO_BUDGET_MAX_NEW_TOKENS = 96
+# per-call visible-completion-token threshold above which an effort=none reply is
+# counted as covert in-content CoT (kimi at effort=none averaged ~2762 ctok/call;
+# clean contract answers are tens of tokens).
+COVERT_COT_CTOK_THRESHOLD = 350
 
 # Cost-estimate assumptions: non-reasoning arms answer in a few tokens; the
 # synthetic token-dense prompts (g12/a0/v45) tokenize at roughly 3 chars/token.
@@ -55,31 +64,36 @@ MODELS = {
     "openai/gpt-5.5": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
         "completion_price_per_M": 30.0, "open_weights": False},
-    "openai/gpt-5.4": {
-        "tier": "frontier_pair", "prompt_price_per_M": 2.5,
-        "completion_price_per_M": 15.0, "open_weights": False},
-    # NOTE: preview slug — revisit when the stable gemini-3.1-pro ships.
+    # openai/gpt-5.4 and google/gemini-3.1-pro-preview DROPPED 2026-07-08 (owner
+    # decision: one flagship per vendor; Google is pushing flash).
     # no_reasoning_effort: Gemini 3 endpoints reject effort=none outright
     # ("Reasoning is mandatory ... cannot be disabled", 400); effort=minimal is
-    # the closest off-arm (0 reasoning tokens on flash, ~85 on pro).
-    "google/gemini-3.1-pro-preview": {
-        "tier": "frontier_pair", "prompt_price_per_M": 2.0,
-        "completion_price_per_M": 12.0, "open_weights": False,
-        "no_reasoning_effort": "minimal"},
+    # the closest off-arm (0 reasoning tokens on flash).
     "google/gemini-3.5-flash": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.5,
         "completion_price_per_M": 9.0, "open_weights": False,
         "no_reasoning_effort": "minimal"},
-    "x-ai/grok-4.3": {
-        "tier": "cheap_reasoner", "prompt_price_per_M": 1.25,
-        "completion_price_per_M": 2.5, "open_weights": False},
+    # x-ai entry is grok-build-0.1 (owner decision 2026-07-08; reasoning-capable
+    # per supported_parameters; pricing verified against
+    # https://openrouter.ai/api/v1/models the same day, $1.00/$2.00 per M).
+    # Mainline grok (4.20 AND 4.3 — verified on both) is quarantined for
+    # composite cells: xAI's endpoint bio-safety filter deterministically blocks
+    # ~56% of the g/v-token prompts (finish_reason=content_filter,
+    # SAFETY_CHECK_TYPE_BIO — the token soup reads as gene/variant nomenclature;
+    # see results/v2_pilots/pilot2_contract.jsonl). PROBE grok-build with ~3
+    # composite calls for the same filter before its first full run.
+    "x-ai/grok-build-0.1": {
+        "tier": "cheap_reasoner", "prompt_price_per_M": 1.0,
+        "completion_price_per_M": 2.0, "open_weights": False},
     "qwen/qwen3.7-max": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.25,
         "completion_price_per_M": 3.75, "open_weights": False},
     # drift canary: cheapest full-sweep reasoner, re-run each cycle (--canary).
+    # pricing re-verified against https://openrouter.ai/api/v1/models 2026-07-08
+    # (was $0.56/$1.76 — stale; live is $0.93/$3.00 per M).
     "z-ai/glm-5.2": {
-        "tier": "cheap_reasoner", "prompt_price_per_M": 0.56,
-        "completion_price_per_M": 1.76, "open_weights": True},
+        "tier": "cheap_reasoner", "prompt_price_per_M": 0.93,
+        "completion_price_per_M": 3.0, "open_weights": True},
     "moonshotai/kimi-k2.6": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.66,
         "completion_price_per_M": 3.41, "open_weights": True},
@@ -93,14 +107,18 @@ MODELS = {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.5,
         "completion_price_per_M": 2.2, "open_weights": True,
         "quantization_filter": False},
-    "meta-llama/llama-4-maverick": {
-        "tier": "non_reasoning", "prompt_price_per_M": 0.15,
-        "completion_price_per_M": 0.6, "open_weights": True},
+    # meta-llama/llama-4-maverick DROPPED 2026-07-07 (owner decision); the
+    # non_reasoning tier is currently empty but kept for future roster additions.
+    # Candidate additions (noted, NOT added pending a pricing/behavior sanity pass;
+    # OpenRouter list prices 2026-07-08): anthropic/claude-fable-5 ($10/$50 per M,
+    # newest Anthropic tier), moonshotai/kimi-k2.7-code ($0.74/$3.50 per M).
+    # muse spark: not on OpenRouter (watch item).
 }
 
 CANARY_MODEL = "z-ai/glm-5.2"
 
-# tier -> reasoning capability + the dose_response effort sweep it gets.
+# tier -> reasoning capability + the effort sweep a "dose"-policy facet would get
+# (no current facet uses "dose"; the policy machinery is kept for future sweeps).
 TIERS = {
     "cheap_reasoner": {"reasoning": True, "dose_efforts": ("none", "low", "medium", "high")},
     "frontier_pair": {"reasoning": True, "dose_efforts": ("none", "high")},
@@ -108,47 +126,55 @@ TIERS = {
 }
 
 # Facet definitions. ``efforts`` is a policy resolved per tier by ``_facet_efforts``:
-#   "dose" -> the tier's full dose_response sweep
+#   "dose" -> the tier's full effort sweep
 #   "pair" -> none vs high (the reasoning on/off contrast)
-#   "on"   -> high only (facets defined WITH reasoning: s5_concrete, chain_depth)
-#   "off"  -> none only (reasoning explicitly disabled)
+#   "on"   -> high only (facets defined WITH reasoning: s5_concrete, chain_nowrap)
+#   "off"  -> none only (reasoning explicitly disabled: zero_budget, sanity)
 # Non-reasoning models resolve every policy to the single default arm (effort=None).
 # Task "s5" cells are rendered via factworld.s5_concrete (gold is a job word for
 # "concrete", a role token for "abstract_stated"); all other tasks are CANONICAL specs.
+# Per-cell budget resolution: ``budgets[length]`` raises the floor for thinking arms
+# only; a facet-level ``max_new_tokens`` applies to every arm (the zero_budget cap,
+# the chain_nowrap 16384 thinking budget); otherwise the protocol defaults apply.
 FACETS = {
-    "dose_response": {
-        "task": "composite_copy_v1", "lengths": (16,), "n": 50,
-        "format_prompt": "composite", "efforts": "dose"},
-    "composite_length": {
-        "task": "composite_copy_v1", "lengths": (16, 64, 128, 512), "n": 30,
-        "format_prompt": "composite", "efforts": "pair"},
-    # budgets: reasoning traces scale with the permutation horizon; the shared
-    # 8192 cap truncates strong models at L128+ (opus/sonnet finish_reason=length
-    # with 0 visible answer at 8192), so the two heaviest cells get 16384. A model
-    # that still truncates there (empty_rate high) is read as "needs >16k tokens
-    # of thinking at that horizon" — the diagnostic column, not the score, tells
-    # that story. L4 is omitted: every scouted model scores 1.00 (L16 anchors).
+    # zero-budget battery: reasoning explicitly off, tight completion budget, and a
+    # hard answer contract appended to every prompt ("Reply with only one line:
+    # Answer: ..."); scoring extracts the LAST "Answer:" line of the visible output
+    # so models that emit working before the contract line still score their answer.
+    # ``cells`` lists explicit (length, leg) pairs: the plain composite at L16/L64
+    # (leg None) plus the binding_only / end_to_end decomposition legs at L16.
+    # Per-cell diagnostics gate publication: contract_rate, covert_cot_rate,
+    # rtok_leak_rate, and a one-shot finish=length escalation (see the runner).
+    "zero_budget": {
+        "task": "composite_copy_v1", "n": 100,
+        "cells": ((16, None), (64, None), (16, "binding_only"), (16, "end_to_end")),
+        "format_prompt": "composite", "efforts": "off",
+        "contract": True, "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
+    # s5 mid-band with reasoning on (owner decision 2026-07-07): L16-64 saturate for
+    # reasoning models under the concrete rendering, so only the discriminating
+    # lengths remain. Budgets: reasoning traces scale with the permutation horizon;
+    # the shared 8192 cap truncates strong models at L128+ (opus/sonnet
+    # finish_reason=length with 0 visible answer at 8192), so both cells get 16384.
     "s5_concrete": {
-        "task": "s5", "lengths": (16, 32, 64, 128, 256), "n": 25,
+        "task": "s5", "lengths": (128, 256), "n": 25,
         "rendering": "concrete", "efforts": "on",
         "budgets": {128: 16384, 256: 16384}},
-    # depth 64: kimi and gemini-pro saturate depth 48 in scouting.
-    "chain_depth": {
-        "task": "chain_v1", "lengths": (4, 8, 12, 16, 24, 32, 48, 64), "n": 30,
-        "efforts": "on"},
-    "decomposition": {
-        "task": "composite_copy_v1", "lengths": (16,), "n": 50,
-        "legs": ("binding_only", "end_to_end", "scaffolded"),
-        "format_prompt": "composite", "efforts": "off"},
+    # no-wrap deep chains, replacing the invalid wrap-era chain_depth facet (its
+    # k=6 cycle wrapped at depth >= 6, collapsing gold to nxt^(depth mod 6)).
+    # STAIRCASE protocol: each depth d runs chain_v1.scaled(k=2*d+1). k must
+    # exceed d (the wrap gate), but k=d+2 would leave its own constant shortcut:
+    # on a single complete k-cycle, d forward hops == (k-d) BACKWARD hops, so
+    # k=d+2 puts gold always exactly 2 reverse lookups from start. k=2d+1 prices
+    # the backward walk at d+1 hops — no direction is cheaper than the measured
+    # depth. Breadth (k agents) grows with depth by design; read the axis as
+    # "d hops over 2d+1 agents", not d hops at fixed breadth.
+    "chain_nowrap": {
+        "task": "chain_v1", "lengths": (16, 32, 64, 128), "n": 25,
+        "efforts": "on", "max_new_tokens": 16384},
     # sanity rows: cheap positive controls at each task's first eval length.
     "sanity": {
         "tasks": (("recall_copy_v1", 6), ("conflict_v1", 4)), "n": 30,
         "efforts": "off"},
-    # floor control: the OLD abstract token rendering with reasoning off — the regime
-    # where the pre-2026-07-05 "s5 wall" lived. Kept as a row, excluded from horizons.
-    "floor": {
-        "task": "s5", "lengths": (16,), "n": 30,
-        "rendering": "abstract_stated", "efforts": "off"},
 }
 
 
@@ -168,7 +194,7 @@ def _facet_efforts(policy: str, tier: dict) -> tuple:
 
 
 def _settings(effort, *, rendering=None, format_prompt=None, leg=None,
-              max_new_tokens=None) -> dict:
+              max_new_tokens=None, contract=False) -> dict:
     """One cell's settings dict (contract C3 keys, always all present)."""
     reasoning_on = effort in REASONING_EFFORTS
     if max_new_tokens is None:
@@ -181,45 +207,56 @@ def _settings(effort, *, rendering=None, format_prompt=None, leg=None,
         "format_prompt": format_prompt,
         "n_shot": 0,
         "leg": leg,
+        # zero-budget battery: hard "Answer: ..." contract line appended to every
+        # prompt + last-Answer-line extraction (part of the resume key).
+        "contract": contract,
     }
 
 
 def arms_for(model_slug: str) -> list[dict]:
     """The full cell plan for one model: list of {facet, task, length, n, settings}.
 
-    Tier policy: cheap_reasoner gets the full effort sweep in dose_response,
-    frontier_pair gets none+high only, non_reasoning gets a single default arm per
-    (facet, task, length) and never receives a reasoning parameter.
+    Tier policy: "dose"-policy facets would give cheap_reasoner the full effort
+    sweep and frontier_pair none+high only (no current facet uses "dose");
+    non_reasoning gets a single default arm per (facet, task, length, leg) and
+    never receives a reasoning parameter.
     """
     reg = MODELS[model_slug]
     tier = TIERS[reg["tier"]]
     cells: list[dict] = []
     for facet_name, fc in FACETS.items():
-        tasks = fc.get("tasks") or tuple((fc["task"], L) for L in fc["lengths"])
-        legs = fc.get("legs", (None,))
+        if "cells" in fc:
+            # explicit (length, leg) pairs (zero_budget mixes plain + leg cells)
+            triples = tuple((fc["task"], L, leg) for L, leg in fc["cells"])
+        else:
+            tasks = fc.get("tasks") or tuple((fc["task"], L) for L in fc["lengths"])
+            legs = fc.get("legs", (None,))
+            triples = tuple((t, L, leg) for t, L in tasks for leg in legs)
         for effort in _facet_efforts(fc["efforts"], tier):
             # Models that cannot disable reasoning substitute their closest
             # off-arm (e.g. Gemini 3: "minimal"); recorded truthfully in settings.
             if effort == "none":
                 effort = reg.get("no_reasoning_effort", "none")
-            for task, length in tasks:
-                for leg in legs:
-                    budget = fc.get("budgets", {}).get(length)
-                    if budget is not None and effort not in REASONING_EFFORTS:
-                        budget = None  # per-length raises only apply to thinking arms
-                    cells.append({
-                        "facet": facet_name,
-                        "task": task,
-                        "length": length,
-                        "n": fc["n"],
-                        "settings": _settings(
-                            effort,
-                            rendering=fc.get("rendering"),
-                            format_prompt=fc.get("format_prompt"),
-                            leg=leg,
-                            max_new_tokens=budget,
-                        ),
-                    })
+            for task, length, leg in triples:
+                budget = fc.get("budgets", {}).get(length)
+                if budget is not None and effort not in REASONING_EFFORTS:
+                    budget = None  # per-length raises only apply to thinking arms
+                if budget is None:
+                    budget = fc.get("max_new_tokens")  # facet-level cap, any arm
+                cells.append({
+                    "facet": facet_name,
+                    "task": task,
+                    "length": length,
+                    "n": fc["n"],
+                    "settings": _settings(
+                        effort,
+                        rendering=fc.get("rendering"),
+                        format_prompt=fc.get("format_prompt"),
+                        leg=leg,
+                        max_new_tokens=budget,
+                        contract=fc.get("contract", False),
+                    ),
+                })
     return cells
 
 
@@ -228,8 +265,15 @@ def settings_hash(cell: dict) -> str:
 
     Hashes the sorted-key JSON dump of ``cell["settings"]``, so it is invariant to
     dict insertion order and identical after a JSON round-trip through history.jsonl.
+
+    A falsy ``contract`` flag is dropped before hashing: history records written
+    before the flag existed (no ``contract`` key) and post-flag non-contract cells
+    (``contract: false``) hash identically, so the resume keys of every already-run
+    cell survive the schema addition. ``contract: true`` cells hash distinctly.
     """
-    payload = json.dumps(cell["settings"], sort_keys=True, separators=(",", ":"))
+    settings = {k: v for k, v in cell["settings"].items()
+                if k != "contract" or v}
+    payload = json.dumps(settings, sort_keys=True, separators=(",", ":"))
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:10]
 
 
@@ -248,7 +292,13 @@ def _prompt_tokens_est(task: str, length: int, rendering: str | None) -> int:
         sysp, user, _gold = s5_concrete.gen_examples(length, 1, framing=rendering)[0]
         return max(1, (len(sysp) + len(user)) // CHARS_PER_TOKEN)
     from . import tasks as TK
-    ex = TK.generate(TK.CANONICAL[task], "test", n=1, length=length)[0]
+    spec = TK.CANONICAL[task]
+    if spec.family == "chain" and length >= spec.k:
+        # chain_nowrap staircase: depth d runs over a (2d+1)-cycle — no wrap, and
+        # the backward walk costs d+1 hops so neither direction beats depth d
+        # (generating at depth >= k raises the wrap validity gate otherwise).
+        spec = spec.scaled(k=2 * length + 1)
+    ex = TK.generate(spec, "test", n=1, length=length)[0]
     return SYSTEM_PROMPT_EST_TOKENS + max(1, len(ex.prompt) // CHARS_PER_TOKEN)
 
 
