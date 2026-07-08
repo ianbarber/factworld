@@ -82,9 +82,16 @@ MODELS = {
     # SAFETY_CHECK_TYPE_BIO — the token soup reads as gene/variant nomenclature;
     # see results/v2_pilots/pilot2_contract.jsonl). PROBE grok-build with ~3
     # composite calls for the same filter before its first full run.
+    # no_reasoning_effort: grok-build rejects effort=none the same way Gemini 3
+    # does ("Reasoning is mandatory for this endpoint", 400; probed 2026-07-08).
+    # Its "minimal" is NOT minimal (4k-15k reasoning tokens on composite probes),
+    # so zero_budget cells are known-contaminated for it — run it on the
+    # reasoning-on facets only (--facets s5_concrete chain_nowrap sanity). The
+    # mainline-grok bio filter does NOT affect this slug (probed clean 3/3).
     "x-ai/grok-build-0.1": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.0,
-        "completion_price_per_M": 2.0, "open_weights": False},
+        "completion_price_per_M": 2.0, "open_weights": False,
+        "no_reasoning_effort": "minimal"},
     "qwen/qwen3.7-max": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.25,
         "completion_price_per_M": 3.75, "open_weights": False},

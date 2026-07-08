@@ -124,7 +124,7 @@ def test_arm_settings_protocol():
 
 def test_gemini_off_arm_is_minimal():
     """Gemini 3 cannot disable reasoning: its "none" arms substitute "minimal"."""
-    for slug in ("google/gemini-3.5-flash",):
+    for slug in ("google/gemini-3.5-flash", "x-ai/grok-build-0.1"):
         efforts = {c["settings"]["effort"] for c in B.arms_for(slug)}
         assert "none" not in efforts
         assert "minimal" in efforts

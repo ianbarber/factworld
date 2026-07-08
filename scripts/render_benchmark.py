@@ -5,8 +5,11 @@ scripts/run_frontier_benchmark.py), keeps the LATEST record per
 ``(model, facet, task, length, {effort, leg, rendering})`` key, and writes into
 ``docs/benchmark/``:
 
-  results.md    headline + diagnostics + full per-cell markdown tables
-  results.csv   flat per-cell export (all metrics + diagnostics + usage)
+  results.md    v2 headline (zero_budget + chain/s5 horizons + ctok/solve) with
+                cleanliness footnotes, a "v1 (archived facets)" legacy headline,
+                diagnostics and full per-cell markdown tables
+  results.csv   flat per-cell export (all metrics + diagnostics incl. contract_rate /
+                covert_cot_rate / rtok_leak_rate / escalated + usage)
   fig_*.png/.svg  facet figures, one per facet with data (PNG 150 dpi for blog upload,
                   SVG for the HTML page); chain_depth cells past chain_v1's design gate
                   (depth >= k=6, cycle wrap) are excluded from figures and headline horizons
@@ -71,6 +74,47 @@ CHAIN_CYCLE_K = 6
 CHAIN_INVALID_MARK = "INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)"
 FIGSIZE = (7.0, 4.4)  # readable at ~700px blog width
 DPI = 150
+
+# --- v2 zero-budget headline ---------------------------------------------------
+# zero_budget cells run composite_copy_v1 with reasoning off (effort=none, or
+# "minimal" where the model cannot disable reasoning) under a hard one-line answer
+# contract (settings.contract=true). Cleanliness marks quarantine cells whose
+# recorded diagnostics say the off-arm was not actually "no visible working":
+COVERT_COT_THRESHOLD = 0.10  # covert_cot_rate above this taints a zero-budget cell
+RTOK_LEAK_PER_CALL = 5.0     # mean reasoning tokens per call above this taints too
+ZB_HEADLINE_CELLS = [        # (length, leg) in headline column order
+    (16, None), (64, None), (16, "binding_only"), (16, "end_to_end"),
+]
+HEADLINE_COLUMNS = [
+    "Model",
+    "zero-budget composite @L16 (relaxed)",
+    "zero-budget composite @L64",
+    "binding_only @L16",
+    "end_to_end @L16",
+    f"chain horizon (chain_nowrap, max depth, relaxed >= {HORIZON_THRESHOLD})",
+    f"s5 horizon (max L, relaxed >= {HORIZON_THRESHOLD})",
+    "ctok/solve",
+]
+ZB_FOOTNOTES = [
+    "(*) off-arm ran effort=minimal (model cannot disable reasoning).",
+    "(†) covert in-content CoT in >10% of calls, or reasoning-token leakage "
+    f"(>{RTOK_LEAK_PER_CALL:.0f} rtok/call) — measures short visible working, "
+    "not in-weights.",
+]
+HORIZON_NOTE = (
+    "Horizons marked >=N are censored: the max tested depth/length still qualifies, "
+    "so the true horizon is a lower bound.")
+EFFICIENCY_NOTE = (
+    "ctok/solve: mean completion tokens per call over chain_nowrap + s5_concrete cells "
+    f"with relaxed >= {HORIZON_THRESHOLD} — how many tokens of thinking a model spends "
+    "on horizons it solves; lower = more efficient. — = no solved cells.")
+EFFICIENCY_FACETS = ("chain_nowrap", "s5_concrete")
+# v1-only facets whose headline scalars are kept in a separate archived table.
+V1_ARCHIVED_FACETS = ("dose_response", "composite_length", "decomposition")
+ARCHIVED_COLUMNS = [
+    "Model", "dose_response (relaxed)", "composite_length (relaxed @ L512, high)",
+    "decomposition (bind / e2e / scaffold)",
+]
 
 
 # --- statistics ---------------------------------------------------------------
@@ -155,6 +199,8 @@ def arm_label(rec) -> str:
         parts.append(f"leg={s['leg']}")
     if s.get("rendering"):
         parts.append(f"rendering={s['rendering']}")
+    if s.get("contract"):
+        parts.append("contract")
     parts.append(f"effort={s.get('effort') or 'default'}")
     return ", ".join(parts)
 
@@ -186,14 +232,32 @@ def headline_composite_length(records, model):
     return pick["metrics"]["relaxed"]
 
 
-def headline_horizon(records, facet, model, exclude_renderings=("abstract_stated",)):
-    """Max length with relaxed >= HORIZON_THRESHOLD, or None if no cell qualifies."""
+def headline_horizon_censored(records, facet, model,
+                              exclude_renderings=("abstract_stated",)):
+    """(max length with relaxed >= HORIZON_THRESHOLD, censored) — censored is True
+    when the max TESTED length qualifies, so the horizon is a lower bound."""
     cells = [r for r in by_facet(records, facet)
              if r["model"] == model
-             and _settings(r).get("rendering") not in exclude_renderings]
+             and _settings(r).get("rendering") not in exclude_renderings
+             and not chain_invalid(r)]
     good = [r["length"] for r in cells
             if (r["metrics"].get("relaxed") or 0.0) >= HORIZON_THRESHOLD]
-    return max(good) if good else None
+    if not good:
+        return None, False
+    horizon = max(good)
+    return horizon, horizon == max(r["length"] for r in cells)
+
+
+def headline_horizon(records, facet, model, exclude_renderings=("abstract_stated",)):
+    """Max length with relaxed >= HORIZON_THRESHOLD, or None if no cell qualifies."""
+    return headline_horizon_censored(records, facet, model, exclude_renderings)[0]
+
+
+def _horizon_str(records, facet, model):
+    horizon, censored = headline_horizon_censored(records, facet, model)
+    if horizon is None:
+        return "—"
+    return f">={horizon}" if censored else str(horizon)
 
 
 def headline_decomposition(records, model):
@@ -204,6 +268,107 @@ def headline_decomposition(records, model):
         matches = [r for r in cells if _settings(r).get("leg") == leg]
         out[leg] = matches[0]["metrics"]["relaxed"] if matches else None
     return out
+
+
+def zero_budget_cell(records, model, length, leg=None):
+    """The model's zero_budget cell at (length, leg), or None."""
+    cells = [r for r in by_facet(records, "zero_budget")
+             if r["model"] == model and r.get("length") == length
+             and _settings(r).get("leg") == leg]
+    return cells[0] if cells else None
+
+
+def model_effort_minimal(records, model) -> bool:
+    """True when the model's off-arm ran effort=minimal (cannot disable reasoning)."""
+    return any(r.get("model") == model and _settings(r).get("effort") == "minimal"
+               for r in records)
+
+
+def zb_marks(rec, model_minimal=False) -> str:
+    """Cleanliness marks for one zero-budget headline value: '' / '*' / '†' / '*†'.
+
+    * — the cell (or the model's off-arm generally) ran effort=minimal; also applied
+        to missing cells of minimal-only models so the quarantine stays visible.
+    † — covert_cot_rate > COVERT_COT_THRESHOLD, or reasoning-token leakage above
+        RTOK_LEAK_PER_CALL: measures short visible working, not in-weights.
+    """
+    marks = ""
+    if model_minimal or (rec is not None and _settings(rec).get("effort") == "minimal"):
+        marks += "*"
+    if rec is not None:
+        d = rec.get("diagnostics") or {}
+        n = rec.get("n") or 0
+        rtok = (rec.get("usage") or {}).get("reasoning_tokens") or 0
+        if ((d.get("covert_cot_rate") or 0.0) > COVERT_COT_THRESHOLD
+                or (n > 0 and rtok / n > RTOK_LEAK_PER_CALL)):
+            marks += "†"
+    return marks
+
+
+def zb_model_marks(records, model) -> str:
+    """Union of cleanliness marks over the model's zero_budget cells (figure labels)."""
+    minimal = model_effort_minimal(records, model)
+    seen = set()
+    for r in by_facet(records, "zero_budget"):
+        if r["model"] == model:
+            seen.update(zb_marks(r, minimal))
+    if not seen and minimal:
+        seen.add("*")
+    return "".join(c for c in "*†" if c in seen)
+
+
+def headline_efficiency(records, model):
+    """Mean completion tokens per call over horizon cells the model solves
+    (chain_nowrap + s5_concrete with relaxed >= HORIZON_THRESHOLD), or None."""
+    per_cell = []
+    for facet in EFFICIENCY_FACETS:
+        for r in by_facet(records, facet):
+            if r["model"] != model or chain_invalid(r):
+                continue
+            if _settings(r).get("rendering") == "abstract_stated":
+                continue
+            if (r["metrics"].get("relaxed") or 0.0) < HORIZON_THRESHOLD:
+                continue
+            n = r.get("n") or 0
+            ctok = (r.get("usage") or {}).get("completion_tokens")
+            if n > 0 and ctok is not None:
+                per_cell.append(ctok / n)
+    return sum(per_cell) / len(per_cell) if per_cell else None
+
+
+def headline_rows(records):
+    """One row per model for the primary (v2) headline table, HEADLINE_COLUMNS order."""
+    rows = []
+    for m in models_of(records):
+        minimal = model_effort_minimal(records, m)
+        row = [m]
+        for length, leg in ZB_HEADLINE_CELLS:
+            r = zero_budget_cell(records, m, length, leg)
+            val = _fmt((r.get("metrics") or {}).get("relaxed")) if r else "—"
+            row.append(val + zb_marks(r, minimal))
+        row.append(_horizon_str(records, "chain_nowrap", m))
+        row.append(_horizon_str(records, "s5_concrete", m))
+        eff = headline_efficiency(records, m)
+        row.append("—" if eff is None else f"{eff:.0f}")
+        rows.append(row)
+    return rows
+
+
+def archived_headline_rows(records):
+    """Legacy v1 headline scalars, only for models with data in an archived facet."""
+    rows = []
+    for m in models_of(records):
+        if not any(r["model"] == m
+                   for facet in V1_ARCHIVED_FACETS for r in by_facet(records, facet)):
+            continue
+        dr, dr_eff = headline_dose_response(records, m)
+        cl = headline_composite_length(records, m)
+        legs = headline_decomposition(records, m)
+        rows.append([m,
+                     "—" if dr is None else f"{dr:.2f} @ {dr_eff}",
+                     _fmt(cl),
+                     " / ".join(_fmt(legs[leg]) for leg in LEG_ORDER)])
+    return rows
 
 
 # --- markdown / csv -----------------------------------------------------------
@@ -238,7 +403,6 @@ def _display_path(path: str) -> str:
 
 
 def write_results_md(records, out_path, history_path):
-    models = models_of(records)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         "# FactWorld frontier benchmark — results",
@@ -250,22 +414,15 @@ def write_results_md(records, out_path, history_path):
     lines += _settings_block(records)
 
     lines += ["## Headline", "",
-              "| Model | dose_response (relaxed) | composite_length (relaxed @ L512, high) | "
-              "s5 horizon (max L, relaxed >= 0.8) | chain horizon (chain_nowrap, max depth, "
-              "relaxed >= 0.8) | decomposition (bind / e2e / scaffold) |",
-              "|---|---|---|---|---|---|"]
-    for m in models:
-        dr, dr_eff = headline_dose_response(records, m)
-        cl = headline_composite_length(records, m)
-        s5 = headline_horizon(records, "s5_concrete", m)
-        ch = headline_horizon(records, "chain_nowrap", m)
-        legs = headline_decomposition(records, m)
-        dr_s = "—" if dr is None else f"{dr:.2f} @ {dr_eff}"
-        triple = " / ".join(_fmt(legs[leg]) for leg in LEG_ORDER)
-        lines.append(f"| {m} | {dr_s} | {_fmt(cl)} | {s5 if s5 is not None else '—'} | "
-                     f"{ch if ch is not None else '—'} | {triple} |")
+              "Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a "
+              "one-line answer contract (settings.contract=true); relaxed match.", "",
+              "| " + " | ".join(HEADLINE_COLUMNS) + " |",
+              "|" + "---|" * len(HEADLINE_COLUMNS)]
+    for row in headline_rows(records):
+        lines.append("| " + " | ".join(str(c) for c in row) + " |")
+    lines += ["", ZB_FOOTNOTES[0], "", ZB_FOOTNOTES[1], "",
+              HORIZON_NOTE, "", EFFICIENCY_NOTE, ""]
     lines += [
-        "",
         "Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a single "
         f"k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths < k "
         '(`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells '
@@ -274,6 +431,18 @@ def write_results_md(records, out_path, history_path):
         f"marked `{CHAIN_INVALID_MARK}` in the tables below and excluded from the chain figure.",
         "",
     ]
+
+    archived = archived_headline_rows(records)
+    if archived:
+        lines += ["## v1 (archived facets)", "",
+                  "Legacy headline columns for the v1-only facets "
+                  f"({', '.join(V1_ARCHIVED_FACETS)}); superseded by the zero-budget "
+                  "headline above. Per-cell rows remain in the tables below.", "",
+                  "| " + " | ".join(ARCHIVED_COLUMNS) + " |",
+                  "|" + "---|" * len(ARCHIVED_COLUMNS)]
+        for row in archived:
+            lines.append("| " + " | ".join(str(c) for c in row) + " |")
+        lines.append("")
 
     lines += ["## Diagnostics per cell", "",
               "| Model | Facet | Task | Length | Arm | empty_rate | api_errors | "
@@ -312,7 +481,8 @@ CSV_FIELDS = [
     "run_id", "ts", "git_commit", "suite_version", "model", "served_models", "providers",
     "facet", "task", "length", "n", "effort", "leg", "rendering", "max_new_tokens",
     "stop_at", "format_prompt", "n_shot", "relaxed", "relaxed_ci_lo", "relaxed_ci_hi",
-    "exact", "contains", "last_n", "empty_rate", "api_errors", "finish_reasons",
+    "exact", "contains", "last_n", "empty_rate", "api_errors", "contract_rate",
+    "covert_cot_rate", "rtok_leak_rate", "escalated", "finish_reasons",
     "prompt_tokens", "completion_tokens", "reasoning_tokens", "cost_usd_est", "elapsed_s",
     "note",
 ]
@@ -343,6 +513,10 @@ def write_results_csv(records, out_path):
                 "exact": mt.get("exact"), "contains": mt.get("contains"),
                 "last_n": mt.get("last_n"),
                 "empty_rate": d.get("empty_rate"), "api_errors": d.get("api_errors"),
+                "contract_rate": d.get("contract_rate"),
+                "covert_cot_rate": d.get("covert_cot_rate"),
+                "rtok_leak_rate": d.get("rtok_leak_rate"),
+                "escalated": r.get("escalated"),
                 "finish_reasons": json.dumps(d.get("finish_reasons") or {}, sort_keys=True),
                 "prompt_tokens": u.get("prompt_tokens"),
                 "completion_tokens": u.get("completion_tokens"),
@@ -509,6 +683,64 @@ def fig_chain_nowrap(records, out_dir):
     return _fig_chain(records, out_dir, "chain_nowrap", "chain_nowrap")
 
 
+ZB_GROUPS = [  # (bar label, length, leg) — headline zero-budget cells
+    ("composite L16", 16, None),
+    ("composite L64", 64, None),
+    ("binding_only L16", 16, "binding_only"),
+    ("end_to_end L16", 16, "end_to_end"),
+]
+
+
+def fig_zero_budget(records, out_dir):
+    cells = by_facet(records, "zero_budget")
+    if not cells:
+        return []
+
+    def composite_l64(m):
+        r = zero_budget_cell(records, m, 64, None)
+        return (r["metrics"].get("relaxed") or 0.0) if r else -1.0
+
+    models = sorted(models_of(cells), key=composite_l64, reverse=True)
+    group_colors = {label: PALETTE[j] for j, (label, _, _) in enumerate(ZB_GROUPS)}
+    fig, ax = plt.subplots(figsize=FIGSIZE)
+    width = 0.2
+    for j, (label, length, leg) in enumerate(ZB_GROUPS):
+        xs, ys, errs, hatched = [], [], [[], []], []
+        for i, m in enumerate(models):
+            r = zero_budget_cell(records, m, length, leg)
+            if r is None:
+                continue
+            y = r["metrics"]["relaxed"]
+            lo, hi = _ci(r)
+            xs.append(i + (j - 1.5) * width)
+            ys.append(y)
+            errs[0].append(max(0.0, y - lo))
+            errs[1].append(max(0.0, hi - y))
+            hatched.append("*" in zb_marks(r, model_effort_minimal(records, m)))
+        if not xs:
+            continue
+        bars = ax.bar(xs, ys, width=width, color=group_colors[label], label=label,
+                      yerr=errs, capsize=2.5, error_kw={"elinewidth": 0.9})
+        for rect, flag in zip(bars, hatched):
+            if flag:  # asterisked (effort=minimal) cells get hatched bars
+                rect.set_hatch("///")
+                rect.set_edgecolor("#555555")
+    ax.set_xticks(range(len(models)),
+                  [m + zb_model_marks(records, m) for m in models],
+                  fontsize=6.5, rotation=20, ha="right")
+    ax.set_ylabel("relaxed accuracy")
+    ax.set_title("Zero budget: composite_copy_v1, reasoning off, one-line answer contract")
+    _style_axes(ax)
+    ax.legend(fontsize=7, loc="upper right", frameon=False)
+    fig.text(0.01, 0.03,
+             "hatched / *: off-arm ran effort=minimal; †: covert CoT or rtok leak "
+             "(see results.md footnotes); sorted by composite @L64",
+             fontsize=7, color="#555555")
+    _caption(fig, cells)
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    return _save(fig, out_dir, "fig_zero_budget")
+
+
 def fig_decomposition(records, out_dir):
     cells = by_facet(records, "decomposition")
     if not cells:
@@ -543,7 +775,7 @@ def fig_decomposition(records, out_dir):
     return _save(fig, out_dir, "fig_decomposition")
 
 
-FIGURES = [fig_dose_response, fig_composite_length, fig_s5_horizon,
+FIGURES = [fig_zero_budget, fig_dose_response, fig_composite_length, fig_s5_horizon,
            fig_chain_depth, fig_chain_nowrap, fig_decomposition]
 
 
@@ -606,24 +838,18 @@ def _html_table(headers, rows, sortable=False):
 
 
 def write_index_html(records, out_dir, svg_paths, history_path):
-    models = models_of(records)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    head_rows = []
-    for m in models:
-        dr, dr_eff = headline_dose_response(records, m)
-        cl = headline_composite_length(records, m)
-        s5 = headline_horizon(records, "s5_concrete", m)
-        ch = headline_horizon(records, "chain_nowrap", m)
-        legs = headline_decomposition(records, m)
-        head_rows.append([
-            m,
-            "—" if dr is None else f"{dr:.2f} @ {dr_eff}",
-            _fmt(cl),
-            s5 if s5 is not None else "—",
-            ch if ch is not None else "—",
-            " / ".join(_fmt(legs[leg]) for leg in LEG_ORDER),
-        ])
+    head_rows = headline_rows(records)
+    archived = archived_headline_rows(records)
+    archived_html = ""
+    if archived:
+        archived_html = (
+            "<h2>v1 (archived facets)</h2>\n"
+            f'<p class="small">Legacy headline columns for the v1-only facets '
+            f"({html.escape(', '.join(V1_ARCHIVED_FACETS))}); superseded by the "
+            "zero-budget headline above.</p>\n"
+            + _html_table(ARCHIVED_COLUMNS, archived))
 
     cell_rows = []
     for r in records:
@@ -663,9 +889,14 @@ single k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths &lt; k
 {CHAIN_CYCLE_K} wrapped the cycle, measure the wrapped task rather than depth, and are marked
 {html.escape(CHAIN_INVALID_MARK)} below and excluded from the chain figure.</p>
 <h2>Headline</h2>
-{_html_table(["Model", "dose_response (relaxed)", "composite_length (relaxed @ L512, high)",
-              "s5 horizon", "chain horizon (chain_nowrap)",
-              "decomposition (bind / e2e / scaffold)"], head_rows)}
+<p class="small">Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a
+one-line answer contract (settings.contract=true); relaxed match.</p>
+{_html_table(HEADLINE_COLUMNS, head_rows)}
+<p class="small">{html.escape(ZB_FOOTNOTES[0])}<br>
+{html.escape(ZB_FOOTNOTES[1])}<br>
+{html.escape(HORIZON_NOTE)}<br>
+{html.escape(EFFICIENCY_NOTE)}</p>
+{archived_html}
 <h2>Figures</h2>
 {figures_html}
 <h2>All cells</h2>
