@@ -30,87 +30,16 @@ import time
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 
-from factworld.tasks import CANONICAL, _world, _rng  # noqa: E402
-from factworld.tasks import content_tokens  # noqa: E402
-
-NAMES = {"g0": "Alice", "g1": "Bob", "g2": "Cara", "g3": "Dan", "g4": "Eva"}
-JOBS = {"r0": "Manager", "r1": "Chef", "r2": "Driver", "r3": "Clerk", "r4": "Guard"}
-
-FRAMINGS = ("V0_abstract", "V0_abstract_stated_init", "V1_concrete")
-
-
-def _name(g): return NAMES[g]
-def _job(r): return JOBS[r]
-
-
-def render_event_v0(e, i):
-    if e.kind == "swap_role":
-        x, y = e.args
-        return f"s{i} swaps {x} and {y}."
-    cyc = e.args
-    return f"s{i} cycles roles: " + " -> ".join(cyc) + "."
-
-
-def render_event_v1(e, i):
-    if e.kind == "swap_role":
-        x, y = e.args
-        return f"s{i} {_name(x)} and {_name(y)} swap jobs."
-    cyc = e.args
-    m = len(cyc)
-    # oracle semantics: a[c_i] = old[c_{(i-1) mod m}]  ->  c_i takes c_{i-1}'s old role
-    parts = [f"{_name(cyc[i])} takes {_name(cyc[(i - 1) % m])}'s job" for i in range(m)]
-    return f"s{i} job rotation: " + ", ".join(parts) + "."
-
-
-INIT_ABSTRACT = "Initially g0 has role r0, g1 has r1, g2 has r2, g3 has r3, g4 has r4."
-INIT_CONCRETE = ("Five people — Alice, Bob, Cara, Dan, Eva — each hold one job. "
-                 "Initially: Alice is Manager, Bob is Chef, Cara is Driver, Dan is Clerk, Eva is Guard.")
-
-
-def render_prompt(framing, events, agent, gold):
-    """Return (system_prompt, user_prompt, gold_answer_token)."""
-    if framing == "V0_abstract":
-        sysp = ("You are taking a short test. Answer with only the requested value, no explanation. "
-                "For 'what role does X have?' answer with only a role token "
-                "(r0, r1, r2, r3, or r4) followed by a period. Example: 'r2 .'")
-        hist = " ".join(render_event_v0(e, i) for i, e in enumerate(events))
-        user = f"{hist} what role does {agent} have?"
-        return sysp, user, gold
-    if framing == "V0_abstract_stated_init":
-        sysp = ("You are taking a short test. Answer with only the requested value, no explanation. "
-                "For 'what role does X have?' answer with only a role token "
-                "(r0, r1, r2, r3, or r4) followed by a period. Example: 'r2 .'")
-        hist = " ".join(render_event_v0(e, i) for i, e in enumerate(events))
-        user = f"{INIT_ABSTRACT} {hist} what role does {agent} have?"
-        return sysp, user, gold
-    if framing == "V1_concrete":
-        sysp = ("You are taking a short test. Answer with only the requested value, no explanation. "
-                "The jobs are Manager, Chef, Driver, Clerk, Guard. For 'what job does X have?' "
-                "answer with only the job name followed by a period. Example: 'Driver .'")
-        hist = " ".join(render_event_v1(e, i) for i, e in enumerate(events))
-        user = f"{INIT_CONCRETE} {hist} what job does {_name(agent)} have?"
-        return sysp, user, _job(gold)
-    raise ValueError(framing)
+from factworld.tasks import CANONICAL, _world  # noqa: E402
+from factworld.s5_concrete import (  # noqa: E402,F401 — single source of truth for renderings
+    NAMES, JOBS, FRAMINGS, INIT_ABSTRACT, INIT_CONCRETE,
+    render_event_v0, render_event_v1, render_prompt, gen_problems, score,
+)
 
 
 def gen_examples(spec, w, oracle, length, n):
     """Deterministic (events, agent, gold) list — identical problems across framings."""
-    out = []
-    for idx in range(n):
-        events = w.sample_hard_chain(length, episode_seed=f"{spec.name}|{idx}")
-        agent = _rng(spec, "test", length, idx).choice(w.agents)
-        gold = oracle.hard_role(events, agent)
-        out.append((events, agent, gold))
-    return out
-
-
-def score(pred_text, gold_token):
-    ct = content_tokens(pred_text)
-    first = ct[0] if ct else ""
-    return {
-        "relaxed": int(first == gold_token),          # first content token matches
-        "contains": int(gold_token in ct),            # gold token appears anywhere
-    }
+    return gen_problems(spec, w, oracle, length, n)
 
 
 def run_cell(backend, framing, examples, max_new_tokens, stop_at):

@@ -16,6 +16,7 @@ environments (e.g. for the ``FunctionBackend`` smoke test path).
 from __future__ import annotations
 
 import re
+import threading
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -219,6 +220,23 @@ class APIBackend(ModelBackend):
     By default calls are issued concurrently via a small thread pool
     (``max_workers``). Set ``max_workers=1`` for sequential execution, or use a
     local endpoint for large ``n``.
+
+    ``answer_mode`` controls post-processing of the model's reply:
+
+      - ``"tokens"`` (default): full FactWorld-token munging — strip
+        ``<think>`` blocks, re-attach the stop token, strip prose prefixes,
+        split on colons/commas, and normalize a glued trailing period. This is
+        the historical behavior for FactWorld's atomic-token answers (``g3 .``).
+      - ``"words"``: for natural-word answers (e.g. concrete renderings whose
+        gold is ``Driver``). Still strips ``<think>`` blocks and whitespace and
+        keeps only the pre-period answer span, but skips the token-specific
+        munging (colon split, comma rsplit, prefix regexes) that corrupts
+        natural-language answers.
+
+    Every completed or failed API call also records lightweight metadata
+    (token usage, served model, provider, finish reason, error) in a
+    thread-safe internal list; ``pop_call_meta()`` returns and clears an
+    aggregate. Callers that never call ``pop_call_meta`` are unaffected.
     """
 
     def __init__(
@@ -230,6 +248,7 @@ class APIBackend(ModelBackend):
         max_workers: int = 4,
         system_prompt: str | None = None,
         extra_body: dict[str, Any] | None = None,
+        answer_mode: str = "tokens",
     ):
         try:
             from openai import OpenAI
@@ -239,11 +258,87 @@ class APIBackend(ModelBackend):
                 "Install it with: pip install openai"
             ) from exc
 
+        if answer_mode not in ("tokens", "words"):
+            raise ValueError(f"answer_mode must be 'tokens' or 'words', got {answer_mode!r}")
+
         self.model = model
         self.client = client if client is not None else OpenAI(api_key=api_key, base_url=base_url)
         self.max_workers = max_workers
         self.system_prompt = system_prompt
         self.extra_body = extra_body
+        self.answer_mode = answer_mode
+        # Per-call metadata, guarded by a lock: ``generate`` fans calls out to a
+        # ThreadPoolExecutor, so appends happen from worker threads.
+        self._meta_lock = threading.Lock()
+        self._call_meta: list[dict[str, Any]] = []
+
+    def _record_call(self, response: Any | None, error: str | None = None) -> None:
+        """Append one per-call metadata record (thread-safe).
+
+        All field extraction is defensive ``getattr``: the openai client's
+        pydantic models allow extra fields (``extra="allow"``), so OpenRouter's
+        ``provider`` and ``usage.reasoning_tokens`` are attribute-accessible
+        when present and simply absent otherwise.
+        """
+        usage = getattr(response, "usage", None)
+        details = getattr(usage, "completion_tokens_details", None)
+        reasoning_tokens = getattr(details, "reasoning_tokens", None)
+        if reasoning_tokens is None:
+            # OpenRouter reports reasoning tokens directly on the usage object.
+            reasoning_tokens = getattr(usage, "reasoning_tokens", None)
+        choices = getattr(response, "choices", None) or []
+        finish_reason = getattr(choices[0], "finish_reason", None) if choices else None
+        record = {
+            "usage": {
+                "prompt_tokens": getattr(usage, "prompt_tokens", 0) or 0,
+                "completion_tokens": getattr(usage, "completion_tokens", 0) or 0,
+                "reasoning_tokens": reasoning_tokens or 0,
+            },
+            "served_model": getattr(response, "model", None),
+            "provider": getattr(response, "provider", None),
+            "finish_reason": finish_reason,
+            "error": error,
+        }
+        with self._meta_lock:
+            self._call_meta.append(record)
+
+    def pop_call_meta(self) -> dict[str, Any]:
+        """Return and clear an aggregate of per-call metadata recorded so far.
+
+        Returns:
+            ``{calls, errors, usage: {prompt_tokens, completion_tokens,
+            reasoning_tokens}, served_models: [...], providers: [...],
+            finish_reasons: {reason: count}}`` where ``served_models`` and
+            ``providers`` are deduplicated in first-seen order (``None``
+            values omitted) and ``errors`` counts failed calls.
+        """
+        with self._meta_lock:
+            records = self._call_meta
+            self._call_meta = []
+        usage = {"prompt_tokens": 0, "completion_tokens": 0, "reasoning_tokens": 0}
+        served_models: list[str] = []
+        providers: list[str] = []
+        finish_reasons: dict[str, int] = {}
+        errors = 0
+        for rec in records:
+            for key in usage:
+                usage[key] += rec["usage"][key]
+            if rec["served_model"] is not None and rec["served_model"] not in served_models:
+                served_models.append(rec["served_model"])
+            if rec["provider"] is not None and rec["provider"] not in providers:
+                providers.append(rec["provider"])
+            if rec["finish_reason"] is not None:
+                finish_reasons[rec["finish_reason"]] = finish_reasons.get(rec["finish_reason"], 0) + 1
+            if rec["error"] is not None:
+                errors += 1
+        return {
+            "calls": len(records),
+            "errors": errors,
+            "usage": usage,
+            "served_models": served_models,
+            "providers": providers,
+            "finish_reasons": finish_reasons,
+        }
 
     def _call_one(self, prompt: str, max_new_tokens: int, stop: list[str] | None, stop_at: str | None) -> str:
         messages: list[dict[str, str]] = []
@@ -267,6 +362,7 @@ class APIBackend(ModelBackend):
                 break
             except openai.RateLimitError as exc:
                 if attempt == max_retries - 1:
+                    self._record_call(None, error=f"{type(exc).__name__}: {exc}")
                     raise
                 headers = getattr(exc.response, "headers", {}) or {}
                 # Case-insensitive header lookup.
@@ -285,9 +381,13 @@ class APIBackend(ModelBackend):
                 # is a ValueError), gateway 5xx, connection drops. Retry with backoff rather
                 # than crashing the whole eval grid on a single bad cell.
                 if attempt == max_retries - 1:
-                    return ""          # exhausted retries -> empty prediction (scored as wrong)
+                    # exhausted retries -> empty prediction (scored as wrong),
+                    # but the failure is recorded in call meta rather than silent.
+                    self._record_call(None, error=f"{type(exc).__name__}: {exc}")
+                    return ""
                 time.sleep(2 ** attempt)
 
+        self._record_call(response)
         choices = getattr(response, "choices", None)
         if not choices:
             return ""
@@ -301,6 +401,15 @@ class APIBackend(ModelBackend):
             text = text.rsplit("</think>", 1)[1]
         elif "<think>" in text:
             text = ""
+        if self.answer_mode == "words":
+            # Natural-word answers (e.g. "Driver ." or "Driver."): keep only the
+            # pre-period answer span and strip whitespace. The FactWorld-token
+            # munging below (prefix regexes, colon split, comma rsplit, glued-period
+            # normalization) corrupts natural-language answers, so skip it.
+            text = text.strip()
+            if "." in text:
+                text = text.split(".", 1)[0]
+            return text.strip()
         # OpenAI excludes the stop token from the returned text; re-attach it
         # so downstream exact-match scoring sees the same span as local backends.
         if stop_at is not None and getattr(choice, "finish_reason", None) == "stop" and not text.endswith(stop_at):
