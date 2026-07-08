@@ -222,13 +222,16 @@ instructions appended for composite/s5). Full table in [`docs/openrouter/results
 `composite_copy_v1@L16` uses `max_new_tokens=2048`, no early stop, and **relaxed** match
 (strip trailing period, score the answer span) so reasoning models can finish their scratchpad
 and trailing-generation artifacts are treated consistently across API and local evals. The
-`chain_v1` column is depth-16 under the same 2048-token budget; a depth-16 reasoning trace can
-exceed that, so this column undercounts reasoning models. Reasoning cells need
-`max_new_tokens=8192`, no early stop — see `results/chain_reasoning_pilot*_20260705.json` and
-`results/s5_horizon_recheck_20260705.jsonl` for budget-controlled chain and s5 numbers. The
+`chain_v1` column runs at depth 16 under the same 2048-token budget. `chain_v1` builds a single
+k=6 pointer cycle and is a depth measurement only at its designed depths, < k
+(`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); at depth 16 the chain wraps
+(effective difficulty is depth mod 6, and gold returns to the start agent at multiples of 6), so
+read this column as a wrapped-task floor check, not a depth score. Measuring depth >= k requires
+the scaled no-wrap variant (`chain_nowrap`). Reasoning cells need `max_new_tokens=8192`, no early
+stop — see `results/s5_horizon_recheck_20260705.jsonl` for budget-controlled s5 numbers. The
 primary write-up is [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
 
-| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
+| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 @d16 (wrapped) | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
 | glm-5.2 | 1.000 | 1.000 | **0.767** | 0.133 | **0.867** | 0.167 |
 | kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | 0.867 | 0.200 |
@@ -247,11 +250,14 @@ Reading the ladder:
   and the recall leg *separately* but fail to **route** the resolved holder into the recall
   lookup without scaffolding.
 - **Depth and non-abelian state are reasoning-movable, with model-dependent horizons.** With
-  reasoning and an 8192-token budget, glm-5.2 solves `chain_v1` to depth 12 (1.00 at depths 4–8,
-  0.967 at 12) and collapses by depth 32 (0.033 — genuine wrong answers, only 3/30 empty;
-  `results/chain_reasoning_pilot*_20260705.json`). `s5_v1` floors under the standard token
-  rendering, but a strong reasoner solves it under a concrete (people/jobs) rendering — glm-5.2
-  holds 1.00 at L32, 0.97 at L64, and 0.90 at L128
+  reasoning and an 8192-token budget, glm-5.2 solves `chain_v1` at its designed depths — 1.00 at
+  depth 4, n=30 (`results/chain_reasoning_pilot_20260705.json`) — where the no-reasoning grid
+  floors. `chain_v1` measures depth only below its k=6 cycle length; the deeper cells in the
+  pilot files (depths 6–32) wrapped the cycle (gold returns to the start agent at multiples of 6;
+  effective difficulty depth mod 6) and are records of the wrapped task, not depth results.
+  Depth >= k is the axis of the scaled no-wrap variant (`chain_nowrap`). `s5_v1` floors under the
+  standard token rendering, but a strong reasoner solves it under a concrete (people/jobs)
+  rendering — glm-5.2 holds 1.00 at L32, 0.97 at L64, and 0.90 at L128
   (`results/s5_horizon_recheck_20260705.jsonl`; Appendix A).
 
 **Autoregressive / test-time-compute experiment (E1b).** Format-fair leg-isolation on
@@ -348,8 +354,10 @@ gradually with length. The dissociations (full write-up:
 1. **Composition and chain depth are movable by test-time compute** for strong reasoning models.
    A reasoning-effort dose-response sweep shows composite value climbing with effort
    (kimi 0.22→0.98, glm 0.14→0.81); given the output format, reasoners solve it. Non-reasoners
-   floor. `chain_v1` follows: glm-5.2 with reasoning solves it to depth 12 and collapses by
-   depth 32. Explicit CoT prompting does not help; background reasoning effort does.
+   floor. `chain_v1` follows at its designed depths (< k=6, before the pointer cycle wraps):
+   glm-5.2 with reasoning solves it where the no-reasoning grid floors; depth beyond k is
+   measured by the scaled no-wrap variant (`chain_nowrap`). Explicit CoT prompting does not
+   help; background reasoning effort does.
 2. **Non-abelian state-tracking (s5) is movable by reasoning under a concrete rendering, with a
    model-dependent horizon.** glm-5.2 solves `s5_v1` with reasoning plus a concrete (people/jobs)
    rendering — 1.00 at L32, 0.97 at L64, 0.90 at L128 — while kimi-k2.6 degrades sooner (1.00 at
@@ -363,8 +371,9 @@ gradually with length. The dissociations (full write-up:
    and only the recurrent hybrid (`gdp_hybrid`) **extrapolates** the learned circuit in length
    (L64 0.75, L128 0.50–0.59; `fprm` and `transformer` collapse past the train length).
 
-The levers are **reasoning strength + a concrete rendering** (composition, chain depth, and
-frontier s5, each with a model-dependent horizon), **supervision density + weaning** (local s5),
+The levers are **reasoning strength + a concrete rendering** (composition and frontier s5, each
+with a measured model-dependent horizon; chain at its designed depths, with the depth horizon
+belonging to `chain_nowrap`), **supervision density + weaning** (local s5),
 and **recurrent architecture** (s5 length extrapolation). Explicit structured CoT prompting never
 helps (and hurts); recall is trivial once the holder is known.
 

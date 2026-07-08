@@ -7,7 +7,10 @@ scripts/run_frontier_benchmark.py), keeps the LATEST record per
 
   results.md    headline + diagnostics + full per-cell markdown tables
   results.csv   flat per-cell export (all metrics + diagnostics + usage)
-  fig_*.png/.svg  five facet figures (PNG 150 dpi for blog upload, SVG for the HTML page)
+  fig_*.png/.svg  facet figures, one per facet with data (PNG 150 dpi for blog upload,
+                  SVG for the HTML page); chain_depth cells past chain_v1's design gate
+                  (depth >= k=6, cycle wrap) are excluded from figures and headline horizons
+                  and marked INVALID in the tables
   index.html    self-contained static page (inline CSS, inline SVG, sortable table)
 
 Relaxed match is the canonical metric and is listed first everywhere; exact/contains/last_n
@@ -56,6 +59,16 @@ PALETTE = [
 EFFORT_ORDER = ["default", "none", "minimal", "low", "medium", "high"]
 LEG_ORDER = ["binding_only", "end_to_end", "scaffolded"]
 HORIZON_THRESHOLD = 0.8
+# chain_v1 builds a single k=6 pointer cycle; its design gate requires depth < k
+# (factworld/tasks.py: "Depths stay < k so the cycle never wraps"). Cells run at
+# depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective
+# difficulty depth mod 6), so they measure the wrapped task, not depth. They stay
+# visible in the per-cell/diagnostics tables with an explicit marker but are
+# excluded from the chain figure and any headline horizon. Depth scaling reports
+# under the `chain_nowrap` facet (scaled no-wrap variant), which reuses the same
+# figure code.
+CHAIN_CYCLE_K = 6
+CHAIN_INVALID_MARK = "INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)"
 FIGSIZE = (7.0, 4.4)  # readable at ~700px blog width
 DPI = 150
 
@@ -119,6 +132,15 @@ def load_latest(history_path: str) -> list[dict]:
 
 def by_facet(records, facet):
     return [r for r in records if r.get("facet") == facet]
+
+
+def chain_invalid(rec) -> bool:
+    """True for chain_depth cells past chain_v1's design gate (depth >= k=6)."""
+    return rec.get("facet") == "chain_depth" and (rec.get("length") or 0) >= CHAIN_CYCLE_K
+
+
+def cell_note(rec) -> str:
+    return CHAIN_INVALID_MARK if chain_invalid(rec) else "—"
 
 
 def models_of(records) -> list[str]:
@@ -229,25 +251,34 @@ def write_results_md(records, out_path, history_path):
 
     lines += ["## Headline", "",
               "| Model | dose_response (relaxed) | composite_length (relaxed @ L512, high) | "
-              "s5 horizon (max L, relaxed >= 0.8) | chain horizon (max depth, relaxed >= 0.8) | "
-              "decomposition (bind / e2e / scaffold) |",
+              "s5 horizon (max L, relaxed >= 0.8) | chain horizon (chain_nowrap, max depth, "
+              "relaxed >= 0.8) | decomposition (bind / e2e / scaffold) |",
               "|---|---|---|---|---|---|"]
     for m in models:
         dr, dr_eff = headline_dose_response(records, m)
         cl = headline_composite_length(records, m)
         s5 = headline_horizon(records, "s5_concrete", m)
-        ch = headline_horizon(records, "chain_depth", m)
+        ch = headline_horizon(records, "chain_nowrap", m)
         legs = headline_decomposition(records, m)
         dr_s = "—" if dr is None else f"{dr:.2f} @ {dr_eff}"
         triple = " / ".join(_fmt(legs[leg]) for leg in LEG_ORDER)
         lines.append(f"| {m} | {dr_s} | {_fmt(cl)} | {s5 if s5 is not None else '—'} | "
                      f"{ch if ch is not None else '—'} | {triple} |")
-    lines.append("")
+    lines += [
+        "",
+        "Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a single "
+        f"k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths < k "
+        '(`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells '
+        f"at depth >= {CHAIN_CYCLE_K} wrapped the cycle (gold == start agent at depths 12/24/48; "
+        "effective difficulty depth mod 6), measure the wrapped task rather than depth, and are "
+        f"marked `{CHAIN_INVALID_MARK}` in the tables below and excluded from the chain figure.",
+        "",
+    ]
 
     lines += ["## Diagnostics per cell", "",
               "| Model | Facet | Task | Length | Arm | empty_rate | api_errors | "
-              "reasoning_tokens | finish_reasons |",
-              "|---|---|---|---|---|---|---|---|---|"]
+              "reasoning_tokens | finish_reasons | note |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
     for r in records:
         d = r.get("diagnostics") or {}
         u = r.get("usage") or {}
@@ -256,12 +287,13 @@ def write_results_md(records, out_path, history_path):
         lines.append(
             f"| {r['model']} | {r['facet']} | {r['task']} | {r.get('length', '—')} | "
             f"{arm_label(r)} | {_fmt(d.get('empty_rate'), 3)} | {d.get('api_errors', '—')} | "
-            f"{u.get('reasoning_tokens', '—')} | {fr_s} |")
+            f"{u.get('reasoning_tokens', '—')} | {fr_s} | {cell_note(r)} |")
     lines.append("")
 
     lines += ["## Full per-cell results", "",
-              "| Model | Facet | Task | Length | Arm | n | relaxed [95% CI] | exact | contains | last_n |",
-              "|---|---|---|---|---|---|---|---|---|---|"]
+              "| Model | Facet | Task | Length | Arm | n | relaxed [95% CI] | exact | contains | "
+              "last_n | note |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in records:
         mt = r.get("metrics") or {}
         lo, hi = _ci(r)
@@ -269,7 +301,7 @@ def write_results_md(records, out_path, history_path):
             f"| {r['model']} | {r['facet']} | {r['task']} | {r.get('length', '—')} | "
             f"{arm_label(r)} | {r.get('n', '—')} | {_fmt(mt.get('relaxed'))} "
             f"[{lo:.2f}, {hi:.2f}] | {_fmt(mt.get('exact'))} | {_fmt(mt.get('contains'))} | "
-            f"{_fmt(mt.get('last_n'))} |")
+            f"{_fmt(mt.get('last_n'))} | {cell_note(r)} |")
     lines.append("")
 
     with open(out_path, "w", encoding="utf-8") as fh:
@@ -282,6 +314,7 @@ CSV_FIELDS = [
     "stop_at", "format_prompt", "n_shot", "relaxed", "relaxed_ci_lo", "relaxed_ci_hi",
     "exact", "contains", "last_n", "empty_rate", "api_errors", "finish_reasons",
     "prompt_tokens", "completion_tokens", "reasoning_tokens", "cost_usd_est", "elapsed_s",
+    "note",
 ]
 
 
@@ -315,6 +348,7 @@ def write_results_csv(records, out_path):
                 "completion_tokens": u.get("completion_tokens"),
                 "reasoning_tokens": u.get("reasoning_tokens"),
                 "cost_usd_est": u.get("cost_usd_est"), "elapsed_s": r.get("elapsed_s"),
+                "note": CHAIN_INVALID_MARK if chain_invalid(r) else "",
             })
 
 
@@ -456,11 +490,23 @@ def fig_s5_horizon(records, out_dir):
                         f"(dotted: horizon threshold {HORIZON_THRESHOLD})")
 
 
-def fig_chain_depth(records, out_dir):
-    return _horizon_fig(records, out_dir, "chain_depth", "fig_chain_depth",
+def _fig_chain(records, out_dir, facet, task_label):
+    """Chain figure over a chain facet; chain_depth cells past the design gate
+    (depth >= k=6, cycle wrap) are excluded — they measure the wrapped task."""
+    valid = [r for r in records if not chain_invalid(r)]
+    return _horizon_fig(valid, out_dir, facet, f"fig_{facet}",
                         "chain depth (log scale)",
-                        "chain_v1: relaxed vs depth "
+                        f"{task_label}: relaxed vs depth "
                         f"(dotted: horizon threshold {HORIZON_THRESHOLD})")
+
+
+def fig_chain_depth(records, out_dir):
+    return _fig_chain(records, out_dir, "chain_depth",
+                      f"chain_v1 (depths < k={CHAIN_CYCLE_K})")
+
+
+def fig_chain_nowrap(records, out_dir):
+    return _fig_chain(records, out_dir, "chain_nowrap", "chain_nowrap")
 
 
 def fig_decomposition(records, out_dir):
@@ -498,7 +544,7 @@ def fig_decomposition(records, out_dir):
 
 
 FIGURES = [fig_dose_response, fig_composite_length, fig_s5_horizon,
-           fig_chain_depth, fig_decomposition]
+           fig_chain_depth, fig_chain_nowrap, fig_decomposition]
 
 
 # --- html ---------------------------------------------------------------------
@@ -568,7 +614,7 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         dr, dr_eff = headline_dose_response(records, m)
         cl = headline_composite_length(records, m)
         s5 = headline_horizon(records, "s5_concrete", m)
-        ch = headline_horizon(records, "chain_depth", m)
+        ch = headline_horizon(records, "chain_nowrap", m)
         legs = headline_decomposition(records, m)
         head_rows.append([
             m,
@@ -590,7 +636,7 @@ def write_index_html(records, out_dir, svg_paths, history_path):
             r.get("n", "—"), _fmt(mt.get("relaxed")), f"[{lo:.2f}, {hi:.2f}]",
             _fmt(mt.get("exact")), _fmt(mt.get("contains")), _fmt(mt.get("last_n")),
             _fmt(d.get("empty_rate"), 3), d.get("api_errors", "—"),
-            u.get("reasoning_tokens", "—"),
+            u.get("reasoning_tokens", "—"), cell_note(r),
         ])
 
     figures_html = "".join(
@@ -610,17 +656,23 @@ def write_index_html(records, out_dir, svg_paths, history_path):
 <p class="small">Generated {now} from <code>{html.escape(os.path.basename(history_path))}</code>
 ({len(records)} latest cells). Canonical metric: <strong>relaxed</strong> match;
 exact / contains / last_n are diagnostics. Intervals: Wilson 95% CI.
-Horizons: max length/depth with relaxed &ge; {HORIZON_THRESHOLD}.</p>
+Horizons: max length/depth with relaxed &ge; {HORIZON_THRESHOLD}.
+Chain horizons come from the <code>chain_nowrap</code> facet only: <code>chain_v1</code> builds a
+single k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths &lt; k
+(<code>factworld/tasks.py</code> design gate), so <code>chain_depth</code> cells at depth &ge;
+{CHAIN_CYCLE_K} wrapped the cycle, measure the wrapped task rather than depth, and are marked
+{html.escape(CHAIN_INVALID_MARK)} below and excluded from the chain figure.</p>
 <h2>Headline</h2>
 {_html_table(["Model", "dose_response (relaxed)", "composite_length (relaxed @ L512, high)",
-              "s5 horizon", "chain horizon", "decomposition (bind / e2e / scaffold)"], head_rows)}
+              "s5 horizon", "chain horizon (chain_nowrap)",
+              "decomposition (bind / e2e / scaffold)"], head_rows)}
 <h2>Figures</h2>
 {figures_html}
 <h2>All cells</h2>
 <p class="small">Click a column header to sort.</p>
 {_html_table(["Model", "Facet", "Task", "Length", "Arm", "n", "relaxed", "95% CI",
               "exact", "contains", "last_n", "empty_rate", "api_errors",
-              "reasoning_tokens"], cell_rows, sortable=True)}
+              "reasoning_tokens", "note"], cell_rows, sortable=True)}
 <script>{_SORT_JS}</script>
 </body>
 </html>

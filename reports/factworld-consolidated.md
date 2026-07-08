@@ -163,9 +163,11 @@ The wider API capability grid below uses the standard zero-shot grid (default de
 `max_new_tokens=16`, `stop_at="."`) — no reasoning — for all tasks except `composite_copy_v1`,
 which uses the long-token setup above. S₅ floors in this no-reasoning grid but is movable by
 reasoning under a concrete rendering (paragraph above; Appendix A); `chain_v1` floors here but
-is reasoning-solvable to ~depth 12 under an 8192-token budget (below).
+is reasoning-solvable at its designed depths under an 8192-token budget (below). The `chain_v1`
+column runs at depth 16 — past the task's design gate — so it is a wrapped-task floor check,
+not a depth score (below).
 
-| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
+| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 @d16 (wrapped) | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
 | glm-5.2 | 1.000 | 1.000 | 0.767 | 0.133 | **0.867** | 0.200 |
 | kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | **0.867** | 0.200 |
@@ -176,12 +178,17 @@ is reasoning-solvable to ~depth 12 under an 8192-token budget (below).
 
 Single-hop recall and conflict are solved across the board. Binding and composition separate the
 stronger models. Depth-*k* composition (`chain_v1`) sits near floor in this no-reasoning grid,
-but with reasoning and `max_new_tokens=8192` glm-5.2 solves it to depth 12 (1.00 at depths 4–8,
-0.967 at 12, 0.733 at 16–24) with a real collapse at depth 32 (0.033, only 3/30 empty —
-`results/chain_reasoning_pilot_20260705.json`, `results/chain_reasoning_pilot2_20260705.json`).
-Non-abelian state-tracking (`s5_v1`) floors here but is movable by reasoning under a concrete
-rendering (Appendix A). Reasoning-model cells require a large completion budget: a short budget
-truncates the reasoning trace before the answer and reads as an empty prediction.
+but with reasoning and `max_new_tokens=8192` glm-5.2 solves it at its designed depths — 1.00 at
+depth 4, n=30 (`results/chain_reasoning_pilot_20260705.json`). `chain_v1` builds a single k=6
+pointer cycle and measures depth only at depths < k (`factworld/tasks.py`: "Depths stay < k so
+the cycle never wraps"); at depth >= 6 the chain wraps — gold returns to the start agent at
+multiples of 6 and effective difficulty is depth mod 6 — so cells run deeper (the grid column
+above at depth 16, and the depth 6–32 cells in the pilot files) exercise the wrapped task and
+are not depth results. Measuring depth beyond k is the axis of the scaled no-wrap variant
+(`chain_nowrap`). Non-abelian state-tracking (`s5_v1`) floors here but is movable by reasoning
+under a concrete rendering (Appendix A). Reasoning-model cells require a large completion
+budget: a short budget truncates the reasoning trace before the answer and reads as an empty
+prediction.
 
 ## 5. Evaluating local architectures
 
@@ -369,8 +376,10 @@ The takeaways are:
 
 - **Composition responds to reasoning.** It is movable at inference by background reasoning,
 including at long context (recovered to 0.80–0.97 at L512), for models that can reason. Depth-*k*
-composition (`chain_v1`) follows: with reasoning and an 8192-token budget glm-5.2 solves it to
-depth 12 and collapses by depth 32 (0.033). Explicit prompting does not substitute.
+composition (`chain_v1`) follows at its designed depths (< k=6, before the pointer cycle wraps):
+with reasoning and an 8192-token budget glm-5.2 solves it where the no-reasoning grid floors;
+the depth horizon beyond k is measured by the scaled no-wrap variant (`chain_nowrap`), not by
+`chain_v1`. Explicit prompting does not substitute.
 - **Non-abelian state-tracking also responds to reasoning — but only under a concrete rendering,
 and with a model-dependent horizon.** GLM-5.2 solves `s5_v1` with reasoning plus a concrete
 (people/jobs) rendering — 1.00 at L32, 0.97 at L64, 0.90 at L128 — while kimi-k2.6 degrades
@@ -586,6 +595,7 @@ gradually in length with a model-dependent horizon (A.3–A.4). For **local from
 the lever is supervision density: dense per-step state supervision develops a length-extrapolating
 circuit that weans to label-free deployment (§8). These are different questions — what a frontier
 reasoner can do at inference vs. what a small model can learn from scratch — and both hold.
-Composition, chain depth, and S₅ are all reasoning-movable at inference (§9); what differs is the
-horizon — composition recovers out to L512, chain collapses by depth 32, and S₅ holds 0.90 at
-L128 for GLM.
+Composition, chain (at its designed depths < k=6), and S₅ are all reasoning-movable at inference
+(§9); what differs is the horizon — composition recovers out to L512 and S₅ holds 0.90 at L128
+for GLM, while the chain-depth horizon is measured by the scaled no-wrap variant
+(`chain_nowrap`), since `chain_v1`'s pointer cycle wraps past depth 5.
