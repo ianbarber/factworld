@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-08 07:11 UTC from `results/benchmark/history.jsonl` (386 latest cells).
+Generated 2026-07-08 13:28 UTC from `results/benchmark/history.jsonl` (466 latest cells).
 
 ## Settings
 
@@ -16,27 +16,60 @@ Observed generation settings (effort -> max_new_tokens, stop_at):
 - effort=low: max_new_tokens=8192, stop_at=None
 - effort=medium: max_new_tokens=8192, stop_at=None
 - effort=minimal: max_new_tokens=2048, stop_at=None
+- effort=minimal: max_new_tokens=96, stop_at=None
 - effort=none: max_new_tokens=2048, stop_at=None
+- effort=none: max_new_tokens=96, stop_at=None
 
 ## Headline
 
-| Model | dose_response (relaxed) | composite_length (relaxed @ L512, high) | s5 horizon (max L, relaxed >= 0.8) | chain horizon (chain_nowrap, max depth, relaxed >= 0.8) | decomposition (bind / e2e / scaffold) |
-|---|---|---|---|---|---|
-| anthropic/claude-opus-4.8 | 0.96 @ high | 1.00 | 128 | — | 0.88 / 0.08 / 1.00 |
-| anthropic/claude-sonnet-5 | 0.94 @ high | 1.00 | 128 | — | 0.86 / 0.00 / 1.00 |
-| deepseek/deepseek-v4-pro | 0.92 @ high | 0.87 | 128 | — | 0.24 / 0.24 / 0.98 |
-| google/gemini-3.1-pro-preview | 0.98 @ high | 0.90 | 256 | — | 1.00 / 0.98 / 1.00 |
-| google/gemini-3.5-flash | 1.00 @ high | 0.97 | 128 | — | 0.82 / 0.44 / 1.00 |
-| meta-llama/llama-4-maverick | 0.16 @ default | 0.10 | — | — | 0.96 / 0.18 / 1.00 |
-| moonshotai/kimi-k2.6 | 0.98 @ high | 0.97 | 256 | — | 0.78 / 0.26 / 1.00 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.84 @ high | 0.23 | — | — | 0.60 / 0.22 / 1.00 |
-| openai/gpt-5.4 | 0.96 @ high | 0.93 | 256 | — | 0.86 / 0.30 / 1.00 |
-| openai/gpt-5.5 | 1.00 @ high | 1.00 | 256 | — | 0.96 / 0.74 / 1.00 |
-| qwen/qwen3.7-max | 0.92 @ high | 1.00 | 256 | — | 0.60 / 0.18 / 1.00 |
-| x-ai/grok-4.3 | 0.22 @ high | 0.73 | 128 | — | 0.16 / 0.18 / 1.00 |
-| z-ai/glm-5.2 | 0.94 @ high | 0.93 | 256 | — | 0.56 / 0.20 / 1.00 |
+Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a one-line answer contract (settings.contract=true); relaxed match.
+
+| Model | zero-budget composite @L16 (relaxed) | zero-budget composite @L64 | binding_only @L16 | end_to_end @L16 | chain horizon (chain_nowrap, max depth, relaxed >= 0.8) | s5 horizon (max L, relaxed >= 0.8) | ctok/solve |
+|---|---|---|---|---|---|---|---|
+| anthropic/claude-opus-4.8 | 0.84 | 0.57 | 0.82 | 0.84 | 32 | 128 | 4240 |
+| anthropic/claude-sonnet-5 | 0.77 | 0.67 | 0.71 | 0.75 | — | 128 | 5700 |
+| deepseek/deepseek-v4-pro | 0.32 | 0.15 | 0.41 | 0.33 | 64 | 128 | 4132 |
+| google/gemini-3.1-pro-preview | —* | —* | —* | —* | — | >=256 | 8446 |
+| google/gemini-3.5-flash | 0.45* | 0.34* | 0.56* | 0.47* | >=128 | 128 | 5483 |
+| meta-llama/llama-4-maverick | — | — | — | — | — | — | — |
+| moonshotai/kimi-k2.6 | 0.83† | 0.96 | 0.92† | 0.82† | 64 | >=256 | 11365 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.36 | 0.20 | 0.55 | 0.35 | — | — | — |
+| openai/gpt-5.4 | — | — | — | — | — | >=256 | 3791 |
+| openai/gpt-5.5 | 0.58 | 0.59 | 0.92 | 0.63 | 64 | >=256 | 3862 |
+| qwen/qwen3.7-max | 0.25 | 0.12 | 0.53 | 0.24 | >=128 | >=256 | 5838 |
+| x-ai/grok-4.3 | — | — | — | — | — | 128 | 4648 |
+| x-ai/grok-build-0.1 | —* | —* | —* | —* | 16 | >=256 | 10671 |
+| z-ai/glm-5.2 | 0.31 | 0.15† | 0.64 | 0.35 | 16 | >=256 | 3924 |
+
+(*) off-arm ran effort=minimal (model cannot disable reasoning).
+
+(†) covert in-content CoT in >10% of calls, or reasoning-token leakage (>5 rtok/call) — measures short visible working, not in-weights.
+
+Horizons marked >=N are censored: the max tested depth/length still qualifies, so the true horizon is a lower bound.
+
+ctok/solve: mean completion tokens per call over chain_nowrap + s5_concrete cells with relaxed >= 0.8 — how many tokens of thinking a model spends on horizons it solves; lower = more efficient. — = no solved cells.
 
 Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
+
+## v1 (archived facets)
+
+Legacy headline columns for the v1-only facets (dose_response, composite_length, decomposition); superseded by the zero-budget headline above. Per-cell rows remain in the tables below.
+
+| Model | dose_response (relaxed) | composite_length (relaxed @ L512, high) | decomposition (bind / e2e / scaffold) |
+|---|---|---|---|
+| anthropic/claude-opus-4.8 | 0.96 @ high | 1.00 | 0.88 / 0.08 / 1.00 |
+| anthropic/claude-sonnet-5 | 0.94 @ high | 1.00 | 0.86 / 0.00 / 1.00 |
+| deepseek/deepseek-v4-pro | 0.92 @ high | 0.87 | 0.24 / 0.24 / 0.98 |
+| google/gemini-3.1-pro-preview | 0.98 @ high | 0.90 | 1.00 / 0.98 / 1.00 |
+| google/gemini-3.5-flash | 1.00 @ high | 0.97 | 0.82 / 0.44 / 1.00 |
+| meta-llama/llama-4-maverick | 0.16 @ default | 0.10 | 0.96 / 0.18 / 1.00 |
+| moonshotai/kimi-k2.6 | 0.98 @ high | 0.97 | 0.78 / 0.26 / 1.00 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.84 @ high | 0.23 | 0.60 / 0.22 / 1.00 |
+| openai/gpt-5.4 | 0.96 @ high | 0.93 | 0.86 / 0.30 / 1.00 |
+| openai/gpt-5.5 | 1.00 @ high | 1.00 | 0.96 / 0.74 / 1.00 |
+| qwen/qwen3.7-max | 0.92 @ high | 1.00 | 0.60 / 0.18 / 1.00 |
+| x-ai/grok-4.3 | 0.22 @ high | 0.73 | 0.16 / 0.18 / 1.00 |
+| z-ai/glm-5.2 | 0.94 @ high | 0.93 | 0.56 / 0.20 / 1.00 |
 
 ## Diagnostics per cell
 
@@ -50,6 +83,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 2119 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 2661 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 2602 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 1244 | stop:25 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 1703 | stop:25 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 2146 | stop:25 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 128 | effort=high | 0.040 | 0 | 14665 | length:1, stop:24 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 1319 | stop:30 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 2557 | stop:30 | — |
@@ -71,6 +108,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | anthropic/claude-opus-4.8 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 1.000 | 0 | 68158 | length:25 | — |
 | anthropic/claude-opus-4.8 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | anthropic/claude-opus-4.8 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 1303 | stop:30 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 1615 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 1809 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -79,6 +120,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 2150 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 48 | effort=high | 0.033 | 0 | 3024 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 2197 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 1351 | stop:25 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 1564 | stop:25 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 64 | effort=high | 0.040 | 0 | 4323 | length:1, stop:24 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 128 | effort=high | 0.280 | 0 | 9958 | length:7, stop:18 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 1534 | stop:30 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 2595 | stop:30 | — |
@@ -100,6 +145,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 1.000 | 0 | 60184 | length:25 | — |
 | anthropic/claude-sonnet-5 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | anthropic/claude-sonnet-5 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.020 | 0 | 0 | length:3, stop:97 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 7441 | stop:30 | — |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 8850 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 11012 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -108,6 +157,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 20593 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 48 | effort=high | 0.167 | 0 | 88570 | length:5, stop:25 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 64 | effort=high | 0.500 | 0 | 235026 | length:15, stop:15 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 17023 | stop:25 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 62570 | stop:25 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 64 | effort=high | 0.040 | 0 | 151615 | length:1, stop:24 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 128 | effort=high | 0.840 | 0 | 436168 | length:22, stop:3 | — |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=high | 0.033 | 0 | 26943 | length:1, stop:29 | — |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 44114 | stop:30 | — |
@@ -131,6 +184,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.720 | 0 | 396133 | length:18, stop:7 | — |
 | deepseek/deepseek-v4-pro | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | deepseek/deepseek-v4-pro | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 9852 | stop:30 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 20538 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 15179 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -168,6 +225,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 47454 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 69960 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 77835 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 39265 | stop:25 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 68234 | stop:25 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 140042 | stop:25 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 128 | effort=high | 0.000 | 0 | 272521 | stop:25 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 30421 | stop:30 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 52078 | stop:30 | — |
@@ -191,6 +252,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | google/gemini-3.5-flash | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 388039 | length:10, stop:15 | — |
 | google/gemini-3.5-flash | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
 | google/gemini-3.5-flash | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=minimal | 0.040 | 0 | 0 | length:6, stop:94 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=minimal | 0.000 | 0 | 0 | stop:100 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | stop:100 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 64 | contract, effort=minimal | 0.030 | 0 | 0 | length:3, stop:97 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 0.000 | 0 | 0 | stop:30 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 8 | effort=default | 0.000 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 12 | effort=default | 0.000 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -223,6 +288,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 126776 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 294256 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 64 | effort=high | 0.100 | 0 | 773309 | length:3, stop:27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 54422 | stop:25 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 32 | effort=high | 0.040 | 0 | 213892 | length:1, stop:24 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 64 | effort=high | 0.080 | 0 | 334007 | length:2, stop:23 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 128 | effort=high | 0.160 | 0 | 924878 | error:1, length:4, stop:20 | — |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 69598 | stop:30 | — |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 1 | length:7, stop:23 | — |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 88013 | stop:30 | — |
@@ -246,6 +315,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.080 | 0 | 636870 | length:2, stop:23 | — |
 | moonshotai/kimi-k2.6 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 12 | stop:30 | — |
 | moonshotai/kimi-k2.6 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 13 | stop:30 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.030 | 0 | 78 | length:3, stop:97 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.040 | 0 | 52 | length:6, stop:94 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.080 | 0 | 50 | length:9, stop:91 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 58 | stop:100 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 5435 | stop:30 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 10234 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 16407 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -254,6 +327,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 32 | effort=high | 0.100 | 0 | 72560 | length:3, stop:27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 48 | effort=high | 1.000 | 0 | 245760 | length:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 64 | effort=high | 1.000 | 0 | 245760 | length:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 0.160 | 0 | 83841 | length:3, stop:22 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 32 | effort=high | 0.120 | 0 | 162217 | length:3, stop:22 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 64 | effort=high | 0.840 | 0 | 327413 | length:20, stop:5 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 128 | effort=high | 0.520 | 0 | 252514 | length:13, stop:12 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=high | 0.300 | 0 | 5645 | stop:21 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 64 | effort=high | 0.400 | 0 | 36358 | length:2, stop:18 | — |
@@ -277,6 +354,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.960 | 0 | 344064 | length:22 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.050 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.090 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 3229 | stop:30 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 4473 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 4804 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -314,6 +395,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | openai/gpt-5.5 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 14751 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | openai/gpt-5.5 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 28909 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | openai/gpt-5.5 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 47337 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 9114 | stop:25 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 21206 | stop:25 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 69752 | stop:25 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 128 | effort=high | 0.040 | 0 | 226834 | length:1, stop:24 | — |
 | openai/gpt-5.5 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 8213 | stop:30 | — |
 | openai/gpt-5.5 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | openai/gpt-5.5 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 9903 | stop:30 | — |
@@ -335,6 +420,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | openai/gpt-5.5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.040 | 0 | 320457 | length:1, stop:24 | — |
 | openai/gpt-5.5 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | openai/gpt-5.5 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 11331 | stop:30 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 19207 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 19181 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -343,6 +432,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 54123 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 62753 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 88412 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 31051 | stop:25 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 68118 | stop:25 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 135259 | stop:25 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 128 | effort=high | 0.000 | 0 | 229053 | stop:25 | — |
 | qwen/qwen3.7-max | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 27705 | stop:30 | — |
 | qwen/qwen3.7-max | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | qwen/qwen3.7-max | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 58421 | stop:30 | — |
@@ -366,6 +459,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | qwen/qwen3.7-max | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 397612 | stop:25 | — |
 | qwen/qwen3.7-max | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | qwen/qwen3.7-max | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 12612 | stop:30 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 18833 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 22680 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -397,6 +494,14 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | x-ai/grok-4.3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 368483 | stop:25 | — |
 | x-ai/grok-4.3 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
 | x-ai/grok-4.3 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 45652 | stop:25 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 32 | effort=high | 0.080 | 0 | 369760 | error:1, length:1, stop:23 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 64 | effort=high | 0.160 | 0 | 535933 | error:3, length:1, stop:21 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 128 | effort=high | 1.000 | 0 | 4443830 | error:7, length:17, stop:1 | — |
+| x-ai/grok-build-0.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 248308 | stop:25 | — |
+| x-ai/grok-build-0.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 506163 | stop:25 | — |
+| x-ai/grok-build-0.1 | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 15624 | stop:30 | — |
+| x-ai/grok-build-0.1 | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 17408 | stop:30 | — |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 3554 | stop:30 | — |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 5469 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 7491 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -405,6 +510,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 29392 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 48 | effort=high | 0.033 | 0 | 19048 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 64 | effort=high | 0.167 | 0 | 57657 | length:5, stop:25 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 10245 | stop:25 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 32 | effort=high | 0.040 | 0 | 36687 | length:1, stop:24 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 64 | effort=high | 0.080 | 0 | 65558 | length:2, stop:23 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 128 | effort=high | 0.200 | 0 | 130971 | length:5, stop:20 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 9631 | stop:30 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 791 | stop:30 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 12782 | stop:30 | — |
@@ -428,6 +537,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | z-ai/glm-5.2 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 263382 | stop:25 | — |
 | z-ai/glm-5.2 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 336 | stop:30 | — |
 | z-ai/glm-5.2 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 57 | stop:30 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.010 | 0 | 96 | length:1, stop:99 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.030 | 0 | 288 | length:3, stop:97 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.040 | 0 | 384 | length:4, stop:96 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 510 | stop:100 | — |
 
 ## Full per-cell results
 
@@ -441,6 +554,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 32 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.63 [0.46, 0.78] | 0.00 | 0.63 | 0.63 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.63 [0.46, 0.78] | 0.00 | 0.63 | 0.63 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.00 | 0.96 | 0.96 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.68 [0.48, 0.83] | 0.00 | 0.68 | 0.68 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.40 [0.25, 0.58] | 0.03 | 0.67 | 0.50 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | — |
@@ -462,6 +579,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | anthropic/claude-opus-4.8 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.00 [0.00, 0.13] | — | 0.00 | — | — |
 | anthropic/claude-opus-4.8 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | anthropic/claude-opus-4.8 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.82 [0.73, 0.88] | — | — | — | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.84 [0.76, 0.90] | 0.00 | 0.86 | 0.86 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.84 [0.76, 0.90] | 0.00 | 0.88 | 0.88 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.57 [0.47, 0.66] | 0.00 | 0.57 | 0.57 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 0.97 | 0.97 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 30 | 0.87 [0.70, 0.95] | 0.00 | 0.87 | 0.87 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -470,6 +591,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.53 [0.36, 0.70] | 0.00 | 0.53 | 0.53 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.50 [0.33, 0.67] | 0.00 | 0.50 | 0.50 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.03 [0.01, 0.17] | 0.00 | 0.03 | 0.03 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.56 [0.37, 0.73] | 0.00 | 0.56 | 0.56 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.08 [0.02, 0.25] | 0.00 | 0.08 | 0.08 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.03 [0.01, 0.17] | 0.00 | 0.83 | 0.60 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | — |
@@ -491,6 +616,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.00 [0.00, 0.13] | — | 0.00 | — | — |
 | anthropic/claude-sonnet-5 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | anthropic/claude-sonnet-5 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 0.97 [0.83, 0.99] | 0.00 | 1.00 | 1.00 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.71 [0.61, 0.79] | — | — | — | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.75 [0.66, 0.82] | 0.00 | 0.75 | 0.75 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.00 | 0.77 | 0.77 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.67 [0.57, 0.75] | 0.00 | 0.67 | 0.67 | — |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -499,6 +628,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.50 [0.33, 0.67] | 0.00 | 0.50 | 0.50 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.83 [0.66, 0.93] | 0.00 | 0.83 | 0.83 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.50 [0.33, 0.67] | 0.00 | 0.50 | 0.50 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.00 | 0.88 | 0.88 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.00 | 0.88 | 0.88 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.08 [0.02, 0.25] | 0.00 | 0.08 | 0.08 | — |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.83 [0.66, 0.93] | 0.00 | 0.83 | 0.83 | — |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.27 [0.14, 0.44] | 0.00 | 0.27 | 0.27 | — |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -522,6 +655,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.28 [0.14, 0.48] | — | 0.28 | — | — |
 | deepseek/deepseek-v4-pro | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | deepseek/deepseek-v4-pro | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.41 [0.32, 0.51] | — | — | — | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.00 | 0.33 | 0.33 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.32 [0.24, 0.42] | 0.00 | 0.32 | 0.32 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.15 [0.09, 0.23] | 0.00 | 0.15 | 0.15 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -559,6 +696,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 32 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 48 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 64 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.00 | 0.96 | 0.96 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.00 | 0.84 | 0.84 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=minimal | 30 | 0.60 [0.42, 0.75] | 0.00 | 0.70 | 0.67 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -582,6 +723,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | google/gemini-3.5-flash | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.52 [0.33, 0.70] | — | 0.56 | — | — |
 | google/gemini-3.5-flash | sanity | conflict_v1 | 4 | effort=minimal | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | google/gemini-3.5-flash | sanity | recall_copy_v1 | 6 | effort=minimal | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=minimal | 100 | 0.56 [0.46, 0.65] | — | — | — | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=minimal | 100 | 0.47 [0.38, 0.57] | 0.00 | 0.48 | 0.48 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | contract, effort=minimal | 100 | 0.45 [0.36, 0.55] | 0.00 | 0.46 | 0.46 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 64 | contract, effort=minimal | 100 | 0.34 [0.25, 0.44] | 0.00 | 0.34 | 0.34 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 30 | 0.20 [0.10, 0.37] | 0.00 | 0.23 | 0.20 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 8 | effort=default | 30 | 0.17 [0.07, 0.34] | 0.03 | 0.27 | 0.27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 12 | effort=default | 30 | 0.00 [0.00, 0.11] | 0.00 | 0.23 | 0.17 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -614,6 +759,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 0.97 | 0.97 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 0.97 | 0.97 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.90 [0.74, 0.97] | 0.00 | 0.90 | 0.90 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.00 | 0.92 | 0.92 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.00 | 0.92 | 0.92 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.64 [0.45, 0.80] | 0.00 | 0.68 | 0.68 | — |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.40 [0.25, 0.58] | 0.00 | 0.53 | 0.50 | — |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 1.00 | 1.00 | — |
@@ -637,6 +786,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.88 [0.70, 0.96] | — | 0.88 | — | — |
 | moonshotai/kimi-k2.6 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | moonshotai/kimi-k2.6 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.92 [0.85, 0.96] | — | — | — | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.82 [0.73, 0.88] | 0.00 | 0.85 | 0.85 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.83 [0.74, 0.89] | 0.00 | 0.86 | 0.86 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.96 [0.90, 0.98] | 0.00 | 0.97 | 0.96 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -645,6 +798,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.00 [0.00, 0.11] | 0.00 | 0.00 | 0.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.00 [0.00, 0.11] | 0.00 | 0.00 | 0.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.00 [0.00, 0.11] | 0.00 | 0.00 | 0.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.44 [0.27, 0.63] | 0.00 | 0.44 | 0.44 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.04 [0.01, 0.20] | 0.00 | 0.04 | 0.04 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.70 [0.52, 0.83] | 0.00 | 0.70 | 0.70 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.20 [0.10, 0.37] | 0.00 | 0.20 | 0.20 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.57 [0.39, 0.73] | 0.00 | 0.57 | 0.57 | — |
@@ -668,6 +825,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.00 [0.00, 0.13] | — | 0.00 | — | — |
 | nvidia/nemotron-3-ultra-550b-a55b | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.55 [0.45, 0.64] | — | — | — | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.35 [0.26, 0.45] | 0.00 | 0.35 | 0.35 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.36 [0.27, 0.46] | 0.00 | 0.36 | 0.36 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.20 [0.13, 0.29] | 0.00 | 0.20 | 0.20 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -705,6 +866,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | openai/gpt-5.5 | chain_depth | chain_v1 | 32 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | openai/gpt-5.5 | chain_depth | chain_v1 | 48 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | openai/gpt-5.5 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.83 [0.66, 0.93] | 0.00 | 0.83 | 0.83 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.00 | 0.84 | 0.84 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.36 [0.20, 0.55] | 0.00 | 0.36 | 0.36 | — |
 | openai/gpt-5.5 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | openai/gpt-5.5 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.67 [0.49, 0.81] | 0.00 | 0.67 | 0.67 | — |
 | openai/gpt-5.5 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 0.97 | 0.97 | — |
@@ -726,6 +891,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | openai/gpt-5.5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | — | 0.96 | — | — |
 | openai/gpt-5.5 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | openai/gpt-5.5 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.92 [0.85, 0.96] | — | — | — | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.63 [0.53, 0.72] | 0.00 | 0.63 | 0.63 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.58 [0.48, 0.67] | 0.00 | 0.58 | 0.58 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.59 [0.49, 0.68] | 0.00 | 0.59 | 0.59 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -734,6 +903,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.77 [0.59, 0.88] | 0.00 | 0.77 | 0.77 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.43 [0.27, 0.61] | 0.00 | 0.43 | 0.43 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.00 | 0.88 | 0.88 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.00 | 0.96 | 0.96 | — |
 | qwen/qwen3.7-max | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 1.00 | 1.00 | — |
 | qwen/qwen3.7-max | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.63 [0.46, 0.78] | 0.00 | 0.63 | 0.63 | — |
 | qwen/qwen3.7-max | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 1.00 | 0.93 | — |
@@ -757,6 +930,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | qwen/qwen3.7-max | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.80 [0.61, 0.91] | — | 0.80 | — | — |
 | qwen/qwen3.7-max | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | qwen/qwen3.7-max | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.53 [0.43, 0.62] | — | — | — | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.24 [0.17, 0.33] | 0.00 | 0.24 | 0.24 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.25 [0.18, 0.34] | 0.00 | 0.25 | 0.25 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.12 [0.07, 0.20] | 0.00 | 0.12 | 0.12 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -788,6 +965,14 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | x-ai/grok-4.3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.68 [0.48, 0.83] | — | 0.68 | — | — |
 | x-ai/grok-4.3 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | x-ai/grok-4.3 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.00 | 0.96 | 0.96 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.00 | 0.72 | 0.72 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.60 [0.41, 0.77] | 0.00 | 0.60 | 0.60 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
+| x-ai/grok-build-0.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | — | 0.92 | — | — |
+| x-ai/grok-build-0.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | — | 0.92 | — | — |
+| x-ai/grok-build-0.1 | sanity | conflict_v1 | 4 | effort=minimal | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| x-ai/grok-build-0.1 | sanity | recall_copy_v1 | 6 | effort=minimal | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -796,6 +981,10 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.10 [0.03, 0.26] | 0.00 | 0.10 | 0.10 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.20 [0.10, 0.37] | 0.00 | 0.20 | 0.20 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.27 [0.14, 0.44] | 0.00 | 0.27 | 0.27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.00 | 0.96 | 0.96 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.28 [0.14, 0.48] | 0.00 | 0.28 | 0.28 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.48 [0.30, 0.67] | 0.00 | 0.48 | 0.48 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.36 [0.20, 0.55] | 0.00 | 0.36 | 0.36 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.97 | 0.97 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.67 [0.49, 0.81] | 0.00 | 0.67 | 0.67 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -819,3 +1008,7 @@ Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a sing
 | z-ai/glm-5.2 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.88 [0.70, 0.96] | — | 0.88 | — | — |
 | z-ai/glm-5.2 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | z-ai/glm-5.2 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.64 [0.54, 0.73] | — | — | — | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.35 [0.26, 0.45] | 0.00 | 0.36 | 0.36 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.31 [0.23, 0.41] | 0.00 | 0.31 | 0.31 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.15 [0.09, 0.23] | 0.00 | 0.17 | 0.16 | — |
