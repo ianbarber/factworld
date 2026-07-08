@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-08 13:28 UTC from `results/benchmark/history.jsonl` (466 latest cells).
+Generated 2026-07-08 21:46 UTC from `results/benchmark/history.jsonl` (466 latest cells).
 
 ## Settings
 
@@ -22,32 +22,43 @@ Observed generation settings (effort -> max_new_tokens, stop_at):
 
 ## Headline
 
-Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a one-line answer contract (settings.contract=true); relaxed match.
+Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a one-line answer contract (settings.contract=true); relaxed match. Escalated cells show the CANONICAL first attempt at the shared base budget, with the escalated rerun as a parenthesised diagnostic.
 
-| Model | zero-budget composite @L16 (relaxed) | zero-budget composite @L64 | binding_only @L16 | end_to_end @L16 | chain horizon (chain_nowrap, max depth, relaxed >= 0.8) | s5 horizon (max L, relaxed >= 0.8) | ctok/solve |
+| Model | zero-budget composite @L16 (relaxed) | zero-budget composite @L64 | binding_only @L16 | replicate @L16 (test-retest) | chain horizon (chain_nowrap, max depth, relaxed >= 0.8) | s5 horizon (max L, relaxed >= 0.8) | s5@128 ctok |
 |---|---|---|---|---|---|---|---|
-| anthropic/claude-opus-4.8 | 0.84 | 0.57 | 0.82 | 0.84 | 32 | 128 | 4240 |
-| anthropic/claude-sonnet-5 | 0.77 | 0.67 | 0.71 | 0.75 | — | 128 | 5700 |
-| deepseek/deepseek-v4-pro | 0.32 | 0.15 | 0.41 | 0.33 | 64 | 128 | 4132 |
-| google/gemini-3.1-pro-preview | —* | —* | —* | —* | — | >=256 | 8446 |
-| google/gemini-3.5-flash | 0.45* | 0.34* | 0.56* | 0.47* | >=128 | 128 | 5483 |
-| meta-llama/llama-4-maverick | — | — | — | — | — | — | — |
-| moonshotai/kimi-k2.6 | 0.83† | 0.96 | 0.92† | 0.82† | 64 | >=256 | 11365 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.36 | 0.20 | 0.55 | 0.35 | — | — | — |
-| openai/gpt-5.4 | — | — | — | — | — | >=256 | 3791 |
-| openai/gpt-5.5 | 0.58 | 0.59 | 0.92 | 0.63 | 64 | >=256 | 3862 |
-| qwen/qwen3.7-max | 0.25 | 0.12 | 0.53 | 0.24 | >=128 | >=256 | 5838 |
-| x-ai/grok-4.3 | — | — | — | — | — | 128 | 4648 |
-| x-ai/grok-build-0.1 | —* | —* | —* | —* | 16 | >=256 | 10671 |
-| z-ai/glm-5.2 | 0.31 | 0.15† | 0.64 | 0.35 | 16 | >=256 | 3924 |
+| anthropic/claude-opus-4.8 | 0.84 | 0.57 | 0.82 | 0.84 | 32 (borderline) | >=128 (budget-censored) | 12683 |
+| anthropic/claude-sonnet-5 | 0.59 (0.77 @512)† | 0.28 (0.67 @512)† | 0.71 | 0.57 (0.75 @512)† | 16 (borderline) | >=128 (budget-censored) | 11866 |
+| deepseek/deepseek-v4-pro | 0.32 | 0.15 | 0.41 | 0.33 | >=64 (budget-censored) | >=128 (budget-censored) | 10043 |
+| google/gemini-3.1-pro-preview (archived roster) | n/a | n/a | n/a | n/a | n/a | >=256 | 13792 |
+| google/gemini-3.5-flash | 0.45* | 0.34* | 0.56* | 0.47* | >=128 | 128 | 11022 |
+| meta-llama/llama-4-maverick (archived roster) | n/a | n/a | n/a | n/a | n/a | — | 10 |
+| moonshotai/kimi-k2.6 | 0.48 (0.83 @512)† | 0.38 (0.96 @512)† | 0.52 (0.92 @512)† | 0.48 (0.82 @512)† | 64 | >=256 | 17418 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.36 | 0.20 | 0.55 | 0.35 | — | — | 12250 |
+| openai/gpt-5.4 (archived roster) | n/a | n/a | n/a | n/a | n/a | >=256 | 5087 |
+| openai/gpt-5.5 | 0.58 | 0.59 | 0.92 | 0.63 | 64 | >=256 | 6989 |
+| qwen/qwen3.7-max | 0.25 | 0.12 | 0.53 | 0.24 | >=128 | >=256 | 7904 |
+| x-ai/grok-4.3 (archived roster) | n/a | n/a | n/a | n/a | n/a | 128 (borderline) | 8883 |
+| x-ai/grok-build-0.1 | n/a | n/a | n/a | n/a | 16 (borderline) | >=256 | 9935 |
+| z-ai/glm-5.2 | 0.31† | 0.15† | 0.64 | 0.35† | 16 | >=256 | 5980 |
+| recency heuristic (floor) | 0.34 | 0.21 | 0.34 | 0.34 | — | — | — |
 
 (*) off-arm ran effort=minimal (model cannot disable reasoning).
 
-(†) covert in-content CoT in >10% of calls, or reasoning-token leakage (>5 rtok/call) — measures short visible working, not in-weights.
+(†) visible working on the canonical attempt: median (per-example) or mean ctok/call > 32 (~3x the 8-11 token answers), mean rtok/call > 2 on the published attempt, or the cell needed a budget escalation — measures short visible working, not in-weights.
 
-Horizons marked >=N are censored: the max tested depth/length still qualifies, so the true horizon is a lower bound.
+(‡) cap-escape: per-example ctok exceeded settings.max_new_tokens on >10% of calls (the provider did not enforce the cap); token counts and budget comparisons for those cells are not cap-comparable.
 
-ctok/solve: mean completion tokens per call over chain_nowrap + s5_concrete cells with relaxed >= 0.8 — how many tokens of thinking a model spends on horizons it solves; lower = more efficient. — = no solved cells.
+(x.xx @512) escalated diagnostic: the cell was rerun once at an escalated token budget after majority finish=length; the CANONICAL number is the first attempt at the shared base budget — the escalated value is a marked diagnostic, not the headline.
+
+recency heuristic (floor): one-line floor recomputed at render time on the exact deterministic items — answer the LAST event's recipient plus that holder's fact (binding leg: the last recipient).
+
+n/a = facet/cell not run for this model; — = run, but no qualifying value.
+
+replicate @L16 (test-retest): the zero_budget end_to_end leg builds prompts IDENTICAL to the plain composite @L16 cell (same runner path), so the column is a replicate, not a distinct measurement; max observed |plain - replicate| across models = 0.05 — read that as the run-to-run noise bar on the headline numbers. Future runs keep this arm intentionally as leg='replicate'.
+
+Horizons marked >=N are censored lower bounds: either the max tested depth/length still qualifies, or ('budget-censored') the first FAILING cell above N was majority finish=length — the model ran out of token budget there, not necessarily ability. Horizons marked (borderline) are threshold calls: the first failing cell's Wilson CI crosses the 0.8 line (e.g. a 0.72 [0.52, 0.86] cell), so N vs the next tested length is not statistically resolved.
+
+s5@128 ctok: completion tokens per call on the matched s5_concrete L128 cell (run by every current-roster model). This replaces ctok/solve, which averaged only over cells a model SOLVED and therefore rewarded models that failed early (selection bias: the published 2.7x opus-vs-kimi ctok/solve gap is ~1.4x on the matched cell).
 
 Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
@@ -73,491 +84,495 @@ Legacy headline columns for the v1-only facets (dose_response, composite_length,
 
 ## Diagnostics per cell
 
-| Model | Facet | Task | Length | Arm | empty_rate | api_errors | reasoning_tokens | finish_reasons | note |
-|---|---|---|---|---|---|---|---|---|---|
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 1382 | stop:30 | — |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 1594 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 1567 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 2152 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 1872 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 2119 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 2661 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 2602 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 1244 | stop:25 | — |
-| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 1703 | stop:25 | — |
-| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 2146 | stop:25 | — |
-| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 128 | effort=high | 0.040 | 0 | 14665 | length:1, stop:24 | — |
-| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 1319 | stop:30 | — |
-| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 2557 | stop:30 | — |
-| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 3352 | stop:30 | — |
-| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 2761 | stop:30 | — |
-| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-opus-4.8 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| anthropic/claude-opus-4.8 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| anthropic/claude-opus-4.8 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| anthropic/claude-opus-4.8 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 2448 | stop:50 | — |
-| anthropic/claude-opus-4.8 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| anthropic/claude-opus-4.8 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-opus-4.8 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 7578 | stop:25 | — |
-| anthropic/claude-opus-4.8 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 13440 | stop:25 | — |
-| anthropic/claude-opus-4.8 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 28491 | stop:25 | — |
-| anthropic/claude-opus-4.8 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.040 | 0 | 48411 | length:1, stop:24 | — |
-| anthropic/claude-opus-4.8 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 1.000 | 0 | 68158 | length:25 | — |
-| anthropic/claude-opus-4.8 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-opus-4.8 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 1303 | stop:30 | — |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 1615 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 1809 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 2283 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 1695 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 2150 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 48 | effort=high | 0.033 | 0 | 3024 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 2197 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 1351 | stop:25 | — |
-| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 1564 | stop:25 | — |
-| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 64 | effort=high | 0.040 | 0 | 4323 | length:1, stop:24 | — |
-| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 128 | effort=high | 0.280 | 0 | 9958 | length:7, stop:18 | — |
-| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 1534 | stop:30 | — |
-| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 2595 | stop:30 | — |
-| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 2809 | stop:30 | — |
-| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 5228 | stop:30 | — |
-| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-sonnet-5 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| anthropic/claude-sonnet-5 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| anthropic/claude-sonnet-5 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| anthropic/claude-sonnet-5 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 2502 | stop:50 | — |
-| anthropic/claude-sonnet-5 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| anthropic/claude-sonnet-5 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | length:1, stop:29 | — |
-| anthropic/claude-sonnet-5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 6510 | stop:25 | — |
-| anthropic/claude-sonnet-5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 13050 | stop:25 | — |
-| anthropic/claude-sonnet-5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.040 | 0 | 28952 | error:1, stop:24 | — |
-| anthropic/claude-sonnet-5 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 53155 | stop:25 | — |
-| anthropic/claude-sonnet-5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 1.000 | 0 | 60184 | length:25 | — |
-| anthropic/claude-sonnet-5 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-sonnet-5 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.020 | 0 | 0 | length:3, stop:97 | — |
-| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 7441 | stop:30 | — |
-| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 8850 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 11012 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 12502 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 11537 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 20593 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 48 | effort=high | 0.167 | 0 | 88570 | length:5, stop:25 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 64 | effort=high | 0.500 | 0 | 235026 | length:15, stop:15 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 17023 | stop:25 | — |
-| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 62570 | stop:25 | — |
-| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 64 | effort=high | 0.040 | 0 | 151615 | length:1, stop:24 | — |
-| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 128 | effort=high | 0.840 | 0 | 436168 | length:22, stop:3 | — |
-| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=high | 0.033 | 0 | 26943 | length:1, stop:29 | — |
-| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 44114 | stop:30 | — |
-| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 128 | effort=high | 0.033 | 0 | 53840 | length:1, stop:29 | — |
-| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 512 | effort=high | 0.100 | 0 | 83206 | length:3, stop:27 | — |
-| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| deepseek/deepseek-v4-pro | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| deepseek/deepseek-v4-pro | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| deepseek/deepseek-v4-pro | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| deepseek/deepseek-v4-pro | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 28490 | stop:50 | — |
-| deepseek/deepseek-v4-pro | dose_response | composite_copy_v1 | 16 | effort=low | 0.020 | 0 | 58200 | length:1, stop:49 | — |
-| deepseek/deepseek-v4-pro | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 33409 | stop:50 | — |
-| deepseek/deepseek-v4-pro | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| deepseek/deepseek-v4-pro | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| deepseek/deepseek-v4-pro | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 35520 | stop:25 | — |
-| deepseek/deepseek-v4-pro | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 65442 | stop:25 | — |
-| deepseek/deepseek-v4-pro | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.040 | 0 | 127456 | length:1, stop:24 | — |
-| deepseek/deepseek-v4-pro | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 244509 | stop:25 | — |
-| deepseek/deepseek-v4-pro | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.720 | 0 | 396133 | length:18, stop:7 | — |
-| deepseek/deepseek-v4-pro | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| deepseek/deepseek-v4-pro | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 9852 | stop:30 | — |
-| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 20538 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 15179 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 22014 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 21838 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 26765 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 34260 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 63559 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 41148 | stop:30 | — |
-| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 13820 | stop:30 | — |
-| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 100821 | stop:30 | — |
-| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 64 | effort=minimal | 0.000 | 0 | 23649 | stop:30 | — |
-| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 122323 | stop:30 | — |
-| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 128 | effort=minimal | 0.000 | 0 | 19528 | stop:30 | — |
-| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 111633 | stop:30 | — |
-| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 512 | effort=minimal | 0.000 | 0 | 27161 | stop:30 | — |
-| google/gemini-3.1-pro-preview | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=minimal | 0.000 | 0 | 7894 | stop:50 | — |
-| google/gemini-3.1-pro-preview | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=minimal | 0.020 | 0 | 12102 | error:1, stop:49 | — |
-| google/gemini-3.1-pro-preview | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=minimal | 0.000 | 0 | 6138 | stop:50 | — |
-| google/gemini-3.1-pro-preview | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 61752 | stop:50 | — |
-| google/gemini-3.1-pro-preview | dose_response | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 22069 | stop:50 | — |
-| google/gemini-3.1-pro-preview | floor | s5 | 16 | rendering=abstract_stated, effort=minimal | 0.000 | 0 | 29524 | stop:30 | — |
-| google/gemini-3.1-pro-preview | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 57602 | stop:25 | — |
-| google/gemini-3.1-pro-preview | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 103871 | stop:25 | — |
-| google/gemini-3.1-pro-preview | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 164515 | stop:25 | — |
-| google/gemini-3.1-pro-preview | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.040 | 0 | 344753 | length:1, stop:24 | — |
-| google/gemini-3.1-pro-preview | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 384750 | stop:25 | — |
-| google/gemini-3.1-pro-preview | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 6169 | stop:30 | — |
-| google/gemini-3.1-pro-preview | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 6405 | stop:30 | — |
-| google/gemini-3.5-flash | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 15205 | stop:30 | — |
-| google/gemini-3.5-flash | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 26910 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.5-flash | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 26349 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.5-flash | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 36779 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.5-flash | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 32425 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.5-flash | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 47454 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.5-flash | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 69960 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.5-flash | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 77835 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 39265 | stop:25 | — |
-| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 68234 | stop:25 | — |
-| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 140042 | stop:25 | — |
-| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 128 | effort=high | 0.000 | 0 | 272521 | stop:25 | — |
-| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 30421 | stop:30 | — |
-| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
-| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 52078 | stop:30 | — |
-| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 64 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
-| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 74015 | length:1, stop:29 | — |
-| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 128 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
-| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 100637 | length:1, stop:29 | — |
-| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 512 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
-| google/gemini-3.5-flash | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=minimal | 0.000 | 0 | 0 | stop:50 | — |
-| google/gemini-3.5-flash | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=minimal | 0.000 | 0 | 0 | stop:50 | — |
-| google/gemini-3.5-flash | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=minimal | 0.000 | 0 | 0 | stop:50 | — |
-| google/gemini-3.5-flash | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 47756 | stop:50 | — |
-| google/gemini-3.5-flash | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 17044 | stop:50 | — |
-| google/gemini-3.5-flash | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 35154 | stop:50 | — |
-| google/gemini-3.5-flash | dose_response | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 0 | stop:50 | — |
-| google/gemini-3.5-flash | floor | s5 | 16 | rendering=abstract_stated, effort=minimal | 0.000 | 0 | 0 | length:1, stop:29 | — |
-| google/gemini-3.5-flash | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 56548 | stop:25 | — |
-| google/gemini-3.5-flash | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 102124 | stop:25 | — |
-| google/gemini-3.5-flash | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 141222 | length:2, stop:23 | — |
-| google/gemini-3.5-flash | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 274191 | length:2, stop:23 | — |
-| google/gemini-3.5-flash | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 388039 | length:10, stop:15 | — |
-| google/gemini-3.5-flash | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
-| google/gemini-3.5-flash | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 0 | stop:30 | — |
-| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=minimal | 0.040 | 0 | 0 | length:6, stop:94 | — |
-| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=minimal | 0.000 | 0 | 0 | stop:100 | — |
-| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | stop:100 | — |
-| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 64 | contract, effort=minimal | 0.030 | 0 | 0 | length:3, stop:97 | — |
-| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 0.000 | 0 | 0 | stop:30 | — |
-| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 8 | effort=default | 0.000 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 12 | effort=default | 0.000 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 16 | effort=default | 0.000 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 24 | effort=default | 0.000 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 32 | effort=default | 0.000 | 0 | 0 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 48 | effort=default | 0.000 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 64 | effort=default | 0.000 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 16 | effort=default | 0.000 | 0 | 0 | stop:30 | — |
-| meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 64 | effort=default | 0.000 | 0 | 0 | stop:30 | — |
-| meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 128 | effort=default | 0.000 | 0 | 0 | stop:30 | — |
-| meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 512 | effort=default | 0.000 | 0 | 0 | stop:30 | — |
-| meta-llama/llama-4-maverick | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=default | 0.000 | 0 | 0 | stop:50 | — |
-| meta-llama/llama-4-maverick | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=default | 0.000 | 0 | 0 | stop:50 | — |
-| meta-llama/llama-4-maverick | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=default | 0.000 | 0 | 0 | stop:50 | — |
-| meta-llama/llama-4-maverick | dose_response | composite_copy_v1 | 16 | effort=default | 0.000 | 0 | 0 | stop:50 | — |
-| meta-llama/llama-4-maverick | floor | s5 | 16 | rendering=abstract_stated, effort=default | 0.000 | 0 | 0 | stop:30 | — |
-| meta-llama/llama-4-maverick | s5_concrete | s5 | 16 | rendering=concrete, effort=default | 0.000 | 0 | 0 | stop:25 | — |
-| meta-llama/llama-4-maverick | s5_concrete | s5 | 32 | rendering=concrete, effort=default | 0.000 | 0 | 0 | stop:25 | — |
-| meta-llama/llama-4-maverick | s5_concrete | s5 | 64 | rendering=concrete, effort=default | 0.000 | 0 | 0 | stop:25 | — |
-| meta-llama/llama-4-maverick | s5_concrete | s5 | 128 | rendering=concrete, effort=default | 0.000 | 0 | 0 | stop:25 | — |
-| meta-llama/llama-4-maverick | s5_concrete | s5 | 256 | rendering=concrete, effort=default | 0.000 | 0 | 0 | stop:25 | — |
-| meta-llama/llama-4-maverick | sanity | conflict_v1 | 4 | effort=default | 0.000 | 0 | 0 | stop:30 | — |
-| meta-llama/llama-4-maverick | sanity | recall_copy_v1 | 6 | effort=default | 0.000 | 0 | 0 | stop:30 | — |
-| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 9535 | stop:30 | — |
-| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 23433 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 27974 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 31188 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 108715 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 126776 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 294256 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 64 | effort=high | 0.100 | 0 | 773309 | length:3, stop:27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 54422 | stop:25 | — |
-| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 32 | effort=high | 0.040 | 0 | 213892 | length:1, stop:24 | — |
-| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 64 | effort=high | 0.080 | 0 | 334007 | length:2, stop:23 | — |
-| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 128 | effort=high | 0.160 | 0 | 924878 | error:1, length:4, stop:20 | — |
-| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 69598 | stop:30 | — |
-| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 1 | length:7, stop:23 | — |
-| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 88013 | stop:30 | — |
-| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 2 | length:4, stop:26 | — |
-| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 102138 | stop:30 | — |
-| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 2 | stop:30 | — |
-| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 141034 | stop:30 | — |
-| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 4 | stop:30 | — |
-| moonshotai/kimi-k2.6 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 15 | length:12, stop:38 | — |
-| moonshotai/kimi-k2.6 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 21 | length:7, stop:43 | — |
-| moonshotai/kimi-k2.6 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 23 | stop:50 | — |
-| moonshotai/kimi-k2.6 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 114566 | stop:50 | — |
-| moonshotai/kimi-k2.6 | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 69452 | stop:50 | — |
-| moonshotai/kimi-k2.6 | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 81842 | stop:50 | — |
-| moonshotai/kimi-k2.6 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 5 | length:14, stop:36 | — |
-| moonshotai/kimi-k2.6 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 13 | stop:30 | — |
-| moonshotai/kimi-k2.6 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 97965 | stop:25 | — |
-| moonshotai/kimi-k2.6 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.040 | 0 | 171577 | stop:24 | — |
-| moonshotai/kimi-k2.6 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 247166 | stop:25 | — |
-| moonshotai/kimi-k2.6 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 421554 | stop:25 | — |
-| moonshotai/kimi-k2.6 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.080 | 0 | 636870 | length:2, stop:23 | — |
-| moonshotai/kimi-k2.6 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 12 | stop:30 | — |
-| moonshotai/kimi-k2.6 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 13 | stop:30 | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.030 | 0 | 78 | length:3, stop:97 | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.040 | 0 | 52 | length:6, stop:94 | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.080 | 0 | 50 | length:9, stop:91 | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 58 | stop:100 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 5435 | stop:30 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 10234 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 16407 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 26436 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 34421 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 32 | effort=high | 0.100 | 0 | 72560 | length:3, stop:27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 48 | effort=high | 1.000 | 0 | 245760 | length:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 64 | effort=high | 1.000 | 0 | 245760 | length:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 0.160 | 0 | 83841 | length:3, stop:22 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 32 | effort=high | 0.120 | 0 | 162217 | length:3, stop:22 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 64 | effort=high | 0.840 | 0 | 327413 | length:20, stop:5 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 128 | effort=high | 0.520 | 0 | 252514 | length:13, stop:12 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=high | 0.300 | 0 | 5645 | stop:21 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 64 | effort=high | 0.400 | 0 | 36358 | length:2, stop:18 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 128 | effort=high | 0.833 | 0 | 16761 | error:1, length:1, stop:5 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 512 | effort=high | 0.767 | 0 | 79903 | length:6, stop:7 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | dose_response | composite_copy_v1 | 16 | effort=high | 0.140 | 0 | 12977 | stop:43 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | dose_response | composite_copy_v1 | 16 | effort=low | 0.460 | 0 | 21082 | length:1, stop:27 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | dose_response | composite_copy_v1 | 16 | effort=medium | 0.300 | 0 | 12936 | stop:35 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.560 | 0 | 27679 | stop:11 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.440 | 0 | 77065 | length:1, stop:14 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.600 | 0 | 136506 | length:10, stop:9 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.320 | 0 | 297749 | length:5, stop:17 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.960 | 0 | 344064 | length:22 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.050 | 0 | 0 | stop:100 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.090 | 0 | 0 | stop:100 | — |
-| openai/gpt-5.4 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 3229 | stop:30 | — |
-| openai/gpt-5.4 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 4473 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.4 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 4804 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.4 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 4777 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.4 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 9403 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.4 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 12303 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.4 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 28534 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.4 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 50118 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.4 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 18908 | stop:30 | — |
-| openai/gpt-5.4 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.4 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 21230 | stop:30 | — |
-| openai/gpt-5.4 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.4 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 25692 | stop:30 | — |
-| openai/gpt-5.4 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.4 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 30627 | stop:30 | — |
-| openai/gpt-5.4 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.4 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| openai/gpt-5.4 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| openai/gpt-5.4 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| openai/gpt-5.4 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 28169 | stop:50 | — |
-| openai/gpt-5.4 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| openai/gpt-5.4 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.4 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 24474 | stop:25 | — |
-| openai/gpt-5.4 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 42463 | stop:25 | — |
-| openai/gpt-5.4 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 75328 | stop:25 | — |
-| openai/gpt-5.4 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 126972 | stop:25 | — |
-| openai/gpt-5.4 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.040 | 0 | 203651 | error:1, stop:24 | — |
-| openai/gpt-5.4 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.4 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.5 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 2686 | stop:30 | — |
-| openai/gpt-5.5 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 3843 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.5 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 5438 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.5 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 8578 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.5 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 11732 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.5 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 14751 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.5 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 28909 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.5 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 47337 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| openai/gpt-5.5 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 9114 | stop:25 | — |
-| openai/gpt-5.5 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 21206 | stop:25 | — |
-| openai/gpt-5.5 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 69752 | stop:25 | — |
-| openai/gpt-5.5 | chain_nowrap | chain_v1 | 128 | effort=high | 0.040 | 0 | 226834 | length:1, stop:24 | — |
-| openai/gpt-5.5 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 8213 | stop:30 | — |
-| openai/gpt-5.5 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.5 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 9903 | stop:30 | — |
-| openai/gpt-5.5 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.5 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 13011 | stop:30 | — |
-| openai/gpt-5.5 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.5 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 10373 | stop:30 | — |
-| openai/gpt-5.5 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.5 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| openai/gpt-5.5 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| openai/gpt-5.5 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| openai/gpt-5.5 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 12798 | stop:50 | — |
-| openai/gpt-5.5 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| openai/gpt-5.5 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 23664 | stop:25 | — |
-| openai/gpt-5.5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 44799 | stop:25 | — |
-| openai/gpt-5.5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 107196 | stop:25 | — |
-| openai/gpt-5.5 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 174517 | stop:25 | — |
-| openai/gpt-5.5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.040 | 0 | 320457 | length:1, stop:24 | — |
-| openai/gpt-5.5 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.5 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 11331 | stop:30 | — |
-| qwen/qwen3.7-max | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 19207 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| qwen/qwen3.7-max | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 19181 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| qwen/qwen3.7-max | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 30808 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| qwen/qwen3.7-max | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 26114 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| qwen/qwen3.7-max | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 54123 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| qwen/qwen3.7-max | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 62753 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| qwen/qwen3.7-max | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 88412 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 31051 | stop:25 | — |
-| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 68118 | stop:25 | — |
-| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 135259 | stop:25 | — |
-| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 128 | effort=high | 0.000 | 0 | 229053 | stop:25 | — |
-| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 27705 | stop:30 | — |
-| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 58421 | stop:30 | — |
-| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 65182 | stop:30 | — |
-| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 80118 | stop:30 | — |
-| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| qwen/qwen3.7-max | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| qwen/qwen3.7-max | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| qwen/qwen3.7-max | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| qwen/qwen3.7-max | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 47533 | stop:50 | — |
-| qwen/qwen3.7-max | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 45037 | stop:50 | — |
-| qwen/qwen3.7-max | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 44170 | stop:50 | — |
-| qwen/qwen3.7-max | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| qwen/qwen3.7-max | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| qwen/qwen3.7-max | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 42853 | stop:25 | — |
-| qwen/qwen3.7-max | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 80913 | stop:25 | — |
-| qwen/qwen3.7-max | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 129591 | stop:25 | — |
-| qwen/qwen3.7-max | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 197412 | stop:25 | — |
-| qwen/qwen3.7-max | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 397612 | stop:25 | — |
-| qwen/qwen3.7-max | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| qwen/qwen3.7-max | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | stop:100 | — |
-| x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 12612 | stop:30 | — |
-| x-ai/grok-4.3 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 18833 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| x-ai/grok-4.3 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 22680 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| x-ai/grok-4.3 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 30798 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| x-ai/grok-4.3 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 35745 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| x-ai/grok-4.3 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 70215 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| x-ai/grok-4.3 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 112430 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| x-ai/grok-4.3 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 177477 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 82868 | stop:30 | — |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 136113 | stop:30 | — |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 132340 | stop:30 | — |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 153800 | stop:30 | — |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| x-ai/grok-4.3 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| x-ai/grok-4.3 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| x-ai/grok-4.3 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 148305 | stop:50 | — |
-| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 47245 | stop:50 | — |
-| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 102537 | stop:50 | — |
-| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| x-ai/grok-4.3 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| x-ai/grok-4.3 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 43136 | stop:25 | — |
-| x-ai/grok-4.3 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 70491 | stop:25 | — |
-| x-ai/grok-4.3 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 128954 | stop:25 | — |
-| x-ai/grok-4.3 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 222011 | stop:25 | — |
-| x-ai/grok-4.3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 368483 | stop:25 | — |
-| x-ai/grok-4.3 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| x-ai/grok-4.3 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | stop:30 | — |
-| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 45652 | stop:25 | — |
-| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 32 | effort=high | 0.080 | 0 | 369760 | error:1, length:1, stop:23 | — |
-| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 64 | effort=high | 0.160 | 0 | 535933 | error:3, length:1, stop:21 | — |
-| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 128 | effort=high | 1.000 | 0 | 4443830 | error:7, length:17, stop:1 | — |
-| x-ai/grok-build-0.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 248308 | stop:25 | — |
-| x-ai/grok-build-0.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 506163 | stop:25 | — |
-| x-ai/grok-build-0.1 | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 15624 | stop:30 | — |
-| x-ai/grok-build-0.1 | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 17408 | stop:30 | — |
-| z-ai/glm-5.2 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 3554 | stop:30 | — |
-| z-ai/glm-5.2 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 5469 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| z-ai/glm-5.2 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 7491 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| z-ai/glm-5.2 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 8923 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| z-ai/glm-5.2 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 10470 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| z-ai/glm-5.2 | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 29392 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| z-ai/glm-5.2 | chain_depth | chain_v1 | 48 | effort=high | 0.033 | 0 | 19048 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| z-ai/glm-5.2 | chain_depth | chain_v1 | 64 | effort=high | 0.167 | 0 | 57657 | length:5, stop:25 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 10245 | stop:25 | — |
-| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 32 | effort=high | 0.040 | 0 | 36687 | length:1, stop:24 | — |
-| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 64 | effort=high | 0.080 | 0 | 65558 | length:2, stop:23 | — |
-| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 128 | effort=high | 0.200 | 0 | 130971 | length:5, stop:20 | — |
-| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 9631 | stop:30 | — |
-| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 791 | stop:30 | — |
-| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 12782 | stop:30 | — |
-| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 533 | stop:30 | — |
-| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 17258 | stop:30 | — |
-| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 510 | stop:30 | — |
-| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 512 | effort=high | 0.033 | 0 | 49122 | length:1, stop:29 | — |
-| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 383 | stop:30 | — |
-| z-ai/glm-5.2 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 1083 | stop:50 | — |
-| z-ai/glm-5.2 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 2195 | stop:50 | — |
-| z-ai/glm-5.2 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | stop:50 | — |
-| z-ai/glm-5.2 | dose_response | composite_copy_v1 | 16 | effort=high | 0.020 | 0 | 28410 | length:1, stop:49 | — |
-| z-ai/glm-5.2 | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 17587 | stop:50 | — |
-| z-ai/glm-5.2 | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 23551 | stop:50 | — |
-| z-ai/glm-5.2 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 1432 | stop:50 | — |
-| z-ai/glm-5.2 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 2621 | stop:30 | — |
-| z-ai/glm-5.2 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 19329 | stop:25 | — |
-| z-ai/glm-5.2 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 33990 | stop:25 | — |
-| z-ai/glm-5.2 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 62202 | stop:25 | — |
-| z-ai/glm-5.2 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 137833 | stop:25 | — |
-| z-ai/glm-5.2 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 263382 | stop:25 | — |
-| z-ai/glm-5.2 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 336 | stop:30 | — |
-| z-ai/glm-5.2 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 57 | stop:30 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.010 | 0 | 96 | length:1, stop:99 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.030 | 0 | 288 | length:3, stop:97 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.040 | 0 | 384 | length:4, stop:96 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 510 | stop:100 | — |
+finish_errors counts per-example finish=='error' calls (surfaced even where diagnostics.api_errors is 0).
+
+| Model | Facet | Task | Length | Arm | empty_rate | api_errors | finish_errors | reasoning_tokens | finish_reasons | note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 1382 | stop:30 | — |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 1594 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 1567 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 2152 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 1872 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 2119 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 0 | 2661 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 2602 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 1244 | stop:25 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 1703 | stop:25 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 2146 | stop:25 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 128 | effort=high | 0.040 | 0 | 0 | 14665 | length:1, stop:24 | — |
+| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 1319 | stop:30 | — |
+| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 2557 | stop:30 | — |
+| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 3352 | stop:30 | — |
+| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 2761 | stop:30 | — |
+| anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-opus-4.8 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| anthropic/claude-opus-4.8 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| anthropic/claude-opus-4.8 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| anthropic/claude-opus-4.8 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 2448 | stop:50 | — |
+| anthropic/claude-opus-4.8 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| anthropic/claude-opus-4.8 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-opus-4.8 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 7578 | stop:25 | — |
+| anthropic/claude-opus-4.8 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 13440 | stop:25 | — |
+| anthropic/claude-opus-4.8 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 28491 | stop:25 | — |
+| anthropic/claude-opus-4.8 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 48411 | length:1, stop:24 | — |
+| anthropic/claude-opus-4.8 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 1.000 | 0 | 0 | 68158 | length:25 | — |
+| anthropic/claude-opus-4.8 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-opus-4.8 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 1303 | stop:30 | — |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 1615 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 1809 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 2283 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 1695 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 2150 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 48 | effort=high | 0.033 | 0 | 0 | 3024 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 2197 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 1351 | stop:25 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 1564 | stop:25 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 64 | effort=high | 0.040 | 0 | 0 | 4323 | length:1, stop:24 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 128 | effort=high | 0.280 | 0 | 0 | 9958 | length:7, stop:18 | — |
+| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 1534 | stop:30 | — |
+| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 2595 | stop:30 | — |
+| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 2809 | stop:30 | — |
+| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 5228 | stop:30 | — |
+| anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-sonnet-5 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| anthropic/claude-sonnet-5 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| anthropic/claude-sonnet-5 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| anthropic/claude-sonnet-5 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 2502 | stop:50 | — |
+| anthropic/claude-sonnet-5 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| anthropic/claude-sonnet-5 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | length:1, stop:29 | — |
+| anthropic/claude-sonnet-5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 6510 | stop:25 | — |
+| anthropic/claude-sonnet-5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 13050 | stop:25 | — |
+| anthropic/claude-sonnet-5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.040 | 0 | 1 | 28952 | error:1, stop:24 | — |
+| anthropic/claude-sonnet-5 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 53155 | stop:25 | — |
+| anthropic/claude-sonnet-5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 1.000 | 0 | 0 | 60184 | length:25 | — |
+| anthropic/claude-sonnet-5 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-sonnet-5 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.020 | 0 | 0 | 0 | length:3, stop:97 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.75; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.77; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.67; canonical = first attempt @96 |
+| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 7441 | stop:30 | — |
+| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 8850 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 11012 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 12502 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 11537 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 0 | 20593 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 48 | effort=high | 0.167 | 0 | 0 | 88570 | length:5, stop:25 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 64 | effort=high | 0.500 | 0 | 0 | 235026 | length:15, stop:15 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 17023 | stop:25 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 62570 | stop:25 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 64 | effort=high | 0.040 | 0 | 0 | 151615 | length:1, stop:24 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 128 | effort=high | 0.840 | 0 | 0 | 436168 | length:22, stop:3 | ‡ cap-escape |
+| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=high | 0.033 | 0 | 0 | 26943 | length:1, stop:29 | — |
+| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 44114 | stop:30 | — |
+| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 128 | effort=high | 0.033 | 0 | 0 | 53840 | length:1, stop:29 | — |
+| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 512 | effort=high | 0.100 | 0 | 0 | 83206 | length:3, stop:27 | — |
+| deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| deepseek/deepseek-v4-pro | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| deepseek/deepseek-v4-pro | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| deepseek/deepseek-v4-pro | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| deepseek/deepseek-v4-pro | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 28490 | stop:50 | — |
+| deepseek/deepseek-v4-pro | dose_response | composite_copy_v1 | 16 | effort=low | 0.020 | 0 | 0 | 58200 | length:1, stop:49 | — |
+| deepseek/deepseek-v4-pro | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 0 | 33409 | stop:50 | — |
+| deepseek/deepseek-v4-pro | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| deepseek/deepseek-v4-pro | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| deepseek/deepseek-v4-pro | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 35520 | stop:25 | — |
+| deepseek/deepseek-v4-pro | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 65442 | stop:25 | — |
+| deepseek/deepseek-v4-pro | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 127456 | length:1, stop:24 | — |
+| deepseek/deepseek-v4-pro | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 244509 | stop:25 | — |
+| deepseek/deepseek-v4-pro | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.720 | 0 | 0 | 396133 | length:18, stop:7 | — |
+| deepseek/deepseek-v4-pro | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| deepseek/deepseek-v4-pro | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 9852 | stop:30 | — |
+| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 20538 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 15179 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 22014 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 21838 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 26765 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 0 | 34260 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 63559 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 41148 | stop:30 | — |
+| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 0 | 13820 | stop:30 | — |
+| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 100821 | stop:30 | — |
+| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 64 | effort=minimal | 0.000 | 0 | 0 | 23649 | stop:30 | — |
+| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 122323 | stop:30 | — |
+| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 128 | effort=minimal | 0.000 | 0 | 0 | 19528 | stop:30 | — |
+| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 111633 | stop:30 | — |
+| google/gemini-3.1-pro-preview | composite_length | composite_copy_v1 | 512 | effort=minimal | 0.000 | 0 | 0 | 27161 | stop:30 | — |
+| google/gemini-3.1-pro-preview | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=minimal | 0.000 | 0 | 0 | 7894 | stop:50 | — |
+| google/gemini-3.1-pro-preview | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=minimal | 0.020 | 0 | 1 | 12102 | error:1, stop:49 | — |
+| google/gemini-3.1-pro-preview | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=minimal | 0.000 | 0 | 0 | 6138 | stop:50 | — |
+| google/gemini-3.1-pro-preview | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 61752 | stop:50 | — |
+| google/gemini-3.1-pro-preview | dose_response | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 0 | 22069 | stop:50 | — |
+| google/gemini-3.1-pro-preview | floor | s5 | 16 | rendering=abstract_stated, effort=minimal | 0.000 | 0 | 0 | 29524 | stop:30 | — |
+| google/gemini-3.1-pro-preview | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 57602 | stop:25 | — |
+| google/gemini-3.1-pro-preview | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 103871 | stop:25 | — |
+| google/gemini-3.1-pro-preview | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 164515 | stop:25 | — |
+| google/gemini-3.1-pro-preview | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 344753 | length:1, stop:24 | — |
+| google/gemini-3.1-pro-preview | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 384750 | stop:25 | — |
+| google/gemini-3.1-pro-preview | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 0 | 6169 | stop:30 | — |
+| google/gemini-3.1-pro-preview | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 0 | 6405 | stop:30 | — |
+| google/gemini-3.5-flash | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 15205 | stop:30 | — |
+| google/gemini-3.5-flash | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 26910 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 26349 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 36779 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 32425 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 47454 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 0 | 69960 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 77835 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 39265 | stop:25 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 68234 | stop:25 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 140042 | stop:25 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 128 | effort=high | 0.000 | 0 | 0 | 272521 | stop:25 | — |
+| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 30421 | stop:30 | — |
+| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 52078 | stop:30 | — |
+| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 64 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 74015 | length:1, stop:29 | — |
+| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 128 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 100637 | length:1, stop:29 | — |
+| google/gemini-3.5-flash | composite_length | composite_copy_v1 | 512 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| google/gemini-3.5-flash | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=minimal | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| google/gemini-3.5-flash | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=minimal | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| google/gemini-3.5-flash | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=minimal | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| google/gemini-3.5-flash | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 47756 | stop:50 | — |
+| google/gemini-3.5-flash | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 0 | 17044 | stop:50 | — |
+| google/gemini-3.5-flash | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 0 | 35154 | stop:50 | — |
+| google/gemini-3.5-flash | dose_response | composite_copy_v1 | 16 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| google/gemini-3.5-flash | floor | s5 | 16 | rendering=abstract_stated, effort=minimal | 0.000 | 0 | 0 | 0 | length:1, stop:29 | — |
+| google/gemini-3.5-flash | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 56548 | stop:25 | — |
+| google/gemini-3.5-flash | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 102124 | stop:25 | — |
+| google/gemini-3.5-flash | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 141222 | length:2, stop:23 | — |
+| google/gemini-3.5-flash | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 274191 | length:2, stop:23 | — |
+| google/gemini-3.5-flash | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 388039 | length:10, stop:15 | — |
+| google/gemini-3.5-flash | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| google/gemini-3.5-flash | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=minimal | 0.040 | 0 | 0 | 0 | length:6, stop:94 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 64 | contract, effort=minimal | 0.030 | 0 | 0 | 0 | length:3, stop:97 | — |
+| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 8 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 12 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 16 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 24 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 32 | effort=default | 0.000 | 0 | 0 | 0 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 48 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| meta-llama/llama-4-maverick | chain_depth | chain_v1 | 64 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 16 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 64 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 128 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 512 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| meta-llama/llama-4-maverick | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=default | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| meta-llama/llama-4-maverick | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=default | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| meta-llama/llama-4-maverick | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=default | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| meta-llama/llama-4-maverick | dose_response | composite_copy_v1 | 16 | effort=default | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| meta-llama/llama-4-maverick | floor | s5 | 16 | rendering=abstract_stated, effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| meta-llama/llama-4-maverick | s5_concrete | s5 | 16 | rendering=concrete, effort=default | 0.000 | 0 | 0 | 0 | stop:25 | — |
+| meta-llama/llama-4-maverick | s5_concrete | s5 | 32 | rendering=concrete, effort=default | 0.000 | 0 | 0 | 0 | stop:25 | — |
+| meta-llama/llama-4-maverick | s5_concrete | s5 | 64 | rendering=concrete, effort=default | 0.000 | 0 | 0 | 0 | stop:25 | — |
+| meta-llama/llama-4-maverick | s5_concrete | s5 | 128 | rendering=concrete, effort=default | 0.000 | 0 | 0 | 0 | stop:25 | — |
+| meta-llama/llama-4-maverick | s5_concrete | s5 | 256 | rendering=concrete, effort=default | 0.000 | 0 | 0 | 0 | stop:25 | — |
+| meta-llama/llama-4-maverick | sanity | conflict_v1 | 4 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| meta-llama/llama-4-maverick | sanity | recall_copy_v1 | 6 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 9535 | stop:30 | — |
+| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 23433 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 27974 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 31188 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 108715 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 0 | 126776 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 0 | 294256 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 64 | effort=high | 0.100 | 0 | 0 | 773309 | length:3, stop:27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 54422 | stop:25 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 32 | effort=high | 0.040 | 0 | 0 | 213892 | length:1, stop:24 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 64 | effort=high | 0.080 | 0 | 0 | 334007 | length:2, stop:23 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 128 | effort=high | 0.160 | 0 | 1 | 924878 | error:1, length:4, stop:20 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 69598 | stop:30 | — |
+| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 1 | length:7, stop:23 | — |
+| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 88013 | stop:30 | — |
+| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 2 | length:4, stop:26 | — |
+| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 102138 | stop:30 | — |
+| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 2 | stop:30 | — |
+| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 141034 | stop:30 | — |
+| moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 4 | stop:30 | — |
+| moonshotai/kimi-k2.6 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 15 | length:12, stop:38 | — |
+| moonshotai/kimi-k2.6 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 21 | length:7, stop:43 | — |
+| moonshotai/kimi-k2.6 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 23 | stop:50 | — |
+| moonshotai/kimi-k2.6 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 114566 | stop:50 | — |
+| moonshotai/kimi-k2.6 | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 0 | 69452 | stop:50 | — |
+| moonshotai/kimi-k2.6 | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 0 | 81842 | stop:50 | — |
+| moonshotai/kimi-k2.6 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 5 | length:14, stop:36 | — |
+| moonshotai/kimi-k2.6 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 13 | stop:30 | — |
+| moonshotai/kimi-k2.6 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 97965 | stop:25 | — |
+| moonshotai/kimi-k2.6 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 171577 | stop:24 | — |
+| moonshotai/kimi-k2.6 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 247166 | stop:25 | — |
+| moonshotai/kimi-k2.6 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 421554 | stop:25 | — |
+| moonshotai/kimi-k2.6 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.080 | 0 | 0 | 636870 | length:2, stop:23 | — |
+| moonshotai/kimi-k2.6 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 12 | stop:30 | — |
+| moonshotai/kimi-k2.6 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 13 | stop:30 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.030 | 0 | 0 | 78 | length:3, stop:97 | escalated @512 diagnostic 0.92; canonical = first attempt @96 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.040 | 0 | 0 | 52 | length:6, stop:94 | escalated @512 diagnostic 0.82; canonical = first attempt @96 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.080 | 0 | 0 | 50 | length:9, stop:91 | escalated @512 diagnostic 0.83; canonical = first attempt @96 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 58 | stop:100 | escalated @512 diagnostic 0.96; canonical = first attempt @96 |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 5435 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 10234 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 16407 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 26436 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 34421 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 32 | effort=high | 0.100 | 0 | 0 | 72560 | length:3, stop:27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 48 | effort=high | 1.000 | 0 | 0 | 245760 | length:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 64 | effort=high | 1.000 | 0 | 0 | 245760 | length:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 0.160 | 0 | 0 | 83841 | length:3, stop:22 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 32 | effort=high | 0.120 | 0 | 0 | 162217 | length:3, stop:22 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 64 | effort=high | 0.840 | 0 | 0 | 327413 | length:20, stop:5 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 128 | effort=high | 0.520 | 0 | 0 | 252514 | length:13, stop:12 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=high | 0.300 | 0 | 0 | 5645 | stop:21 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 64 | effort=high | 0.400 | 0 | 0 | 36358 | length:2, stop:18 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 128 | effort=high | 0.833 | 0 | 1 | 16761 | error:1, length:1, stop:5 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 512 | effort=high | 0.767 | 0 | 0 | 79903 | length:6, stop:7 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | dose_response | composite_copy_v1 | 16 | effort=high | 0.140 | 0 | 0 | 12977 | stop:43 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | dose_response | composite_copy_v1 | 16 | effort=low | 0.460 | 0 | 0 | 21082 | length:1, stop:27 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | dose_response | composite_copy_v1 | 16 | effort=medium | 0.300 | 0 | 0 | 12936 | stop:35 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.560 | 0 | 0 | 27679 | stop:11 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.440 | 0 | 0 | 77065 | length:1, stop:14 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.600 | 0 | 0 | 136506 | length:10, stop:9 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.320 | 0 | 0 | 297749 | length:5, stop:17 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.960 | 0 | 0 | 344064 | length:22 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.050 | 0 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.090 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.4 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 3229 | stop:30 | — |
+| openai/gpt-5.4 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 4473 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.4 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 4804 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.4 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 4777 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.4 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 9403 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.4 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 12303 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.4 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 0 | 28534 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.4 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 50118 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.4 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 18908 | stop:30 | — |
+| openai/gpt-5.4 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.4 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 21230 | stop:30 | — |
+| openai/gpt-5.4 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.4 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 25692 | stop:30 | — |
+| openai/gpt-5.4 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.4 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 30627 | stop:30 | — |
+| openai/gpt-5.4 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.4 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.4 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.4 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.4 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 28169 | stop:50 | — |
+| openai/gpt-5.4 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.4 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.4 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 24474 | stop:25 | — |
+| openai/gpt-5.4 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 42463 | stop:25 | — |
+| openai/gpt-5.4 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 75328 | stop:25 | — |
+| openai/gpt-5.4 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 126972 | stop:25 | — |
+| openai/gpt-5.4 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.040 | 0 | 1 | 203651 | error:1, stop:24 | — |
+| openai/gpt-5.4 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.4 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 2686 | stop:30 | — |
+| openai/gpt-5.5 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 3843 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 5438 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 8578 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 11732 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 14751 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 0 | 28909 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 47337 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 9114 | stop:25 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 21206 | stop:25 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 69752 | stop:25 | — |
+| openai/gpt-5.5 | chain_nowrap | chain_v1 | 128 | effort=high | 0.040 | 0 | 0 | 226834 | length:1, stop:24 | — |
+| openai/gpt-5.5 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 8213 | stop:30 | — |
+| openai/gpt-5.5 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 9903 | stop:30 | — |
+| openai/gpt-5.5 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 13011 | stop:30 | — |
+| openai/gpt-5.5 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 10373 | stop:30 | — |
+| openai/gpt-5.5 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.5 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.5 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.5 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 12798 | stop:50 | — |
+| openai/gpt-5.5 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.5 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 23664 | stop:25 | — |
+| openai/gpt-5.5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 44799 | stop:25 | — |
+| openai/gpt-5.5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 107196 | stop:25 | — |
+| openai/gpt-5.5 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 174517 | stop:25 | — |
+| openai/gpt-5.5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 320457 | length:1, stop:24 | — |
+| openai/gpt-5.5 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 11331 | stop:30 | — |
+| qwen/qwen3.7-max | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 19207 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 19181 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 30808 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 26114 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 54123 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 0 | 62753 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 88412 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 31051 | stop:25 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 68118 | stop:25 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 135259 | stop:25 | — |
+| qwen/qwen3.7-max | chain_nowrap | chain_v1 | 128 | effort=high | 0.000 | 0 | 0 | 229053 | stop:25 | — |
+| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 27705 | stop:30 | — |
+| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 58421 | stop:30 | — |
+| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 65182 | stop:30 | — |
+| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 80118 | stop:30 | — |
+| qwen/qwen3.7-max | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| qwen/qwen3.7-max | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| qwen/qwen3.7-max | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| qwen/qwen3.7-max | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| qwen/qwen3.7-max | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 47533 | stop:50 | — |
+| qwen/qwen3.7-max | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 0 | 45037 | stop:50 | — |
+| qwen/qwen3.7-max | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 0 | 44170 | stop:50 | — |
+| qwen/qwen3.7-max | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| qwen/qwen3.7-max | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| qwen/qwen3.7-max | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 42853 | stop:25 | — |
+| qwen/qwen3.7-max | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 80913 | stop:25 | — |
+| qwen/qwen3.7-max | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 129591 | stop:25 | — |
+| qwen/qwen3.7-max | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 197412 | stop:25 | — |
+| qwen/qwen3.7-max | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 397612 | stop:25 | — |
+| qwen/qwen3.7-max | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| qwen/qwen3.7-max | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 12612 | stop:30 | — |
+| x-ai/grok-4.3 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 18833 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| x-ai/grok-4.3 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 22680 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| x-ai/grok-4.3 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 30798 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| x-ai/grok-4.3 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 35745 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| x-ai/grok-4.3 | chain_depth | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 70215 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| x-ai/grok-4.3 | chain_depth | chain_v1 | 48 | effort=high | 0.000 | 0 | 0 | 112430 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| x-ai/grok-4.3 | chain_depth | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 177477 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 82868 | stop:30 | — |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 136113 | stop:30 | — |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 132340 | stop:30 | — |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 512 | effort=high | 0.000 | 0 | 0 | 153800 | stop:30 | — |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| x-ai/grok-4.3 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| x-ai/grok-4.3 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| x-ai/grok-4.3 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 148305 | stop:50 | — |
+| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 0 | 47245 | stop:50 | — |
+| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 0 | 102537 | stop:50 | — |
+| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| x-ai/grok-4.3 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| x-ai/grok-4.3 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 43136 | stop:25 | — |
+| x-ai/grok-4.3 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 70491 | stop:25 | — |
+| x-ai/grok-4.3 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 128954 | stop:25 | — |
+| x-ai/grok-4.3 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 222011 | stop:25 | — |
+| x-ai/grok-4.3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 368483 | stop:25 | — |
+| x-ai/grok-4.3 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| x-ai/grok-4.3 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 45652 | stop:25 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 32 | effort=high | 0.080 | 0 | 1 | 369760 | error:1, length:1, stop:23 | ‡ cap-escape |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 64 | effort=high | 0.160 | 0 | 3 | 535933 | error:3, length:1, stop:21 | ‡ cap-escape |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 128 | effort=high | 1.000 | 0 | 7 | 4443830 | error:7, length:17, stop:1 | ‡ cap-escape |
+| x-ai/grok-build-0.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 248308 | stop:25 | — |
+| x-ai/grok-build-0.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 506163 | stop:25 | ‡ cap-escape |
+| x-ai/grok-build-0.1 | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 0 | 15624 | stop:30 | — |
+| x-ai/grok-build-0.1 | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 0 | 17408 | stop:30 | — |
+| z-ai/glm-5.2 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 3554 | stop:30 | — |
+| z-ai/glm-5.2 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 5469 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 7491 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_depth | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 8923 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_depth | chain_v1 | 24 | effort=high | 0.000 | 0 | 0 | 10470 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_depth | chain_v1 | 32 | effort=high | 0.033 | 0 | 0 | 29392 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_depth | chain_v1 | 48 | effort=high | 0.033 | 0 | 0 | 19048 | length:1, stop:29 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_depth | chain_v1 | 64 | effort=high | 0.167 | 0 | 0 | 57657 | length:5, stop:25 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 10245 | stop:25 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 32 | effort=high | 0.040 | 0 | 0 | 36687 | length:1, stop:24 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 64 | effort=high | 0.080 | 0 | 0 | 65558 | length:2, stop:23 | — |
+| z-ai/glm-5.2 | chain_nowrap | chain_v1 | 128 | effort=high | 0.200 | 0 | 0 | 130971 | length:5, stop:20 | — |
+| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 9631 | stop:30 | — |
+| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 791 | stop:30 | — |
+| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 12782 | stop:30 | — |
+| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 64 | effort=none | 0.000 | 0 | 0 | 533 | stop:30 | — |
+| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 128 | effort=high | 0.000 | 0 | 0 | 17258 | stop:30 | — |
+| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 128 | effort=none | 0.000 | 0 | 0 | 510 | stop:30 | — |
+| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 512 | effort=high | 0.033 | 0 | 0 | 49122 | length:1, stop:29 | — |
+| z-ai/glm-5.2 | composite_length | composite_copy_v1 | 512 | effort=none | 0.000 | 0 | 0 | 383 | stop:30 | — |
+| z-ai/glm-5.2 | decomposition | composite_copy_v1 | 16 | leg=binding_only, effort=none | 0.000 | 0 | 0 | 1083 | stop:50 | — |
+| z-ai/glm-5.2 | decomposition | composite_copy_v1 | 16 | leg=end_to_end, effort=none | 0.000 | 0 | 0 | 2195 | stop:50 | — |
+| z-ai/glm-5.2 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| z-ai/glm-5.2 | dose_response | composite_copy_v1 | 16 | effort=high | 0.020 | 0 | 0 | 28410 | length:1, stop:49 | — |
+| z-ai/glm-5.2 | dose_response | composite_copy_v1 | 16 | effort=low | 0.000 | 0 | 0 | 17587 | stop:50 | — |
+| z-ai/glm-5.2 | dose_response | composite_copy_v1 | 16 | effort=medium | 0.000 | 0 | 0 | 23551 | stop:50 | — |
+| z-ai/glm-5.2 | dose_response | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 1432 | stop:50 | — |
+| z-ai/glm-5.2 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 2621 | stop:30 | — |
+| z-ai/glm-5.2 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 19329 | stop:25 | — |
+| z-ai/glm-5.2 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 33990 | stop:25 | — |
+| z-ai/glm-5.2 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 62202 | stop:25 | — |
+| z-ai/glm-5.2 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 137833 | stop:25 | — |
+| z-ai/glm-5.2 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 263382 | stop:25 | — |
+| z-ai/glm-5.2 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 336 | stop:30 | — |
+| z-ai/glm-5.2 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 57 | stop:30 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 0.010 | 0 | 0 | 96 | length:1, stop:99 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.030 | 0 | 0 | 288 | length:3, stop:97 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.040 | 0 | 0 | 384 | length:4, stop:96 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 510 | stop:100 | — |
 
 ## Full per-cell results
+
+relaxed is the CANONICAL value (first attempt for escalated cells; the escalated diagnostic is in the note column). ‡ = cap-escape (see headline footnotes).
 
 | Model | Facet | Task | Length | Arm | n | relaxed [95% CI] | exact | contains | last_n | note |
 |---|---|---|---|---|---|---|---|---|---|---|
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 16 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 16 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 0.97 | 0.97 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 24 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 32 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.63 [0.46, 0.78] | 0.00 | 0.63 | 0.63 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.63 [0.46, 0.78] | 0.00 | 0.63 | 0.63 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.73 [0.56, 0.86] | 0.00 | 0.73 | 0.73 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.70 [0.52, 0.83] | 0.00 | 0.70 | 0.70 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.00 | 0.96 | 0.96 | — |
 | anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.68 [0.48, 0.83] | 0.00 | 0.68 | 0.68 | — |
-| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
+| anthropic/claude-opus-4.8 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.08 [0.02, 0.25] | 0.00 | 0.08 | 0.08 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.40 [0.25, 0.58] | 0.03 | 0.67 | 0.50 | — |
 | anthropic/claude-opus-4.8 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | — |
@@ -584,17 +599,17 @@ Legacy headline columns for the v1-only facets (dose_response, composite_length,
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.84 [0.76, 0.90] | 0.00 | 0.88 | 0.88 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.57 [0.47, 0.66] | 0.00 | 0.57 | 0.57 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 0.97 | 0.97 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 30 | 0.87 [0.70, 0.95] | 0.00 | 0.87 | 0.87 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 16 | effort=high | 30 | 0.30 [0.17, 0.48] | 0.00 | 0.30 | 0.30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 24 | effort=high | 30 | 0.90 [0.74, 0.97] | 0.00 | 0.90 | 0.90 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.53 [0.36, 0.70] | 0.00 | 0.53 | 0.53 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.50 [0.33, 0.67] | 0.00 | 0.50 | 0.50 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 16 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 24 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 0.97 | 0.97 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.67 [0.49, 0.81] | 0.00 | 0.67 | 0.67 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.03 [0.01, 0.17] | 0.00 | 0.03 | 0.03 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.56 [0.37, 0.73] | 0.00 | 0.56 | 0.56 | — |
-| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.08 [0.02, 0.25] | 0.00 | 0.08 | 0.08 | — |
-| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
-| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.00 | 0.72 | 0.72 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.24 [0.11, 0.43] | 0.00 | 0.24 | 0.24 | — |
+| anthropic/claude-sonnet-5 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.04 [0.01, 0.20] | 0.00 | 0.04 | 0.04 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.03 [0.01, 0.17] | 0.00 | 0.83 | 0.60 | — |
 | anthropic/claude-sonnet-5 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.00 | 0.93 | 0.93 | — |
@@ -617,9 +632,9 @@ Legacy headline columns for the v1-only facets (dose_response, composite_length,
 | anthropic/claude-sonnet-5 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | anthropic/claude-sonnet-5 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 0.97 [0.83, 0.99] | 0.00 | 1.00 | 1.00 | — |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.71 [0.61, 0.79] | — | — | — | — |
-| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.75 [0.66, 0.82] | 0.00 | 0.75 | 0.75 | — |
-| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.00 | 0.77 | 0.77 | — |
-| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.67 [0.57, 0.75] | 0.00 | 0.67 | 0.67 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.57 [0.47, 0.66] | 0.00 | 0.75 | 0.75 | escalated @512 diagnostic 0.75; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.59 [0.49, 0.68] | 0.00 | 0.77 | 0.77 | escalated @512 diagnostic 0.77; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.28 [0.20, 0.37] | 0.00 | 0.67 | 0.67 | escalated @512 diagnostic 0.67; canonical = first attempt @96 |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -631,7 +646,7 @@ Legacy headline columns for the v1-only facets (dose_response, composite_length,
 | deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.00 | 0.88 | 0.88 | — |
 | deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.00 | 0.88 | 0.88 | — |
-| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.08 [0.02, 0.25] | 0.00 | 0.08 | 0.08 | — |
+| deepseek/deepseek-v4-pro | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.08 [0.02, 0.25] | 0.00 | 0.08 | 0.08 | ‡ cap-escape |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.83 [0.66, 0.93] | 0.00 | 0.83 | 0.83 | — |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.27 [0.14, 0.44] | 0.00 | 0.27 | 0.27 | — |
 | deepseek/deepseek-v4-pro | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -696,10 +711,10 @@ Legacy headline columns for the v1-only facets (dose_response, composite_length,
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 32 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 48 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.5-flash | chain_depth | chain_v1 | 64 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.00 | 0.96 | 0.96 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | google/gemini-3.5-flash | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | google/gemini-3.5-flash | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
-| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.00 | 0.84 | 0.84 | — |
+| google/gemini-3.5-flash | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.00 | 0.88 | 0.88 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 16 | effort=minimal | 30 | 0.60 [0.42, 0.75] | 0.00 | 0.70 | 0.67 | — |
 | google/gemini-3.5-flash | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -761,8 +776,8 @@ Legacy headline columns for the v1-only facets (dose_response, composite_length,
 | moonshotai/kimi-k2.6 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.90 [0.74, 0.97] | 0.00 | 0.90 | 0.90 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.00 | 0.92 | 0.92 | — |
-| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.00 | 0.92 | 0.92 | — |
-| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.64 [0.45, 0.80] | 0.00 | 0.68 | 0.68 | — |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.00 | 0.92 | 0.92 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.64 [0.45, 0.80] | 0.00 | 0.68 | 0.68 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.40 [0.25, 0.58] | 0.00 | 0.53 | 0.50 | — |
 | moonshotai/kimi-k2.6 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.00 | 1.00 | 1.00 | — |
@@ -786,10 +801,10 @@ Legacy headline columns for the v1-only facets (dose_response, composite_length,
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.88 [0.70, 0.96] | — | 0.88 | — | — |
 | moonshotai/kimi-k2.6 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | moonshotai/kimi-k2.6 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.92 [0.85, 0.96] | — | — | — | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.82 [0.73, 0.88] | 0.00 | 0.85 | 0.85 | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.83 [0.74, 0.89] | 0.00 | 0.86 | 0.86 | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.96 [0.90, 0.98] | 0.00 | 0.97 | 0.96 | — |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=binding_only, contract, effort=none | 100 | 0.52 [0.42, 0.62] | — | — | — | escalated @512 diagnostic 0.92; canonical = first attempt @96 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.48 [0.38, 0.58] | 0.00 | 0.85 | 0.85 | escalated @512 diagnostic 0.82; canonical = first attempt @96 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.48 [0.38, 0.58] | 0.00 | 0.86 | 0.86 | escalated @512 diagnostic 0.83; canonical = first attempt @96 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.38 [0.29, 0.48] | 0.00 | 0.97 | 0.96 | escalated @512 diagnostic 0.96; canonical = first attempt @96 |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -966,11 +981,11 @@ Legacy headline columns for the v1-only facets (dose_response, composite_length,
 | x-ai/grok-4.3 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | x-ai/grok-4.3 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.00 | 0.96 | 0.96 | — |
-| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.00 | 0.72 | 0.72 | — |
-| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.60 [0.41, 0.77] | 0.00 | 0.60 | 0.60 | — |
-| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | — |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.00 | 0.72 | 0.72 | ‡ cap-escape |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.60 [0.41, 0.77] | 0.00 | 0.60 | 0.60 | ‡ cap-escape |
+| x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.00 [0.00, 0.13] | 0.00 | 0.00 | 0.00 | ‡ cap-escape |
 | x-ai/grok-build-0.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | — | 0.92 | — | — |
-| x-ai/grok-build-0.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | — | 0.92 | — | — |
+| x-ai/grok-build-0.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | — | 0.92 | — | ‡ cap-escape |
 | x-ai/grok-build-0.1 | sanity | conflict_v1 | 4 | effort=minimal | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | x-ai/grok-build-0.1 | sanity | recall_copy_v1 | 6 | effort=minimal | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | z-ai/glm-5.2 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |

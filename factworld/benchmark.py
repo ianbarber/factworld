@@ -35,9 +35,17 @@ REASONING_EFFORTS = ("low", "medium", "high")   # arms that actually think
 REASONING_MAX_NEW_TOKENS = 8192                 # protocol rule: never truncate thinking
 DEFAULT_MAX_NEW_TOKENS = 2048                   # non-thinking arms (grid-script default)
 # zero-budget battery: tight completion budget + hard answer contract. The runner
-# escalates a cell once (to a larger budget) when finish=length exceeds 10% of its
-# calls, so a fixed cap never silently zeros a verbose model.
+# escalates a cell up to twice (96 -> 512 -> 2048) while finish=length exceeds 10%
+# of its calls; the FIRST attempt (at this budget) stays the canonical number and
+# the escalated attempts are marked diagnostics, so a fixed cap never silently
+# zeros a verbose model and an escalated budget never inflates the headline.
 ZERO_BUDGET_MAX_NEW_TOKENS = 96
+# Per-cell spend guard (the grok-build lesson: a pinned generator ignored the
+# 16384 cap and emitted ~256k ctok per call, 23/25 calls at d128). A cell's
+# cumulative visible completion tokens may not exceed
+# CELL_BUDGET_FACTOR * n * max_new_tokens; past that the runner stops submitting
+# new calls, records what completed, and flags the cell cost_aborted.
+CELL_BUDGET_FACTOR = 3
 # per-call visible-completion-token threshold above which an effort=none reply is
 # counted as covert in-content CoT (kimi at effort=none averaged ~2762 ctok/call;
 # clean contract answers are tens of tokens).
@@ -149,12 +157,19 @@ FACETS = {
     # Answer: ..."); scoring extracts the LAST "Answer:" line of the visible output
     # so models that emit working before the contract line still score their answer.
     # ``cells`` lists explicit (length, leg) pairs: the plain composite at L16/L64
-    # (leg None) plus the binding_only / end_to_end decomposition legs at L16.
+    # (leg None), the binding_only decomposition leg at L16, and the replicate leg
+    # at L16. The replicate leg is a TEST-RETEST duplicate of the plain L16 cell:
+    # the runner builds the IDENTICAL prompt on purpose (adversarial review F6 —
+    # the old "end_to_end" leg was this same prompt mislabeled as a distinct
+    # measurement); its |delta| vs the plain cell is the run-to-run noise bar
+    # quoted next to the headline. The leg stays in the settings hash so the
+    # replicate cell resumes/re-runs independently of the plain cell.
     # Per-cell diagnostics gate publication: contract_rate, covert_cot_rate,
-    # rtok_leak_rate, and a one-shot finish=length escalation (see the runner).
+    # rtok_any_rate / rtok_mean_per_call, finish_errors, cost_aborted, and the
+    # iterated finish=length escalation (see the runner).
     "zero_budget": {
         "task": "composite_copy_v1", "n": 100,
-        "cells": ((16, None), (64, None), (16, "binding_only"), (16, "end_to_end")),
+        "cells": ((16, None), (64, None), (16, "binding_only"), (16, "replicate")),
         "format_prompt": "composite", "efforts": "off",
         "contract": True, "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
     # s5 mid-band with reasoning on (owner decision 2026-07-07): L16-64 saturate for

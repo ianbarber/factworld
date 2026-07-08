@@ -63,9 +63,12 @@ def test_arms_for_facets():
     opus = B.arms_for("anthropic/claude-opus-4.8")
 
     # zero_budget: explicit (length, leg) cells, effort none, tight budget, contract on.
+    # The "replicate" leg (review F6, replacing the mislabeled "end_to_end") is a
+    # deliberate test-retest duplicate of the plain L16 cell.
     zb = [c for c in opus if c["facet"] == "zero_budget"]
     assert [(c["length"], c["settings"]["leg"]) for c in zb] == [
-        (16, None), (64, None), (16, "binding_only"), (16, "end_to_end")]
+        (16, None), (64, None), (16, "binding_only"), (16, "replicate")]
+    assert not any(c["settings"]["leg"] == "end_to_end" for c in zb)
     for c in zb:
         assert c["task"] == "composite_copy_v1" and c["n"] == 100
         assert c["settings"]["effort"] == "none"
@@ -209,9 +212,13 @@ def _validate_c3(rec, cell, model):
     assert set(rec["settings"]) == SETTINGS_KEYS
     assert set(rec["metrics"]) == {"relaxed", "exact", "contains", "last_n"}
     assert rec["metrics"]["relaxed"] is not None  # relaxed is ALWAYS present
-    diag_keys = {"empty_rate", "api_errors", "finish_reasons"}
+    diag_keys = {"empty_rate", "api_errors", "finish_errors", "finish_reasons",
+                 "cost_aborted"}
+    if rec["diagnostics"]["cost_aborted"]:
+        diag_keys |= {"calls_completed"}
     if rec["settings"]["contract"]:
-        diag_keys |= {"contract_rate", "covert_cot_rate", "rtok_leak_rate"}
+        diag_keys |= {"contract_rate", "covert_cot_rate", "rtok_any_rate",
+                      "rtok_mean_per_call"}
     assert set(rec["diagnostics"]) == diag_keys
     assert set(rec["usage"]) == {"prompt_tokens", "completion_tokens",
                                  "reasoning_tokens", "cost_usd_est"}
@@ -386,9 +393,11 @@ def _zb_cell(n=5):
 
 
 def test_escalation_on_length_cutoff():
-    """A contract cell with finish=length > 10% reruns ONCE at 512 and publishes
-    the rerun (escalated=true, first attempt's diagnostics kept, usage summed,
-    planned settings preserved for resume)."""
+    """A contract cell with finish=length > 10% reruns at the next escalation
+    budget (96 -> 512) and stops once clean. The record keeps EVERY attempt in
+    full under escalation.attempts (first attempt canonical per review F2), the
+    top-level metrics/examples are the last attempt's (escalated=true), usage is
+    summed across attempts, planned settings preserved for resume."""
     backend = _MetaBackend([
         {"finish": "length", "ctok": 96, "rtok": 0, "text": "truncated working with no answer line"},
         {"finish": "stop", "ctok": 400, "rtok": 2, "text": "long working...\nAnswer: g3 v9"},
@@ -396,29 +405,79 @@ def test_escalation_on_length_cutoff():
     cell = _zb_cell()
     rec = RFB.execute_cell(backend, "z-ai/glm-5.2", cell, n=5,
                            run_id="t", git_commit="d")
-    assert backend.budgets == [96, RFB.ESCALATED_MAX_NEW_TOKENS] == [96, 512]
+    assert backend.budgets == [96, RFB.ESCALATION_BUDGETS[0]] == [96, 512]
     assert rec["escalated"] is True
-    # published diagnostics/examples come from the rerun
+    # published (top-level) diagnostics/examples come from the LAST attempt
     assert rec["diagnostics"]["finish_reasons"] == {"stop": 5}
     assert rec["diagnostics"]["contract_rate"] == 1.0
     assert all(e["finish"] == "stop" and e["ctok"] == 400 for e in rec["examples"])
     # rerun cleanliness diagnostics: 400 ctok > threshold, rtok leak present
     assert rec["diagnostics"]["covert_cot_rate"] == 1.0
-    assert rec["diagnostics"]["rtok_leak_rate"] == 1.0
-    # first attempt is preserved with its own diagnostics
+    assert rec["diagnostics"]["rtok_any_rate"] == 1.0
+    assert rec["diagnostics"]["rtok_mean_per_call"] == 2.0
     esc = rec["escalation"]
     assert esc["max_new_tokens"] == 512
-    assert esc["first_attempt"]["max_new_tokens"] == 96
-    assert esc["first_attempt"]["diagnostics"]["finish_reasons"] == {"length": 5}
-    assert esc["first_attempt"]["diagnostics"]["contract_rate"] == 0.0
-    assert esc["first_attempt"]["relaxed"] == 0.0
-    # spend honesty: usage covers BOTH attempts
+    # attempts: BOTH attempts recorded in full, index-stamped, budgets in order
+    assert [a["attempt"] for a in esc["attempts"]] == [0, 1]
+    assert [a["max_new_tokens"] for a in esc["attempts"]] == [96, 512]
+    first, last = esc["attempts"][0], esc["attempts"][-1]
+    # the FIRST attempt (the canonical number) keeps its examples VERBATIM —
+    # per-call ctok/rtok/finish and the empty preds of the truncated replies.
+    assert len(first["examples"]) == 5
+    assert all(e["finish"] == "length" and e["ctok"] == 96 and e["rtok"] == 0
+               and e["pred"] == "" and e["relaxed"] == 0 for e in first["examples"])
+    assert first["relaxed"] == 0.0 and first["metrics"]["relaxed"] == 0.0
+    assert first["diagnostics"]["finish_reasons"] == {"length": 5}
+    assert first["diagnostics"]["contract_rate"] == 0.0
+    assert first["length_rate"] == 1.0
+    # per-attempt usage stays per-attempt (NOT the summed record usage)
+    assert first["usage"]["completion_tokens"] == 5 * 96
+    assert last["usage"]["completion_tokens"] == 5 * 400
+    assert last["examples"] == rec["examples"]
+    # legacy alias for the pre-attempts renderer schema: summary of attempt 0
+    fa = esc["first_attempt"]
+    assert fa["max_new_tokens"] == 96
+    assert fa["relaxed"] == 0.0
+    assert fa["diagnostics"] == first["diagnostics"]
+    assert "examples" not in fa
+    # spend honesty: top-level usage covers BOTH attempts
     assert rec["usage"]["prompt_tokens"] == 100  # 2 attempts x 5 calls x 10
     assert rec["usage"]["completion_tokens"] == 5 * 96 + 5 * 400
     # resume key unchanged: the record's settings are the PLANNED ones, so the
     # written record satisfies the original cell's resume key.
     assert rec["settings"]["max_new_tokens"] == 96
     assert B.settings_hash(rec) == B.settings_hash(cell)
+    _validate_c3(rec, cell, "z-ai/glm-5.2")
+
+
+def test_escalation_iterates_to_2048():
+    """Escalation is iterated (review: one-shot escalation left kimi L16 with 9
+    residual cap-outs at 512): still >10% finish=length at 512 -> a second rerun
+    at 2048, and it hard-stops there (at most 2 escalations)."""
+    backend = _MetaBackend([
+        {"finish": "length", "ctok": 96, "rtok": 0, "text": "cut"},
+        {"finish": "length", "ctok": 512, "rtok": 0, "text": "still cut"},
+        {"finish": "length", "ctok": 2048, "rtok": 0, "text": "STILL cut"},
+    ])
+    cell = _zb_cell()
+    rec = RFB.execute_cell(backend, "z-ai/glm-5.2", cell, n=5,
+                           run_id="t", git_commit="d")
+    # 96 -> 512 -> 2048, then stop even though finish=length persists.
+    assert backend.budgets == [96, 512, 2048]
+    assert list(RFB.ESCALATION_BUDGETS) == [512, 2048]
+    assert rec["escalated"] is True
+    esc = rec["escalation"]
+    assert esc["max_new_tokens"] == 2048 and esc["length_rate"] == 1.0
+    assert [a["max_new_tokens"] for a in esc["attempts"]] == [96, 512, 2048]
+    # every attempt carries complete per-example data
+    for a, ctok in zip(esc["attempts"], (96, 512, 2048)):
+        assert len(a["examples"]) == 5
+        assert all(e["ctok"] == ctok and e["finish"] == "length" for e in a["examples"])
+    # first_attempt alias still points at attempt 0
+    assert esc["first_attempt"]["max_new_tokens"] == 96
+    # usage covers all three attempts
+    assert rec["usage"]["completion_tokens"] == 5 * (96 + 512 + 2048)
+    assert rec["usage"]["prompt_tokens"] == 150
     _validate_c3(rec, cell, "z-ai/glm-5.2")
 
 
@@ -431,7 +490,9 @@ def test_no_escalation_below_threshold_or_without_contract():
     assert backend.budgets == [96]
     assert rec["escalated"] is False and "escalation" not in rec
     assert rec["diagnostics"]["covert_cot_rate"] == 0.0
-    assert rec["diagnostics"]["rtok_leak_rate"] == 0.0
+    assert rec["diagnostics"]["rtok_any_rate"] == 0.0
+    assert rec["diagnostics"]["rtok_mean_per_call"] == 0.0
+    assert rec["diagnostics"]["cost_aborted"] is False
 
     # non-contract cells never escalate even at 100% finish=length.
     sanity = next(c for c in B.arms_for("z-ai/glm-5.2") if c["task"] == "recall_copy_v1")
@@ -442,6 +503,107 @@ def test_no_escalation_below_threshold_or_without_contract():
     assert backend2.budgets == [2048]
     assert rec2["escalated"] is False
     assert all(e["finish"] == "length" for e in rec2["examples"])
+
+
+def test_finish_errors_counted():
+    """finish_reason=='error' calls are counted into diagnostics.finish_errors,
+    SEPARATE from api_errors (review F8: 12 finish=error calls were invisible at
+    api_errors=0)."""
+    backend = _MetaBackend([{"finish": "error", "ctok": 0, "rtok": 0, "text": ""}])
+    sanity = next(c for c in B.arms_for("z-ai/glm-5.2") if c["task"] == "recall_copy_v1")
+    sanity["n"] = 5
+    rec = RFB.execute_cell(backend, "z-ai/glm-5.2", sanity, n=5,
+                           run_id="t", git_commit="d")
+    assert rec["diagnostics"]["finish_errors"] == 5
+    assert rec["diagnostics"]["api_errors"] == 0  # the F8 signature
+    assert rec["diagnostics"]["finish_reasons"] == {"error": 5}
+    _validate_c3(rec, sanity, "z-ai/glm-5.2")
+
+    # clean cells report 0 (the key is always present)
+    backend2 = _MetaBackend([{"finish": "stop", "ctok": 5, "rtok": 0, "text": "v0"}])
+    rec2 = RFB.execute_cell(backend2, "z-ai/glm-5.2", sanity, n=5,
+                            run_id="t", git_commit="d")
+    assert rec2["diagnostics"]["finish_errors"] == 0
+
+
+class _RunawayBackend:
+    """Meta-capable fake that emits a huge visible ctok on every call (the
+    grok-build failure mode: a pinned generator ignoring the token cap)."""
+
+    name = "runaway"
+
+    def __init__(self, ctok_per_call, finish="stop", text="Answer: g3 v9"):
+        self.ctok = ctok_per_call
+        self.finish = finish
+        self.text = text
+        self.calls = 0
+        self._last_n = 0
+
+    def generate(self, prompts, max_new_tokens, stop_at=None):
+        self.calls += len(prompts)
+        self._last_n = len(prompts)
+        return [self.text] * len(prompts)
+
+    def pop_example_meta(self):
+        return [{"completion_tokens": self.ctok, "reasoning_tokens": 0,
+                 "finish_reason": self.finish}] * self._last_n
+
+    def pop_call_meta(self):
+        n = self._last_n
+        return {"calls": n, "errors": 0,
+                "usage": {"prompt_tokens": 10 * n, "completion_tokens": self.ctok * n,
+                          "reasoning_tokens": 0},
+                "served_models": ["served/m"], "providers": ["P"],
+                "finish_reasons": {self.finish: n}}
+
+
+def test_cost_guard_aborts_runaway_cell():
+    """Once cumulative ctok exceeds CELL_BUDGET_FACTOR * n * max_new_tokens the
+    guard stops submitting calls; what completed is recorded, the rest get empty
+    preds with finish=cost_aborted, and the cell is flagged cost_aborted."""
+    cell = _zb_cell(n=25)
+    # budget = 3 * 25 * 96 = 7200 ctok; 5000 ctok/call trips after the 1st chunk (8 calls)
+    backend = _RunawayBackend(ctok_per_call=5000)
+    rec = RFB.execute_cell(backend, "z-ai/glm-5.2", cell, n=25,
+                           run_id="t", git_commit="d")
+    assert B.CELL_BUDGET_FACTOR == 3
+    chunk = RFB.CostGuardBackend.CHUNK
+    assert backend.calls == chunk == 8  # stopped submitting after one chunk
+    d = rec["diagnostics"]
+    assert d["cost_aborted"] is True
+    assert d["calls_completed"] == chunk
+    # completed calls recorded verbatim; the rest are explicit cost_aborted stubs
+    done = [e for e in rec["examples"] if e["finish"] == "stop"]
+    stub = [e for e in rec["examples"] if e["finish"] == "cost_aborted"]
+    assert len(done) == chunk and len(stub) == 25 - chunk
+    assert all(e["ctok"] == 5000 for e in done)
+    assert all(e["ctok"] is None and e["pred"] == "" for e in stub)
+    # usage only covers what actually ran
+    assert rec["usage"]["completion_tokens"] == 5000 * chunk
+    _validate_c3(rec, cell, "z-ai/glm-5.2")
+
+
+def test_cost_guard_blocks_escalation():
+    """A cost-aborted attempt must not escalate (escalating a runaway cell would
+    multiply the spend), even when its finish=length rate exceeds the threshold."""
+    backend = _RunawayBackend(ctok_per_call=5000, finish="length", text="cut")
+    rec = RFB.execute_cell(backend, "z-ai/glm-5.2", _zb_cell(n=25), n=25,
+                           run_id="t", git_commit="d")
+    assert rec["diagnostics"]["cost_aborted"] is True
+    assert backend.calls == RFB.CostGuardBackend.CHUNK  # no second attempt ran
+    assert rec["escalated"] is False and "escalation" not in rec
+
+
+def test_cost_guard_within_budget_is_inert():
+    """Well-behaved cells run all n calls with cost_aborted=False (and backends
+    without per-example meta are never aborted — nothing to measure)."""
+    backend = _RunawayBackend(ctok_per_call=10)  # 25*10 << 7200
+    rec = RFB.execute_cell(backend, "z-ai/glm-5.2", _zb_cell(n=25), n=25,
+                           run_id="t", git_commit="d")
+    assert backend.calls == 25
+    assert rec["diagnostics"]["cost_aborted"] is False
+    assert "calls_completed" not in rec["diagnostics"]
+    assert all(e["finish"] == "stop" for e in rec["examples"])
 
 
 def test_chain_nowrap_uses_scaled_spec():
@@ -502,8 +664,10 @@ if __name__ == "__main__":
                test_settings_hash_contract_flag_compat, test_cost_estimate_sane,
                test_extract_contract_answer, test_execute_cell_end_to_end,
                test_zero_budget_contract_scoring, test_binding_leg_rejects_holder_dump,
-               test_escalation_on_length_cutoff,
+               test_escalation_on_length_cutoff, test_escalation_iterates_to_2048,
                test_no_escalation_below_threshold_or_without_contract,
+               test_finish_errors_counted, test_cost_guard_aborts_runaway_cell,
+               test_cost_guard_blocks_escalation, test_cost_guard_within_budget_is_inert,
                test_chain_nowrap_uses_scaled_spec, test_resume_key_includes_n,
                test_build_plan_n_scale]:
         fn()

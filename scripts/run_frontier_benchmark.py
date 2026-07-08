@@ -25,12 +25,29 @@ Protocol rules:
     depth by design.
   - zero_budget cells (settings.contract) append a hard one-line answer contract
     to every prompt and score the span after the LAST "Answer:" line of the
-    visible output; per-cell contract_rate / covert_cot_rate / rtok_leak_rate
-    diagnose whether the effort=none arm is actually clean for that model.
-  - Model-aware cutoff handling: a zero_budget cell whose finish=length rate
-    exceeds 10% is automatically rerun ONCE at the escalated budget (512); the
-    rerun is what gets published (escalated=true, first attempt's diagnostics
-    kept in the record), so a fixed cap never silently zeros a verbose model.
+    visible output; per-cell contract_rate / covert_cot_rate / rtok_any_rate /
+    rtok_mean_per_call diagnose whether the effort=none arm is actually clean
+    for that model.
+  - The zero_budget "replicate" leg is a TEST-RETEST duplicate of the plain cell:
+    the runner builds the IDENTICAL prompt on purpose (review F6 — the old
+    "end_to_end" leg was this prompt mislabeled as a distinct measurement); its
+    |delta| vs the plain cell is the quoted run-to-run noise bar.
+  - Model-aware cutoff handling (iterated, review F2/F3): a zero_budget cell
+    whose finish=length rate exceeds 10% is rerun at escalating budgets
+    (96 -> 512 -> 2048, at most 2 escalations). The FIRST attempt (at the
+    planned budget) is the CANONICAL number; escalated attempts are marked
+    diagnostics. EVERY attempt's metrics/diagnostics/examples are recorded
+    verbatim under ``escalation.attempts`` (the first attempt's per-example
+    data must be complete — the renderer publishes it), and the record's
+    top-level metrics/examples are the last attempt's (escalated=true flags
+    them as the diagnostic view). Usage/cost cover all attempts.
+  - Per-cell spend guard (the grok-build lesson): once a cell's cumulative
+    visible completion tokens exceed CELL_BUDGET_FACTOR * n * max_new_tokens,
+    no further calls are submitted; what completed is recorded with
+    diagnostics.cost_aborted=true and a loud warning.
+  - finish_reason=="error" calls are counted into diagnostics.finish_errors
+    (distinct from api_errors, the exception-path count — review F8 found 12
+    finish=error calls invisible at api_errors=0) and warned about loudly.
 
 Examples:
     set -a; source .env; set +a
@@ -67,6 +84,7 @@ from factworld import tasks as TK
 from factworld.backends import APIBackend
 from factworld.benchmark import (
     CANARY_MODEL,
+    CELL_BUDGET_FACTOR,
     COVERT_COT_CTOK_THRESHOLD,
     FACETS,
     MODELS,
@@ -115,11 +133,14 @@ CONTRACT_LINE_COMPOSITE = "Reply with only one line: Answer: <holder> <value>"
 CONTRACT_LINE_BINDING = "Reply with only one line: Answer: <holder>"
 _ANSWER_LINE_RE = re.compile(r"answer\s*:\s*(.+)", re.IGNORECASE)
 
-# Model-aware cutoff handling (owner requirement): if finish=length exceeds this
-# fraction of a zero_budget cell's calls, rerun the cell ONCE at the escalated
-# budget and publish the rerun (escalated=true, both attempts' diagnostics kept).
+# Model-aware cutoff handling (owner requirement; iterated per review — a single
+# 512 escalation left kimi L16 with 9 residual cap-outs): while finish=length
+# exceeds this fraction of a zero_budget cell's calls, rerun the cell at the next
+# escalation budget (96 -> 512 -> 2048, at most len(ESCALATION_BUDGETS) reruns).
+# The FIRST attempt stays canonical (review F2); escalated attempts are marked
+# diagnostics, each recorded in full under escalation.attempts.
 LENGTH_ESCALATION_THRESHOLD = 0.10
-ESCALATED_MAX_NEW_TOKENS = 512
+ESCALATION_BUDGETS = (512, 2048)
 
 
 def extract_contract_answer(text: str) -> str | None:
@@ -138,6 +159,88 @@ EMPTY_META = {
     "usage": {"prompt_tokens": 0, "completion_tokens": 0, "reasoning_tokens": 0},
     "served_models": [], "providers": [], "finish_reasons": {},
 }
+
+
+class CostGuardBackend:
+    """Per-cell spend guard (the grok-build lesson: a pinned generator ignored the
+    16384 cap and emitted ~256k visible ctok per call — a cell must not be able to
+    spend unboundedly past its nominal budget).
+
+    Wraps any ``ModelBackend`` and submits prompts in chunks; after each chunk the
+    cell's cumulative visible completion tokens are compared against
+    ``budget_ctok`` (CELL_BUDGET_FACTOR * n * max_new_tokens). Once exceeded, no
+    further chunks are submitted: the remaining prompts get empty predictions and
+    ``finish="cost_aborted"`` per-example meta, and ``cost_aborted`` is set so the
+    record can flag what completed. Backends without per-example meta
+    (FunctionBackend) cannot be measured, so the guard is inert for them (it
+    passes calls through untracked and ``pop_example_meta`` returns None).
+
+    Cumulative ctok persists across ``generate`` calls on one guard instance; a
+    fresh guard is built per attempt with that attempt's budget (an aborted
+    attempt also blocks any further escalation — see ``execute_cell``).
+    """
+
+    CHUNK = 8  # calls submitted between budget checks
+
+    def __init__(self, backend, budget_ctok: int):
+        self.backend = backend
+        self.budget_ctok = budget_ctok
+        self.cost_aborted = False
+        self.calls_completed = 0
+        self._cum_ctok = 0
+        self._has_meta = hasattr(backend, "pop_example_meta")
+        self._ex_meta: list[dict] | None = None
+        self._call_meta: dict | None = None
+
+    @property
+    def name(self) -> str:
+        return getattr(self.backend, "name", "unknown")
+
+    def generate(self, prompts, max_new_tokens, stop_at=None):
+        preds: list[str] = []
+        ex_meta: list[dict] = []
+        call_meta = copy.deepcopy(EMPTY_META)
+        i = 0
+        while i < len(prompts) and not self.cost_aborted:
+            chunk = prompts[i:i + self.CHUNK]
+            preds.extend(self.backend.generate(chunk, max_new_tokens, stop_at))
+            self.calls_completed += len(chunk)
+            if self._has_meta:
+                metas = self.backend.pop_example_meta()
+                ex_meta.extend(metas)
+                self._cum_ctok += sum(m["completion_tokens"] or 0 for m in metas)
+            if hasattr(self.backend, "pop_call_meta"):
+                self._merge_call_meta(call_meta, self.backend.pop_call_meta())
+            i += len(chunk)
+            if self._has_meta and self._cum_ctok > self.budget_ctok:
+                self.cost_aborted = True
+        n_missing = len(prompts) - len(preds)
+        if n_missing:
+            preds.extend([""] * n_missing)
+            ex_meta.extend([{"completion_tokens": None, "reasoning_tokens": None,
+                             "finish_reason": "cost_aborted"}] * n_missing)
+        self._ex_meta = ex_meta if self._has_meta else None
+        self._call_meta = call_meta
+        return preds
+
+    @staticmethod
+    def _merge_call_meta(acc: dict, meta: dict) -> None:
+        acc["calls"] += meta["calls"]
+        acc["errors"] += meta["errors"]
+        for key in acc["usage"]:
+            acc["usage"][key] += meta["usage"][key]
+        for key in ("served_models", "providers"):
+            acc[key] = list(dict.fromkeys(acc[key] + meta[key]))
+        for reason, count in meta["finish_reasons"].items():
+            acc["finish_reasons"][reason] = acc["finish_reasons"].get(reason, 0) + count
+
+    def pop_example_meta(self):
+        meta, self._ex_meta = self._ex_meta, None
+        return meta
+
+    def pop_call_meta(self):
+        meta, self._call_meta = self._call_meta, None
+        return meta if meta is not None else copy.deepcopy(EMPTY_META)
 
 
 # --- plan / resume ----------------------------------------------------------------
@@ -260,14 +363,19 @@ def _run_s5_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]]:
 
 
 def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str], float]:
-    """One zero-budget answer-contract cell (leg None / binding_only / end_to_end).
+    """One zero-budget answer-contract cell (leg None / binding_only / replicate).
 
     Prompts end with the hard contract line; the backend runs in ``raw`` answer
     mode and the prediction is the span after the LAST "Answer:" line of the
     visible output (empty when no line parses — the contract miss also counts as
     an empty pred). Scoring:
-      leg None / end_to_end — the unmodified composite prompt, canonical relaxed
+      leg None / replicate  — the unmodified composite prompt, canonical relaxed
                               on the extracted span (plus the diagnostic scorers).
+                              The replicate leg is INTENTIONALLY the identical
+                              prompt to the plain cell: a test-retest arm whose
+                              |delta| vs the plain cell is the quoted run-to-run
+                              noise bar (review F6 — do not "fix" this into a
+                              distinct measurement).
       binding_only          — query rewritten to ask only for the holder
                               (experiment_autoregressive protocol); score = the
                               extracted span's FIRST content token is the holder
@@ -286,7 +394,7 @@ def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]
         base_prompts = [p for p, _g in rewritten]
         golds = [g for _p, g in rewritten]
         contract_line = CONTRACT_LINE_BINDING
-    elif leg in (None, "end_to_end"):
+    elif leg in (None, "replicate"):
         base_prompts = [e.prompt for e in examples_in]
         golds = [e.answer for e in examples_in]
         contract_line = CONTRACT_LINE_COMPOSITE
@@ -368,46 +476,58 @@ def _attach_example_meta(examples: list[dict], ex_meta: list[dict] | None) -> No
 
 def _run_attempt(backend, cell: dict, n: int, max_new_tokens: int | None = None) -> dict:
     """One generation pass over a cell (``max_new_tokens`` overrides the planned
-    budget for the escalation rerun). Returns metrics/examples/diagnostics, the
-    popped call meta, and the finish=length rate that drives escalation."""
+    budget for an escalation rerun). The backend is wrapped in a per-attempt
+    ``CostGuardBackend`` (budget CELL_BUDGET_FACTOR * n * max_new_tokens).
+    Returns metrics/examples/diagnostics, the popped call meta, and the
+    finish=length rate that drives escalation."""
     run_cell = cell
     if max_new_tokens is not None:
         run_cell = {**cell, "settings": {**cell["settings"], "max_new_tokens": max_new_tokens}}
+    guard = CostGuardBackend(
+        backend, CELL_BUDGET_FACTOR * n * run_cell["settings"]["max_new_tokens"])
     contract_rate = None
     if run_cell["settings"].get("contract"):
-        metrics, examples, preds, contract_rate = _run_zero_budget_cell(backend, run_cell, n)
+        metrics, examples, preds, contract_rate = _run_zero_budget_cell(guard, run_cell, n)
     elif run_cell["facet"] in S5_FACETS:
-        metrics, examples, preds = _run_s5_cell(backend, run_cell, n)
+        metrics, examples, preds = _run_s5_cell(guard, run_cell, n)
     else:
-        metrics, examples, preds = _run_task_cell(backend, run_cell, n)
+        metrics, examples, preds = _run_task_cell(guard, run_cell, n)
 
-    ex_meta = backend.pop_example_meta() if hasattr(backend, "pop_example_meta") else None
-    _attach_example_meta(examples, ex_meta)
-    if hasattr(backend, "pop_call_meta"):
-        meta = backend.pop_call_meta()
-    else:
-        meta = copy.deepcopy(EMPTY_META)  # deep: the escalation path mutates usage
+    _attach_example_meta(examples, guard.pop_example_meta())
+    meta = guard.pop_call_meta()  # already a fresh dict: the escalation path mutates usage
     empty_rate = sum(1 for p in preds if not p.strip()) / max(1, len(preds))
     length_rate = (sum(1 for ex in examples if ex["finish"] == "length")
                    / max(1, len(examples)))
     diagnostics = {
         "empty_rate": round(empty_rate, 4),
         "api_errors": meta["errors"],
+        # finish=error calls are NOT exception-path api_errors (review F8: 12
+        # finish=error calls sat invisible at api_errors=0) — count them apart.
+        "finish_errors": meta["finish_reasons"].get("error", 0),
         "finish_reasons": meta["finish_reasons"],
+        "cost_aborted": guard.cost_aborted,
     }
+    if guard.cost_aborted:
+        diagnostics["calls_completed"] = guard.calls_completed
     if contract_rate is not None:
         # Zero-budget cleanliness diagnostics (owner gate for the battery): is the
         # effort=none arm actually reasoning-free and contract-compliant here?
         ctoks = [ex["ctok"] for ex in examples]
-        rtoks = [ex["rtok"] for ex in examples]
+        rtoks = [ex["rtok"] for ex in examples if ex["rtok"] is not None]
         diagnostics["contract_rate"] = round(contract_rate, 4)
         diagnostics["covert_cot_rate"] = round(
             sum(1 for c in ctoks if c is not None and c > COVERT_COT_CTOK_THRESHOLD)
             / max(1, len(ctoks)), 4)
-        diagnostics["rtok_leak_rate"] = round(
+        # rtok_any_rate (was rtok_leak_rate, renamed per review F9: "leak" implied
+        # the renderer's per-call magnitude dagger, but this is the fraction of
+        # calls with ANY reasoning tokens); rtok_mean_per_call is the magnitude.
+        diagnostics["rtok_any_rate"] = round(
             sum(1 for r in rtoks if r) / max(1, len(rtoks)), 4)
+        diagnostics["rtok_mean_per_call"] = (
+            round(sum(rtoks) / len(rtoks), 2) if rtoks else None)
     return {"metrics": metrics, "examples": examples, "diagnostics": diagnostics,
-            "meta": meta, "length_rate": length_rate}
+            "meta": meta, "length_rate": length_rate,
+            "max_new_tokens": run_cell["settings"]["max_new_tokens"]}
 
 
 def execute_cell(backend, model: str, cell: dict, *, n: int, run_id: str,
@@ -416,41 +536,67 @@ def execute_cell(backend, model: str, cell: dict, *, n: int, run_id: str,
 
     Works with any ``ModelBackend``; per-call diagnostics/usage come from
     ``pop_call_meta``/``pop_example_meta`` when the backend provides them
-    (APIBackend), else zeros/Nones.
+    (APIBackend), else zeros/Nones. Every attempt runs behind a per-attempt
+    ``CostGuardBackend`` spend guard (diagnostics.cost_aborted flags a tripped
+    cell — see ``_run_attempt``).
 
-    Contract cells get model-aware cutoff handling: if the finish=length rate
-    exceeds LENGTH_ESCALATION_THRESHOLD, the cell reruns once at
-    ESCALATED_MAX_NEW_TOKENS and the rerun is what gets recorded (escalated=true,
-    first attempt's diagnostics kept under ``escalation.first_attempt``; usage and
-    cost cover BOTH attempts). The record's ``settings`` stay the planned ones so
-    the resume key is unchanged.
+    Contract cells get model-aware cutoff handling (C3, iterated per review
+    F2/F3): while the finish=length rate exceeds LENGTH_ESCALATION_THRESHOLD,
+    the cell reruns at the next ESCALATION_BUDGETS entry (96 -> 512 -> 2048, at
+    most 2 reruns; a cost-aborted attempt stops escalation). The FIRST attempt
+    at the planned budget is the CANONICAL number for the renderer; every
+    attempt (including the first and the final) is recorded IN FULL — metrics,
+    diagnostics, per-example ctok/rtok/finish — under ``escalation.attempts``
+    (``escalation.first_attempt`` keeps the legacy summary alias of attempt 0
+    for renderer compat). The record's top-level metrics/examples are the LAST
+    attempt's, marked escalated=true so the renderer treats them as the
+    diagnostic view, and usage/cost cover ALL attempts. The record's
+    ``settings`` stay the planned ones so the resume key is unchanged.
     """
     t0 = time.time()
     attempt = _run_attempt(backend, cell, n)
+    attempts = [attempt]
+    for budget in ESCALATION_BUDGETS:
+        if not (cell["settings"].get("contract")
+                and attempt["length_rate"] > LENGTH_ESCALATION_THRESHOLD
+                and not attempt["diagnostics"]["cost_aborted"]):
+            break
+        attempt = _run_attempt(backend, cell, n, max_new_tokens=budget)
+        attempts.append(attempt)
     escalation = None
-    if (cell["settings"].get("contract")
-            and attempt["length_rate"] > LENGTH_ESCALATION_THRESHOLD):
-        first = {
-            "max_new_tokens": cell["settings"]["max_new_tokens"],
-            "relaxed": attempt["metrics"]["relaxed"],
-            "length_rate": round(attempt["length_rate"], 4),
-            "diagnostics": attempt["diagnostics"],
-            "usage": attempt["meta"]["usage"],
-        }
-        rerun = _run_attempt(backend, cell, n, max_new_tokens=ESCALATED_MAX_NEW_TOKENS)
+    if len(attempts) > 1:
+        attempt_recs = [{
+            "attempt": i,
+            "max_new_tokens": a["max_new_tokens"],
+            "relaxed": a["metrics"]["relaxed"],
+            "length_rate": round(a["length_rate"], 4),
+            "metrics": a["metrics"],
+            "diagnostics": a["diagnostics"],
+            # snapshot: the spend-honesty pass below mutates the LAST attempt's
+            # meta usage in place, and this entry must keep per-attempt numbers.
+            "usage": dict(a["meta"]["usage"]),
+            # per-example data for EVERY attempt: the renderer publishes the
+            # FIRST attempt as canonical (review F2), so its examples must be
+            # complete here, not just the last attempt's at the top level.
+            "examples": a["examples"],
+        } for i, a in enumerate(attempts)]
         escalation = {
-            "max_new_tokens": ESCALATED_MAX_NEW_TOKENS,
-            "length_rate": round(rerun["length_rate"], 4),
-            "first_attempt": first,
+            "max_new_tokens": attempt["max_new_tokens"],
+            "length_rate": round(attempt["length_rate"], 4),
+            "attempts": attempt_recs,
+            # legacy alias (pre-attempts renderer schema): summary of attempt 0.
+            "first_attempt": {k: attempt_recs[0][k] for k in
+                              ("max_new_tokens", "relaxed", "length_rate",
+                               "diagnostics", "usage")},
         }
-        # Spend honesty: the published usage/cost cover both attempts; served
+        # Spend honesty: the published usage/cost cover every attempt; served
         # models/providers are the first-seen union across them.
-        for key in rerun["meta"]["usage"]:
-            rerun["meta"]["usage"][key] += attempt["meta"]["usage"][key]
+        for prev in attempts[:-1]:
+            for key in attempt["meta"]["usage"]:
+                attempt["meta"]["usage"][key] += prev["meta"]["usage"][key]
         for key in ("served_models", "providers"):
-            rerun["meta"][key] = list(dict.fromkeys(
-                attempt["meta"][key] + rerun["meta"][key]))
-        attempt = rerun
+            attempt["meta"][key] = list(dict.fromkeys(
+                [m for a in attempts for m in a["meta"][key]]))
     elapsed = time.time() - t0
 
     meta = attempt["meta"]
@@ -619,9 +765,11 @@ def main():
             extras = ""
             if "contract_rate" in d:
                 extras = (f" contract={d['contract_rate']:.2f} "
-                          f"covert={d['covert_cot_rate']:.2f} leak={d['rtok_leak_rate']:.2f}")
+                          f"covert={d['covert_cot_rate']:.2f} rtok_any={d['rtok_any_rate']:.2f}")
             if rec["escalated"]:
-                extras += f" ESCALATED->{rec['escalation']['max_new_tokens']}"
+                n_att = len(rec["escalation"]["attempts"])
+                extras += (f" ESCALATED->{rec['escalation']['max_new_tokens']} "
+                           f"({n_att} attempts; first attempt stays canonical)")
             print(f"  {tag}: relaxed={rec['metrics']['relaxed']:.3f} "
                   f"empty={d['empty_rate']:.2f} err={d['api_errors']} "
                   f"rtok={u['reasoning_tokens']} ${u['cost_usd_est']:.2f} "
@@ -630,6 +778,16 @@ def main():
                 print(f"  !!! WARNING {tag}: empty_rate={d['empty_rate']:.2f} > 0.5 — "
                       f"truncation suspect (check finish_reasons={d['finish_reasons']}); "
                       f"record kept.", flush=True)
+            if d["finish_errors"] > 0:
+                print(f"  !!! WARNING {tag}: {d['finish_errors']} calls finished with "
+                      f"finish_reason=error (api_errors={d['api_errors']} — these are "
+                      f"NOT exception-path errors); scores for those calls are not "
+                      f"real measurements. Record kept.", flush=True)
+            if d["cost_aborted"]:
+                print(f"  !!! WARNING {tag}: COST GUARD tripped — cell exceeded "
+                      f"{CELL_BUDGET_FACTOR}x its n*max_new_tokens ctok envelope; "
+                      f"only {d['calls_completed']}/{rec['n']} calls submitted, the "
+                      f"rest recorded as finish=cost_aborted.", flush=True)
         print(f"  -- done ({skipped} cells skipped by resume)", flush=True)
     print(f"\nrun {run_id} complete: total est cost ${total_cost:.2f}; history -> {a.history}")
 
