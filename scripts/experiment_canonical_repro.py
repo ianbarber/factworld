@@ -121,7 +121,7 @@ def r3_s5_extrapolation(arch, *, d=256, nl=4, steps=4000, seed=0, device="cuda")
     import importlib.util
     _s = importlib.util.spec_from_file_location("eds", os.path.join(REPO, "scripts", "experiment_dense_supervision.py"))
     eds = importlib.util.module_from_spec(_s); _s.loader.exec_module(eds)
-    spec = TK.CANONICAL["composite_copy_scale_v1"].scaled(k=5)
+    spec = TK.RETIRED["composite_copy_scale_v1"].scaled(k=5)
     model, tok, w, r, oracle, origins = eds.run_K(spec, 1, seed, steps=steps, batch=32, d_model=d,
                                                    n_layers=nl, train_n=8000, device=device, arch=arch,
                                                    eval_lengths=(16, 64, 128))

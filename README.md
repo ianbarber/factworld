@@ -25,18 +25,18 @@ from-scratch locally, or your own Python callable.
 
 ```bash
 # API fair eval for reasoning models (2048 tokens, no early stop)
-python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50 --no_stop
+python scripts/eval_model.py composite_copy_v2 --backend api --model gpt-4o-mini --n 50 --no_stop
 
 # HuggingFace
-python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
+python scripts/eval_model.py composite_copy_v2 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
 
 # Train a local model from scratch
-python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
+python scripts/run_benchmark.py composite_copy_v2 --arch gdp_hybrid --d_model 320 --steps 8000
 ```
 
 > **Composite-format note:** the API and HuggingFace backends automatically append
-> an output-format instruction for ``composite_copy_v1`` and ``composite_v1`` so
-> chat models emit the required ``<holder> <value> .`` answer span. Use
+> an output-format instruction for composite-family tasks (e.g. ``composite_copy_v2``)
+> so chat models emit the required ``<holder> <value> .`` answer span. Use
 > ``--no-composite-format`` to disable it (e.g. for ablations).
 
 📄 **Prior tech reports (archived in [`phases/`](phases/)):** these used an earlier
@@ -87,7 +87,7 @@ from factworld.backends import FunctionBackend
 from factworld.runner import evaluate_task
 from factworld.tasks import CANONICAL
 
-spec    = CANONICAL["composite_copy_v1"]    # binding × in-context-copy recall, in one query
+spec    = CANONICAL["composite_copy_v2"]    # binding × in-context-copy recall, in one query
 backend = FunctionBackend(
     lambda prompts, n, stop: ["g0 ."] * len(prompts),
     name="always-g0",
@@ -98,13 +98,13 @@ print(result["overall"])
 
 ```bash
 # API fair eval for reasoning models (2048 tokens, no early stop)
-python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50 --no_stop
+python scripts/eval_model.py composite_copy_v2 --backend api --model gpt-4o-mini --n 50 --no_stop
 
 # HuggingFace
-python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
+python scripts/eval_model.py composite_copy_v2 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
 
 # Local from-scratch
-python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
+python scripts/run_benchmark.py composite_copy_v2 --arch gdp_hybrid --d_model 320 --steps 8000
 
 # Run a grid of OpenRouter models (set OPENROUTER_API_KEY)
 python scripts/eval_openrouter_grid.py --n 30
@@ -115,7 +115,7 @@ python scripts/eval_openrouter_grid.py \\
     --n 30 --composite_format --no_reasoning
 
 # Evaluate a local model and merge it into the OpenRouter table
-python scripts/eval_model.py composite_copy_v1 --backend local --arch gdn_hybrid \\
+python scripts/eval_model.py composite_copy_v2 --backend local --arch gdn_hybrid \\
     --d_model 320 --steps 8000 --n 50 --json_out results/local-gdn.json
 python scripts/merge_grid_results.py docs/openrouter-results.json results/local-gdn.json \\
     --out docs/combined-results.md
@@ -144,7 +144,7 @@ class MyBackend(ModelBackend):
         # Return one continuation per prompt, not including the prompt.
         return [my_model.complete(p, max_tokens=max_new_tokens) for p in prompts]
 
-spec = CANONICAL["composite_copy_v1"]
+spec = CANONICAL["composite_copy_v2"]
 result = evaluate_task(MyBackend(), spec, n=50)
 print(result["overall"])
 ```
@@ -160,7 +160,7 @@ backend = FunctionBackend(
     lambda prompts, n, stop: ["g0 ."] * len(prompts),
     name="always-g0",
 )
-result = evaluate_task(backend, CANONICAL["composite_copy_v1"], n=50)
+result = evaluate_task(backend, CANONICAL["composite_copy_v2"], n=50)
 print(result["overall"])
 ```
 
@@ -177,22 +177,23 @@ metric — **relaxed match** of the answer span. Each task carries a ``kind``:
 | task | what it measures | difficulty axis |
 |---|---|---|
 | `recall_copy_v1` | genuine 1-of-N in-context-copy recall | distractor pool (binding load) |
-| `binding_v1` | last-write-wins state (the delta-rule axis) | give-stream length |
-| `composite_copy_v1` | binding × in-context-copy recall — the 2-hop composition probe | binding horizon |
+| `binding_v2` | last-write-wins state (the delta-rule axis) | give-stream length |
+| `composite_copy_v2` | binding × in-context-copy recall — the 2-hop composition probe | binding horizon |
 | `conflict_v1` | parametric ↔ in-context override (memorized map vs context) | pool size |
 | `chain_v1` | depth-*k* pointer chase | composition depth |
 
-**Controls** — `recall_v1`, `composite_v1` (memorized fixed-map versions; positive
-controls / binding isolation, degenerate as recall scores). **Experimental** —
-`s5_v1` (non-abelian S₅), `binding_load_v1` (large working set),
-`composite_copy_scale_v1` (the exact k=5 configuration used for the paper's §5
-scale result). Only `benchmark`-kind tasks are scored; the registry never
-presents confounded tasks as peers.
+**Controls** — `recall_v1` (memorized fixed-map recall; a positive control,
+degenerate as a recall score). **Experimental** — `s5_v1` (non-abelian S₅).
+**Retired** — the recency-defective v1 give-stream family (`binding_v1`,
+`binding_load_v1`, `composite_v1`, `composite_copy_v1`, `composite_copy_scale_v1`)
+lives in `tasks.RETIRED`: generable for historical reproduction, never scored
+([#11](https://github.com/ianbarber/factworld/issues/11)). Only `benchmark`-kind
+tasks are scored; the registry never presents confounded tasks as peers.
 
 Scale any task to stress larger models via explicit difficulty knobs:
 
 ```python
-hard = CANONICAL["composite_copy_v1"].scaled(k=64, eval_lengths=(32, 64, 128))
+hard = CANONICAL["composite_copy_v2"].scaled(k=64, eval_lengths=(32, 64, 128))
 ```
 
 ## How the tasks get harder — and who solves them
@@ -205,8 +206,8 @@ mistakes are in [`docs/tasks.md`](docs/tasks.md).
 | --- | --- | --- | --- |
 | `recall_copy_v1` | 1-of-N in-context-copy recall | k facts (~0.016) | distractor pool |
 | `conflict_v1` | parametric ↔ in-context override | k facts (~0.016) | memorized map vs. context |
-| `binding_v1` | last-write-wins state tracking | k roles (0.200) | give-stream length |
-| `composite_copy_v1` | binding × in-context recall | k² pairs (~0.031) | binding horizon |
+| `binding_v2` | last-write-wins state tracking | k roles (0.200) | give-stream length |
+| `composite_copy_v2` | binding × in-context recall | k² pairs (~0.031) | binding horizon |
 | `chain_v1` | depth-*k* pointer chase | k agents (~0.167) | composition depth |
 | `s5_v1` | S₅ role permutation | 5 roles (0.200) | permutation horizon |
 
@@ -437,14 +438,14 @@ rest print their tables to stdout (transcribed into the cited doc).
 python scripts/validate_suite.py          # validity gate: no majority/recency/first-pos shortcut clears floor (prints PASS)
 
 # 1-command benchmark entry point (any task / scaled variant)
-python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
+python scripts/run_benchmark.py composite_copy_v2 --arch gdp_hybrid --d_model 320 --steps 8000
 
 # Section 3.1 — state-tracking dissociation                 -> docs/state-tracking/dense-supervised.md
 python scripts/dense_s5.py --group s5     # S5 matrix: gdp_pure / n_h=1 null / gdn / transformer / gru, 3 seeds
 python scripts/dense_s5.py --group a5     # A5 not-S5-specific control panel
 
 # Section 3.2 — recall                                       -> docs/results-ci.md, docs/recall/readout.md
-python scripts/ci_dissociation.py         # recall_copy_v1 + binding_v1, 4 archs x 3 seeds (pool-2 dissociation CIs)
+python scripts/ci_dissociation.py         # recall_copy_v1 + binding_v2, 4 archs x 3 seeds (pool-2 dissociation CIs)
 python scripts/recall_attention_test.py   # attention-free attribution: gdp_pure / gdn_pure / gdp_hybrid across pools 2..8
 python scripts/recall_fair.py             # the 1-hop-vs-deferred differential (onehop/defsep/defpad; n_heads 4 vs 8)
 

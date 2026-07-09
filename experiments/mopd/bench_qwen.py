@@ -75,7 +75,7 @@ def main() -> None:
 
     rows = []
     for name, L in BENCH:
-        spec = TK.CANONICAL[name]
+        spec = TK.spec_for(name)  # binding/composite v1 pins unchanged (RETIRED handles, issue #11)
         exs = TK.generate(spec, "test", n=a.n, length=L)
         chats = [build_chat(tok, e.prompt, bool(a.think)) for e in exs]
         preds = []

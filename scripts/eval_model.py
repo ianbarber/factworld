@@ -5,13 +5,13 @@ APIs, and a hardcoded function backend for smoke tests.
 
 Examples:
     python scripts/eval_model.py recall_v1 --backend function --n 5
-    python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 20
-    python scripts/eval_model.py binding_v1 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
+    python scripts/eval_model.py composite_copy_v2 --backend api --model gpt-4o-mini --n 20
+    python scripts/eval_model.py binding_v2 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
     python scripts/eval_model.py conflict_v1 --backend local --arch gdp_hybrid --d_model 128 --n_layers 2 --steps 100
 
 The API / HF backends automatically append a composite-output format instruction
-for ``composite_copy_v1`` and ``composite_v1`` so chat models emit the required
-``<holder> <value> .`` span (use ``--no-composite-format`` to disable).
+for composite-family tasks (e.g. ``composite_copy_v2``) so chat models emit the
+required ``<holder> <value> .`` span (use ``--no-composite-format`` to disable).
 """
 import argparse
 import json
@@ -78,7 +78,9 @@ def build_local_backend(spec, arch, d_model, n_layers, steps, train_n, batch,
 
 def main():
     ap = argparse.ArgumentParser(description="Evaluate a model on a FactWorld task.")
-    ap.add_argument("task", choices=list(TK.CANONICAL), help="Canonical task name.")
+    ap.add_argument("task", choices=[*TK.CANONICAL, *TK.RETIRED],
+                    help="Canonical task name (RETIRED names allowed for historical "
+                         "reproduction only — never scored; see tasks.RETIRED).")
     ap.add_argument("--backend", choices=["local", "hf", "api", "function"], required=True,
                     help="Which backend to use for generation.")
     ap.add_argument("--model", default=None,
@@ -119,10 +121,10 @@ def main():
                     help="Optional JSON output path (same schema as eval_openrouter_grid.py).")
     a = ap.parse_args()
 
-    spec = TK.CANONICAL[a.task]
+    spec = TK.spec_for(a.task)
 
     system_prompt = a.system_prompt
-    if a.composite_format and a.task in ("composite_copy_v1", "composite_v1"):
+    if a.composite_format and spec.family == "composite":
         system_prompt = f"{system_prompt} {COMPOSITE_FORMAT_PROMPT}"
 
     if a.backend == "local":

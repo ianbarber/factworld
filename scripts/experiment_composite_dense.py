@@ -52,7 +52,12 @@ def make_world(spec):
 
 
 def build_composite_stream(spec, w, r, oracle, origins, L, K, rng, supervise_value=False):
-    """A composite_copy_scale_v1 stream: facts + give-stream + dense holder-of-object slots + query + value.
+    """A composite stream at the §5 scale-point knobs: facts + give-stream + dense
+    holder-of-object slots + query + value.
+
+    Give-streams come from the uniform-last-write (v2) sampler in factworld.tasks — the old
+    script-local copy drew every event's object uniformly, reproducing the retired v1 recency
+    defect (the resolving write clustered near the stream end; see tasks.RETIRED / issue #11).
 
     K = supervise the holder-of-the-object every K give-events (K=1 dense on the binding leg).
     The final value (recall leg) is NEVER supervised unless supervise_value=True (a control).
@@ -61,8 +66,7 @@ def build_composite_stream(spec, w, r, oracle, origins, L, K, rng, supervise_val
     pool = spec.recall_pool or spec.k
     chosen = list(w.agents[:pool])
     objs = list(w.objects[:spec.n_objects_active])
-    ev = [type(w.sample_easy_chain(1, "x")[0])("give", (rng.choice(objs), rng.choice(chosen))) for _ in range(L)]
-    obj = rng.choice(sorted({e.args[0] for e in ev}))
+    obj, _p, ev = TK._uniform_last_write_stream(rng, L, objs, chosen)
     holder = oracle.easy_holder(ev, obj)
     value = origins[holder]
     facts = " ".join(r.render_fact(a, "a0", origins[a], key=f"{a}|{rng.random()}") for a in chosen)
@@ -219,7 +223,10 @@ def main():
     ap.add_argument("--out_prefix", default=None)
     a = ap.parse_args()
 
-    spec = TK.CANONICAL["composite_copy_scale_v1"]
+    # Knob source only (k=5 recall pool, 4 active objects — the §5 scale point); the spec is
+    # RETIRED (v1 sampler, issue #11) but build_composite_stream uses the v2 uniform-last-write
+    # sampler, so streams generated here do NOT carry the v1 recency defect.
+    spec = TK.RETIRED["composite_copy_scale_v1"]
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     from pathlib import Path
     prefix = Path(a.out_prefix or f"results/composite_dense_{ts}")
@@ -251,7 +258,8 @@ def main():
                 f.write(json.dumps(row) + "\n")
             import torch; del model; torch.cuda.empty_cache()
 
-    lines = ["# Dense-supervision weaning on the composition task (composite_copy_scale_v1)", "",
+    lines = ["# Dense-supervision weaning on the composition task "
+             "(composite_copy_scale_v1 knobs, v2 uniform-last-write sampler)", "",
              f"`scripts/experiment_composite_dense.py`. gdp_hybrid d{a.d_model}x{a.n_layers}, {a.steps} steps "
              f"(+{a.wean_steps} wean), seeds {a.seeds}. Guided free-run: facts+events forced, holder slots + "
              f"final value GENERATED. value = the recall leg (does it fire?). Floor = 0.20.", "",

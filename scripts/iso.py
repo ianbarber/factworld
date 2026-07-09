@@ -21,8 +21,6 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
-from factworld.world import Event  # noqa: E402
-
 # d_ff chosen so all four are ~5.68M params at d_model=256 (see param-budget search)
 CONFIGS = [
     ("n_h=1", dict(d_ff=1408, num_householder=1, allow_neg_eigval=True)),
@@ -48,16 +46,16 @@ def _world():
 
 
 def examples(w, r, origins, lengths, n, seed):
+    """Composite items on the uniform-last-write (v2) give-stream sampler from factworld.tasks —
+    the old script-local copy drew every event's object uniformly, reproducing the retired v1
+    recency defect (resolving write clustered near the stream end; see tasks.RETIRED / issue #11)."""
+    from factworld.tasks import _uniform_last_write_stream
     rng = random.Random(seed)
     out = []
     for _ in range(n):
         L = rng.choice(lengths)
-        ev = [Event("give", (rng.choice(w.objects), rng.choice(w.agents))) for _ in range(L)]
-        obj = rng.choice(sorted({e.args[0] for e in ev}))
-        holder = None
-        for e in ev:
-            if e.args[0] == obj:
-                holder = e.args[1]
+        obj, p, ev = _uniform_last_write_stream(rng, L, list(w.objects), list(w.agents))
+        holder = ev[p].args[1]
         g = origins[holder]
         facts = " ".join(r.render_fact(a, "a0", origins[a], key=str(a)) for a in w.agents)
         hist = " ".join(r.render_history(tuple(ev), with_steps=True))
@@ -98,17 +96,15 @@ def main():
     from factworld import train as T
     w, r, origins = _world()
     ev = {L: examples(w, r, origins, (L,), 200, 200 + L) for L in LENS}
-    # build training docs (history + query + CoT 'holder value .')
+    # build training docs (history + query + CoT 'holder value .') on the same
+    # uniform-last-write (v2) sampler as examples() (v1-defect port, issue #11)
+    from factworld.tasks import _uniform_last_write_stream
     rng = random.Random(2)
     train_docs = []
     for _ in range(8000):
         L = rng.choice(TRAIN_LEN)
-        events = [Event("give", (rng.choice(w.objects), rng.choice(w.agents))) for _ in range(L)]
-        obj = rng.choice(sorted({e.args[0] for e in events}))
-        holder = None
-        for e in events:
-            if e.args[0] == obj:
-                holder = e.args[1]
+        obj, p, events = _uniform_last_write_stream(rng, L, list(w.objects), list(w.agents))
+        holder = events[p].args[1]
         facts = " ".join(r.render_fact(a, "a0", origins[a], key=str(a)) for a in w.agents)
         hist = " ".join(r.render_history(tuple(events), with_steps=True))
         train_docs.append(f"{facts} {hist} what is a0 of the holder of {obj} ? : {holder} {origins[holder]} .")

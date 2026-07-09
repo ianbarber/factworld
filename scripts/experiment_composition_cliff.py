@@ -110,7 +110,7 @@ def train_and_eval(spec, arch, seed, *, d_model, n_layers, steps, batch, train_n
 
 def specs_for_probe(probe: str):
     if probe == "ceiling_k32":
-        return [("ceiling_k32", TK.CANONICAL["composite_copy_v1"], None)]
+        return [("ceiling_k32", TK.RETIRED["composite_copy_v1"], None)]
     if probe == "recall_pool16":
         spec = TK.CANONICAL["recall_copy_v1"].scaled(
             k=32,
@@ -121,7 +121,7 @@ def specs_for_probe(probe: str):
         return [("recall_pool16", spec, 16)]
     if probe == "pool_sweep":
         return [
-            ("pool_sweep", TK.CANONICAL["composite_copy_v1"].scaled(recall_pool=p), p)
+            ("pool_sweep", TK.RETIRED["composite_copy_v1"].scaled(recall_pool=p), p)
             for p in (8, 12, 16)
         ]
     raise ValueError(f"unknown probe: {probe}")

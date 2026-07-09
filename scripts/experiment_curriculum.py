@@ -49,7 +49,7 @@ _SHARED = dict(k=32, value_vocab_size=128, seed=0)
 
 def curriculum_specs():
     """Task specs for training arms and eval (eval uses canonical difficulty)."""
-    binding = TK.CANONICAL["binding_v1"].scaled(**_SHARED, name="curriculum_binding")
+    binding = TK.RETIRED["binding_v1"].scaled(**_SHARED, name="curriculum_binding")
     recall = TK.CANONICAL["recall_copy_v1"].scaled(
         **_SHARED,
         memorized_recall=False,
@@ -57,10 +57,10 @@ def curriculum_specs():
         eval_lengths=(5, 16),
         name="curriculum_recall",
     )
-    composite_p5 = TK.CANONICAL["composite_copy_v1"].scaled(
+    composite_p5 = TK.RETIRED["composite_copy_v1"].scaled(
         **_SHARED, recall_pool=5, name="curriculum_composite_p5",
     )
-    composite_p16 = TK.CANONICAL["composite_copy_v1"].scaled(
+    composite_p16 = TK.RETIRED["composite_copy_v1"].scaled(
         **_SHARED, recall_pool=16, name="curriculum_composite_p16",
     )
     return {

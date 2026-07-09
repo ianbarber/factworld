@@ -1,0 +1,39 @@
+{
+  "captured_at_suite_version": "1.0",
+  "captured_from": "git HEAD pre-v2-sampler (branch benchmark/frontier-v1)",
+  "n": 25,
+  "hash": "sha256 over '\\n'.join(f'{prompt}\\t{answer}') per (spec, eval length)",
+  "hashes": {
+    "composite_copy_v1": {
+      "16": "6202ce8be38ac89695b2c7e98ea6b5edc8b8cc9da014e38f925efa0cfd233fb1",
+      "32": "7989ed47898362e56c90e066860cae3c1305ddac381531315d5293f2670199a8",
+      "64": "dce7e4869ffed77dae8c3d6c993bbd0ff5f9f688e073a985bdb4b56eefb42507"
+    },
+    "binding_v1": {
+      "16": "0cc4eb2da1814e373d913d0044da557ca6e8394594a9df97b0773f6733df5725",
+      "32": "6e79e0af69b5180784c93275a43d41eb33e969fc6777bb306a4832a4e135627f",
+      "64": "287e14eb281eb3b578e2e7533b938cbc564eb5e8c27521c6093eada84a08c39d"
+    },
+    "composite_copy_scale_v1": {
+      "16": "9ff2ecb7110d90d3a0e5b27de6a4b1b003a32f303addf60ac0b36eb48b07a9f3",
+      "64": "49acecb3fd2ecf1dd5e33bd0d0c6858782b10710bcaf2b6fc46f4f1c6c0fbeb0"
+    },
+    "recall_copy_v1": {
+      "6": "daebb608e6b029d547459f796d925f122866580a7ed8340b980a5304f5cfdb26",
+      "8": "79e677ffa5122dc73c26af1dda46fad81351421e94973198d4d9821c4efb52f9"
+    },
+    "conflict_v1": {
+      "4": "b3789b658644b64fae53998bdf569f4cca38d820fa1dab9bcd9a81d43db6012e",
+      "5": "9a9704299609d1671712a6bf31733361e5b7344ec2b0291e3aec54eb9d8caad4"
+    },
+    "chain_v1": {
+      "4": "cc674e20d9852d8466883b598c0426a452c50fa48e517ce391c825a8ae7503d6",
+      "5": "4b2d0ee80441b2d5e4590496260bfcf8c1e97f2791fbc3b44b1bc6ee371c3df3"
+    },
+    "s5_v1": {
+      "32": "3ca4487ac38ba321059511244fe2ffcc7dc225179fff12295475b82d8ff2fdb5",
+      "64": "1099e87df5dfaf474b2009d9aa290ebc5db8cab0f1e6afb5c3aa92e1ccd25936",
+      "128": "77222bb82cc54fee328151918f9891dc5ff230ca009d4223623fc81f2b661f7f"
+    }
+  }
+}

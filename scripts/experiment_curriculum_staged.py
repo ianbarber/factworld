@@ -52,7 +52,7 @@ _SHARED = dict(k=32, value_vocab_size=128, seed=0)
 
 def staged_specs():
     """Task specs for training arms and eval."""
-    binding = TK.CANONICAL["binding_v1"].scaled(**_SHARED, name="curriculum_binding")
+    binding = TK.RETIRED["binding_v1"].scaled(**_SHARED, name="curriculum_binding")
     recall_easy = TK.CANONICAL["recall_copy_v1"].scaled(
         **_SHARED,
         memorized_recall=False,
@@ -76,10 +76,10 @@ def staged_specs():
     )
     # Composite arms carry the oracle holder trajectory so we can train with
     # dense per-step supervision via --use_trace.
-    composite_p5 = TK.CANONICAL["composite_copy_v1"].scaled(
+    composite_p5 = TK.RETIRED["composite_copy_v1"].scaled(
         **_SHARED, recall_pool=5, worked_trace=True, name="curriculum_composite_p5",
     )
-    composite_p16 = TK.CANONICAL["composite_copy_v1"].scaled(
+    composite_p16 = TK.RETIRED["composite_copy_v1"].scaled(
         **_SHARED, recall_pool=16, worked_trace=True, name="curriculum_composite_p16",
     )
     return {

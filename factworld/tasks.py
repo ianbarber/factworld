@@ -12,8 +12,18 @@ Label discipline (inherited from the instrument): every example's gold answer co
 **oracle**, never from parsing rendered text — so labels cannot leak. This module is torch-free (data
 generation needs no GPU).
 
+Suite 1.1 adds the v2 binding/composite specs (``binding_v2`` / ``composite_copy_v2``): same knobs as
+their v1 counterparts but with ``last_write_uniform=True``, which places the queried object's resolving
+write uniformly over the stream instead of letting it cluster near the end (the v1 recency shortcut —
+see the TaskSpec field and the RETIRED registry annotations). The recency-defective v1 family
+(binding_v1 / binding_load_v1 / composite_v1 / composite_copy_v1 / composite_copy_scale_v1) is RETIRED
+(issue #11): the scored registry (``CANONICAL`` / ``REPORTED``) carries ONE clean version per task; the
+retired specs stay generable — and byte-identical (frozen-spec immutability; regression-pinned by
+tests/goldens_prechange.json) — in the ``RETIRED`` dict for historical reproduction and the
+defect-documentation tests, but are never scored.
+
   from factworld.tasks import CANONICAL, generate, score_exact
-  spec = CANONICAL["composite_v1"]
+  spec = CANONICAL["composite_copy_v2"]
   train = generate(spec, "train", n=8000)
   test  = generate(spec, "test", length=64)          # held-out OOD-length split, fixed seed
   acc   = sum(score_exact(pred, ex.answer) for pred, ex in zip(preds, test)) / len(test)
@@ -28,7 +38,14 @@ from .oracle import Oracle
 from .render import Renderer
 from .world import Event, World
 
-SUITE_VERSION = "1.0"
+SUITE_VERSION = "1.1"
+
+# The generation-stream version baked into every spec's RNG key at its introduction. This is
+# deliberately DECOUPLED from SUITE_VERSION: `spec.version` feeds `_rng`, so retying it to the
+# suite version would silently reshuffle every already-published spec's examples on a suite bump —
+# violating "same (spec, split, length, idx) -> identical example, forever". v1 specs were
+# introduced at "1.0" and stay there; new specs pin the version current at their introduction.
+_STREAM_V1 = "1.0"
 
 # The one canonical metric reported as the headline score (see ``score_relaxed``). The other scorers
 # (exact / contains / last_n) are diagnostics. ``runner.evaluate_task`` reads this so the runner,
@@ -41,11 +58,12 @@ class TaskSpec:
     """A frozen, reproducible benchmark task. Difficulty knobs are explicit and scalable."""
     name: str
     family: str                       # 'recall' | 'binding' | 'composite' | 's5'
-    version: str = SUITE_VERSION
+    version: str = _STREAM_V1         # RNG-stream version: frozen at spec introduction (see _STREAM_V1)
     seed: int = 0
     # 'benchmark' = a scored, discriminating task; 'control' = a positive control / isolation task that is
     # degenerate as a capability score (e.g. memorized-map recall); 'experimental' = correct construct but
-    # not reliably trainable in this harness yet (see s5_v1). Only 'benchmark' tasks are in REPORTED.
+    # not reliably trainable in this harness yet (see s5_v1); 'retired' = superseded/defective spec kept
+    # generable in RETIRED (never scored). Only 'benchmark' tasks are in REPORTED.
     kind: str = "benchmark"
     # world / breadth knobs
     k: int = 5                         # agents (= roles for s5); also the recall pool unless recall_pool set
@@ -59,6 +77,28 @@ class TaskSpec:
     train_lengths: tuple = (4, 8, 16)  # binding-chain / permutation-history lengths in training
     eval_lengths: tuple = (16, 32, 64) # held-out OOD lengths
     worked_trace: bool = False         # s5/composite: emit the oracle state trajectory as a scratchpad
+    # binding/composite: v2 give-stream sampler. The v1 sampler draws every event's object uniformly
+    # from the active set, so the queried object's resolving (last) write sits ~Geometric(1/m) events
+    # from the stream END regardless of L (median distance 1 at L16) — a strong recency heuristic
+    # ("last event's recipient" [+ that holder's fact]) scores ~0.34@L16/0.21@L64, and L adds
+    # distractor volume, not binding depth. With last_write_uniform=True the queried object is chosen
+    # FIRST and its last write is placed uniformly over [floor(0.1*L), L-2] (never the final event,
+    # never degenerate-early); later events draw only from the OTHER active objects, earlier events
+    # from all of them (genuine overwrite history). Distance-from-end of the resolving write is then
+    # ~Uniform and scales linearly with L, and the recency heuristic drops to ~chance.
+    #
+    # RESIDUAL DOCUMENTED FLOOR (v2, adversarial verification 2026-07-09): heuristics that FILTER
+    # events by the queried object and guess among its give-recipients (uniformly / mode /
+    # first-write) score E[mult(holder)/w] where w = the object's write count — measured ~0.52@L16 /
+    # 0.20@L64 / 0.13@L128 on composite_copy_v2 (chance 1/16), ~0.58/0.34/0.27 on binding_v2
+    # (chance 1/5). This is information-theoretic for last-write-wins, not a sampler defect: the
+    # resolving write is exchangeable among the queried object's w writes, so an order-blind
+    # adversary's hit rate cannot be pushed below ~E[1/w] by ANY sampler that keeps w << L
+    # (multi-object interference). Unlike the v1 position shortcut (flat in L), this floor decays
+    # ~1/L, so the L axis stays a genuine binding-depth axis; small-L cells (L<=16) should be read
+    # against this floor, not against 1/pool.
+    last_write_uniform: bool = False
+
     # chain-only: explicit opt-in to depth >= k WRAP semantics. The pointer map is a single k-cycle, so
     # at depth >= k gold collapses to nxt^(depth mod k)(start) — depth is NOT being measured (depth ≡ 0
     # mod k is the identity). Off by default: generate() raises ValueError. The no-wrap deep-chain
@@ -136,15 +176,38 @@ def _ex_recall(spec, w, r, fixed_origins, rng, split, length, idx):
     return Example(f"{facts} {q}", _render_answer(origins[g]), length)
 
 
+def _uniform_last_write_stream(rng, length, objs, recipients):
+    """v2 give-stream sampler (see TaskSpec.last_write_uniform). Chooses the queried object FIRST,
+    places its last write at position p ~ Uniform[floor(0.1*L), L-2] (never the final event, never
+    degenerate-early), then fills the stream: events after p draw only from the OTHER active objects
+    (interference continues to the end), events before p draw from ALL of them (the queried object
+    may be overwritten earlier — genuine history). Returns (obj, p, events). No post-hoc filtering,
+    so determinism stays simple and item counts exact."""
+    assert length >= 2 and len(objs) >= 2, "uniform-last-write stream needs L>=2 and >=2 active objects"
+    obj = rng.choice(objs)
+    p = rng.randint(length // 10, length - 2)          # length // 10 == floor(0.1 * L)
+    others = [o for o in objs if o != obj]
+    ev = []
+    for i in range(length):
+        o = obj if i == p else rng.choice(objs if i < p else others)
+        ev.append(Event("give", (o, rng.choice(recipients))))
+    return obj, p, ev
+
+
 def _ex_binding(spec, w, r, oracle, rng, length):
     """Last-write-wins binding (no recall): resolve the current holder of an object, answer the agent."""
     objs = list(w.objects[:spec.n_objects_active])
-    ev = [Event("give", (rng.choice(objs), rng.choice(w.agents))) for _ in range(length)]
-    obj = rng.choice(sorted({e.args[0] for e in ev}))
+    if spec.last_write_uniform:                        # v2 sampler: uniform resolving-write position
+        obj, p, ev = _uniform_last_write_stream(rng, length, objs, list(w.agents))
+        meta = {"obj": obj, "last_write_pos": p}
+    else:                                              # v1 sampler (frozen): uniform object draws
+        ev = [Event("give", (rng.choice(objs), rng.choice(w.agents))) for _ in range(length)]
+        obj = rng.choice(sorted({e.args[0] for e in ev}))
+        meta = {"obj": obj}
     holder = oracle.easy_holder(ev, obj)
     hist = " ".join(r.render_history(tuple(ev), with_steps=True))
     q = r.render_query("state_easy", target=obj)
-    return Example(f"{hist} {q}", _render_answer(holder), length, {"obj": obj})
+    return Example(f"{hist} {q}", _render_answer(holder), length, meta)
 
 
 def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
@@ -153,8 +216,12 @@ def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
     chosen = list(w.agents[:pool]) if spec.memorized_recall else rng.sample(list(w.agents), pool)
     origins = fixed_origins if spec.memorized_recall else dict(zip(chosen, rng.sample(list(w.value_vocab), pool)))
     objs = list(w.objects[:spec.n_objects_active])
-    ev = [Event("give", (rng.choice(objs), rng.choice(chosen))) for _ in range(length)]
-    obj = rng.choice(sorted({e.args[0] for e in ev}))
+    if spec.last_write_uniform:                        # v2 sampler: uniform resolving-write position
+        obj, p, ev = _uniform_last_write_stream(rng, length, objs, chosen)
+    else:                                              # v1 sampler (frozen): uniform object draws
+        ev = [Event("give", (rng.choice(objs), rng.choice(chosen))) for _ in range(length)]
+        obj = rng.choice(sorted({e.args[0] for e in ev}))
+        p = None
     holder = oracle.easy_holder(ev, obj)                          # gold via the oracle
     value = origins[holder]
     facts = " ".join(r.render_fact(a, "a0", origins[a], key=f"{a}|{idx}|{rng.random()}") for a in chosen)
@@ -162,6 +229,8 @@ def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
     q = r.render_query("recall", attribute="a0", entity=f"the holder of {obj}")
     prompt = f"{facts} {hist} {q}"
     meta = {"holder": holder, "obj": obj}
+    if p is not None:
+        meta["last_write_pos"] = p
     if spec.worked_trace:    # oracle worked-trace = optional TRAINING signal, not part of the scored answer
         meta["trace"] = " ".join(oracle.easy_holder(ev, obj, t=t) for t in range(1, length + 1))
     return Example(prompt, _render_answer(f"{holder} {value}"), length, meta)
@@ -390,7 +459,8 @@ def trace_accuracy(pred_trace: str, gold_trace: str) -> dict:
 
 
 # canonical frozen reference instances (scale via .scaled(...)). `kind` separates scored benchmark tasks
-# from controls/experimental tasks (see the kind field: benchmark|control|experimental).
+# from controls/experimental tasks (see the kind field: benchmark|control|experimental|retired).
+# ONE version per task: superseded specs live in RETIRED below, never here.
 CANONICAL = {
     # control: memorized 5-entry map shared train/test -> in-weights lookup, not retrieval. Use as a
     # positive control / floor-check, not a recall score. The honest recall task is recall_copy_v1.
@@ -405,22 +475,21 @@ CANONICAL = {
                                  value_vocab_size=64, train_lengths=(2, 3, 4, 5), eval_lengths=(6, 8)),
     # NOTE: last-write-wins binding *is* the delta-rule update, so delta-rule recurrences have a structural
     # prior here — this measures last-write-wins tracking, not a neutral cross-architecture state score.
-    "binding_v1":       TaskSpec("binding_v1", "binding", n_objects_active=4),
-    # control: the recall leg is the memorized 5-map -> this isolates the BINDING leg (recall saturated),
-    # it is not a composition score. The real composition task is composite_copy_v1.
-    "composite_v1":     TaskSpec("composite_v1", "composite", k=5, memorized_recall=True, kind="control"),
+    # binding_v1 (the recency-defective sampler) is RETIRED; this is the one registered binding task.
+    # The v2 give-stream sampler: the resolving write's distance-from-end is ~Uniform and scales with
+    # L (L is a genuine binding-depth axis); strong recency sits at ~1/k chance.
+    "binding_v2":       TaskSpec("binding_v2", "binding", version="1.1", n_objects_active=4,
+                                 last_write_uniform=True),
     # the flagship: genuine 2-hop binding × in-context-copy. BIMODAL at the emergence threshold -> report
-    # p(converge) over >=5 seeds, not a mean.
-    "composite_copy_v1": TaskSpec("composite_copy_v1", "composite", k=32, recall_pool=16,
-                                  memorized_recall=False, value_vocab_size=128,
-                                  train_lengths=(4, 8, 16), eval_lengths=(16, 32, 64)),
-    # the EXACT §5 scale-experiment difficulty point, registered for one-command reproducibility: a small
-    # recall pool (k=5, 1-of-5) so the recall leg is independently learnable (§4 cliff) and a composite floor
-    # is attributable to composition, not recall capacity. This is what scale_wall2.py/scale_confirm.py run;
-    # kind=experimental so it stays out of REPORTED (the shipped scored default is the harder composite_copy_v1).
-    "composite_copy_scale_v1": TaskSpec("composite_copy_scale_v1", "composite", k=5, recall_pool=5,
-                                        memorized_recall=False, value_vocab_size=128, kind="experimental",
-                                        train_lengths=(4, 8, 16), eval_lengths=(16, 64)),
+    # p(converge) over >=5 seeds, not a mean. composite_copy_v1 (recency-defective sampler) is RETIRED;
+    # this is the one registered composition task. The v2 give-stream sampler: the resolving write's
+    # distance-from-end is ~Uniform in [1, ~0.9L] so L is a genuine binding-depth axis, and the strong
+    # recency heuristic drops to ~1/recall_pool chance (read small-L cells against the residual
+    # filter-by-object floor E[1/w] documented on TaskSpec.last_write_uniform, not against 1/pool).
+    "composite_copy_v2": TaskSpec("composite_copy_v2", "composite", version="1.1", k=32,
+                                  recall_pool=16, memorized_recall=False, value_vocab_size=128,
+                                  train_lengths=(4, 8, 16), eval_lengths=(16, 32, 64),
+                                  last_write_uniform=True),
     # experimental: correct non-abelian S5 construct, but not reliably trainable in this harness (answer-only
     # floors in-distribution; worked-trace learns train length but compounds at generation). Needs the
     # dense-per-step regime before it is a scored task. Excluded from REPORTED.
@@ -447,14 +516,60 @@ CANONICAL = {
     # at depth >= k raises ValueError (gold collapses to nxt^(depth mod k)); deep chains must use the
     # no-wrap protocol .scaled(k=depth+2), or opt into wrap explicitly via .scaled(chain_allow_wrap=True).
     "chain_v1":         TaskSpec("chain_v1", "chain", k=6, train_lengths=(2, 3), eval_lengths=(4, 5)),
-    # experimental: binding under a LARGER working set (m=8 active objects) to expose the interference
-    # cliff a load probe found (m>=8 floors). Flagged not-yet-a-score: needs the dense regime + a
-    # removal/overwrite primitive (not in the Event model) before it discriminates rather than just floors.
-    "binding_load_v1":  TaskSpec("binding_load_v1", "binding", n_objects_active=8, kind="experimental"),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)
 REPORTED = tuple(name for name, spec in CANONICAL.items() if spec.kind == "benchmark")
+
+# RETIRED specs (issue #11, owner decision 2026-07-09: kill v1 — one clean version per task in the
+# scored registry). These are the recency-defective v1 give-stream family: the v1 sampler draws every
+# event's object uniformly from the active set, so the queried object's resolving (last) write sits
+# ~Geometric(1/m) events from the stream END at every L (median distance 1 at L16). The one-line
+# STRONG recency heuristic ("last give-event's recipient" [+ that holder's stated a0 fact]) therefore
+# scores far above chance — measured ~0.34@L16 / 0.21@L64 on composite_copy_v1 (chance ~1/16) and
+# ~0.4 on binding_v1 (chance 1/5) — and the L axis measures distractor volume, not binding depth.
+# Superseded by the last_write_uniform v2 specs in CANONICAL (binding_v2 / composite_copy_v2), which
+# hold that heuristic at ~chance.
+#
+# RETIRED specs are NEVER scored: kind='retired' keeps them out of REPORTED, scripts/validate_suite.py
+# skips them (the known-shortcut annotation above replaces its per-task exemption), and the scored
+# registry lookups (eval CLIs, the frontier benchmark) resolve CANONICAL names. They remain here —
+# frozen and byte-identical (version pinned at _STREAM_V1; goldens in tests/goldens_prechange.json /
+# tests/test_composite_v2.py) — ONLY for historical reproduction of published results and for the
+# defect-documentation tests that pin the v1-vs-v2 shortcut contrast.
+RETIRED = {
+    # last-write-wins binding under the defective v1 sampler (published binding numbers reference it).
+    "binding_v1":       TaskSpec("binding_v1", "binding", n_objects_active=4, kind="retired"),
+    # binding under a LARGER working set (m=8 active objects; interference-cliff probe). Was
+    # kind=experimental (never a score); retired with the rest of the v1 sampler family.
+    "binding_load_v1":  TaskSpec("binding_load_v1", "binding", n_objects_active=8, kind="retired"),
+    # control: recall leg = the memorized 5-map, isolating the BINDING leg (recall saturated). Was
+    # kind=control; the binding leg still came from the defective v1 stream.
+    "composite_v1":     TaskSpec("composite_v1", "composite", k=5, memorized_recall=True, kind="retired"),
+    # the pre-fix flagship: 2-hop binding × in-context-copy under the v1 sampler (the published
+    # composite grid/benchmark columns). Superseded knob-for-knob by composite_copy_v2.
+    "composite_copy_v1": TaskSpec("composite_copy_v1", "composite", k=32, recall_pool=16,
+                                  memorized_recall=False, value_vocab_size=128, kind="retired",
+                                  train_lengths=(4, 8, 16), eval_lengths=(16, 32, 64)),
+    # the EXACT §5 scale-experiment difficulty point (k=5, 1-of-5 recall so a composite floor is
+    # attributable to composition, not recall capacity): what scale_wall2.py/scale_confirm.py ran.
+    "composite_copy_scale_v1": TaskSpec("composite_copy_scale_v1", "composite", k=5, recall_pool=5,
+                                        memorized_recall=False, value_vocab_size=128, kind="retired",
+                                        train_lengths=(4, 8, 16), eval_lengths=(16, 64)),
+}
+
+
+def spec_for(name: str) -> TaskSpec:
+    """Resolve a task name against CANONICAL, falling back to RETIRED.
+
+    The fallback exists ONLY so historical runs remain reproducible (retired specs generate
+    byte-identically forever); anything reporting a score should stick to CANONICAL names.
+    """
+    if name in CANONICAL:
+        return CANONICAL[name]
+    if name in RETIRED:
+        return RETIRED[name]
+    raise KeyError(f"unknown task {name!r} (not in CANONICAL or RETIRED)")
 
 
 if __name__ == "__main__":  # self-test: every canonical task generates + round-trips through the oracle
