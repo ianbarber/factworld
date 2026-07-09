@@ -10,6 +10,12 @@ This module is the single source of truth for WHAT the recurring benchmark runs:
   - ``arms_for(model_slug)``: the exact list of cell dicts the runner executes.
   - ``settings_hash(cell)``: stable resume key for a cell's settings.
   - ``cost_estimate(model_slug, cells)``: price a cell plan before running it.
+  - ``spec_for_cell(task, length, breadth, k_fixed)``: the TaskSpec a cell runs —
+    the v3 working-set-breadth rungs (settings["breadth"]: scaled(k=2*B,
+    recall_pool=B)) and fixed-k chains (settings["k_fixed"]) resolve here, shared
+    by the runner and the cost estimator.
+  - ``cell_dollar_cap(model_slug, n, max_new_tokens)``: the per-cell dollar cap
+    the runner's cost guard enforces for expensive models.
 
 Protocol rule (learned 2026-07-05, see results/s5_horizon_recheck_20260705.jsonl and
 results/chain_reasoning_pilot*_20260705.*): every reasoning-on cell (effort in
@@ -50,6 +56,20 @@ CELL_BUDGET_FACTOR = 3
 # counted as covert in-content CoT (kimi at effort=none averaged ~2762 ctok/call;
 # clean contract answers are tens of tokens).
 COVERT_COT_CTOK_THRESHOLD = 350
+# Working-set-breadth axis (v3): a cell's settings may carry ``breadth`` — the pool
+# rung B, running the task at CANONICAL[task].scaled(k=2*B, recall_pool=B). The
+# anchor is composite_copy_v2 itself (k=32/pool16), so B=16 IS the canonical spec;
+# the key is SENTINEL-DROPPED at B=16 (omitted from settings, ignored by
+# settings_hash) so every pre-breadth history record's resume key is unchanged.
+CANONICAL_BREADTH = 16
+# Per-cell DOLLAR cap (in addition to the token-based CostGuard): the token guard
+# alone permits CELL_BUDGET_FACTOR (3x) a cell's nominal completion budget, which
+# on a frontier thinking cell (e.g. 32768 tokens x n=25 x 3 on opus) is ~$61. For
+# models at or above the price threshold the runner also caps a cell's completion
+# spend at max(CELL_DOLLAR_CAP_MIN_USD, its NOMINAL budget n*max_new_tokens priced
+# at the completion rate) — see cell_dollar_cap.
+CELL_DOLLAR_CAP_MIN_USD = 2.50
+CELL_DOLLAR_CAP_PRICE_THRESHOLD = 10.0  # completion $/M at or above which the cap applies
 
 # Cost-estimate assumptions: non-reasoning arms answer in a few tokens; the
 # synthetic token-dense prompts (g12/a0/v45) tokenize at roughly 3 chars/token.
@@ -220,12 +240,26 @@ def _facet_efforts(policy: str, tier: dict) -> tuple:
 
 
 def _settings(effort, *, rendering=None, format_prompt=None, leg=None,
-              max_new_tokens=None, contract=False) -> dict:
-    """One cell's settings dict (contract C3 keys, always all present)."""
+              max_new_tokens=None, contract=False, breadth=None, k_fixed=None) -> dict:
+    """One cell's settings dict (contract C3 keys, always all present).
+
+    The v3 breadth/depth extension keys are OPTIONAL and sentinel-dropped at their
+    canonical values (``breadth`` at CANONICAL_BREADTH/None, ``k_fixed`` at None):
+    they are OMITTED from the dict entirely so canonical cells keep the exact
+    settings (and resume keys) of pre-breadth history. When present they are part
+    of the settings hash (see settings_hash).
+
+      breadth  — pool rung B: run the task at CANONICAL[task].scaled(k=2*B,
+                 recall_pool=B) (composite tasks; B=16 IS canonical
+                 composite_copy_v2).
+      k_fixed  — fixed-breadth chain: chain_v1.scaled(k=k_fixed) — d hops over a
+                 FIXED k-cycle, replacing the staircase k=2d+1 (k_fixed must
+                 exceed the depth; tasks.py's wrap gate raises otherwise).
+    """
     reasoning_on = effort in REASONING_EFFORTS
     if max_new_tokens is None:
         max_new_tokens = REASONING_MAX_NEW_TOKENS if reasoning_on else DEFAULT_MAX_NEW_TOKENS
-    return {
+    settings = {
         "effort": effort,
         "max_new_tokens": max_new_tokens,
         "stop_at": None,
@@ -237,6 +271,11 @@ def _settings(effort, *, rendering=None, format_prompt=None, leg=None,
         # prompt + last-Answer-line extraction (part of the resume key).
         "contract": contract,
     }
+    if breadth is not None and breadth != CANONICAL_BREADTH:
+        settings["breadth"] = breadth
+    if k_fixed is not None:
+        settings["k_fixed"] = k_fixed
+    return settings
 
 
 def arms_for(model_slug: str) -> list[dict]:
@@ -265,6 +304,13 @@ def arms_for(model_slug: str) -> list[dict]:
             tasks = fc.get("tasks") or tuple((fc["task"], L) for L in fc["lengths"])
             legs = fc.get("legs", (None,))
             triples = tuple((t, L, leg) for t, L in tasks for leg in legs)
+        # v3 breadth/depth knobs (no current facet sets them, so plans and resume
+        # keys are byte-identical): ``breadths`` lists the pool rungs B a facet
+        # runs (each cell repeats per rung; the canonical rung's key is
+        # sentinel-dropped), ``k_fixed`` pins the chain cycle size instead of the
+        # staircase k=2d+1.
+        breadths = fc.get("breadths", (CANONICAL_BREADTH,))
+        k_fixed = fc.get("k_fixed")
         for effort in _facet_efforts(fc["efforts"], tier):
             # Models that cannot disable reasoning substitute their closest
             # off-arm (e.g. Gemini 3: "minimal"); recorded truthfully in settings.
@@ -276,20 +322,23 @@ def arms_for(model_slug: str) -> list[dict]:
                     budget = None  # per-length raises only apply to thinking arms
                 if budget is None:
                     budget = fc.get("max_new_tokens")  # facet-level cap, any arm
-                cells.append({
-                    "facet": facet_name,
-                    "task": task,
-                    "length": length,
-                    "n": fc["n"],
-                    "settings": _settings(
-                        effort,
-                        rendering=fc.get("rendering"),
-                        format_prompt=fc.get("format_prompt"),
-                        leg=leg,
-                        max_new_tokens=budget,
-                        contract=fc.get("contract", False),
-                    ),
-                })
+                for breadth in breadths:
+                    cells.append({
+                        "facet": facet_name,
+                        "task": task,
+                        "length": length,
+                        "n": fc["n"],
+                        "settings": _settings(
+                            effort,
+                            rendering=fc.get("rendering"),
+                            format_prompt=fc.get("format_prompt"),
+                            leg=leg,
+                            max_new_tokens=budget,
+                            contract=fc.get("contract", False),
+                            breadth=breadth,
+                            k_fixed=k_fixed,
+                        ),
+                    })
     return cells
 
 
@@ -299,38 +348,85 @@ def settings_hash(cell: dict) -> str:
     Hashes the sorted-key JSON dump of ``cell["settings"]``, so it is invariant to
     dict insertion order and identical after a JSON round-trip through history.jsonl.
 
-    A falsy ``contract`` flag is dropped before hashing: history records written
-    before the flag existed (no ``contract`` key) and post-flag non-contract cells
-    (``contract: false``) hash identically, so the resume keys of every already-run
-    cell survive the schema addition. ``contract: true`` cells hash distinctly.
+    Sentinel-dropped keys keep every already-run cell's resume key valid across
+    schema additions; the keys hash distinctly whenever they carry a
+    NON-canonical value:
+
+      - a falsy ``contract`` flag: history written before the flag existed (no
+        ``contract`` key) and post-flag non-contract cells (``contract: false``)
+        hash identically; ``contract: true`` cells hash distinctly.
+      - ``breadth`` at the canonical pool rung (CANONICAL_BREADTH == 16) or
+        falsy: the plan omits the key at canonical B, and an explicit
+        ``breadth: 16`` must still hash like pre-breadth history (breadth=16 IS
+        canonical composite_copy_v2). Note breadth=16 is TRUTHY — a plain falsy
+        drop would not cover it, hence the explicit sentinel.
+      - a falsy ``k_fixed``: staircase chain cells (k=2d+1) keep their keys; a
+        fixed-k chain cell (``k_fixed: 257``) hashes distinctly.
     """
+    _drop = {
+        "contract": lambda v: not v,
+        "breadth": lambda v: not v or v == CANONICAL_BREADTH,
+        "k_fixed": lambda v: not v,
+    }
     settings = {k: v for k, v in cell["settings"].items()
-                if k != "contract" or v}
+                if k not in _drop or not _drop[k](v)}
     payload = json.dumps(settings, sort_keys=True, separators=(",", ":"))
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:10]
+
+
+# --- spec resolution (single source of truth for the runner + cost estimator) ------
+
+def spec_for_cell(task: str, length: int, breadth: int | None = None,
+                  k_fixed: int | None = None):
+    """The TaskSpec a cell actually runs (shared by the runner's cell execution
+    and ``_prompt_tokens_est`` so prompts and prices never diverge).
+
+      - ``breadth`` (pool rung B, composite tasks): CANONICAL[task].scaled(
+        k=2*B, recall_pool=B). Anchored so B=CANONICAL_BREADTH (16) resolves to
+        the canonical composite_copy_v2 knobs (k=32/pool16) — scaling at the
+        canonical rung is a no-op by construction.
+      - ``k_fixed`` (chain family): chain_v1.scaled(k=k_fixed) — d hops over a
+        FIXED k-cycle (composition at fixed breadth). tasks.py's wrap gate
+        raises at generation time if k_fixed <= depth.
+      - chain without k_fixed: the no-wrap STAIRCASE k=2*length+1 when the depth
+        reaches the spec's cycle (breadth grows with depth by design).
+    """
+    from . import tasks as TK
+    spec = TK.CANONICAL[task]
+    if breadth:
+        spec = spec.scaled(k=2 * breadth, recall_pool=breadth)
+    if spec.family == "chain":
+        if k_fixed:
+            spec = spec.scaled(k=k_fixed)
+        elif length >= spec.k:
+            # chain_nowrap staircase: depth d runs over a (2d+1)-cycle — no wrap,
+            # and the backward walk costs d+1 hops so neither direction beats
+            # depth d (generating at depth >= k raises the wrap gate otherwise).
+            spec = spec.scaled(k=2 * length + 1)
+    return spec
 
 
 # --- cost estimation --------------------------------------------------------------
 
 @lru_cache(maxsize=None)
-def _prompt_tokens_est(task: str, length: int, rendering: str | None) -> int:
-    """Rough prompt-token count for one example of (task, length, rendering).
+def _prompt_tokens_est(task: str, length: int, rendering: str | None,
+                       breadth: int | None = None, k_fixed: int | None = None) -> int:
+    """Rough prompt-token count for one example of (task, length, rendering,
+    breadth rung, fixed chain k).
 
-    Generates one deterministic example and estimates tokens at CHARS_PER_TOKEN
-    (the synthetic g/v/r token soup tokenizes densely). Cached: the dry-run plan
-    touches each (task, length) once, not once per model.
+    Generates one deterministic example — via ``spec_for_cell``, so breadth rungs
+    (more facts + a bigger recipient pool) and fixed-k chains (k facts at any
+    depth) are priced on the exact spec the runner executes — and estimates
+    tokens at CHARS_PER_TOKEN (the synthetic g/v/r token soup tokenizes
+    densely). Cached: the dry-run plan touches each distinct combination once,
+    not once per model.
     """
     if task == "s5":
         from . import s5_concrete
         sysp, user, _gold = s5_concrete.gen_examples(length, 1, framing=rendering)[0]
         return max(1, (len(sysp) + len(user)) // CHARS_PER_TOKEN)
     from . import tasks as TK
-    spec = TK.CANONICAL[task]
-    if spec.family == "chain" and length >= spec.k:
-        # chain_nowrap staircase: depth d runs over a (2d+1)-cycle — no wrap, and
-        # the backward walk costs d+1 hops so neither direction beats depth d
-        # (generating at depth >= k raises the wrap validity gate otherwise).
-        spec = spec.scaled(k=2 * length + 1)
+    spec = spec_for_cell(task, length, breadth=breadth, k_fixed=k_fixed)
     ex = TK.generate(spec, "test", n=1, length=length)[0]
     return SYSTEM_PROMPT_EST_TOKENS + max(1, len(ex.prompt) // CHARS_PER_TOKEN)
 
@@ -348,7 +444,8 @@ def cost_estimate(model_slug: str, cells: list[dict], assumed_output_tokens: int
     for cell in cells:
         n = cell["n"]
         s = cell["settings"]
-        per_prompt = _prompt_tokens_est(cell["task"], cell["length"], s.get("rendering"))
+        per_prompt = _prompt_tokens_est(cell["task"], cell["length"], s.get("rendering"),
+                                        s.get("breadth"), s.get("k_fixed"))
         per_out = assumed_output_tokens if s["effort"] in REASONING_EFFORTS else NON_REASONING_OUTPUT_TOKENS
         calls += n
         prompt_tokens += n * per_prompt
@@ -361,3 +458,26 @@ def cost_estimate(model_slug: str, cells: list[dict], assumed_output_tokens: int
         "completion_tokens": completion_tokens,
         "cost_usd": round(cost, 4),
     }
+
+
+def cell_dollar_cap(model_slug: str, n: int, max_new_tokens: int) -> float | None:
+    """Per-cell DOLLAR cap for expensive models, or None (token guard suffices).
+
+    Applies to models whose completion price is at or above
+    CELL_DOLLAR_CAP_PRICE_THRESHOLD ($10/M — opus, gpt-5.5, sonnet on the current
+    roster). Cap = max(CELL_DOLLAR_CAP_MIN_USD, the cell's NOMINAL completion
+    budget ``n * max_new_tokens`` priced at the completion rate): the token-based
+    CostGuard alone permits CELL_BUDGET_FACTOR (3x) the nominal budget — ~$61 for
+    a 32768-token x n=25 thinking cell on opus — so the dollar cap holds an
+    expensive cell to what it would legitimately cost with every call at its full
+    budget, while the $2.50 floor keeps tight cells (e.g. the 96-token
+    zero-budget battery, nominal ~$0.24 on opus) from being aborted by a handful
+    of cap-escaping verbose calls. The runner prices the guard on completion
+    tokens (usage.completion_tokens already includes reasoning); prompt spend is
+    deterministic and priced by the dry-run estimate instead.
+    """
+    reg = MODELS.get(model_slug)
+    if reg is None or reg["completion_price_per_M"] < CELL_DOLLAR_CAP_PRICE_THRESHOLD:
+        return None
+    nominal = n * max_new_tokens / 1e6 * reg["completion_price_per_M"]
+    return max(CELL_DOLLAR_CAP_MIN_USD, nominal)

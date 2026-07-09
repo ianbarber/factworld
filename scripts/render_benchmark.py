@@ -85,6 +85,38 @@ CHAIN_INVALID_MARK = "INVALID (k=6 cycle wrap — task redesigned as chain_nowra
 FIGSIZE = (7.0, 4.4)  # readable at ~700px blog width
 DPI = 150
 
+# --- v3 working-set-breadth settings keys ---------------------------------------
+# Cells may carry settings["breadth"] (the pool rung B: the runner executes
+# CANONICAL[task].scaled(k=2*B, recall_pool=B)) and chain cells settings["k_fixed"]
+# (chain_v1.scaled(k=k_fixed), fixed breadth instead of the k=2d+1 staircase).
+# Both are sentinel-dropped at their canonical values (B=16 == composite_copy_v2's
+# recall_pool / no k_fixed), so records WITHOUT the keys are canonical cells.
+# Non-canonical rungs are distinct arms: they get their own dedup key + arm label
+# and are EXCLUDED from the canonical headline columns, horizons and figures
+# (they will publish under their own breadth tables at Checkpoint 1).
+CANONICAL_BREADTH = 16
+BREADTH_FLOOR_NOTE = (
+    "Per-rung floors for breadth cells: the object-filter floor E[1/w] moves with "
+    "m (active objects) and L only — w counts writes to the QUERIED object, which "
+    "the pool size does not touch — so the floor is FLAT across pool rungs at a "
+    "given (m, L); rows are labelled per (task, L, m), not per rung.")
+
+
+def breadth_of(rec) -> int:
+    """The cell's pool rung B (settings.breadth; CANONICAL_BREADTH when absent)."""
+    return _settings(rec).get("breadth") or CANONICAL_BREADTH
+
+
+def k_fixed_of(rec):
+    """The cell's fixed chain cycle size, or None (staircase / non-chain cells)."""
+    return _settings(rec).get("k_fixed")
+
+
+def canonical_arm(rec) -> bool:
+    """True for cells on the canonical rungs (no breadth override, no fixed-k
+    chain): only these feed the headline columns, horizons and figures."""
+    return breadth_of(rec) == CANONICAL_BREADTH and not k_fixed_of(rec)
+
 # --- v2 zero-budget headline ---------------------------------------------------
 # zero_budget cells run a composite_copy task with reasoning off (effort=none, or
 # "minimal" where the model cannot disable reasoning) under a hard one-line answer
@@ -352,10 +384,13 @@ def _settings(rec) -> dict:
 
 
 def cell_key(rec) -> tuple:
-    """Dedup key: (model, facet, task, length, hash of {effort, leg, rendering})."""
+    """Dedup key: (model, facet, task, length, hash of {effort, leg, rendering,
+    breadth, k_fixed}) — every breadth/fixed-k rung is its own arm (records
+    without the v3 keys read as the canonical rung)."""
     s = _settings(rec)
     arm = json.dumps(
-        {"effort": s.get("effort"), "leg": s.get("leg"), "rendering": s.get("rendering")},
+        {"effort": s.get("effort"), "leg": s.get("leg"), "rendering": s.get("rendering"),
+         "breadth": s.get("breadth"), "k_fixed": s.get("k_fixed")},
         sort_keys=True,
     )
     return (rec.get("model"), rec.get("facet"), rec.get("task"), rec.get("length"), arm)
@@ -435,6 +470,10 @@ def arm_label(rec) -> str:
         parts.append(f"rendering={s['rendering']}")
     if s.get("contract"):
         parts.append("contract")
+    if s.get("breadth"):  # non-canonical pool rung (absent == B=16, canonical)
+        parts.append(f"B={s['breadth']}")
+    if s.get("k_fixed"):  # fixed-breadth chain (vs the k=2d+1 staircase)
+        parts.append(f"k_fixed={s['k_fixed']}")
     parts.append(f"effort={s.get('effort') or 'default'}")
     return ", ".join(parts)
 
@@ -478,7 +517,8 @@ def headline_horizon_censored(records, facet, model,
     cells = [r for r in by_facet(records, facet)
              if r["model"] == model
              and _settings(r).get("rendering") not in exclude_renderings
-             and not chain_invalid(r)]
+             and not chain_invalid(r)
+             and canonical_arm(r)]  # breadth/fixed-k rungs are separate arms
     if not cells:
         return None, "n/a"
     good = [r["length"] for r in cells
@@ -562,7 +602,8 @@ def zero_budget_cell(records, model, length, leg=None, task=None):
         cells = [r for r in by_facet(records, "zero_budget")
                  if r["model"] == model and r.get("length") == length
                  and _settings(r).get("leg") == want
-                 and (task is None or r.get("task") == task)]
+                 and (task is None or r.get("task") == task)
+                 and canonical_arm(r)]  # breadth rungs never shadow the headline
         if cells:
             return cells[0]
     return None
@@ -724,6 +765,43 @@ def object_filter_floor(task: str = "composite_copy_v2", n: int = 100):
 
     f16, f64 = floor(16), floor(64)
     return {"composite_16": f16, "composite_64": f64, "binding_16": f16}
+
+
+@functools.lru_cache(maxsize=64)
+def object_filter_floor_at(task: str, length: int, breadth: int | None = None,
+                           n: int = 100):
+    """Per-rung floor hook for breadth cells: E[1/w] on the exact deterministic
+    items of ``task`` at ``length`` under pool rung ``breadth`` (the runner's
+    scaled(k=2*B, recall_pool=B) spec; None/16 = the canonical spec).
+
+    The floor MOVES WITH m (n_objects_active) and L ONLY: w counts give-events
+    that write the QUERIED object, which depend on the active-object working set
+    and the stream length, never on the pool size — so across pool rungs at a
+    fixed (m, L) the floor is FLAT (up to item-sampling noise; the rung changes
+    which deterministic items are drawn, not the w distribution). Label floor
+    rows per (task, L, m) via ``object_filter_floor_label_at``, one row per
+    (m, L), shared by every rung. None when the spec is unavailable."""
+    spec = _task_spec(task)
+    if spec is None:
+        return None
+    if breadth and breadth != CANONICAL_BREADTH:
+        spec = spec.scaled(k=2 * breadth, recall_pool=breadth)
+    from factworld import tasks as TK
+    tot = 0.0
+    for e in TK.generate(spec, "test", n=n, length=length):
+        writes = len(re.findall(rf"gives {e.meta.get('obj')} to ", e.prompt))
+        if writes:
+            tot += 1.0 / writes
+    return tot / n
+
+
+def object_filter_floor_label_at(task: str, length: int) -> str:
+    """Row label for a per-rung breadth floor: keyed by (task, L, m) — the knobs
+    the floor actually moves with — and explicitly flat across pool rungs."""
+    spec = _task_spec(task)
+    m = spec.n_objects_active if spec is not None else "?"
+    return (f"{OBJECT_FILTER_LABEL} ({task} @L{length}, m={m}; "
+            f"flat across pool rungs)")
 
 
 def _floor_row(label, vals):
@@ -916,6 +994,11 @@ def write_results_md(records, out_path, history_path):
     for row in headline_rows(records):
         lines.append("| " + " | ".join(str(c) for c in row) + " |")
     lines += ["", FLOOR_NOTE, ""]
+    if any(not canonical_arm(r) for r in records):
+        # breadth/fixed-k rung cells exist: they are separate arms (labelled
+        # B=... / k_fixed=... in the per-cell tables, excluded from the headline
+        # columns/figures above) and their floors are per-(m, L), not per-rung.
+        lines += [BREADTH_FLOOR_NOTE, ""]
     for note in ZB_FOOTNOTES:
         lines += [note, ""]
     lines += [replicate_note(records), "", HORIZON_NOTE, "", EFFICIENCY_NOTE, ""]
@@ -996,7 +1079,8 @@ def write_results_md(records, out_path, history_path):
 
 CSV_FIELDS = [
     "run_id", "ts", "git_commit", "suite_version", "model", "served_models", "providers",
-    "facet", "task", "length", "n", "effort", "leg", "rendering", "max_new_tokens",
+    "facet", "task", "length", "n", "effort", "leg", "rendering", "breadth", "k_fixed",
+    "max_new_tokens",
     "stop_at", "format_prompt", "n_shot", "relaxed", "relaxed_ci_lo", "relaxed_ci_hi",
     "exact", "contains", "last_n", "empty_rate", "api_errors", "finish_errors",
     "contract_rate", "covert_cot_rate", "rtok_leak_rate", "rtok_per_call", "escalated",
@@ -1024,6 +1108,8 @@ def write_results_csv(records, out_path):
                 "length": r.get("length"), "n": r.get("n"),
                 "effort": s.get("effort"), "leg": s.get("leg"),
                 "rendering": s.get("rendering"),
+                # v3 rung keys (blank on canonical cells — sentinel-dropped)
+                "breadth": s.get("breadth"), "k_fixed": s.get("k_fixed"),
                 "max_new_tokens": s.get("max_new_tokens"), "stop_at": s.get("stop_at"),
                 "format_prompt": s.get("format_prompt"), "n_shot": s.get("n_shot"),
                 # relaxed is the CANONICAL value (first attempt for escalated cells);
@@ -1156,7 +1242,8 @@ def fig_composite_length(records, out_dir):
 
 def _horizon_fig(records, out_dir, facet, name, xlabel, title):
     cells = [r for r in by_facet(records, facet)
-             if _settings(r).get("rendering") != "abstract_stated"]
+             if _settings(r).get("rendering") != "abstract_stated"
+             and canonical_arm(r)]  # one line per model: canonical rungs only
     if not cells:
         return []
     models = models_of(cells)
@@ -1235,9 +1322,11 @@ ZB_GROUPS = [  # (bar label, length, leg) — headline zero-budget cells in ladd
 
 def fig_zero_budget(records, out_dir):
     # Like the headline table, the figure shows the LATEST zero-budget task's
-    # cells only; an archived task's cells stay in the per-cell tables.
+    # cells only (canonical rungs — breadth-rung cells are separate arms); an
+    # archived task's cells stay in the per-cell tables.
     zb_task = zb_latest_task(records)
-    cells = [r for r in by_facet(records, "zero_budget") if r.get("task") == zb_task]
+    cells = [r for r in by_facet(records, "zero_budget")
+             if r.get("task") == zb_task and canonical_arm(r)]
     if not cells:
         return []
 

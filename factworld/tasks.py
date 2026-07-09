@@ -313,9 +313,14 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
     (one OOD/ID coordinate). Same (spec,split,length,idx) -> identical example, forever."""
     assert split in ("train", "test")
     w, r, oracle = _world(spec)
-    # fixed origins sample spec.k values from the value vocab, so only build them for the families that
-    # use them — a chain scaled to k > value_vocab_size (the no-wrap deep protocol) must not crash here.
-    fixed = _fixed_origins(spec, w) if spec.family in ("recall", "composite") else None
+    # fixed origins sample spec.k values from the value vocab, so only build them where they are USED —
+    # a chain scaled to k > value_vocab_size (the no-wrap deep protocol) must not crash here, and neither
+    # must a non-memorized recall/composite spec scaled likewise (the breadth-rung protocol
+    # scaled(k=2*B, recall_pool=B) reaches k=256 > the 128-value vocab at B=128). _ex_recall/_ex_composite
+    # read fixed origins only when spec.memorized_recall; _fixed_origins draws from its OWN rng namespace
+    # ("factworld|origins|..."), so skipping it never perturbs any example stream.
+    fixed = (_fixed_origins(spec, w)
+             if spec.family in ("recall", "composite") and spec.memorized_recall else None)
 
     if spec.family == "conflict":     # special train protocol: reinforce the in-weights map, then conflict
         pmap = _param_map(spec, w)

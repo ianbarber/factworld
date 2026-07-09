@@ -626,6 +626,97 @@ def test_zero_budget_task_versioning():
         assert "| zero_budget | composite_copy_v2 |" in full
 
 
+def test_breadth_and_k_fixed_arms():
+    """v3 rung settings keys: cells carrying settings.breadth (pool rung) or
+    settings.k_fixed (fixed-breadth chain) are SEPARATE arms — own dedup key,
+    B=/k_fixed= arm labels, excluded from the canonical headline lookups,
+    horizons and (via canonical_arm) figures — and history renders the
+    per-(m,L) breadth floor note."""
+    if not HAS_MPL:
+        return
+    zb = _record("testlab/model-a", "zero_budget", "composite_copy_v2", 16, 100,
+                 0.60, ts="2026-07-09T00:00:00+00:00", effort="none", leg=None,
+                 max_new_tokens=96, stop_at=None, contract=True, contract_rate=1.0)
+    rung = json.loads(json.dumps(zb))
+    rung["settings"]["breadth"] = 64          # NEWER record on a different rung:
+    rung["ts"] = "2026-07-10T00:00:00+00:00"  # must not dedup/shadow the plain cell
+    rung["metrics"]["relaxed"] = 0.20
+    stair = _record("testlab/model-a", "chain_nowrap", "chain_v1", 16, 25, 0.95,
+                    effort="high")
+    fixed = _record("testlab/model-a", "chain_nowrap", "chain_v1", 128, 25, 0.95,
+                    effort="high")
+    fixed["settings"]["k_fixed"] = 257
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "history.jsonl")
+        with open(path, "w", encoding="utf-8") as fh:
+            for r in (zb, rung, stair, fixed):
+                fh.write(json.dumps(r) + "\n")
+        recs = RB.load_latest(path)
+        # dedup: every rung survives as its own arm
+        assert len(recs) == 4
+        # helpers: canonical vs rung arms
+        assert RB.breadth_of(zb) == RB.CANONICAL_BREADTH == 16
+        assert RB.breadth_of(rung) == 64 and not RB.canonical_arm(rung)
+        assert RB.k_fixed_of(fixed) == 257 and not RB.canonical_arm(fixed)
+        assert RB.canonical_arm(zb) and RB.canonical_arm(stair)
+        # arm labels name the rung
+        assert "B=64" in RB.arm_label(rung) and "B=" not in RB.arm_label(zb)
+        assert "k_fixed=257" in RB.arm_label(fixed)
+        # headline lookups stay canonical: the newer B=64 record neither shadows
+        # nor replaces the plain zero-budget cell...
+        cell = RB.zero_budget_cell(recs, "testlab/model-a", 16, None,
+                                   task="composite_copy_v2")
+        assert cell["metrics"]["relaxed"] == 0.60
+        # ...and the passing d128 fixed-k cell must not stretch the staircase
+        # horizon (chain_nowrap canonical arms top out at the passing d16)
+        assert RB.headline_horizon_censored(recs, "chain_nowrap", "testlab/model-a") \
+            == (16, "tested")
+        # full render: rung rows stay in the per-cell tables, labelled, with the
+        # per-(m, L) floor note
+        out = os.path.join(tmp, "out")
+        RB.render(path, out)
+        with open(os.path.join(out, "results.md"), encoding="utf-8") as fh:
+            md = fh.read()
+        assert "B=64" in md and "k_fixed=257" in md
+        assert RB.BREADTH_FLOOR_NOTE in md         # per-(m, L) floor note rendered
+        head = md[md.index("## Headline"):md.index("## Diagnostics per cell")]
+        assert "B=64" not in head                  # rungs never enter the headline
+        with open(os.path.join(out, "results.csv"), encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
+        assert {"breadth", "k_fixed"} <= set(rows[0])
+        assert {r["breadth"] for r in rows} == {"", "64"}
+        assert {r["k_fixed"] for r in rows} == {"", "257"}
+
+
+def test_object_filter_floor_at_per_rung():
+    """Per-rung floor hook: E[1/w] moves with m and L only — recomputed at a pool
+    rung it stays FLAT (the pool changes lookup candidates, not the queried
+    object's write count) while moving ~1/L in length; the row label is keyed by
+    (task, L, m) and says so."""
+    if not HAS_MPL:
+        return
+    # canonical rungs reproduce the headline floor values exactly
+    f16 = RB.object_filter_floor_at("composite_copy_v2", 16)
+    f64 = RB.object_filter_floor_at("composite_copy_v2", 64)
+    assert abs(f16 - 0.4085119047619049) < 1e-9
+    assert abs(f64 - 0.1481572065275625) < 1e-9
+    assert RB.object_filter_floor_at("composite_copy_v2", 16,
+                                     breadth=RB.CANONICAL_BREADTH) == f16
+    # flat across pool rungs at fixed (m, L) — up to item-sampling noise...
+    f16_b64 = RB.object_filter_floor_at("composite_copy_v2", 16, breadth=64)
+    f64_b64 = RB.object_filter_floor_at("composite_copy_v2", 64, breadth=64)
+    assert abs(f16_b64 - f16) < 0.06
+    assert abs(f64_b64 - f64) < 0.04
+    # ...while moving with L (the ~1/L decay survives at every rung)
+    assert f64_b64 < f16_b64 / 2
+    # unknown task degrades to None (no wrong-task floor), like the other floors
+    assert RB.object_filter_floor_at("composite_copy_v999", 16) is None
+    # labels are per (task, L, m) and flag the flatness across rungs
+    label = RB.object_filter_floor_label_at("composite_copy_v2", 64)
+    assert label == ("object-filter floor (composite_copy_v2 @L64, m=4; "
+                     "flat across pool rungs)")
+
+
 def test_archived_roster():
     """Roster split: models not in the current roster (factworld.benchmark.MODELS,
     patched to the fixture roster) are archived — headline excludes them and they
@@ -811,6 +902,7 @@ if __name__ == "__main__":
                test_efficiency_matched_cell, test_replicate_noise,
                test_recency_heuristic, test_recency_heuristic_v2_floor_near_chance,
                test_object_filter_floor, test_zero_budget_task_versioning,
+               test_breadth_and_k_fixed_arms, test_object_filter_floor_at_per_rung,
                test_archived_roster, test_render_end_to_end]:
         fn()
         print(f"{fn.__name__}: ok")

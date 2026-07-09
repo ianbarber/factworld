@@ -175,6 +175,109 @@ def test_settings_hash_contract_flag_compat():
     assert B.settings_hash(flagged) != B.settings_hash(s5_cell)
 
 
+def test_settings_hash_breadth_and_k_fixed_sentinels():
+    """v3 rung keys are SENTINEL-DROPPED at their canonical values (breadth=16 —
+    truthy, so the falsy drop alone would not cover it — and k_fixed absent/None):
+    canonical-valued keys hash identically to the key being absent, so every
+    pre-breadth history record's resume key is unchanged; truthy NON-canonical
+    values hash distinctly, so each rung resumes independently."""
+    zb = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "zero_budget")
+    h = B.settings_hash(zb)
+    # the plan omits the keys entirely at canonical values
+    assert "breadth" not in zb["settings"] and "k_fixed" not in zb["settings"]
+    # direction 1: canonical / falsy values are dropped -> identical hash
+    assert B.settings_hash(
+        {"settings": {**zb["settings"], "breadth": B.CANONICAL_BREADTH}}) == h
+    assert B.settings_hash(
+        {"settings": {**zb["settings"], "breadth": None, "k_fixed": None}}) == h
+    # direction 2: truthy non-canonical values are hashed -> distinct keys per rung
+    b64 = B.settings_hash({"settings": {**zb["settings"], "breadth": 64}})
+    b4 = B.settings_hash({"settings": {**zb["settings"], "breadth": 4}})
+    assert len({h, b64, b4}) == 3
+    # JSON round trip (how history_keys recomputes the hash) is stable for rungs
+    rt = json.loads(json.dumps({**zb["settings"], "breadth": 64}))
+    assert B.settings_hash({"settings": rt}) == b64
+
+    chain = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "chain_nowrap")
+    hc = B.settings_hash(chain)
+    assert B.settings_hash({"settings": {**chain["settings"], "k_fixed": None}}) == hc
+    assert B.settings_hash({"settings": {**chain["settings"], "k_fixed": 257}}) != hc
+
+
+def test_plan_has_no_rung_keys_and_facet_breadths_expand():
+    """No current facet sets breadths/k_fixed, so every planned cell's settings
+    are exactly the pre-breadth C3 keys (the --dry-run 0-cells acceptance rests
+    on this); a facet that opts in via ``breadths`` expands one cell per rung
+    with the canonical rung's key sentinel-dropped."""
+    from unittest import mock
+    for slug in B.MODELS:
+        for cell in B.arms_for(slug):
+            assert set(cell["settings"]) == SETTINGS_KEYS
+    fake = {**B.FACETS["zero_budget"], "breadths": (4, B.CANONICAL_BREADTH, 64)}
+    with mock.patch.dict(B.FACETS, {"zero_budget": fake}):
+        cells = [c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "zero_budget"]
+        assert len(cells) == 4 * 3  # 4 (length, leg) cells x 3 pool rungs
+        rungs = {(c["length"], c["settings"]["leg"], c["settings"].get("breadth"))
+                 for c in cells}
+        # canonical rung: key omitted (None); non-canonical rungs carried verbatim
+        assert {(16, None, 4), (16, None, None), (16, None, 64)} <= rungs
+        keys = {B.settings_hash(c) for c in cells if c["settings"]["leg"] is None
+                and c["length"] == 16}
+        assert len(keys) == 3  # each rung is its own resume key
+
+
+def test_prompt_tokens_est_breadth_and_k_fixed():
+    """Cost estimation prices the exact spec the runner executes: breadth rungs
+    (more facts + a bigger pool) and fixed-k chains (k facts at any depth)."""
+    base = B._prompt_tokens_est("composite_copy_v2", 64, None)
+    # canonical rung (B=16) is the canonical spec — identical estimate
+    assert B._prompt_tokens_est("composite_copy_v2", 64, None, 16, None) == base
+    b64 = B._prompt_tokens_est("composite_copy_v2", 64, None, 64, None)
+    b4 = B._prompt_tokens_est("composite_copy_v2", 64, None, 4, None)
+    assert b64 > base > b4  # pool 64 adds ~48 fact lines; pool 4 drops 12
+    # B=128 (k=256 > the 128-value vocab) must generate: tasks.generate builds
+    # fixed origins only for memorized_recall specs (stream-neutral guard —
+    # _fixed_origins draws from its own rng namespace and is unused otherwise)
+    b128 = B._prompt_tokens_est("composite_copy_v2", 64, None, 128, None)
+    assert b128 > b64
+    ex = TK.generate(B.spec_for_cell("composite_copy_v2", 64, breadth=128),
+                     "test", n=1, length=64)[0]
+    assert ex.answer and ex.meta.get("holder")
+    # fixed-k chain: d16 over a 257-cycle prices ~like the d128 staircase's 257
+    # facts (the staircase d16 runs k=33), bounded above by d128@k257's deeper query
+    stair16 = B._prompt_tokens_est("chain_v1", 16, None)
+    stair128 = B._prompt_tokens_est("chain_v1", 128, None)          # k=257
+    d16_k257 = B._prompt_tokens_est("chain_v1", 16, None, None, 257)
+    assert stair16 < d16_k257 <= stair128
+    assert d16_k257 > 3 * stair16
+    # the runner and the estimator resolve the SAME spec
+    spec = B.spec_for_cell("chain_v1", 16, k_fixed=257)
+    assert spec.k == 257
+    spec2 = B.spec_for_cell("composite_copy_v2", 64, breadth=64)
+    assert (spec2.k, spec2.recall_pool) == (128, 64)
+    spec3 = B.spec_for_cell("composite_copy_v2", 64, breadth=16)
+    assert spec3 == TK.CANONICAL["composite_copy_v2"]  # B=16 IS canonical
+
+
+def test_cell_dollar_cap():
+    """Per-cell dollar cap: expensive models (completion >= $10/M) get
+    max($2.50, nominal n*max_new_tokens completion spend); cheap models None."""
+    # opus chain thinking cell: 25 * 16384 * $25/M = $10.24 nominal
+    assert B.cell_dollar_cap("anthropic/claude-opus-4.8", 25, 16384) == 10.24
+    # tight zero-budget cell floors at $2.50 (nominal would be $0.24)
+    assert B.cell_dollar_cap("anthropic/claude-opus-4.8", 100, 96) == 2.5
+    # the motivating scenario: a 32768x25 frontier cell was ~$61 under the 3x
+    # token guard alone; the dollar cap holds it to its nominal $20.48/$24.58
+    assert B.cell_dollar_cap("anthropic/claude-opus-4.8", 25, 32768) == 20.48
+    assert B.cell_dollar_cap("openai/gpt-5.5", 25, 32768) == 24.576
+    assert B.cell_dollar_cap("anthropic/claude-sonnet-5", 25, 16384) == max(
+        2.5, 25 * 16384 * 10 / 1e6)
+    # below the threshold: gemini flash ($9/M) and the cheap tier are uncapped
+    assert B.cell_dollar_cap("google/gemini-3.5-flash", 25, 16384) is None
+    assert B.cell_dollar_cap("z-ai/glm-5.2", 25, 32768) is None
+    assert B.cell_dollar_cap("not/on-roster", 25, 16384) is None
+
+
 def test_cost_estimate_sane():
     glm_cells = [_runnable(c) for c in B.arms_for("z-ai/glm-5.2")]
     est = B.cost_estimate("z-ai/glm-5.2", glm_cells)
@@ -234,7 +337,7 @@ def _validate_c3(rec, cell, model):
     diag_keys = {"empty_rate", "api_errors", "finish_errors", "finish_reasons",
                  "cost_aborted"}
     if rec["diagnostics"]["cost_aborted"]:
-        diag_keys |= {"calls_completed"}
+        diag_keys |= {"calls_completed", "cost_abort_reason"}
     if rec["settings"]["contract"]:
         diag_keys |= {"contract_rate", "covert_cot_rate", "rtok_any_rate",
                       "rtok_mean_per_call"}
@@ -591,6 +694,7 @@ def test_cost_guard_aborts_runaway_cell():
     assert backend.calls == chunk == 8  # stopped submitting after one chunk
     d = rec["diagnostics"]
     assert d["cost_aborted"] is True
+    assert d["cost_abort_reason"] == "ctok"  # the token envelope, not the $ cap
     assert d["calls_completed"] == chunk
     # completed calls recorded verbatim; the rest are explicit cost_aborted stubs
     done = [e for e in rec["examples"] if e["finish"] == "stop"]
@@ -624,6 +728,96 @@ def test_cost_guard_within_budget_is_inert():
     assert rec["diagnostics"]["cost_aborted"] is False
     assert "calls_completed" not in rec["diagnostics"]
     assert all(e["finish"] == "stop" for e in rec["examples"])
+
+
+def test_dollar_cap_guard_aborts_expensive_cell():
+    """The per-cell DOLLAR cap (expensive models only): an opus chain cell whose
+    provider ignores the token cap is stopped once its completion-priced spend
+    exceeds max($2.50, nominal n*max_new_tokens) — well inside the 3x token
+    envelope — while the same runaway on the cheap canary (no dollar cap, token
+    envelope not exceeded) runs to completion."""
+    model = "anthropic/claude-opus-4.8"
+    cell = next(c for c in B.arms_for(model)
+                if c["facet"] == "chain_nowrap" and c["length"] == 16)
+    cell["n"] = 25
+    # dollar cap $10.24 (= 25*16384*$25/M); trip point 409,600 ctok. 40k ctok/call:
+    # chunk 1 (8 calls) = 320k ($8.00, under), chunk 2 (16) = 640k ($16 > $10.24)
+    # -> abort on DOLLARS with the 3x token envelope (1,228,800 ctok) untouched.
+    backend = _RunawayBackend(ctok_per_call=40000)
+    rec = RFB.execute_cell(backend, model, cell, n=25, run_id="t", git_commit="d")
+    d = rec["diagnostics"]
+    assert d["cost_aborted"] is True
+    assert d["cost_abort_reason"] == "usd"
+    assert backend.calls == 2 * RFB.CostGuardBackend.CHUNK == 16
+    assert d["calls_completed"] == 16
+    assert rec["usage"]["completion_tokens"] == 40000 * 16 < B.CELL_BUDGET_FACTOR * 25 * 16384
+    _validate_c3(rec, cell, model)
+
+    glm_cell = next(c for c in B.arms_for("z-ai/glm-5.2")
+                    if c["facet"] == "chain_nowrap" and c["length"] == 16)
+    glm_cell["n"] = 25
+    backend2 = _RunawayBackend(ctok_per_call=40000)  # 25*40k = 1.0M < 1.2288M budget
+    rec2 = RFB.execute_cell(backend2, "z-ai/glm-5.2", glm_cell, n=25,
+                            run_id="t", git_commit="d")
+    assert rec2["diagnostics"]["cost_aborted"] is False
+    assert backend2.calls == 25
+
+
+def test_breadth_cell_uses_scaled_spec():
+    """A zero_budget cell carrying settings['breadth']=B must run
+    composite_copy_v2.scaled(k=2*B, recall_pool=B) — the exact items of the pool
+    rung, not the canonical pool-16 prompts — and resume under its own key."""
+    model = "z-ai/glm-5.2"
+    cell = _zb_cell()
+    plain_key = RFB.cell_key(model, cell)
+    cell["settings"] = {**cell["settings"], "breadth": 8}
+    assert RFB.cell_key(model, cell) != plain_key  # each rung is its own cell
+
+    spec = TK.CANONICAL["composite_copy_v2"].scaled(k=16, recall_pool=8)
+    gold = {e.prompt: e.answer for e in TK.generate(spec, "test", n=5, length=16)}
+
+    def oracle(prompts, mnt, stop):
+        out = []
+        for p in prompts:
+            base, line = p.rsplit("\n", 1)
+            assert line == RFB.CONTRACT_LINE_COMPOSITE
+            out.append(f"Answer: {gold[base].rstrip(' .')}")  # KeyError on wrong spec
+        return out
+
+    rec = RFB.execute_cell(FunctionBackend(oracle, name="oracle"), model, cell,
+                           n=5, run_id="t", git_commit="d")
+    assert rec["metrics"]["relaxed"] == 1.0
+    assert rec["settings"]["breadth"] == 8  # recorded -> the rung resumes itself
+    with tempfile.TemporaryDirectory() as tmp:
+        history = os.path.join(tmp, "history.jsonl")
+        RFB.append_record(history, rec)
+        done = RFB.history_keys(history)
+        assert RFB.cell_key(model, cell) in done
+        assert plain_key not in done  # the canonical cell is NOT satisfied by a rung
+
+
+def test_k_fixed_chain_cell_uses_fixed_spec():
+    """A chain_nowrap cell carrying settings['k_fixed'] must run
+    chain_v1.scaled(k=k_fixed) (fixed breadth at any depth) instead of the
+    staircase k=2d+1, and resume under its own key."""
+    model = "z-ai/glm-5.2"
+    cell = next(c for c in B.arms_for(model)
+                if c["facet"] == "chain_nowrap" and c["length"] == 16)
+    cell["n"] = 5
+    stair_key = RFB.cell_key(model, cell)
+    cell["settings"] = {**cell["settings"], "k_fixed": 257}
+    assert RFB.cell_key(model, cell) != stair_key
+
+    spec = TK.CANONICAL["chain_v1"].scaled(k=257)
+    gold = {e.prompt: e.answer for e in TK.generate(spec, "test", n=5, length=16)}
+
+    def oracle(prompts, mnt, stop):
+        return [gold[p] for p in prompts]  # KeyError if the staircase (k=33) ran
+
+    rec = RFB.execute_cell(FunctionBackend(oracle, name="oracle"), model, cell,
+                           n=5, run_id="t", git_commit="d")
+    assert rec["metrics"]["relaxed"] == 1.0
+    assert rec["settings"]["k_fixed"] == 257
 
 
 def test_chain_nowrap_uses_scaled_spec():
@@ -774,13 +968,19 @@ def test_build_plan_n_scale():
 if __name__ == "__main__":
     for fn in [test_registry_shape, test_arms_for_facets, test_arm_settings_protocol,
                test_gemini_off_arm_is_minimal, test_settings_hash_stable,
-               test_settings_hash_contract_flag_compat, test_cost_estimate_sane,
+               test_settings_hash_contract_flag_compat,
+               test_settings_hash_breadth_and_k_fixed_sentinels,
+               test_plan_has_no_rung_keys_and_facet_breadths_expand,
+               test_prompt_tokens_est_breadth_and_k_fixed,
+               test_cell_dollar_cap, test_cost_estimate_sane,
                test_extract_contract_answer, test_execute_cell_end_to_end,
                test_zero_budget_contract_scoring, test_binding_leg_rejects_holder_dump,
                test_escalation_on_length_cutoff, test_escalation_iterates_to_2048,
                test_no_escalation_below_threshold_or_without_contract,
                test_finish_errors_counted, test_cost_guard_aborts_runaway_cell,
                test_cost_guard_blocks_escalation, test_cost_guard_within_budget_is_inert,
+               test_dollar_cap_guard_aborts_expensive_cell,
+               test_breadth_cell_uses_scaled_spec, test_k_fixed_chain_cell_uses_fixed_spec,
                test_chain_nowrap_uses_scaled_spec, test_resume_key_includes_n,
                test_skip_facets_machinery,
                test_v2_task_cells_get_fresh_resume_keys,

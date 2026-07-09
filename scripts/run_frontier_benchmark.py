@@ -44,9 +44,19 @@ Protocol rules:
     top-level metrics/examples are the last attempt's (escalated=true flags
     them as the diagnostic view). Usage/cost cover all attempts.
   - Per-cell spend guard (the grok-build lesson): once a cell's cumulative
-    visible completion tokens exceed CELL_BUDGET_FACTOR * n * max_new_tokens,
-    no further calls are submitted; what completed is recorded with
-    diagnostics.cost_aborted=true and a loud warning.
+    visible completion tokens exceed CELL_BUDGET_FACTOR * n * max_new_tokens —
+    or, for expensive models (completion price >= $10/M: opus, gpt-5.5,
+    sonnet), once its completion-priced spend exceeds the per-cell DOLLAR cap
+    max($2.50, nominal n * max_new_tokens completion spend) — no further calls
+    are submitted; what completed is recorded with diagnostics.cost_aborted=true
+    (+ cost_abort_reason "ctok"/"usd") and a loud warning.
+  - v3 working-set-breadth rungs: a cell may carry settings["breadth"] (the pool
+    rung B; the task runs at CANONICAL[task].scaled(k=2*B, recall_pool=B)) or,
+    for chain cells, settings["k_fixed"] (chain_v1.scaled(k=k_fixed), fixed
+    breadth instead of the staircase). Both keys are sentinel-dropped at their
+    canonical values (B=16 / no k_fixed) so pre-breadth history resume keys are
+    unchanged; when present (non-canonical) they are part of the settings hash,
+    so every rung resumes independently.
   - finish_reason=="error" calls are counted into diagnostics.finish_errors
     (distinct from api_errors, the exception-path count — review F8 found 12
     finish=error calls invisible at api_errors=0) and warned about loudly.
@@ -92,8 +102,10 @@ from factworld.benchmark import (
     MODELS,
     REASONING_EFFORTS,
     arms_for,
+    cell_dollar_cap,
     cost_estimate,
     settings_hash,
+    spec_for_cell,
 )
 from factworld.render import Renderer
 from factworld.runner import evaluate_task
@@ -173,10 +185,13 @@ class CostGuardBackend:
 
     Wraps any ``ModelBackend`` and submits prompts in chunks; after each chunk the
     cell's cumulative visible completion tokens are compared against
-    ``budget_ctok`` (CELL_BUDGET_FACTOR * n * max_new_tokens). Once exceeded, no
-    further chunks are submitted: the remaining prompts get empty predictions and
-    ``finish="cost_aborted"`` per-example meta, and ``cost_aborted`` is set so the
-    record can flag what completed. Backends without per-example meta
+    ``budget_ctok`` (CELL_BUDGET_FACTOR * n * max_new_tokens) AND — when
+    ``budget_usd`` is set (expensive models, see ``cell_dollar_cap``) — their
+    completion-priced dollar cost against the per-cell DOLLAR cap. Once either is
+    exceeded, no further chunks are submitted: the remaining prompts get empty
+    predictions and ``finish="cost_aborted"`` per-example meta, ``cost_aborted``
+    is set so the record can flag what completed, and ``abort_reason`` records
+    which guard tripped ("ctok" or "usd"). Backends without per-example meta
     (FunctionBackend) cannot be measured, so the guard is inert for them (it
     passes calls through untracked and ``pop_example_meta`` returns None).
 
@@ -187,10 +202,14 @@ class CostGuardBackend:
 
     CHUNK = 8  # calls submitted between budget checks
 
-    def __init__(self, backend, budget_ctok: int):
+    def __init__(self, backend, budget_ctok: int, budget_usd: float | None = None,
+                 completion_price_per_M: float = 0.0):
         self.backend = backend
         self.budget_ctok = budget_ctok
+        self.budget_usd = budget_usd
+        self.completion_price_per_M = completion_price_per_M
         self.cost_aborted = False
+        self.abort_reason: str | None = None  # "ctok" | "usd" once tripped
         self.calls_completed = 0
         self._cum_ctok = 0
         self._has_meta = hasattr(backend, "pop_example_meta")
@@ -217,8 +236,15 @@ class CostGuardBackend:
             if hasattr(self.backend, "pop_call_meta"):
                 self._merge_call_meta(call_meta, self.backend.pop_call_meta())
             i += len(chunk)
-            if self._has_meta and self._cum_ctok > self.budget_ctok:
-                self.cost_aborted = True
+            if self._has_meta:
+                if self._cum_ctok > self.budget_ctok:
+                    self.cost_aborted, self.abort_reason = True, "ctok"
+                elif (self.budget_usd is not None
+                      and self._cum_ctok / 1e6 * self.completion_price_per_M
+                      > self.budget_usd):
+                    # per-cell DOLLAR cap (completion-priced; usage completion
+                    # tokens already include reasoning) — expensive models only.
+                    self.cost_aborted, self.abort_reason = True, "usd"
         n_missing = len(prompts) - len(preds)
         if n_missing:
             preds.extend([""] * n_missing)
@@ -371,6 +397,16 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
 
 # --- cell execution ------------------------------------------------------------------
 
+def _cell_spec(cell: dict):
+    """The TaskSpec this cell runs (single source of truth:
+    factworld.benchmark.spec_for_cell — breadth rungs via settings["breadth"]
+    (scaled(k=2*B, recall_pool=B)), fixed-k chains via settings["k_fixed"]
+    (chain_v1.scaled(k=k_fixed)), the chain_nowrap staircase k=2d+1 otherwise)."""
+    s = cell["settings"]
+    return spec_for_cell(cell["task"], cell["length"],
+                         breadth=s.get("breadth"), k_fixed=s.get("k_fixed"))
+
+
 def _run_s5_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]]:
     settings = cell["settings"]
     triples = S5.gen_examples(cell["length"], n, framing=settings["rendering"])
@@ -414,7 +450,7 @@ def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]
     Returns (metrics, examples, preds, contract_rate).
     """
     settings = cell["settings"]
-    spec = TK.CANONICAL[cell["task"]]
+    spec = _cell_spec(cell)  # breadth rungs: scaled(k=2*B, recall_pool=B)
     examples_in = TK.generate(spec, "test", n=n, length=cell["length"])
     leg = settings["leg"]
     if leg == "binding_only":
@@ -470,14 +506,16 @@ def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]
 
 def _run_task_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]]:
     """Canonical-task cells (chain_nowrap / sanity) via the same ``evaluate_task``
-    path as scripts/eval_openrouter_grid.py."""
+    path as scripts/eval_openrouter_grid.py.
+
+    Chain cells WITHOUT settings["k_fixed"] run the STAIRCASE: depth d over a
+    (2d+1)-cycle — never wraps, and the backward walk costs d+1 hops so no
+    direction is cheaper than the measured depth (k=d+2 would leave gold a
+    constant 2 reverse lookups from start). With settings["k_fixed"] the cycle
+    size is pinned (chain_v1.scaled(k=k_fixed)): d hops at FIXED breadth, the
+    composition-as-axis arm."""
     settings = cell["settings"]
-    spec = TK.CANONICAL[cell["task"]]
-    if cell["facet"] == "chain_nowrap":
-        # STAIRCASE: depth d over a (2d+1)-cycle — never wraps, and the backward
-        # walk costs d+1 hops so no direction is cheaper than the measured depth
-        # (k=d+2 would leave gold a constant 2 reverse lookups from start).
-        spec = spec.scaled(k=2 * cell["length"] + 1)
+    spec = _cell_spec(cell)
     result = evaluate_task(
         backend, spec, split="test", n=n, length=cell["length"],
         max_new_tokens=settings["max_new_tokens"], n_shot=settings["n_shot"],
@@ -510,17 +548,23 @@ def _attach_example_meta(examples: list[dict], ex_meta: list[dict] | None) -> No
             ex["ctok"] = ex["rtok"] = ex["finish"] = None
 
 
-def _run_attempt(backend, cell: dict, n: int, max_new_tokens: int | None = None) -> dict:
+def _run_attempt(backend, cell: dict, n: int, max_new_tokens: int | None = None,
+                 model: str | None = None) -> dict:
     """One generation pass over a cell (``max_new_tokens`` overrides the planned
     budget for an escalation rerun). The backend is wrapped in a per-attempt
-    ``CostGuardBackend`` (budget CELL_BUDGET_FACTOR * n * max_new_tokens).
+    ``CostGuardBackend`` (token budget CELL_BUDGET_FACTOR * n * max_new_tokens,
+    plus the per-cell DOLLAR cap from ``cell_dollar_cap`` for expensive models —
+    max($2.50, the attempt's nominal n * max_new_tokens completion spend)).
     Returns metrics/examples/diagnostics, the popped call meta, and the
     finish=length rate that drives escalation."""
     run_cell = cell
     if max_new_tokens is not None:
         run_cell = {**cell, "settings": {**cell["settings"], "max_new_tokens": max_new_tokens}}
+    attempt_budget = run_cell["settings"]["max_new_tokens"]
     guard = CostGuardBackend(
-        backend, CELL_BUDGET_FACTOR * n * run_cell["settings"]["max_new_tokens"])
+        backend, CELL_BUDGET_FACTOR * n * attempt_budget,
+        budget_usd=(cell_dollar_cap(model, n, attempt_budget) if model else None),
+        completion_price_per_M=MODELS.get(model, {}).get("completion_price_per_M", 0.0))
     contract_rate = None
     if run_cell["settings"].get("contract"):
         metrics, examples, preds, contract_rate = _run_zero_budget_cell(guard, run_cell, n)
@@ -545,6 +589,9 @@ def _run_attempt(backend, cell: dict, n: int, max_new_tokens: int | None = None)
     }
     if guard.cost_aborted:
         diagnostics["calls_completed"] = guard.calls_completed
+        # which guard tripped: "ctok" (3x token envelope) or "usd" (per-cell
+        # dollar cap, expensive models only — see cell_dollar_cap).
+        diagnostics["cost_abort_reason"] = guard.abort_reason
     if contract_rate is not None:
         # Zero-budget cleanliness diagnostics (owner gate for the battery): is the
         # effort=none arm actually reasoning-free and contract-compliant here?
@@ -590,14 +637,14 @@ def execute_cell(backend, model: str, cell: dict, *, n: int, run_id: str,
     ``settings`` stay the planned ones so the resume key is unchanged.
     """
     t0 = time.time()
-    attempt = _run_attempt(backend, cell, n)
+    attempt = _run_attempt(backend, cell, n, model=model)
     attempts = [attempt]
     for budget in ESCALATION_BUDGETS:
         if not (cell["settings"].get("contract")
                 and attempt["length_rate"] > LENGTH_ESCALATION_THRESHOLD
                 and not attempt["diagnostics"]["cost_aborted"]):
             break
-        attempt = _run_attempt(backend, cell, n, max_new_tokens=budget)
+        attempt = _run_attempt(backend, cell, n, max_new_tokens=budget, model=model)
         attempts.append(attempt)
     escalation = None
     if len(attempts) > 1:
@@ -690,6 +737,10 @@ def _arm_label(cell: dict) -> str:
         parts.append(f"leg={s['leg']}")
     if s["rendering"]:
         parts.append(f"rendering={s['rendering']}")
+    if s.get("breadth"):  # non-canonical pool rung (sentinel-dropped at B=16)
+        parts.append(f"B={s['breadth']}")
+    if s.get("k_fixed"):  # fixed-breadth chain (vs the k=2d+1 staircase)
+        parts.append(f"k_fixed={s['k_fixed']}")
     return " ".join(parts)
 
 
@@ -823,10 +874,14 @@ def main():
                       f"NOT exception-path errors); scores for those calls are not "
                       f"real measurements. Record kept.", flush=True)
             if d["cost_aborted"]:
+                why = ("its per-cell DOLLAR cap (cell_dollar_cap: max($2.50, "
+                       "nominal n*max_new_tokens completion spend))"
+                       if d.get("cost_abort_reason") == "usd" else
+                       f"{CELL_BUDGET_FACTOR}x its n*max_new_tokens ctok envelope")
                 print(f"  !!! WARNING {tag}: COST GUARD tripped — cell exceeded "
-                      f"{CELL_BUDGET_FACTOR}x its n*max_new_tokens ctok envelope; "
-                      f"only {d['calls_completed']}/{rec['n']} calls submitted, the "
-                      f"rest recorded as finish=cost_aborted.", flush=True)
+                      f"{why}; only {d['calls_completed']}/{rec['n']} calls "
+                      f"submitted, the rest recorded as finish=cost_aborted.",
+                      flush=True)
         print(f"  -- done ({skipped} cells skipped by resume)", flush=True)
     print(f"\nrun {run_id} complete: total est cost ${total_cost:.2f}; history -> {a.history}")
 
