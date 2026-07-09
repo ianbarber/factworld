@@ -115,6 +115,14 @@ length. The instrument is sound on the natural-language format.
 
 ## 4. Evaluating frontier models
 
+For frontier-model comparisons, the canonical source is the recurring benchmark report,
+[`frontier-benchmark.md`](frontier-benchmark.md): the current-roster capability ladder — recall,
+state tracking, composition, chain depth, long-horizon state — in an instant (no-thinking) and a
+thinking regime, on the de-skewed v2 tasks, with shallow-heuristic floors, censoring and
+cleanliness marks, and per-cell provenance. It supersedes the OpenRouter grid in this section for
+cross-model claims; the grid below remains the pretrained-open-model snapshot on the v1 tasks and
+the source for the reasoning-effort and scaffolding analyses.
+
 The default setup for API evaluation is:
 
 - `max_new_tokens=2048` — enough for reasoning models to finish a scratchpad.
