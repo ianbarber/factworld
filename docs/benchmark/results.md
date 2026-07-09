@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-08 21:46 UTC from `results/benchmark/history.jsonl` (466 latest cells).
+Generated 2026-07-09 11:07 UTC from `results/benchmark/history.jsonl` (502 latest cells).
 
 ## Settings
 
@@ -20,27 +20,31 @@ Observed generation settings (effort -> max_new_tokens, stop_at):
 - effort=none: max_new_tokens=2048, stop_at=None
 - effort=none: max_new_tokens=96, stop_at=None
 
-## Headline
+## Headline (current roster)
 
-Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a one-line answer contract (settings.contract=true); relaxed match. Escalated cells show the CANONICAL first attempt at the shared base budget, with the escalated rerun as a parenthesised diagnostic.
+Current roster only (factworld.benchmark.MODELS); models dropped from the roster render in the archived-models section below.
 
-| Model | zero-budget composite @L16 (relaxed) | zero-budget composite @L64 | binding_only @L16 | replicate @L16 (test-retest) | chain horizon (chain_nowrap, max depth, relaxed >= 0.8) | s5 horizon (max L, relaxed >= 0.8) | s5@128 ctok |
-|---|---|---|---|---|---|---|---|
-| anthropic/claude-opus-4.8 | 0.84 | 0.57 | 0.82 | 0.84 | 32 (borderline) | >=128 (budget-censored) | 12683 |
-| anthropic/claude-sonnet-5 | 0.59 (0.77 @512)† | 0.28 (0.67 @512)† | 0.71 | 0.57 (0.75 @512)† | 16 (borderline) | >=128 (budget-censored) | 11866 |
-| deepseek/deepseek-v4-pro | 0.32 | 0.15 | 0.41 | 0.33 | >=64 (budget-censored) | >=128 (budget-censored) | 10043 |
-| google/gemini-3.1-pro-preview (archived roster) | n/a | n/a | n/a | n/a | n/a | >=256 | 13792 |
-| google/gemini-3.5-flash | 0.45* | 0.34* | 0.56* | 0.47* | >=128 | 128 | 11022 |
-| meta-llama/llama-4-maverick (archived roster) | n/a | n/a | n/a | n/a | n/a | — | 10 |
-| moonshotai/kimi-k2.6 | 0.48 (0.83 @512)† | 0.38 (0.96 @512)† | 0.52 (0.92 @512)† | 0.48 (0.82 @512)† | 64 | >=256 | 17418 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.36 | 0.20 | 0.55 | 0.35 | — | — | 12250 |
-| openai/gpt-5.4 (archived roster) | n/a | n/a | n/a | n/a | n/a | >=256 | 5087 |
-| openai/gpt-5.5 | 0.58 | 0.59 | 0.92 | 0.63 | 64 | >=256 | 6989 |
-| qwen/qwen3.7-max | 0.25 | 0.12 | 0.53 | 0.24 | >=128 | >=256 | 7904 |
-| x-ai/grok-4.3 (archived roster) | n/a | n/a | n/a | n/a | n/a | 128 (borderline) | 8883 |
-| x-ai/grok-build-0.1 | n/a | n/a | n/a | n/a | 16 (borderline) | >=256 | 9935 |
-| z-ai/glm-5.2 | 0.31† | 0.15† | 0.64 | 0.35† | 16 | >=256 | 5980 |
-| recency heuristic (floor) | 0.34 | 0.21 | 0.34 | 0.34 | — | — | — |
+Columns follow the capability ladder — recall -> state tracking -> composition -> chain depth -> long-horizon state — in two regimes: 'instant (no thinking)' cells run with reasoning off and a hard one-line answer contract (in-weights ability, no visible working); 'thinking' cells run with a generous reasoning budget.
+
+Zero-budget (instant) cells: task **composite_copy_v2** with reasoning off (effort=none) under a one-line answer contract (settings.contract=true); relaxed match. Escalated cells show the CANONICAL first attempt at the shared base budget, with the escalated rerun as a parenthesised diagnostic.
+
+History also contains zero-budget cells on composite_copy_v1; the zero-budget columns below use the latest task's records (composite_copy_v2) only — the archived task's cells remain in the per-cell tables.
+
+| Model | instant: recall (sanity, recall_copy_v1) | instant: binding_only @L16 (state tracking, v2) | instant: zero-budget composite @L16 (composition, relaxed, v2) | instant: zero-budget composite @L64 (v2) | instant: replicate @L16 (test-retest, v2) | thinking: chain horizon (chain_nowrap, max depth, relaxed >= 0.8) | thinking: s5 horizon (long-horizon state, max L, relaxed >= 0.8) | thinking: s5@128 ctok |
+|---|---|---|---|---|---|---|---|---|
+| anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | 0.77 | 32 (borderline) | >=128 (budget-censored) | 12683 |
+| anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (0.76 @512)† | 0.32 (0.66 @512)† | 0.65 (0.82 @512)† | 16 (borderline) | >=128 (budget-censored) | 11866 |
+| deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | 0.44 | >=64 (budget-censored) | >=128 (budget-censored) | 10043 |
+| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | 0.65* | >=128 | 128 | 11022 |
+| moonshotai/kimi-k2.6 | 1.00 | 0.94† | 0.77† | 0.93† | 0.83† | 64 | >=256 | 17418 |
+| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | 0.30 | — | — | 12250 |
+| openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | 0.46 | 64 | >=256 | 6989 |
+| qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | 0.25 | >=128 | >=256 | 7904 |
+| z-ai/glm-5.2 | 1.00 | 0.70† | 0.35† | 0.16 | 0.36 | 16 | >=256 | 5980 |
+| recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | 0.04 | — | — | — |
+| object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | 0.41 | — | — | — |
+
+Read small-L zero-budget cells against the object-filter floor, not chance: the floor is inherent to last-write-wins (filter the stream to the queried object, guess among its w writes) and decays only ~1/L, so it sits well above chance at L16 — a score near the floor row shows object filtering, not state tracking; genuine last-write resolution has to clear it.
 
 (*) off-arm ran effort=minimal (model cannot disable reasoning).
 
@@ -50,11 +54,13 @@ Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a on
 
 (x.xx @512) escalated diagnostic: the cell was rerun once at an escalated token budget after majority finish=length; the CANONICAL number is the first attempt at the shared base budget — the escalated value is a marked diagnostic, not the headline.
 
-recency heuristic (floor): one-line floor recomputed at render time on the exact deterministic items — answer the LAST event's recipient plus that holder's fact (binding leg: the last recipient).
+recency heuristic (floor, <task>): one-line floor recomputed at render time on the exact deterministic items of the task named in the row label (the same task as the zero-budget columns) — answer the LAST event's recipient plus that holder's fact (binding leg: the last recipient).
+
+object-filter floor (<task>): E[1/w] recomputed at render time on the same exact items — for each item, 1/(number of writes to the queried object): a reader that filters events by the queried object but picks a RANDOM write (no last-write-wins resolution) scores this with no state tracking at all; the binding leg derives from the same items, so its floor is the same 1/w.
 
 n/a = facet/cell not run for this model; — = run, but no qualifying value.
 
-replicate @L16 (test-retest): the zero_budget end_to_end leg builds prompts IDENTICAL to the plain composite @L16 cell (same runner path), so the column is a replicate, not a distinct measurement; max observed |plain - replicate| across models = 0.05 — read that as the run-to-run noise bar on the headline numbers. Future runs keep this arm intentionally as leg='replicate'.
+replicate @L16 (test-retest): the zero_budget end_to_end leg builds prompts IDENTICAL to the plain composite @L16 cell (same runner path), so the column is a replicate, not a distinct measurement; max observed |plain - replicate| across models = 0.06 — read that as the run-to-run noise bar on the headline numbers. Future runs keep this arm intentionally as leg='replicate'.
 
 Horizons marked >=N are censored lower bounds: either the max tested depth/length still qualifies, or ('budget-censored') the first FAILING cell above N was majority finish=length — the model ran out of token budget there, not necessarily ability. Horizons marked (borderline) are threshold calls: the first failing cell's Wilson CI crosses the 0.8 line (e.g. a 0.72 [0.52, 0.86] cell), so N vs the next tested length is not statistically resolved.
 
@@ -62,24 +68,32 @@ s5@128 ctok: completion tokens per call on the matched s5_concrete L128 cell (ru
 
 Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
-## v1 (archived facets)
+## Archived models (dropped from the roster)
 
-Legacy headline columns for the v1-only facets (dose_response, composite_length, decomposition); superseded by the zero-budget headline above. Per-cell rows remain in the tables below.
+Models present in history but no longer in factworld.benchmark.MODELS, with their v1-facet columns (historical facet names). Their per-cell rows — any facet — remain in the tables below.
+
+| Model | dose_response (relaxed) | composite_length (relaxed @ L512, high) | decomposition (bind / e2e / scaffold) |
+|---|---|---|---|
+| google/gemini-3.1-pro-preview | 0.98 @ high | 0.90 | 1.00 / 0.98 / 1.00 |
+| meta-llama/llama-4-maverick | 0.16 @ default | 0.10 | 0.96 / 0.18 / 1.00 |
+| openai/gpt-5.4 | 0.96 @ high | 0.93 | 0.86 / 0.30 / 1.00 |
+| x-ai/grok-4.3 | 0.22 @ high | 0.73 | 0.16 / 0.18 / 1.00 |
+| x-ai/grok-build-0.1 | — | — | — / — / — |
+
+## v1 archived facets (pre-redesign)
+
+Legacy headline columns for the pre-redesign v1-only facets (dose_response, composite_length, decomposition), current-roster models only; superseded by the ladder headline above. Per-cell rows remain in the tables below.
 
 | Model | dose_response (relaxed) | composite_length (relaxed @ L512, high) | decomposition (bind / e2e / scaffold) |
 |---|---|---|---|
 | anthropic/claude-opus-4.8 | 0.96 @ high | 1.00 | 0.88 / 0.08 / 1.00 |
 | anthropic/claude-sonnet-5 | 0.94 @ high | 1.00 | 0.86 / 0.00 / 1.00 |
 | deepseek/deepseek-v4-pro | 0.92 @ high | 0.87 | 0.24 / 0.24 / 0.98 |
-| google/gemini-3.1-pro-preview | 0.98 @ high | 0.90 | 1.00 / 0.98 / 1.00 |
 | google/gemini-3.5-flash | 1.00 @ high | 0.97 | 0.82 / 0.44 / 1.00 |
-| meta-llama/llama-4-maverick | 0.16 @ default | 0.10 | 0.96 / 0.18 / 1.00 |
 | moonshotai/kimi-k2.6 | 0.98 @ high | 0.97 | 0.78 / 0.26 / 1.00 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.84 @ high | 0.23 | 0.60 / 0.22 / 1.00 |
-| openai/gpt-5.4 | 0.96 @ high | 0.93 | 0.86 / 0.30 / 1.00 |
 | openai/gpt-5.5 | 1.00 @ high | 1.00 | 0.96 / 0.74 / 1.00 |
 | qwen/qwen3.7-max | 0.92 @ high | 1.00 | 0.60 / 0.18 / 1.00 |
-| x-ai/grok-4.3 | 0.22 @ high | 0.73 | 0.16 / 0.18 / 1.00 |
 | z-ai/glm-5.2 | 0.94 @ high | 0.93 | 0.56 / 0.20 / 1.00 |
 
 ## Diagnostics per cell
@@ -125,6 +139,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 1303 | stop:30 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 1615 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 1809 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -162,6 +180,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.75; canonical = first attempt @96 |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.77; canonical = first attempt @96 |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.67; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.82; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.76; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.66; canonical = first attempt @96 |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 7441 | stop:30 | — |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 8850 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 11012 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -201,6 +223,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 9852 | stop:30 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 20538 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 15179 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -269,6 +295,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 64 | contract, effort=minimal | 0.030 | 0 | 0 | 0 | length:3, stop:97 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=minimal | 0.030 | 0 | 0 | 0 | length:3, stop:97 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | length:1, stop:99 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 64 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 8 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 12 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -332,6 +362,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.040 | 0 | 0 | 52 | length:6, stop:94 | escalated @512 diagnostic 0.82; canonical = first attempt @96 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.080 | 0 | 0 | 50 | length:9, stop:91 | escalated @512 diagnostic 0.83; canonical = first attempt @96 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 58 | stop:100 | escalated @512 diagnostic 0.96; canonical = first attempt @96 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.020 | 0 | 0 | 89 | stop:98 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.010 | 0 | 0 | 80 | stop:100 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.080 | 0 | 0 | 65 | length:1, stop:92 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.030 | 0 | 0 | 81 | stop:98 | ‡ cap-escape |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 5435 | stop:30 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 10234 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 16407 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -371,6 +405,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.050 | 0 | 0 | 0 | stop:100 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.090 | 0 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.010 | 0 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.040 | 0 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.140 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 3229 | stop:30 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 4473 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 4804 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -437,6 +475,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 11331 | stop:30 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 19207 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 19181 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -476,6 +518,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 12612 | stop:30 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 8 | effort=high | 0.000 | 0 | 0 | 18833 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 12 | effort=high | 0.000 | 0 | 0 | 22680 | stop:30 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -554,6 +600,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.030 | 0 | 0 | 288 | length:3, stop:97 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.040 | 0 | 0 | 384 | length:4, stop:96 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 510 | stop:100 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.070 | 0 | 0 | 672 | length:7, stop:93 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.010 | 0 | 0 | 96 | length:1, stop:99 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.050 | 0 | 0 | 480 | length:5, stop:95 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 
 ## Full per-cell results
 
@@ -598,6 +648,10 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.84 [0.76, 0.90] | 0.00 | 0.86 | 0.86 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.84 [0.76, 0.90] | 0.00 | 0.88 | 0.88 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.57 [0.47, 0.66] | 0.00 | 0.57 | 0.57 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.78 [0.69, 0.85] | — | — | — | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.00 | 0.85 | 0.84 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.72 [0.63, 0.80] | 0.00 | 0.79 | 0.78 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.43 [0.34, 0.53] | 0.00 | 0.43 | 0.43 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -635,6 +689,10 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.57 [0.47, 0.66] | 0.00 | 0.75 | 0.75 | escalated @512 diagnostic 0.75; canonical = first attempt @96 |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.59 [0.49, 0.68] | 0.00 | 0.77 | 0.77 | escalated @512 diagnostic 0.77; canonical = first attempt @96 |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.28 [0.20, 0.37] | 0.00 | 0.67 | 0.67 | escalated @512 diagnostic 0.67; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.77 [0.68, 0.84] | — | — | — | — |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.65 [0.55, 0.74] | 0.00 | 0.82 | 0.82 | escalated @512 diagnostic 0.82; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.62 [0.52, 0.71] | 0.00 | 0.76 | 0.76 | escalated @512 diagnostic 0.76; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.32 [0.24, 0.42] | 0.00 | 0.66 | 0.66 | escalated @512 diagnostic 0.66; canonical = first attempt @96 |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -674,6 +732,10 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.00 | 0.33 | 0.33 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.32 [0.24, 0.42] | 0.00 | 0.32 | 0.32 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.15 [0.09, 0.23] | 0.00 | 0.15 | 0.15 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.51 [0.41, 0.61] | — | — | — | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.44 [0.35, 0.54] | 0.00 | 0.44 | 0.44 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.44 [0.35, 0.54] | 0.00 | 0.44 | 0.44 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.19 [0.13, 0.28] | 0.00 | 0.19 | 0.19 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -742,6 +804,10 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=minimal | 100 | 0.47 [0.38, 0.57] | 0.00 | 0.48 | 0.48 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 16 | contract, effort=minimal | 100 | 0.45 [0.36, 0.55] | 0.00 | 0.46 | 0.46 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 64 | contract, effort=minimal | 100 | 0.34 [0.25, 0.44] | 0.00 | 0.34 | 0.34 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=minimal | 100 | 0.66 [0.56, 0.75] | — | — | — | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=minimal | 100 | 0.65 [0.55, 0.74] | 0.00 | 0.66 | 0.66 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | contract, effort=minimal | 100 | 0.64 [0.54, 0.73] | 0.00 | 0.64 | 0.64 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 64 | contract, effort=minimal | 100 | 0.28 [0.20, 0.37] | 0.00 | 0.28 | 0.28 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 30 | 0.20 [0.10, 0.37] | 0.00 | 0.23 | 0.20 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 8 | effort=default | 30 | 0.17 [0.07, 0.34] | 0.03 | 0.27 | 0.27 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 12 | effort=default | 30 | 0.00 [0.00, 0.11] | 0.00 | 0.23 | 0.17 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -805,6 +871,10 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.48 [0.38, 0.58] | 0.00 | 0.85 | 0.85 | escalated @512 diagnostic 0.82; canonical = first attempt @96 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.48 [0.38, 0.58] | 0.00 | 0.86 | 0.86 | escalated @512 diagnostic 0.83; canonical = first attempt @96 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.38 [0.29, 0.48] | 0.00 | 0.97 | 0.96 | escalated @512 diagnostic 0.96; canonical = first attempt @96 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.94 [0.88, 0.97] | — | — | — | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.83 [0.74, 0.89] | 0.00 | 0.87 | 0.87 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.00 | 0.84 | 0.84 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.93 [0.86, 0.97] | 0.00 | 0.95 | 0.95 | ‡ cap-escape |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -844,6 +914,10 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.35 [0.26, 0.45] | 0.00 | 0.35 | 0.35 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.36 [0.27, 0.46] | 0.00 | 0.36 | 0.36 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.20 [0.13, 0.29] | 0.00 | 0.20 | 0.20 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.49 [0.39, 0.59] | — | — | — | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.30 [0.22, 0.40] | 0.00 | 0.30 | 0.30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.00 | 0.33 | 0.33 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.12 [0.07, 0.20] | 0.00 | 0.12 | 0.12 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -910,6 +984,10 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.63 [0.53, 0.72] | 0.00 | 0.63 | 0.63 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.58 [0.48, 0.67] | 0.00 | 0.58 | 0.58 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.59 [0.49, 0.68] | 0.00 | 0.59 | 0.59 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.80 [0.71, 0.87] | — | — | — | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.46 [0.37, 0.56] | 0.00 | 0.46 | 0.46 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.46 [0.37, 0.56] | 0.00 | 0.46 | 0.46 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.00 | 0.33 | 0.33 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -949,6 +1027,10 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.24 [0.17, 0.33] | 0.00 | 0.24 | 0.24 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.25 [0.18, 0.34] | 0.00 | 0.25 | 0.25 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.12 [0.07, 0.20] | 0.00 | 0.12 | 0.12 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.51 [0.41, 0.61] | — | — | — | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.25 [0.18, 0.34] | 0.00 | 0.25 | 0.25 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.24 [0.17, 0.33] | 0.00 | 0.24 | 0.24 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.08 [0.04, 0.15] | 0.00 | 0.08 | 0.08 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
@@ -1027,3 +1109,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.35 [0.26, 0.45] | 0.00 | 0.36 | 0.36 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.31 [0.23, 0.41] | 0.00 | 0.31 | 0.31 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.15 [0.09, 0.23] | 0.00 | 0.17 | 0.16 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.70 [0.60, 0.78] | — | — | — | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.36 [0.27, 0.46] | 0.00 | 0.38 | 0.38 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.35 [0.26, 0.45] | 0.00 | 0.36 | 0.36 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.16 [0.10, 0.24] | 0.00 | 0.17 | 0.17 | — |

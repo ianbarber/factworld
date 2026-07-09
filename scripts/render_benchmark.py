@@ -5,10 +5,14 @@ scripts/run_frontier_benchmark.py), keeps the LATEST record per
 ``(model, facet, task, length, {effort, leg, rendering})`` key, and writes into
 ``docs/benchmark/``:
 
-  results.md    v2 headline (zero_budget + chain/s5 horizons + s5@128 ctok) with
-                cleanliness footnotes, the recency-heuristic floor row, a
-                "v1 (archived facets)" legacy headline, diagnostics and full
-                per-cell markdown tables. Escalated zero-budget cells publish the
+  results.md    capability-ladder headline for the CURRENT roster
+                (factworld.benchmark.MODELS) — 'instant (no thinking)' zero-budget
+                columns plus 'thinking' chain/s5 horizons and s5@128 ctok — with
+                cleanliness footnotes, the recency-heuristic and object-filter
+                floor rows, an "Archived models (dropped from the roster)" section
+                for models no longer on the roster, a "v1 archived facets
+                (pre-redesign)" legacy headline, diagnostics and full per-cell
+                markdown tables. Escalated zero-budget cells publish the
                 CANONICAL first attempt at the shared base budget; the escalated
                 rerun renders as a marked diagnostic.
   results.csv   flat per-cell export (all metrics + diagnostics incl. contract_rate /
@@ -64,7 +68,7 @@ PALETTE = [
     "#CC79A7", "#56B4E9", "#F0E442", "#000000",
 ]
 # "minimal" is the off-arm substitute for models that cannot disable reasoning
-# (Gemini 3 rejects effort=none), so it sits next to "none" on the dose axis.
+# (Gemini 3 rejects effort=none), so it sits next to "none" on the effort axis.
 EFFORT_ORDER = ["default", "none", "minimal", "low", "medium", "high"]
 LEG_ORDER = ["binding_only", "end_to_end", "scaffolded"]
 HORIZON_THRESHOLD = 0.8
@@ -82,30 +86,93 @@ FIGSIZE = (7.0, 4.4)  # readable at ~700px blog width
 DPI = 150
 
 # --- v2 zero-budget headline ---------------------------------------------------
-# zero_budget cells run composite_copy_v1 with reasoning off (effort=none, or
+# zero_budget cells run a composite_copy task with reasoning off (effort=none, or
 # "minimal" where the model cannot disable reasoning) under a hard one-line answer
-# contract (settings.contract=true). Cleanliness marks quarantine cells whose
+# contract (settings.contract=true). The TASK VERSION is read from the records:
+# the registry switched the facet from composite_copy_v1 to composite_copy_v2
+# (uniform last-write placement — v1's recency shortcut fix), so a history can mix
+# v1-task and v2-task zero-budget cells. The headline/figure use the LATEST task's
+# records only (see ``zb_latest_task``) and label the columns with that task;
+# older-task zero-budget cells remain in the per-cell tables.
+# Cleanliness marks quarantine cells whose
 # CANONICAL attempt was not actually "no visible working". Answers are 8-11 tokens,
 # so the visible-working line sits at ~3x the answer length:
 CTOK_WORKING_LINE = 32.0     # median (per-example) / mean ctok per call above this -> †
 RTOK_LEAK_PER_CALL = 2.0     # mean reasoning tokens per call on the published attempt -> †
 CAP_ESCAPE_RATE = 0.10       # fraction of calls with ctok > max_new_tokens -> ‡
 S5_EFF_LENGTH = 128          # matched efficiency cell: s5_concrete @ L128 (F10)
-V2_FACETS = ("zero_budget", "chain_nowrap")  # roster rows with none of these are archived
-ZB_HEADLINE_CELLS = [        # (length, leg) in headline column order
-    (16, None), (64, None), (16, "binding_only"), (16, "end_to_end"),
+# The runner's test-retest leg was renamed end_to_end -> replicate (review F6);
+# "replicate" headline lookups also accept the pre-rename leg name in old records.
+REPLICATE_LEG_ALIASES = ("replicate", "end_to_end")
+# (length, leg) in headline column order, following the capability ladder:
+# binding (state tracking) before composite (composition).
+ZB_HEADLINE_CELLS = [
+    (16, "binding_only"), (16, None), (64, None), (16, "replicate"),
 ]
-HEADLINE_COLUMNS = [
-    "Model",
-    "zero-budget composite @L16 (relaxed)",
-    "zero-budget composite @L64",
-    "binding_only @L16",
-    "replicate @L16 (test-retest)",
-    f"chain horizon (chain_nowrap, max depth, relaxed >= {HORIZON_THRESHOLD})",
-    f"s5 horizon (max L, relaxed >= {HORIZON_THRESHOLD})",
-    "s5@128 ctok",
-]
-HEURISTIC_LABEL = "recency heuristic (floor)"
+
+
+def _current_roster() -> frozenset:
+    """Slugs of the CURRENT benchmark roster (factworld.benchmark.MODELS). The
+    headline shows these models only; any other model in history is archived
+    (dropped from the roster) and renders in its own section — no mixing."""
+    try:
+        from factworld.benchmark import MODELS
+    except Exception:  # pragma: no cover - environment guard
+        return frozenset()
+    return frozenset(MODELS)
+
+
+CURRENT_ROSTER = _current_roster()
+
+
+def _task_ver(zb_task) -> str:
+    """Short version tag of a zero-budget task name ('composite_copy_v2' -> 'v2')."""
+    return (zb_task or "").rsplit("_", 1)[-1] if zb_task else "?"
+
+
+# Header-row regouping of headline_columns: (group label, colspan). The two
+# regimes are the owner's framing: 'instant' = no thinking, one-line answer
+# (in-weights ability); 'thinking' = generous reasoning budget.
+HEADLINE_GROUPS = [("", 1), ("instant (no thinking)", 5), ("thinking", 3)]
+LADDER_NOTE = (
+    "Columns follow the capability ladder — recall -> state tracking -> composition "
+    "-> chain depth -> long-horizon state — in two regimes: 'instant (no thinking)' "
+    "cells run with reasoning off and a hard one-line answer contract (in-weights "
+    "ability, no visible working); 'thinking' cells run with a generous reasoning "
+    "budget.")
+
+
+def headline_columns(zb_task) -> list[str]:
+    """Headline column headers in capability-ladder order (recall -> state tracking
+    -> composition -> chain depth -> long-horizon state), regime-prefixed; the
+    zero-budget columns carry the task version of the records they were built from
+    (the LATEST zero-budget task in history)."""
+    ver = _task_ver(zb_task)
+    return [
+        "Model",
+        "instant: recall (sanity, recall_copy_v1)",
+        f"instant: binding_only @L16 (state tracking, {ver})",
+        f"instant: zero-budget composite @L16 (composition, relaxed, {ver})",
+        f"instant: zero-budget composite @L64 ({ver})",
+        f"instant: replicate @L16 (test-retest, {ver})",
+        f"thinking: chain horizon (chain_nowrap, max depth, relaxed >= {HORIZON_THRESHOLD})",
+        f"thinking: s5 horizon (long-horizon state, max L, relaxed >= {HORIZON_THRESHOLD})",
+        "thinking: s5@128 ctok",
+    ]
+
+
+HEURISTIC_LABEL = "recency heuristic (floor"  # completed with the task by heuristic_label
+OBJECT_FILTER_LABEL = "object-filter floor"   # completed with the task by object_filter_label
+
+
+def heuristic_label(zb_task) -> str:
+    """Floor-row label, versioned by the task its items were regenerated from."""
+    return f"{HEURISTIC_LABEL}, {zb_task})"
+
+
+def object_filter_label(zb_task) -> str:
+    """Object-filter floor-row label, versioned like heuristic_label."""
+    return f"{OBJECT_FILTER_LABEL} ({zb_task})"
 ZB_FOOTNOTES = [
     "(*) off-arm ran effort=minimal (model cannot disable reasoning).",
     "(†) visible working on the canonical attempt: median (per-example) or mean "
@@ -119,11 +186,23 @@ ZB_FOOTNOTES = [
     "budget after majority finish=length; the CANONICAL number is the first attempt "
     "at the shared base budget — the escalated value is a marked diagnostic, not the "
     "headline.",
-    f"{HEURISTIC_LABEL}: one-line floor recomputed at render time on the exact "
-    "deterministic items — answer the LAST event's recipient plus that holder's "
-    "fact (binding leg: the last recipient).",
+    f"{HEURISTIC_LABEL}, <task>): one-line floor recomputed at render time on the "
+    "exact deterministic items of the task named in the row label (the same task "
+    "as the zero-budget columns) — answer the LAST event's recipient plus that "
+    "holder's fact (binding leg: the last recipient).",
+    f"{OBJECT_FILTER_LABEL} (<task>): E[1/w] recomputed at render time on the same "
+    "exact items — for each item, 1/(number of writes to the queried object): a "
+    "reader that filters events by the queried object but picks a RANDOM write "
+    "(no last-write-wins resolution) scores this with no state tracking at all; "
+    "the binding leg derives from the same items, so its floor is the same 1/w.",
     "n/a = facet/cell not run for this model; — = run, but no qualifying value.",
 ]
+FLOOR_NOTE = (
+    "Read small-L zero-budget cells against the object-filter floor, not chance: "
+    "the floor is inherent to last-write-wins (filter the stream to the queried "
+    "object, guess among its w writes) and decays only ~1/L, so it sits well above "
+    "chance at L16 — a score near the floor row shows object filtering, not state "
+    "tracking; genuine last-write resolution has to clear it.")
 HORIZON_NOTE = (
     "Horizons marked >=N are censored lower bounds: either the max tested depth/length "
     "still qualifies, or ('budget-censored') the first FAILING cell above N was majority "
@@ -137,7 +216,9 @@ EFFICIENCY_NOTE = (
     "only over cells a model SOLVED and therefore rewarded models that failed early "
     "(selection bias: the published 2.7x opus-vs-kimi ctok/solve gap is ~1.4x on the "
     "matched cell).")
-# v1-only facets whose headline scalars are kept in a separate archived table.
+# v1-only facets whose headline scalars are kept in separate archived tables
+# (the historical facet name dose_response stays in the archived headers only —
+# 'dose' terminology is purged from all active labels/prose).
 V1_ARCHIVED_FACETS = ("dose_response", "composite_length", "decomposition")
 ARCHIVED_COLUMNS = [
     "Model", "dose_response (relaxed)", "composite_length (relaxed @ L512, high)",
@@ -324,13 +405,24 @@ def cell_note(rec) -> str:
 
 
 def archived_roster(records, model) -> bool:
-    """True for v1-only roster rows: the model has no record in any v2 facet."""
-    return not any(r.get("model") == model and r.get("facet") in V2_FACETS
-                   for r in records)
+    """True when the model is NOT on the current roster (factworld.benchmark.MODELS):
+    it renders in the '## Archived models (dropped from the roster)' section, never
+    in the headline. An empty roster (factworld unavailable) archives nothing."""
+    return bool(CURRENT_ROSTER) and model not in CURRENT_ROSTER
 
 
 def models_of(records) -> list[str]:
     return sorted({r.get("model") for r in records if r.get("model")})
+
+
+def roster_models(records) -> list[str]:
+    """Models in history that are on the current roster (headline rows)."""
+    return [m for m in models_of(records) if not archived_roster(records, m)]
+
+
+def archived_models(records) -> list[str]:
+    """Models in history that were dropped from the roster (archived section)."""
+    return [m for m in models_of(records) if archived_roster(records, m)]
 
 
 def arm_label(rec) -> str:
@@ -436,12 +528,44 @@ def headline_decomposition(records, model):
     return out
 
 
-def zero_budget_cell(records, model, length, leg=None):
-    """The model's zero_budget cell at (length, leg), or None."""
-    cells = [r for r in by_facet(records, "zero_budget")
-             if r["model"] == model and r.get("length") == length
-             and _settings(r).get("leg") == leg]
-    return cells[0] if cells else None
+def zb_latest_task(records):
+    """The task version the headline zero-budget columns publish: the task of the
+    NEWEST zero_budget record (ties broken by task name, so v2 wins over v1 at
+    equal ts). A history that mixes v1-task cells with v2-task cells publishes
+    the latest task's cells only; the older task's cells stay in the per-cell
+    tables. None when the facet never ran."""
+    cells = by_facet(records, "zero_budget")
+    if not cells:
+        return None
+    newest = max(cells, key=lambda r: (r.get("ts") or "", r.get("task") or ""))
+    return newest.get("task")
+
+
+def _zb_mixed_task_note(records, zb_task) -> str:
+    """A headline note when history mixes zero-budget task versions, else ''."""
+    others = sorted({r.get("task") for r in by_facet(records, "zero_budget")
+                     if r.get("task") and r.get("task") != zb_task})
+    if not others:
+        return ""
+    return (f"History also contains zero-budget cells on {', '.join(others)}; the "
+            f"zero-budget columns below use the latest task's records ({zb_task}) "
+            "only — the archived task's cells remain in the per-cell tables.")
+
+
+def zero_budget_cell(records, model, length, leg=None, task=None):
+    """The model's zero_budget cell at (length, leg), or None. ``task`` (when
+    given) restricts to one task version — the headline passes the latest one.
+    leg="replicate" also matches the pre-F6 leg name "end_to_end" (the same
+    test-retest arm before the rename), preferring a true replicate record."""
+    legs = REPLICATE_LEG_ALIASES if leg == "replicate" else (leg,)
+    for want in legs:
+        cells = [r for r in by_facet(records, "zero_budget")
+                 if r["model"] == model and r.get("length") == length
+                 and _settings(r).get("leg") == want
+                 and (task is None or r.get("task") == task)]
+        if cells:
+            return cells[0]
+    return None
 
 
 def model_effort_minimal(records, model) -> bool:
@@ -486,12 +610,13 @@ def zb_value_str(rec, model_minimal=False) -> str:
     return val + zb_marks(rec, model_minimal)
 
 
-def zb_model_marks(records, model) -> str:
-    """Union of cleanliness marks over the model's zero_budget cells (figure labels)."""
+def zb_model_marks(records, model, task=None) -> str:
+    """Union of cleanliness marks over the model's zero_budget cells (figure
+    labels); ``task`` restricts to one task version (the figure's)."""
     minimal = model_effort_minimal(records, model)
     seen = set()
     for r in by_facet(records, "zero_budget"):
-        if r["model"] == model:
+        if r["model"] == model and (task is None or r.get("task") == task):
             seen.update(zb_marks(r, minimal))
     if not seen and minimal:
         seen.add("*")
@@ -513,20 +638,45 @@ def headline_efficiency(records, model):
     return ctok / n if n > 0 and ctok is not None else None
 
 
-@functools.lru_cache(maxsize=8)
-def recency_heuristic(n: int = 100):
-    """Zero-budget floor (F7): score the one-line recency heuristic — answer with
-    the LAST event's recipient and that holder's stated fact (binding-leg analog:
-    the last recipient IS the holder guess) — on the exact deterministic
-    composite_copy_v1 items, regenerated locally (pure stdlib, no API).
+def headline_recall(records, model):
+    """The ladder's first rung: the sanity recall_copy_v1 cell's canonical relaxed
+    (instant regime — reasoning off). None when the cell never ran."""
+    cells = [r for r in by_facet(records, "sanity")
+             if r["model"] == model and r.get("task") == "recall_copy_v1"]
+    return canonical_relaxed(cells[0]) if cells else None
 
-    Returns {"composite_16", "composite_64", "binding_16"} or None when the
-    factworld package is unavailable."""
+
+def _task_spec(task):
+    """TaskSpec lookup tolerant of the v1-family retirement (issue #11): scored
+    specs live in tasks.CANONICAL; retired v1 specs move to tasks.RETIRED but
+    their historical records still need render-time floors. None when the
+    factworld package (or the requested spec) is unavailable."""
     try:
         from factworld import tasks as TK
     except Exception:  # pragma: no cover - environment guard
         return None
-    spec = TK.CANONICAL["composite_copy_v1"]
+    spec = TK.CANONICAL.get(task)
+    if spec is None:
+        spec = getattr(TK, "RETIRED", {}).get(task)
+    return spec
+
+
+@functools.lru_cache(maxsize=8)
+def recency_heuristic(task: str = "composite_copy_v1", n: int = 100):
+    """Zero-budget floor (F7): score the one-line recency heuristic — answer with
+    the LAST event's recipient and that holder's stated fact (binding-leg analog:
+    the last recipient IS the holder guess) — on the exact deterministic items of
+    ``task`` (the task the zero_budget records actually ran; looked up in
+    CANONICAL or, once the v1 family retires, RETIRED), regenerated locally
+    (pure stdlib, no API). v1 and v2 share the prompt grammar, so the same
+    extraction applies; on v2 the floor sits near chance by construction.
+
+    Returns {"composite_16", "composite_64", "binding_16"} or None when the
+    factworld package (or the requested task spec) is unavailable."""
+    spec = _task_spec(task)
+    if spec is None:  # e.g. v2-task records rendered against an older factworld
+        return None
+    from factworld import tasks as TK
 
     def scores(length):
         comp = bind = 0
@@ -545,26 +695,92 @@ def recency_heuristic(n: int = 100):
     return {"composite_16": c16, "composite_64": c64, "binding_16": b16}
 
 
-def heuristic_row(records):
-    """The 'recency heuristic' row for the zero-budget headline table, or None."""
-    n = max((r.get("n") or 0 for r in by_facet(records, "zero_budget")), default=0)
-    vals = recency_heuristic(n or 100)
-    if vals is None:
+@functools.lru_cache(maxsize=8)
+def object_filter_floor(task: str = "composite_copy_v2", n: int = 100):
+    """Shallow zero-budget floor: E[1/w] over the exact deterministic items of
+    ``task`` — for each item, 1/(number of give-events that write the queried
+    object). A reader that FILTERS the stream to the queried object's writes but
+    picks one uniformly at random (no last-write-wins resolution) is correct on
+    the holder with probability >= 1/w, so E[1/w] is the score of pure object
+    filtering with zero state tracking. Inherent to last-write-wins: it sits well
+    above chance at small L and decays ~1/L. The binding leg derives from the
+    SAME items (same w per item), so its floor equals the composite one at the
+    same L; the replicate leg is the identical composite@L16 prompt.
+
+    Returns {"composite_16", "composite_64", "binding_16"} or None when the
+    factworld package (or the requested task spec) is unavailable."""
+    spec = _task_spec(task)
+    if spec is None:
         return None
-    return [HEURISTIC_LABEL,
-            _fmt(vals["composite_16"]), _fmt(vals["composite_64"]),
+    from factworld import tasks as TK
+
+    def floor(length):
+        tot = 0.0
+        for e in TK.generate(spec, "test", n=n, length=length):
+            writes = len(re.findall(rf"gives {e.meta.get('obj')} to ", e.prompt))
+            if writes:
+                tot += 1.0 / writes
+        return tot / n
+
+    f16, f64 = floor(16), floor(64)
+    return {"composite_16": f16, "composite_64": f64, "binding_16": f16}
+
+
+def _floor_row(label, vals):
+    """One floor row in headline-column order. Floors apply to the zero-budget
+    (instant) columns only; recall and the thinking columns render '—'. The
+    replicate column repeats composite@L16 (identical prompts)."""
+    return [label, "—",
             _fmt(vals["binding_16"]), _fmt(vals["composite_16"]),
+            _fmt(vals["composite_64"]), _fmt(vals["composite_16"]),
             "—", "—", "—"]
 
 
-def replicate_noise(records):
-    """Max observed |plain@L16 - replicate@L16| across models (F6): the end_to_end
-    leg builds prompts IDENTICAL to the plain composite cell, so the pair is a
-    test-retest replicate and the max |delta| is the run-to-run noise bar."""
+def _zb_floor_n(records, zb_task) -> int:
+    return max((r.get("n") or 0 for r in by_facet(records, "zero_budget")
+                if r.get("task") == zb_task), default=0) or 100
+
+
+def heuristic_row(records, zb_task=None):
+    """The 'recency heuristic' row for the zero-budget headline table, or None.
+    Regenerates the floor on the task the zero_budget records actually used
+    (``zb_task``, default: the latest one in history) and labels the row with it,
+    so the row renders v1 floors for a v1-task history and v2 floors once
+    uniform-last-write records land."""
+    if zb_task is None:
+        zb_task = zb_latest_task(records)
+    if zb_task is None:
+        return None
+    vals = recency_heuristic(zb_task, _zb_floor_n(records, zb_task))
+    if vals is None:
+        return None
+    return _floor_row(heuristic_label(zb_task), vals)
+
+
+def object_filter_row(records, zb_task=None):
+    """The 'object-filter floor' row (E[1/w] on the exact items), or None; the
+    same task/labeling rules as heuristic_row."""
+    if zb_task is None:
+        zb_task = zb_latest_task(records)
+    if zb_task is None:
+        return None
+    vals = object_filter_floor(zb_task, _zb_floor_n(records, zb_task))
+    if vals is None:
+        return None
+    return _floor_row(object_filter_label(zb_task), vals)
+
+
+def replicate_noise(records, zb_task=None):
+    """Max observed |plain@L16 - replicate@L16| across models (F6): the replicate
+    leg (recorded as end_to_end before the F6 rename) builds prompts IDENTICAL to
+    the plain composite cell, so the pair is a test-retest replicate and the max
+    |delta| is the run-to-run noise bar. Computed within the latest task version."""
+    if zb_task is None:
+        zb_task = zb_latest_task(records)
     deltas = []
     for m in models_of(records):
-        a = zero_budget_cell(records, m, 16, None)
-        b = zero_budget_cell(records, m, 16, "end_to_end")
+        a = zero_budget_cell(records, m, 16, None, task=zb_task)
+        b = zero_budget_cell(records, m, 16, "replicate", task=zb_task)
         if a is not None and b is not None:
             va, vb = canonical_relaxed(a), canonical_relaxed(b)
             if va is not None and vb is not None:
@@ -584,43 +800,56 @@ def replicate_note(records) -> str:
 
 
 def headline_rows(records):
-    """One row per model for the primary (v2) headline table, HEADLINE_COLUMNS order.
-    v1-only roster rows are labelled '(archived roster)'; cells that never ran say
-    'n/a' (distinct from '—' = run but no qualifying value, F9)."""
+    """One row per CURRENT-ROSTER model for the headline table, headline_columns
+    (capability-ladder) order — archived models render in their own section, never
+    here. The zero-budget columns use the LATEST zero-budget task's records only
+    (older-task cells render 'n/a' here but stay in the per-cell tables); cells
+    that never ran say 'n/a' (distinct from '—' = run but no qualifying value,
+    F9). The recency-heuristic and object-filter floor rows come last."""
+    zb_task = zb_latest_task(records)
     rows = []
-    for m in models_of(records):
+    for m in roster_models(records):
         minimal = model_effort_minimal(records, m)
-        label = f"{m} (archived roster)" if archived_roster(records, m) else m
-        row = [label]
+        row = [m]
+        rec = headline_recall(records, m)
+        row.append("n/a" if rec is None else _fmt(rec))
         for length, leg in ZB_HEADLINE_CELLS:
-            r = zero_budget_cell(records, m, length, leg)
+            r = zero_budget_cell(records, m, length, leg, task=zb_task)
             row.append(zb_value_str(r, minimal))
         row.append(_horizon_str(records, "chain_nowrap", m))
         row.append(_horizon_str(records, "s5_concrete", m))
         eff = headline_efficiency(records, m)
         row.append("n/a" if eff is None else f"{eff:.0f}")
         rows.append(row)
-    hr = heuristic_row(records)
-    if hr is not None:
-        rows.append(hr)
+    for floor in (heuristic_row(records, zb_task), object_filter_row(records, zb_task)):
+        if floor is not None:
+            rows.append(floor)
     return rows
+
+
+def _v1_facet_row(records, m):
+    """One ARCHIVED_COLUMNS row of v1-facet headline scalars for one model."""
+    dr, dr_eff = headline_dose_response(records, m)
+    cl = headline_composite_length(records, m)
+    legs = headline_decomposition(records, m)
+    return [m,
+            "—" if dr is None else f"{dr:.2f} @ {dr_eff}",
+            _fmt(cl),
+            " / ".join(_fmt(legs[leg]) for leg in LEG_ORDER)]
 
 
 def archived_headline_rows(records):
-    """Legacy v1 headline scalars, only for models with data in an archived facet."""
-    rows = []
-    for m in models_of(records):
-        if not any(r["model"] == m
-                   for facet in V1_ARCHIVED_FACETS for r in by_facet(records, facet)):
-            continue
-        dr, dr_eff = headline_dose_response(records, m)
-        cl = headline_composite_length(records, m)
-        legs = headline_decomposition(records, m)
-        rows.append([m,
-                     "—" if dr is None else f"{dr:.2f} @ {dr_eff}",
-                     _fmt(cl),
-                     " / ".join(_fmt(legs[leg]) for leg in LEG_ORDER)])
-    return rows
+    """'v1 archived facets (pre-redesign)' rows: CURRENT-ROSTER models with data
+    in an archived v1 facet (archived MODELS render in their own section)."""
+    return [_v1_facet_row(records, m) for m in roster_models(records)
+            if any(r["model"] == m
+                   for facet in V1_ARCHIVED_FACETS for r in by_facet(records, facet))]
+
+
+def archived_model_rows(records):
+    """'Archived models (dropped from the roster)' rows: every model in history
+    that is not in factworld.benchmark.MODELS, with its v1-facet columns."""
+    return [_v1_facet_row(records, m) for m in archived_models(records)]
 
 
 # --- markdown / csv -----------------------------------------------------------
@@ -665,16 +894,28 @@ def write_results_md(records, out_path, history_path):
     ]
     lines += _settings_block(records)
 
-    lines += ["## Headline", "",
-              "Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a "
-              "one-line answer contract (settings.contract=true); relaxed match. Escalated "
-              "cells show the CANONICAL first attempt at the shared base budget, with the "
-              "escalated rerun as a parenthesised diagnostic.", "",
-              "| " + " | ".join(HEADLINE_COLUMNS) + " |",
-              "|" + "---|" * len(HEADLINE_COLUMNS)]
+    zb_task = zb_latest_task(records)
+    headline_cols = headline_columns(zb_task)
+    lines += ["## Headline (current roster)", "",
+              "Current roster only (factworld.benchmark.MODELS); models dropped from "
+              "the roster render in the archived-models section below.",
+              "",
+              LADDER_NOTE,
+              "",
+              f"Zero-budget (instant) cells: task **{zb_task or 'n/a'}** with reasoning "
+              "off (effort=none) under a one-line answer contract "
+              "(settings.contract=true); relaxed match. Escalated cells show the "
+              "CANONICAL first attempt at the shared base budget, with the escalated "
+              "rerun as a parenthesised diagnostic.",
+              ""]
+    note = _zb_mixed_task_note(records, zb_task)
+    if note:
+        lines += [note, ""]
+    lines += ["| " + " | ".join(headline_cols) + " |",
+              "|" + "---|" * len(headline_cols)]
     for row in headline_rows(records):
         lines.append("| " + " | ".join(str(c) for c in row) + " |")
-    lines.append("")
+    lines += ["", FLOOR_NOTE, ""]
     for note in ZB_FOOTNOTES:
         lines += [note, ""]
     lines += [replicate_note(records), "", HORIZON_NOTE, "", EFFICIENCY_NOTE, ""]
@@ -688,12 +929,26 @@ def write_results_md(records, out_path, history_path):
         "",
     ]
 
+    dropped = archived_model_rows(records)
+    if dropped:
+        lines += ["## Archived models (dropped from the roster)", "",
+                  "Models present in history but no longer in "
+                  "factworld.benchmark.MODELS, with their v1-facet columns "
+                  "(historical facet names). Their per-cell rows — any facet — "
+                  "remain in the tables below.", "",
+                  "| " + " | ".join(ARCHIVED_COLUMNS) + " |",
+                  "|" + "---|" * len(ARCHIVED_COLUMNS)]
+        for row in dropped:
+            lines.append("| " + " | ".join(str(c) for c in row) + " |")
+        lines.append("")
+
     archived = archived_headline_rows(records)
     if archived:
-        lines += ["## v1 (archived facets)", "",
-                  "Legacy headline columns for the v1-only facets "
-                  f"({', '.join(V1_ARCHIVED_FACETS)}); superseded by the zero-budget "
-                  "headline above. Per-cell rows remain in the tables below.", "",
+        lines += ["## v1 archived facets (pre-redesign)", "",
+                  "Legacy headline columns for the pre-redesign v1-only facets "
+                  f"({', '.join(V1_ARCHIVED_FACETS)}), current-roster models only; "
+                  "superseded by the ladder headline above. Per-cell rows remain "
+                  "in the tables below.", "",
                   "| " + " | ".join(ARCHIVED_COLUMNS) + " |",
                   "|" + "---|" * len(ARCHIVED_COLUMNS)]
         for row in archived:
@@ -858,7 +1113,7 @@ def fig_dose_response(records, out_dir):
     ax.set_xticks(range(len(efforts)), efforts)
     ax.set_xlabel("reasoning effort")
     ax.set_ylabel("relaxed accuracy")
-    ax.set_title("Dose response: composite_copy_v1 @ L16 vs reasoning effort")
+    ax.set_title("v1 archived facet (pre-redesign): composite_copy_v1 @L16 vs reasoning effort")
     _style_axes(ax)
     ax.legend(fontsize=7, loc="lower right", frameon=False)
     _caption(fig, cells)
@@ -968,21 +1223,26 @@ def fig_chain_nowrap(records, out_dir):
     return _fig_chain(records, out_dir, "chain_nowrap", "chain_nowrap")
 
 
-ZB_GROUPS = [  # (bar label, length, leg) — headline zero-budget cells
+ZB_GROUPS = [  # (bar label, length, leg) — headline zero-budget cells in ladder
+    # order (binding/state tracking before composite/composition); "replicate"
+    # also matches the pre-F6 leg name end_to_end (REPLICATE_LEG_ALIASES)
+    ("binding_only L16", 16, "binding_only"),
     ("composite L16", 16, None),
     ("composite L64", 64, None),
-    ("binding_only L16", 16, "binding_only"),
-    ("replicate L16 (test-retest)", 16, "end_to_end"),
+    ("replicate L16 (test-retest)", 16, "replicate"),
 ]
 
 
 def fig_zero_budget(records, out_dir):
-    cells = by_facet(records, "zero_budget")
+    # Like the headline table, the figure shows the LATEST zero-budget task's
+    # cells only; an archived task's cells stay in the per-cell tables.
+    zb_task = zb_latest_task(records)
+    cells = [r for r in by_facet(records, "zero_budget") if r.get("task") == zb_task]
     if not cells:
         return []
 
     def composite_l64(m):
-        r = zero_budget_cell(records, m, 64, None)
+        r = zero_budget_cell(records, m, 64, None, task=zb_task)
         return (canonical_relaxed(r) or 0.0) if r else -1.0
 
     models = sorted(models_of(cells), key=composite_l64, reverse=True)
@@ -992,7 +1252,7 @@ def fig_zero_budget(records, out_dir):
     for j, (label, length, leg) in enumerate(ZB_GROUPS):
         xs, ys, errs, hatched, escapes = [], [], [[], []], [], []
         for i, m in enumerate(models):
-            r = zero_budget_cell(records, m, length, leg)
+            r = zero_budget_cell(records, m, length, leg, task=zb_task)
             if r is None:
                 continue
             y = canonical_relaxed(r)  # first attempt for escalated cells (F2)
@@ -1017,10 +1277,10 @@ def fig_zero_budget(records, out_dir):
                             textcoords="offset points", xytext=(0, 8),
                             ha="center", fontsize=9, color="#333333")
     ax.set_xticks(range(len(models)),
-                  [m + zb_model_marks(records, m) for m in models],
+                  [m + zb_model_marks(records, m, task=zb_task) for m in models],
                   fontsize=6.5, rotation=20, ha="right")
     ax.set_ylabel("relaxed accuracy")
-    ax.set_title("Zero budget: composite_copy_v1, reasoning off, one-line answer contract")
+    ax.set_title(f"Zero budget: {zb_task}, reasoning off, one-line answer contract")
     _style_axes(ax)
     ax.legend(fontsize=7, loc="upper right", frameon=False)
     fig.text(0.01, 0.03,
@@ -1118,9 +1378,17 @@ def _inline_svg(svg_path: str) -> str:
     return text[start:] if start >= 0 else text
 
 
-def _html_table(headers, rows, sortable=False):
+def _html_table(headers, rows, sortable=False, groups=None):
+    """``groups`` (label, colspan) pairs add a grouping header row above the
+    column headers (the headline's instant/thinking regime split); only used on
+    non-sortable tables (the sort JS indexes the flat header row)."""
     cls = ' class="sortable"' if sortable else ""
-    out = [f"<table{cls}><thead><tr>"]
+    out = [f"<table{cls}><thead>"]
+    if groups:
+        out.append("<tr>" + "".join(
+            f'<th colspan="{span}">{html.escape(label)}</th>'
+            for label, span in groups) + "</tr>")
+    out.append("<tr>")
     out += [f"<th>{html.escape(h)}</th>" for h in headers]
     out.append("</tr></thead><tbody>")
     for row in rows:
@@ -1132,15 +1400,29 @@ def _html_table(headers, rows, sortable=False):
 def write_index_html(records, out_dir, svg_paths, history_path):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
+    zb_task = zb_latest_task(records)
+    headline_cols = headline_columns(zb_task)
+    mixed_note = _zb_mixed_task_note(records, zb_task)
     head_rows = headline_rows(records)
+    dropped = archived_model_rows(records)
+    dropped_html = ""
+    if dropped:
+        dropped_html = (
+            "<h2>Archived models (dropped from the roster)</h2>\n"
+            '<p class="small">Models present in history but no longer in '
+            "factworld.benchmark.MODELS, with their v1-facet columns (historical "
+            "facet names). Their per-cell rows — any facet — remain in the tables "
+            "below.</p>\n"
+            + _html_table(ARCHIVED_COLUMNS, dropped))
     archived = archived_headline_rows(records)
     archived_html = ""
     if archived:
         archived_html = (
-            "<h2>v1 (archived facets)</h2>\n"
-            f'<p class="small">Legacy headline columns for the v1-only facets '
-            f"({html.escape(', '.join(V1_ARCHIVED_FACETS))}); superseded by the "
-            "zero-budget headline above.</p>\n"
+            "<h2>v1 archived facets (pre-redesign)</h2>\n"
+            f'<p class="small">Legacy headline columns for the pre-redesign '
+            f"v1-only facets ({html.escape(', '.join(V1_ARCHIVED_FACETS))}), "
+            "current-roster models only; superseded by the ladder headline "
+            "above.</p>\n"
             + _html_table(ARCHIVED_COLUMNS, archived))
 
     cell_rows = []
@@ -1180,16 +1462,21 @@ single k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths &lt; k
 (<code>factworld/tasks.py</code> design gate), so <code>chain_depth</code> cells at depth &ge;
 {CHAIN_CYCLE_K} wrapped the cycle, measure the wrapped task rather than depth, and are marked
 {html.escape(CHAIN_INVALID_MARK)} below and excluded from the chain figure.</p>
-<h2>Headline</h2>
-<p class="small">Zero-budget cells: composite_copy_v1 with reasoning off (effort=none) under a
-one-line answer contract (settings.contract=true); relaxed match. Escalated cells show the
-CANONICAL first attempt at the shared base budget, with the escalated rerun as a
-parenthesised diagnostic.</p>
-{_html_table(HEADLINE_COLUMNS, head_rows)}
+<h2>Headline (current roster)</h2>
+<p class="small">Current roster only (factworld.benchmark.MODELS); models dropped from the
+roster render in the archived-models section below. {html.escape(LADDER_NOTE)}</p>
+<p class="small">Zero-budget (instant) cells: task <strong>{html.escape(zb_task or "n/a")}</strong>
+with reasoning off (effort=none) under a one-line answer contract (settings.contract=true);
+relaxed match. Escalated cells show the CANONICAL first attempt at the shared base budget,
+with the escalated rerun as a parenthesised diagnostic.
+{(" " + html.escape(mixed_note)) if mixed_note else ""}</p>
+{_html_table(headline_cols, head_rows, groups=HEADLINE_GROUPS)}
+<p class="small">{html.escape(FLOOR_NOTE)}</p>
 <p class="small">{"<br>".join(html.escape(n) for n in ZB_FOOTNOTES)}<br>
 {html.escape(replicate_note(records))}<br>
 {html.escape(HORIZON_NOTE)}<br>
 {html.escape(EFFICIENCY_NOTE)}</p>
+{dropped_html}
 {archived_html}
 <h2>Figures</h2>
 {figures_html}

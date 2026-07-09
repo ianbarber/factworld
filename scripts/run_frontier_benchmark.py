@@ -8,10 +8,12 @@ finish reasons), token usage and an estimated cost. Every example record carries
 per-call ``{ctok, rtok, finish}`` (completion tokens, reasoning tokens, finish
 reason) alongside ``{gold, pred, relaxed}`` so pass-at-budget / tokens-at-matched-
 accuracy views are computable post hoc. Resume is automatic: any cell whose (model,
-facet, task, length, n, settings_hash, suite_version) key already has a history
+facet, task, length, n, settings_hash, stream_version) key already has a history
 record is skipped (latest-wins dedup lives in scripts/render_benchmark.py). n is
 part of the key so a low-n scouting pass (--n-scale) never satisfies resume for the
-full-n cell.
+full-n cell; the version component is the cell's SPEC stream version (not the
+global suite version), so registry/suite bumps never invalidate cells whose pinned
+example streams are unchanged.
 
 Protocol rules:
   - Reasoning-on cells run with a >=8192-token budget and stop_at=None (smaller
@@ -117,8 +119,11 @@ BASE_SYSTEM_PROMPT = (
 
 # Grid mechanics: --composite_format appends the two-token format instruction for
 # composite tasks (format-fair across models that don't guess the output shape).
+# composite_copy_v2 (the zero_budget task since the uniform-last-write fix) has
+# the same prompt/answer shape as v1, so it takes the same format instruction.
 TASK_PROMPTS = {
     "composite_copy_v1": COMPOSITE_FORMAT_PROMPT,
+    "composite_copy_v2": COMPOSITE_FORMAT_PROMPT,
     "composite_v1": COMPOSITE_FORMAT_PROMPT,
 }
 
@@ -245,18 +250,41 @@ class CostGuardBackend:
 
 # --- plan / resume ----------------------------------------------------------------
 
+def stream_version(task: str) -> str:
+    """The RNG-stream version of a cell's task: ``spec.version`` (frozen at spec
+    introduction — see tasks._STREAM_V1), NOT the global TK.SUITE_VERSION.
+
+    The suite version moves whenever the registry changes (1.0 -> 1.1 added the
+    v2 specs), but a spec's example stream is immutable forever, so keying resume
+    on the global would spuriously invalidate EVERY existing cell on a suite bump
+    (chain_nowrap/s5/sanity cells are unchanged — their streams are pinned).
+    Facet tasks that are not TaskSpecs (task "s5", rendered via
+    factworld.s5_concrete off the pinned s5_v1 spec) carry the v1 stream version.
+    """
+    spec = TK.CANONICAL.get(task) or TK.RETIRED.get(task)
+    return spec.version if spec is not None else TK._STREAM_V1
+
+
 def cell_key(model: str, cell: dict) -> tuple:
     """Resume key: skip a cell if ANY history record already carries this key.
 
     Includes the cell's n so a low-n scouting run (--n-scale) does not mark the
-    full-n cell as done.
+    full-n cell as done. The version component is the PER-SPEC stream version
+    (``stream_version``), so a suite bump only invalidates cells whose task
+    stream actually changed (i.e. genuinely new specs).
     """
     return (model, cell["facet"], cell["task"], cell["length"], cell["n"],
-            settings_hash(cell), TK.SUITE_VERSION)
+            settings_hash(cell), stream_version(cell["task"]))
 
 
 def history_keys(history_path: str) -> set[tuple]:
-    """Read the history file and return the set of already-run cell keys."""
+    """Read the history file and return the set of already-run cell keys.
+
+    Records written since the per-spec resume key carry ``stream_version``;
+    older records fall back to their recorded ``suite_version``, which equals
+    the stream version for every pre-1.1 record (all their tasks are pinned at
+    the "1.0" stream).
+    """
     keys: set[tuple] = set()
     if not os.path.exists(history_path):
         return keys
@@ -272,7 +300,7 @@ def history_keys(history_path: str) -> set[tuple]:
             keys.add((rec.get("model"), rec.get("facet"), rec.get("task"),
                       rec.get("length"), rec.get("n"),
                       settings_hash({"settings": rec.get("settings") or {}}),
-                      rec.get("suite_version")))
+                      rec.get("stream_version") or rec.get("suite_version")))
     return keys
 
 
@@ -391,6 +419,14 @@ def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]
     leg = settings["leg"]
     if leg == "binding_only":
         rewritten = [binding_prompt(e, spec.name) for e in examples_in]
+        # binding_prompt returns the UNMODIFIED (prompt, answer) for task names
+        # outside its allowlist — a silent fallback that would mislabel the leg
+        # as binding while measuring the full composite. Fail loudly instead.
+        for e, (p, g) in zip(examples_in, rewritten):
+            if (p, g) == (e.prompt, e.answer):
+                raise ValueError(
+                    f"binding_prompt did not rewrite the query for task "
+                    f"{spec.name!r} (is it missing from its task allowlist?)")
         base_prompts = [p for p, _g in rewritten]
         golds = [g for _p, g in rewritten]
         contract_line = CONTRACT_LINE_BINDING
@@ -609,6 +645,9 @@ def execute_cell(backend, model: str, cell: dict, *, n: int, run_id: str,
         "ts": datetime.now(timezone.utc).isoformat(),
         "git_commit": git_commit,
         "suite_version": TK.SUITE_VERSION,
+        # the resume-key version component (per-spec stream version, NOT the
+        # suite version — see stream_version/history_keys)
+        "stream_version": stream_version(cell["task"]),
         "model": model,
         "served_models": meta["served_models"],
         "providers": meta["providers"],

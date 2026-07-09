@@ -3,12 +3,18 @@
 Builds a synthetic history fixture that conforms EXACTLY to the C3 record contract
 (every field the runner will emit: the five v1 facets plus the v2 zero_budget cells
 with contract diagnostics / escalation and the chain_nowrap staircase, x 3 fake
-models plus an archived v1-only roster model and sanity/floor rows), renders it into
-a temp directory, and checks every artefact: PNG magic bytes, SVG XML validity, HTML
-table content, CSV shape, the v2 headline (escalated-canonical values, recalibrated
-† daggers, budget-censored horizons, ‡ cap-escape, the replicate/test-retest column,
-the recency-heuristic floor row, s5@128 ctok, n/a-vs-— and archived-roster marking,
-finish_errors), and the latest-record-wins dedup rule.
+roster models plus one model dropped from the roster, and sanity/floor rows),
+renders it into a temp directory, and checks every artefact: PNG magic bytes, SVG
+XML validity, HTML table content, CSV shape, the capability-ladder headline
+(current roster only, instant/thinking regime grouping, escalated-canonical
+values, recalibrated † daggers, budget-censored horizons, ‡ cap-escape, the
+replicate/test-retest column, the recency-heuristic + object-filter floor rows,
+s5@128 ctok, n/a-vs-—, finish_errors), the archived-models section, and the
+latest-record-wins dedup rule.
+
+RB.CURRENT_ROSTER is patched to the fixture roster (the real one is
+factworld.benchmark.MODELS): the headline shows roster models only and
+ARCHIVED_MODEL renders in '## Archived models (dropped from the roster)'.
 
 Run directly:  python3 tests/test_render_benchmark.py
 Run with pytest: python3 -m pytest tests/test_render_benchmark.py
@@ -33,9 +39,6 @@ try:
 except ImportError:  # pragma: no cover
     HAS_MPL = False
 
-if HAS_MPL:
-    import render_benchmark as RB
-
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 MODELS = {
@@ -44,9 +47,15 @@ MODELS = {
     "testlab/model-b": ("cheap_reasoner", 0.78),
     "testlab/model-c": ("non_reasoning", 0.55),
 }
-# v1-only roster row (no record in any v2 facet -> "(archived roster)" + n/a cells).
+# Model dropped from the roster: in history but not in CURRENT_ROSTER -> renders
+# only in the '## Archived models (dropped from the roster)' section + per-cell tables.
 ARCHIVED_MODEL = "testlab/model-d"
 ALL_MODELS = set(MODELS) | {ARCHIVED_MODEL}
+
+if HAS_MPL:
+    import render_benchmark as RB
+    # Stand-in for factworld.benchmark.MODELS: the fixture models are the roster.
+    RB.CURRENT_ROSTER = frozenset(MODELS)
 
 # Escalation payload mirroring the real runner (aggregates only, no per-example data).
 ESCALATION_L64 = {
@@ -298,6 +307,9 @@ def test_headline_scalars():
     legs = RB.headline_decomposition(recs, "testlab/model-b")
     assert set(legs) == {"binding_only", "end_to_end", "scaffolded"}
     assert all(v is not None for v in legs.values())
+    # Ladder rung 1: recall from the sanity recall_copy_v1 cell (instant regime).
+    assert abs(RB.headline_recall(recs, "testlab/model-a") - 1.0) < 1e-9
+    assert RB.headline_recall(recs, ARCHIVED_MODEL) is None
 
 
 def test_escalated_canonical():
@@ -449,27 +461,190 @@ def test_replicate_noise():
 
 def test_recency_heuristic():
     """F7: the render-time recency-heuristic floor reproduces the judge-verified
-    values on the exact deterministic items (0.34@L16 / 0.21@L64 / binding 0.34)."""
+    values on the exact deterministic items (0.34@L16 / 0.21@L64 / binding 0.34).
+    The floor is parameterized by the task the zero_budget records used and the
+    row is labelled with it."""
     if not HAS_MPL:
         return
-    vals = RB.recency_heuristic(100)
+    vals = RB.recency_heuristic("composite_copy_v1", 100)
     assert vals is not None
     assert abs(vals["composite_16"] - 0.34) < 1e-9
     assert abs(vals["composite_64"] - 0.21) < 1e-9
     assert abs(vals["binding_16"] - 0.34) < 1e-9
     recs = _fixture_records()
+    assert RB.zb_latest_task(recs) == "composite_copy_v1"
+    # ladder order: [label, recall —, binding@16, composite@16, composite@64,
+    # replicate@16 (== composite@16), chain —, s5 —, ctok —]
     row = RB.heuristic_row(recs)
-    assert row == [RB.HEURISTIC_LABEL, "0.34", "0.21", "0.34", "0.34", "—", "—", "—"]
+    assert row == [RB.heuristic_label("composite_copy_v1"),
+                   "—", "0.34", "0.34", "0.21", "0.34", "—", "—", "—"]
+    # an unknown task (e.g. v2-task records rendered against an older factworld)
+    # degrades to no floor row rather than a wrong-task floor
+    assert RB.recency_heuristic("composite_copy_v999", 100) is None
+
+
+def test_recency_heuristic_v2_floor_near_chance():
+    """The uniform-last-write v2 sampler is the shortcut fix: the same one-line
+    recency heuristic must collapse toward chance on composite_copy_v2 items.
+    Tolerated as a flagged skip until the generator agent lands the v2 spec."""
+    if not HAS_MPL:
+        return
+    import factworld.tasks as TK
+    if "composite_copy_v2" not in TK.CANONICAL:
+        print("FLAG: composite_copy_v2 not in tasks.CANONICAL yet (generator agent "
+              "pending) — v2 floor values unverified", file=sys.stderr)
+        return
+    v1 = RB.recency_heuristic("composite_copy_v1", 100)
+    v2 = RB.recency_heuristic("composite_copy_v2", 100)
+    assert v2 is not None
+    # v1's geometric(1/4) recency mass put the floor at 0.34/0.21; the v2 uniform
+    # placement leaves the last event's recipient ~1/pool correct.
+    assert v2["composite_16"] < v1["composite_16"] / 2
+    assert v2["composite_64"] < v1["composite_64"] / 2
+    assert v2["composite_16"] <= 0.15 and v2["composite_64"] <= 0.15
+    assert v2["binding_16"] <= 0.15
+
+
+def test_object_filter_floor():
+    """The object-filter floor: E[1/w] over the exact deterministic items, where w
+    is the number of writes to the queried object — the score of filtering the
+    stream by the queried object and picking a RANDOM write (no last-write-wins
+    resolution). Inherent shallow floor: well above chance at small L, ~1/L decay.
+    The binding leg derives from the same items, so its floor equals composite@L16.
+    The v2 floor row is what small-L zero-budget cells are read against."""
+    if not HAS_MPL:
+        return
+    v1 = RB.object_filter_floor("composite_copy_v1", 100)
+    assert v1 is not None
+    assert abs(v1["composite_16"] - 0.2909047619047617) < 1e-9
+    assert abs(v1["composite_64"] - 0.06582200301642682) < 1e-9
+    assert v1["binding_16"] == v1["composite_16"]
+    # unknown task degrades to no floor row rather than a wrong-task floor
+    assert RB.object_filter_floor("composite_copy_v999", 100) is None
+    # fixture history is v1-task: the row is labelled with the records' task and
+    # fills the ladder's zero-budget columns only
+    recs = _fixture_records()
+    assert RB.object_filter_row(recs) == [
+        RB.object_filter_label("composite_copy_v1"),
+        "—", "0.29", "0.29", "0.07", "0.29", "—", "—", "—"]
+    import factworld.tasks as TK
+    if ("composite_copy_v2" not in TK.CANONICAL
+            and "composite_copy_v2" not in getattr(TK, "RETIRED", {})):
+        print("FLAG: composite_copy_v2 spec unavailable — v2 object-filter floor "
+              "unverified", file=sys.stderr)
+        return
+    v2 = RB.object_filter_floor("composite_copy_v2", 100)
+    assert v2 is not None
+    # uniform last-write placement leaves MORE (earlier) writes to the queried
+    # object in play than v1's geometric recency mass; both decay ~1/L
+    assert abs(v2["composite_16"] - 0.4085119047619049) < 1e-9
+    assert abs(v2["composite_64"] - 0.1481572065275625) < 1e-9
+    assert v2["binding_16"] == v2["composite_16"]
+    assert v2["composite_64"] < v2["composite_16"] / 2
+
+
+def _append_v2_task_records(path):
+    """Append NEWER composite_copy_v2 zero_budget records for model-a (the state
+    of history right after the first post-switch benchmark run): plain L16/L64,
+    binding_only, and the renamed 'replicate' test-retest leg."""
+    v2 = []
+    for L, leg, acc in [(16, None, 0.30), (64, None, 0.10),
+                        (16, "binding_only", 0.85), (16, "replicate", 0.28)]:
+        v2.append(_record("testlab/model-a", "zero_budget", "composite_copy_v2",
+                          L, 100, acc, ts="2026-07-09T00:00:00+00:00",
+                          effort="none", leg=leg, max_new_tokens=96, stop_at=None,
+                          contract=True, contract_rate=0.99, covert_cot_rate=0.0,
+                          rtok_leak_rate=0.0, reasoning_tokens=0, escalated=False))
+    with open(path, "a", encoding="utf-8") as fh:
+        for r in v2:
+            fh.write(json.dumps(r) + "\n")
+
+
+def test_zero_budget_task_versioning():
+    """A history mixing v1-task zero-budget cells with newer v2-task records:
+    the headline/figure use the LATEST task's records only, columns carry the
+    version tag, the floor row follows the task, and the archived v1-task cells
+    stay in the per-cell tables."""
+    if not HAS_MPL:
+        return
+    import factworld.tasks as TK
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "history.jsonl")
+        make_fixture_history(path)
+        _append_v2_task_records(path)
+        recs = RB.load_latest(path)
+
+        assert RB.zb_latest_task(recs) == "composite_copy_v2"
+        assert RB.headline_columns("composite_copy_v2")[3] == \
+            "instant: zero-budget composite @L16 (composition, relaxed, v2)"
+        # v1 and v2 cells coexist in the latest records (task is in the dedup key)
+        zb_tasks = {r.get("task") for r in RB.by_facet(recs, "zero_budget")}
+        assert zb_tasks == {"composite_copy_v1", "composite_copy_v2"}
+        # task-filtered lookup + the replicate/end_to_end leg alias
+        a16 = RB.zero_budget_cell(recs, "testlab/model-a", 16, None,
+                                  task="composite_copy_v2")
+        assert a16["metrics"]["relaxed"] == 0.30
+        rep = RB.zero_budget_cell(recs, "testlab/model-a", 16, "replicate",
+                                  task="composite_copy_v2")
+        assert rep["settings"]["leg"] == "replicate"
+        rep_v1 = RB.zero_budget_cell(recs, "testlab/model-a", 16, "replicate",
+                                     task="composite_copy_v1")
+        assert rep_v1["settings"]["leg"] == "end_to_end"  # pre-F6 name still found
+        # headline (ladder order: model, recall, binding, c@16, c@64, replicate,
+        # chain, s5, ctok): model-a publishes the v2 records; model-b (v1-task
+        # only) is n/a
+        rows = RB.headline_rows(recs)
+        row_a = next(r for r in rows if r[0].startswith("testlab/model-a"))
+        assert row_a[2] == "0.85" and row_a[3] == "0.30"
+        assert row_a[4] == "0.10" and row_a[5] == "0.28"
+        row_b = next(r for r in rows if r[0].startswith("testlab/model-b"))
+        assert row_b[3] == "n/a" and row_b[4] == "n/a"
+        note = RB._zb_mixed_task_note(recs, "composite_copy_v2")
+        assert "composite_copy_v1" in note and "latest task" in note
+        # replicate noise pairs within the latest task only: |0.30 - 0.28|
+        assert abs(RB.replicate_noise(recs) - 0.02) < 1e-9
+        # floor row follows the records' task; absent (never wrong-task) while the
+        # generator agent has not landed the v2 spec
+        hr = RB.heuristic_row(recs)
+        if "composite_copy_v2" in TK.CANONICAL:
+            assert hr is not None and hr[0] == RB.heuristic_label("composite_copy_v2")
+        else:
+            assert hr is None
+            print("FLAG: composite_copy_v2 not in tasks.CANONICAL yet — floor row "
+                  "omitted for the v2-task table", file=sys.stderr)
+        # full render: v2-tagged headline, mixed-task note, archived v1 cells in
+        # the per-cell tables
+        out = os.path.join(tmp, "out")
+        RB.render(path, out)
+        with open(os.path.join(out, "results.md"), encoding="utf-8") as fh:
+            md = fh.read()
+        assert "task **composite_copy_v2**" in md
+        assert "instant: zero-budget composite @L16 (composition, relaxed, v2)" in md
+        assert "use the latest task's records (composite_copy_v2)" in md
+        full = md[md.index("## Full per-cell results"):]
+        assert "| zero_budget | composite_copy_v1 |" in full   # archived cells kept
+        assert "| zero_budget | composite_copy_v2 |" in full
 
 
 def test_archived_roster():
-    """F9: v1-only roster rows are flagged; models with any v2 facet are not."""
+    """Roster split: models not in the current roster (factworld.benchmark.MODELS,
+    patched to the fixture roster) are archived — headline excludes them and they
+    render in the archived-models section with the v1-facet columns."""
     if not HAS_MPL:
         return
     recs = _fixture_records()
     assert RB.archived_roster(recs, ARCHIVED_MODEL)
     for m in MODELS:
         assert not RB.archived_roster(recs, m)
+    assert RB.archived_models(recs) == [ARCHIVED_MODEL]
+    assert set(RB.roster_models(recs)) == set(MODELS)
+    assert RB.archived_model_rows(recs) == [
+        [ARCHIVED_MODEL, "0.50 @ high", "—", "— / — / —"]]
+    # no mixing: the headline has a row per roster model + the two floor rows
+    rows = RB.headline_rows(recs)
+    assert [r[0] for r in rows] == sorted(MODELS) + [
+        RB.heuristic_label("composite_copy_v1"),
+        RB.object_filter_label("composite_copy_v1")]
 
 
 def test_render_end_to_end():
@@ -508,21 +683,46 @@ def test_render_end_to_end():
         for m in ALL_MODELS:
             assert m in page
         assert "finish_errors" in page
-        assert "(archived roster)" in page
+        # regime grouping header row + roster split + floor note mirror in HTML
+        assert "Archived models (dropped from the roster)" in page
+        assert "v1 archived facets (pre-redesign)" in page
+        assert '<th colspan="5">instant (no thinking)</th>' in page
+        assert '<th colspan="3">thinking</th>' in page
+        assert "capability ladder" in page
+        assert "object-filter floor" in page
+        assert "Read small-L zero-budget cells against the object-filter floor" in page
 
-        # Markdown has the four sections and relaxed listed before diagnostics metrics.
+        # Markdown has the five sections and relaxed listed before diagnostics metrics.
         with open(os.path.join(out, "results.md"), encoding="utf-8") as fh:
             md = fh.read()
-        for section in ["## Headline", "## v1 (archived facets)",
+        for section in ["## Headline (current roster)",
+                        "## Archived models (dropped from the roster)",
+                        "## v1 archived facets (pre-redesign)",
                         "## Diagnostics per cell", "## Full per-cell results"]:
             assert section in md
         assert md.index("relaxed") < md.index("exact")
 
-        # v2 headline: zero-budget columns (with the replicate/test-retest relabel),
-        # cleanliness marks + footnotes, censoring, and the s5@128 ctok column.
-        for col in ["zero-budget composite @L16", "zero-budget composite @L64",
-                    "binding_only @L16", "replicate @L16 (test-retest)", "s5@128 ctok"]:
+        # Ladder headline: regime-prefixed columns in recall -> state tracking ->
+        # composition -> chain depth -> long-horizon state order (with the
+        # replicate/test-retest relabel and the task-version tag read from the
+        # records — this fixture is a v1-task history), cleanliness marks +
+        # footnotes, censoring, and the s5@128 ctok column.
+        cols = RB.headline_columns("composite_copy_v1")
+        assert cols == [
+            "Model",
+            "instant: recall (sanity, recall_copy_v1)",
+            "instant: binding_only @L16 (state tracking, v1)",
+            "instant: zero-budget composite @L16 (composition, relaxed, v1)",
+            "instant: zero-budget composite @L64 (v1)",
+            "instant: replicate @L16 (test-retest, v1)",
+            "thinking: chain horizon (chain_nowrap, max depth, relaxed >= 0.8)",
+            "thinking: s5 horizon (long-horizon state, max L, relaxed >= 0.8)",
+            "thinking: s5@128 ctok",
+        ]
+        for col in cols:
             assert col in md, f"missing headline column {col!r}"
+        assert "task **composite_copy_v1**" in md  # headline names the zb task
+        assert "capability ladder" in md           # regime/ladder framing note
         assert "end_to_end @L16" not in md.split("## Diagnostics per cell")[0]
         assert "off-arm ran effort=minimal" in md
         assert "visible working on the canonical attempt" in md
@@ -531,9 +731,14 @@ def test_render_end_to_end():
         assert ">=16 (budget-censored)" in md      # model-b's from-below censoring
         assert "run-to-run noise bar" in md        # replicate noise note (max 0.05)
         assert "0.05" in md
-        head = md[md.index("## Headline"):md.index("## v1 (archived facets)")]
+        head = md[md.index("## Headline"):
+                  md.index("## Archived models (dropped from the roster)")]
+        # 'dose' terminology is purged from all active labels/prose (the historical
+        # facet name survives only in the archived tables below).
+        assert "dose" not in head.lower()
         row_a = next(l for l in head.splitlines() if l.startswith("| testlab/model-a |"))
         assert row_a.split("|")[-2].strip().isdigit()  # s5@128 ctok renders numerically
+        assert row_a.split("|")[2].strip() == "1.00"   # ladder rung 1: sanity recall
         row_b = next(l for l in head.splitlines() if l.startswith("| testlab/model-b |"))
         assert "†" in row_b                        # recalibrated dagger
         assert "0.38 (0.96 @512)†" in row_b        # escalated cell: canonical + diagnostic
@@ -541,14 +746,28 @@ def test_render_end_to_end():
         assert "*" in row_c                        # effort=minimal quarantine mark
         row_a_clean = row_a.replace("| testlab/model-a |", "|")
         assert "†" not in row_a_clean and "*" not in row_a_clean
-        # Archived roster row: flagged, all v2 cells n/a (never ran, not failed).
-        row_d = next(l for l in head.splitlines()
-                     if l.startswith(f"| {ARCHIVED_MODEL} (archived roster) |"))
-        assert row_d.count("n/a") == 7
-        # Recency-heuristic floor row computed at render time on the exact items.
+        # Dropped-roster model: NOT in the headline (no mixing) — it renders in the
+        # archived-models section with its v1-facet columns.
+        assert ARCHIVED_MODEL not in head
+        dropped = md[md.index("## Archived models (dropped from the roster)"):
+                     md.index("## v1 archived facets (pre-redesign)")]
+        row_d = next(l for l in dropped.splitlines()
+                     if l.startswith(f"| {ARCHIVED_MODEL} |"))
+        assert "0.50 @ high" in row_d
+        # ...and the pre-redesign facet table holds roster models only.
+        prered = md[md.index("## v1 archived facets (pre-redesign)"):
+                    md.index("## Diagnostics per cell")]
+        assert ARCHIVED_MODEL not in prered
+        # Floor rows computed at render time on the exact items of the task the
+        # records used (labelled with the task version): the recency heuristic and
+        # the object-filter floor (E[1/w]), with the read-small-L-against-floor note.
         heur = next(l for l in head.splitlines()
-                    if l.startswith(f"| {RB.HEURISTIC_LABEL} |"))
+                    if l.startswith(f"| {RB.heuristic_label('composite_copy_v1')} |"))
         assert "0.34" in heur and "0.21" in heur
+        objf = next(l for l in head.splitlines()
+                    if l.startswith(f"| {RB.object_filter_label('composite_copy_v1')} |"))
+        assert "0.29" in objf and "0.07" in objf
+        assert "Read small-L zero-budget cells against the object-filter floor" in head
         # Diagnostics table surfaces finish_errors and the ‡ per-cell note.
         diag = md[md.index("## Diagnostics per cell"):md.index("## Full per-cell results")]
         assert "finish_errors" in diag
@@ -590,6 +809,8 @@ if __name__ == "__main__":
                test_escalated_canonical, test_zero_budget_marks,
                test_horizons_censoring, test_cap_escape_and_finish_errors,
                test_efficiency_matched_cell, test_replicate_noise,
-               test_recency_heuristic, test_archived_roster, test_render_end_to_end]:
+               test_recency_heuristic, test_recency_heuristic_v2_floor_near_chance,
+               test_object_filter_floor, test_zero_budget_task_versioning,
+               test_archived_roster, test_render_end_to_end]:
         fn()
         print(f"{fn.__name__}: ok")

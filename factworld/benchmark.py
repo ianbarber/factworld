@@ -81,25 +81,17 @@ MODELS = {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.5,
         "completion_price_per_M": 9.0, "open_weights": False,
         "no_reasoning_effort": "minimal"},
-    # x-ai entry is grok-build-0.1 (owner decision 2026-07-08; reasoning-capable
-    # per supported_parameters; pricing verified against
-    # https://openrouter.ai/api/v1/models the same day, $1.00/$2.00 per M).
-    # Mainline grok (4.20 AND 4.3 — verified on both) is quarantined for
-    # composite cells: xAI's endpoint bio-safety filter deterministically blocks
-    # ~56% of the g/v-token prompts (finish_reason=content_filter,
+    # x-ai is UNREPRESENTED (owner decision 2026-07-09): no current xAI endpoint
+    # is cleanly measurable on this suite. Mainline grok (4.20 AND 4.3, verified
+    # on both): the endpoint bio-safety filter deterministically blocks ~56% of
+    # the g/v-token composite prompts (finish_reason=content_filter,
     # SAFETY_CHECK_TYPE_BIO — the token soup reads as gene/variant nomenclature;
-    # see results/v2_pilots/pilot2_contract.jsonl). PROBE grok-build with ~3
-    # composite calls for the same filter before its first full run.
-    # no_reasoning_effort: grok-build rejects effort=none the same way Gemini 3
-    # does ("Reasoning is mandatory for this endpoint", 400; probed 2026-07-08).
-    # Its "minimal" is NOT minimal (4k-15k reasoning tokens on composite probes),
-    # so zero_budget cells are known-contaminated for it — run it on the
-    # reasoning-on facets only (--facets s5_concrete chain_nowrap sanity). The
-    # mainline-grok bio filter does NOT affect this slug (probed clean 3/3).
-    "x-ai/grok-build-0.1": {
-        "tier": "cheap_reasoner", "prompt_price_per_M": 1.0,
-        "completion_price_per_M": 2.0, "open_weights": False,
-        "no_reasoning_effort": "minimal"},
+    # see results/v2_pilots/pilot2_contract.jsonl). grok-build-0.1 (dropped after
+    # one cycle; its chain/s5 records remain in history as an archived model):
+    # cannot disable reasoning, its "minimal" emits 4-15k reasoning tokens, and
+    # its provider pins reasoning at ~256k tokens ignoring the requested cap
+    # (chain d128: 17 truncations + 7 errors + 1 empty stop = zero scoreable
+    # completions for ~$11). Re-probe when xAI ships new endpoints.
     "qwen/qwen3.7-max": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.25,
         "completion_price_per_M": 3.75, "open_weights": False},
@@ -167,8 +159,20 @@ FACETS = {
     # Per-cell diagnostics gate publication: contract_rate, covert_cot_rate,
     # rtok_any_rate / rtok_mean_per_call, finish_errors, cost_aborted, and the
     # iterated finish=length escalation (see the runner).
+    # Task is composite_copy_v2 (adversarial-review fix): v1 drew every event
+    # uniformly from the 4 active objects, leaving the queried object's last
+    # write ~geometric(1/4) from the stream END regardless of L — a one-line
+    # recency heuristic scored 0.34@L16/0.21@L64. v2 places the queried
+    # object's last write UNIFORMLY over [0.1*L, L-2] (interference from the
+    # other objects continues to the end), so L is a genuine binding-depth axis
+    # and the recency floor drops to ~chance. The binding_only leg derives from
+    # the SAME v2 items via binding_prompt. Task is part of the resume key
+    # (cell_key includes cell["task"]), so every v2-task cell gets a fresh key
+    # by construction — v1-task history records never satisfy resume for it.
+    # composite_copy_v1 is retired (tasks.RETIRED, issue #11): generable for
+    # historical reproduction only, never scored.
     "zero_budget": {
-        "task": "composite_copy_v1", "n": 100,
+        "task": "composite_copy_v2", "n": 100,
         "cells": ((16, None), (64, None), (16, "binding_only"), (16, "replicate")),
         "format_prompt": "composite", "efforts": "off",
         "contract": True, "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
@@ -242,11 +246,18 @@ def arms_for(model_slug: str) -> list[dict]:
     sweep and frontier_pair none+high only (no current facet uses "dose");
     non_reasoning gets a single default arm per (facet, task, length, leg) and
     never receives a reasoning parameter.
+
+    Facets listed in the model's ``skip_facets`` registry field are dropped here
+    (structurally — not by CLI discipline): grok-build's "minimal" is not
+    minimal, so its zero_budget off-arm is known-contaminated and never planned.
     """
     reg = MODELS[model_slug]
     tier = TIERS[reg["tier"]]
     cells: list[dict] = []
+    skip = set(reg.get("skip_facets", ()))
     for facet_name, fc in FACETS.items():
+        if facet_name in skip:
+            continue
         if "cells" in fc:
             # explicit (length, leg) pairs (zero_budget mixes plain + leg cells)
             triples = tuple((fc["task"], L, leg) for L, leg in fc["cells"])

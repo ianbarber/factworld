@@ -28,7 +28,19 @@ import run_frontier_benchmark as RFB
 
 SETTINGS_KEYS = {"effort", "max_new_tokens", "stop_at", "rendering",
                  "format_prompt", "n_shot", "leg", "contract"}
-C3_TOP_KEYS = {"run_id", "ts", "git_commit", "suite_version", "model", "served_models",
+
+# The zero_budget facet targets composite_copy_v2 (uniform last-write placement,
+# killing the retired v1 sampler's recency shortcut); the v1 family lives in
+# tasks.RETIRED (issue #11) and every planned facet task resolves in CANONICAL.
+assert "composite_copy_v2" in TK.CANONICAL
+
+
+def _runnable(cell: dict) -> dict:
+    """Every planned cell's task now resolves in CANONICAL (kept as a seam so the
+    item-generating tests read explicitly; asserts the invariant)."""
+    assert cell["task"] in TK.CANONICAL or cell["task"] == "s5"
+    return cell
+C3_TOP_KEYS = {"run_id", "ts", "git_commit", "suite_version", "stream_version", "model", "served_models",
                "providers", "facet", "task", "length", "n", "settings", "metrics",
                "diagnostics", "usage", "elapsed_s", "escalated", "examples"}
 EXAMPLE_KEYS = {"gold", "pred", "relaxed", "ctok", "rtok", "finish"}
@@ -41,17 +53,15 @@ def _efforts(cells, facet):
 # --- registry -------------------------------------------------------------------
 
 def test_registry_shape():
-    assert len(B.MODELS) == 10
-    # roster decisions 2026-07-07/08: maverick, gpt-5.4, gemini-3.1-pro dropped;
-    # x-ai entry is grok-build-0.1 (mainline grok bio-filtered on composite cells)
+    assert len(B.MODELS) == 9
+    # roster decisions 2026-07-07/08/09: maverick, gpt-5.4, gemini-3.1-pro
+    # dropped; x-ai unrepresented (mainline grok bio-filtered on composite
+    # prompts; grok-build dropped for provider pathology — pinned ~256k
+    # reasoning ignoring caps, cannot disable reasoning)
     for dropped in ("meta-llama/llama-4-maverick", "openai/gpt-5.4",
                     "google/gemini-3.1-pro-preview", "x-ai/grok-4.3",
-                    "x-ai/grok-4.20"):
+                    "x-ai/grok-4.20", "x-ai/grok-build-0.1"):
         assert dropped not in B.MODELS
-    grok = B.MODELS["x-ai/grok-build-0.1"]
-    # pricing verified against openrouter.ai/api/v1/models 2026-07-08
-    assert grok["prompt_price_per_M"] == 1.0
-    assert grok["completion_price_per_M"] == 2.0
     for slug, reg in B.MODELS.items():
         assert reg["tier"] in B.TIERS, slug
         assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
@@ -70,7 +80,10 @@ def test_arms_for_facets():
         (16, None), (64, None), (16, "binding_only"), (16, "replicate")]
     assert not any(c["settings"]["leg"] == "end_to_end" for c in zb)
     for c in zb:
-        assert c["task"] == "composite_copy_v1" and c["n"] == 100
+        # composite_copy_v2: the uniform-last-write sampler (v1's queried-object
+        # last write sat ~geometric(1/4) from the stream end; a recency one-liner
+        # scored 0.34@L16). All other knobs inherited from the v1 battery.
+        assert c["task"] == "composite_copy_v2" and c["n"] == 100
         assert c["settings"]["effort"] == "none"
         assert c["settings"]["contract"] is True
         assert c["settings"]["max_new_tokens"] == B.ZERO_BUDGET_MAX_NEW_TOKENS == 96
@@ -127,7 +140,7 @@ def test_arm_settings_protocol():
 
 def test_gemini_off_arm_is_minimal():
     """Gemini 3 cannot disable reasoning: its "none" arms substitute "minimal"."""
-    for slug in ("google/gemini-3.5-flash", "x-ai/grok-build-0.1"):
+    for slug in ("google/gemini-3.5-flash",):
         efforts = {c["settings"]["effort"] for c in B.arms_for(slug)}
         assert "none" not in efforts
         assert "minimal" in efforts
@@ -163,7 +176,7 @@ def test_settings_hash_contract_flag_compat():
 
 
 def test_cost_estimate_sane():
-    glm_cells = B.arms_for("z-ai/glm-5.2")
+    glm_cells = [_runnable(c) for c in B.arms_for("z-ai/glm-5.2")]
     est = B.cost_estimate("z-ai/glm-5.2", glm_cells)
     assert est["calls"] == sum(c["n"] for c in glm_cells)
     assert est["prompt_tokens"] > 0 and est["completion_tokens"] > 0
@@ -175,14 +188,20 @@ def test_cost_estimate_sane():
     opus = B.cost_estimate("anthropic/claude-opus-4.8", glm_cells)
     assert opus["cost_usd"] > est["cost_usd"]
     # longer composite prompts cost more prompt tokens
-    short = B._prompt_tokens_est("composite_copy_v1", 16, None)
-    long = B._prompt_tokens_est("composite_copy_v1", 64, None)
+    short = B._prompt_tokens_est("composite_copy_v2", 16, None)
+    long = B._prompt_tokens_est("composite_copy_v2", 64, None)
     assert long > short * 2
     # chain estimates use the no-wrap staircase (k=2*depth+1), so depth 128 must
     # not trip chain_v1's wrap validity gate and deeper chains cost more.
     d16 = B._prompt_tokens_est("chain_v1", 16, None)
     d128 = B._prompt_tokens_est("chain_v1", 128, None)
     assert d128 > d16 * 3
+    # composite_copy_v2 keeps v1's L/pool/prompt shape, so its prompt size is
+    # comparable to the retired spec's (regenerated via RETIRED — _prompt_tokens_est
+    # itself only prices CANONICAL tasks, which is all the registry plans).
+    v1_ex = TK.generate(TK.RETIRED["composite_copy_v1"], "test", n=1, length=16)[0]
+    v2_ex = TK.generate(TK.CANONICAL["composite_copy_v2"], "test", n=1, length=16)[0]
+    assert 0.8 * len(v1_ex.prompt) < len(v2_ex.prompt) < 1.2 * len(v1_ex.prompt)
 
 
 # --- contract extraction -------------------------------------------------------------
@@ -233,7 +252,7 @@ def test_execute_cell_end_to_end():
     cells = B.arms_for(model)
     s5_cell = next(c for c in cells if c["facet"] == "s5_concrete" and c["length"] == 128)
     sanity_cell = next(c for c in cells if c["task"] == "recall_copy_v1")
-    zb_cell = next(c for c in cells if c["settings"]["leg"] == "binding_only")
+    zb_cell = _runnable(next(c for c in cells if c["settings"]["leg"] == "binding_only"))
     for c in (s5_cell, sanity_cell, zb_cell):
         c["n"] = 5
 
@@ -288,11 +307,11 @@ def test_zero_budget_contract_scoring():
     after the LAST Answer: line; an oracle answering through the contract gets 1.0."""
     model = "z-ai/glm-5.2"
     cells = B.arms_for(model)
-    plain = next(c for c in cells if c["facet"] == "zero_budget"
-                 and c["settings"]["leg"] is None and c["length"] == 16)
+    plain = _runnable(next(c for c in cells if c["facet"] == "zero_budget"
+                           and c["settings"]["leg"] is None and c["length"] == 16))
     plain["n"] = 5
 
-    spec = TK.CANONICAL["composite_copy_v1"]
+    spec = TK.CANONICAL[plain["task"]]
     gold = {e.prompt: e.answer for e in TK.generate(spec, "test", n=5, length=16)}
     seen_prompts = []
 
@@ -313,7 +332,7 @@ def test_zero_budget_contract_scoring():
     assert rec["diagnostics"]["contract_rate"] == 1.0
 
     # the binding leg uses the holder-only contract line
-    bind = next(c for c in cells if c["settings"]["leg"] == "binding_only")
+    bind = _runnable(next(c for c in cells if c["settings"]["leg"] == "binding_only"))
     bind["n"] = 5
     lines = []
     rec2 = RFB.execute_cell(
@@ -329,7 +348,8 @@ def test_binding_leg_rejects_holder_dump():
     leg: the span's FIRST content token must be the holder (membership scoring had
     a 100% false-positive rate against this — kimi exploited it live)."""
     model = "z-ai/glm-5.2"
-    bind = next(c for c in B.arms_for(model) if c["settings"]["leg"] == "binding_only")
+    bind = _runnable(next(c for c in B.arms_for(model)
+                          if c["settings"]["leg"] == "binding_only"))
     bind["n"] = 5
 
     dump = "Answer: zz " + " ".join(f"g{i}" for i in range(64))  # every candidate holder
@@ -341,7 +361,7 @@ def test_binding_leg_rejects_holder_dump():
 
     # positive control: committing to the correct holder (with trailing period,
     # relaxed-style) scores 1.0.
-    spec = TK.CANONICAL["composite_copy_v1"]
+    spec = TK.CANONICAL[bind["task"]]
     examples = TK.generate(spec, "test", n=5, length=16)
     from experiment_autoregressive import binding_prompt
     holder = {binding_prompt(e, spec.name)[0]: e.meta["holder"] for e in examples}
@@ -385,9 +405,9 @@ class _MetaBackend:
 
 
 def _zb_cell(n=5):
-    cell = next(c for c in B.arms_for("z-ai/glm-5.2")
-                if c["facet"] == "zero_budget" and c["settings"]["leg"] is None
-                and c["length"] == 16)
+    cell = _runnable(next(c for c in B.arms_for("z-ai/glm-5.2")
+                          if c["facet"] == "zero_budget" and c["settings"]["leg"] is None
+                          and c["length"] == 16))
     cell["n"] = n
     return cell
 
@@ -628,10 +648,10 @@ def test_resume_key_includes_n():
     full-n cell — cell_key/history_keys include n (contract: effort, leg, rendering,
     n, budget, contract flag all in the resume key)."""
     model = "anthropic/claude-sonnet-5"
-    full = next(c for c in RFB.build_plan([model], ["zero_budget"], n_scale=1.0)[model]
-                if c["settings"]["leg"] is None and c["length"] == 16)
-    scout = next(c for c in RFB.build_plan([model], ["zero_budget"], n_scale=0.2)[model]
-                 if c["settings"]["leg"] is None and c["length"] == 16)
+    full = _runnable(next(c for c in RFB.build_plan([model], ["zero_budget"], n_scale=1.0)[model]
+                          if c["settings"]["leg"] is None and c["length"] == 16))
+    scout = _runnable(next(c for c in RFB.build_plan([model], ["zero_budget"], n_scale=0.2)[model]
+                           if c["settings"]["leg"] is None and c["length"] == 16))
     zb_n = B.FACETS["zero_budget"]["n"]
     assert full["n"] == zb_n and scout["n"] == max(5, int(zb_n * 0.2))
     assert RFB.cell_key(model, scout) != RFB.cell_key(model, full)
@@ -646,6 +666,99 @@ def test_resume_key_includes_n():
         done = RFB.history_keys(history)
         assert RFB.should_skip(model, scout, done, force=False, canary=False)
         assert not RFB.should_skip(model, full, done, force=False, canary=False)
+
+
+def test_skip_facets_machinery():
+    """skip_facets drops facets structurally in arms_for (kept for future models
+    whose off-arm is contaminated — grok-build was the motivating case before it
+    was dropped from the roster entirely, 2026-07-09). No current roster model
+    skips facets, and the full-roster zero_budget plan covers all 9 models."""
+    from unittest import mock
+    for slug in B.MODELS:
+        assert not B.MODELS[slug].get("skip_facets")
+    # simulate a skip_facets model without mutating the real registry
+    fake = {**B.MODELS["z-ai/glm-5.2"], "skip_facets": ("zero_budget",)}
+    with mock.patch.dict(B.MODELS, {"z-ai/glm-5.2": fake}):
+        cells = B.arms_for("z-ai/glm-5.2")
+        assert not any(c["facet"] == "zero_budget" for c in cells)
+        assert {c["facet"] for c in cells} == {"s5_concrete", "chain_nowrap", "sanity"}
+    plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
+    assert sum(len(cells) for cells in plan.values()) == 36
+    assert sum(1 for cells in plan.values() if cells) == 9
+
+
+def test_v2_task_cells_get_fresh_resume_keys():
+    """The zero_budget facet switched task to composite_copy_v2: the task is part
+    of cell_key, so v1-task history records (same model/facet/length/n/settings)
+    must NOT satisfy resume for the v2-task cells."""
+    model = "z-ai/glm-5.2"
+    v2_cells = [c for c in B.arms_for(model) if c["facet"] == "zero_budget"]
+    assert v2_cells and all(c["task"] == "composite_copy_v2" for c in v2_cells)
+    with tempfile.TemporaryDirectory() as tmp:
+        history = os.path.join(tmp, "history.jsonl")
+        with open(history, "w", encoding="utf-8") as fh:
+            for c in v2_cells:  # a v1-task twin of every planned v2 cell
+                fh.write(json.dumps({
+                    "model": model, "facet": c["facet"],
+                    "task": "composite_copy_v1", "length": c["length"],
+                    "n": c["n"], "settings": c["settings"],
+                    # what real v1 records carry (pre-1.1 history has no
+                    # stream_version field; suite_version was "1.0")
+                    "suite_version": "1.0",
+                }) + "\n")
+        done = RFB.history_keys(history)
+        for c in v2_cells:
+            twin = {**c, "task": "composite_copy_v1"}
+            assert RFB.cell_key(model, twin) in done       # the twin IS in history
+            assert RFB.cell_key(model, c) not in done      # ...but never the v2 cell
+            assert not RFB.should_skip(model, c, done, force=False, canary=False)
+
+
+def test_resume_key_uses_spec_stream_version_not_suite_version():
+    """Regression (issue #11 landing): cell_key's version component is the CELL's
+    spec stream version, NOT the global TK.SUITE_VERSION. The 1.0 -> 1.1 suite bump
+    (which only ADDED the v2 specs) must not invalidate resume for cells whose
+    example streams are pinned and unchanged (chain_nowrap / s5_concrete / sanity /
+    any v1-stream cell): their keys must still match pre-bump history records that
+    recorded suite_version "1.0"."""
+    assert TK.SUITE_VERSION == "1.1"
+    # per-task stream versions: pinned v1 streams stay "1.0"; only the v2 specs are new
+    assert RFB.stream_version("chain_v1") == "1.0"
+    assert RFB.stream_version("recall_copy_v1") == "1.0"
+    assert RFB.stream_version("conflict_v1") == "1.0"
+    assert RFB.stream_version("s5") == "1.0"              # s5_concrete facet task (non-TaskSpec)
+    assert RFB.stream_version("composite_copy_v1") == "1.0"  # retired specs resolve too
+    assert RFB.stream_version("composite_copy_v2") == "1.1"
+    assert RFB.stream_version("binding_v2") == "1.1"
+
+    model = "z-ai/glm-5.2"
+    cells = B.arms_for(model)
+    pinned = [c for c in cells if c["facet"] in ("chain_nowrap", "s5_concrete", "sanity")]
+    v2 = [c for c in cells if c["facet"] == "zero_budget"]
+    assert pinned and v2
+    with tempfile.TemporaryDirectory() as tmp:
+        history = os.path.join(tmp, "history.jsonl")
+        with open(history, "w", encoding="utf-8") as fh:
+            for c in pinned + v2:  # records exactly as a pre-bump run wrote them
+                fh.write(json.dumps({
+                    "model": model, "facet": c["facet"], "task": c["task"],
+                    "length": c["length"], "n": c["n"], "settings": c["settings"],
+                    "suite_version": "1.0",   # the global at the time of the run
+                }) + "\n")
+        done = RFB.history_keys(history)
+        # pinned-stream cells resume-hit across the suite bump...
+        for c in pinned:
+            assert RFB.cell_key(model, c) in done, (c["facet"], c["task"], c["length"])
+            assert RFB.should_skip(model, c, done, force=False, canary=False)
+        # ...but the genuinely-new v2-stream cells do not (stream "1.1" != "1.0")
+        for c in v2:
+            assert RFB.cell_key(model, c) not in done
+        # new records carry stream_version explicitly and resume against themselves
+        rec = RFB.execute_cell(FunctionBackend(lambda ps, m, st: ["x"] * len(ps), name="f"),
+                               model, {**v2[0], "n": 5}, n=5, run_id="t", git_commit="d")
+        assert rec["stream_version"] == "1.1" and rec["suite_version"] == TK.SUITE_VERSION
+        RFB.append_record(history, rec)
+        assert RFB.cell_key(model, {**v2[0], "n": 5}) in RFB.history_keys(history)
 
 
 def test_build_plan_n_scale():
@@ -669,6 +782,9 @@ if __name__ == "__main__":
                test_finish_errors_counted, test_cost_guard_aborts_runaway_cell,
                test_cost_guard_blocks_escalation, test_cost_guard_within_budget_is_inert,
                test_chain_nowrap_uses_scaled_spec, test_resume_key_includes_n,
+               test_skip_facets_machinery,
+               test_v2_task_cells_get_fresh_resume_keys,
+               test_resume_key_uses_spec_stream_version_not_suite_version,
                test_build_plan_n_scale]:
         fn()
         print(f"{fn.__name__}: ok")
