@@ -3,7 +3,9 @@
 FactWorld's experiment program, post-refactor (natural-language format). Each experiment
 has a script, a results file, and a finding below. The four pieces here close the power,
 format-fairness, architecture-independence, weaning, and test-time-compute questions raised
-in review.
+in review; sections 6–11 log the frontier-benchmark arc (2026-07-05 → 07-09) — completion
+budgets, task validity (chain wrap, give-stream recency), answer contracts, thinking-budget
+elicitation, and the composition frontier.
 
 ## 1. Dense-vs-sparse state supervision (the s5 wall) — `experiment_dense_supervision.py`
 
@@ -138,3 +140,150 @@ Can a dense-learned s5 circuit survive weaning to answer-only, and does weaning 
 Two clean dissociations: one movable by supervision density (s5, local), one movable by
 base-model reasoning strength (composition). Architecture matters only for length extrapolation
 of a *learned* s5 circuit (gdp_hybrid wins).
+
+## 6. s5 completion-budget recheck — `experiment_s5_framing.py`
+
+max_new_tokens=8192 (the script's default is 16), V1_concrete rendering, reasoning on, n=30/cell:
+
+| model | L | relaxed | empty preds |
+| --- | --- | --- | --- |
+| glm-5.2 | 32 | **1.00** | 0/30 |
+| glm-5.2 | 64 | 0.97 | 0/30 |
+| glm-5.2 | 128 | 0.90 | 2/30 |
+| kimi-k2.6 | 16 | 1.00 | 0/30 |
+| kimi-k2.6 | 32 | 0.83 | 5/30 |
+
+The same V1_concrete cell at the 16-token default (`docs/openrouter/s5-horizon.jsonl`) reads
+0.10@L64 with **27/30 empty predictions**.
+
+**Finding:** reasoning-model cells demand an explicit large completion budget with a published
+empty-prediction rate — the per-cell empty rate is the diagnostic that separates "wrong" from
+"cut off". At 8192 tokens glm holds 0.90–1.00 through L128 under the concrete rendering; the
+16-token cell's 0.10@L64 measures truncation, not capability. Data:
+`results/s5_horizon_recheck_20260705.jsonl`.
+
+## 7. chain_v1 cycle-wrap validity + no-wrap depth — `test_chain_validity.py`, `experiment_v2_pilot_chain.py`
+
+chain_v1's pointer map is a single k-cycle (k=6): at depth ≥ 6 gold collapses to
+`nxt^(depth mod 6)(start)`, so effective difficulty is depth mod 6, and depth ≡ 0 (mod 6) is
+the identity — the wrapped pilot cells at depths 6/12/24 have gold == start on 30/30 items
+(`results/chain_reasoning_pilot*_20260705.jsonl`). The generator raises at depth ≥ k unless
+wrap is explicitly opted in (`chain_allow_wrap=True`); deep chains run scaled, benchmark
+protocol k = 2·depth+1, which also prices the backward walk at depth+1 hops (k = depth+2
+would leave gold two reverse lookups from start). No-wrap pilot (gold ≠ start asserted before
+any spend), effort=high, n=15/cell:
+
+| model | depth 16 | depth 32 |
+| --- | --- | --- |
+| glm-5.2 | 0.80 | 0.13 |
+| kimi-k2.6 | 1.00 | — |
+| gpt-5.4 | **1.00** | **1.00** |
+| opus-4.8 | **1.00** | **1.00** |
+
+**Finding:** true depth separates models where the wrapped task could not. glm's d32 failure
+has a hop-miscount fingerprint: 9 of 13 wrong answers are exactly one hop past gold (chain
+position 33 of 32), so the misses are step-counting errors, not lookup failures. Data:
+`results/v2_pilots/pilot1_chain_nowrap.jsonl`; gate `tests/test_chain_validity.py`.
+
+## 8. Zero-budget answer contract — `experiment_v2_pilot_contract.py`
+
+composite_copy_v1@L16, effort=none, n=50, hard one-line contract ("Reply with only one line:
+Answer: ...") with last-Answer-line extraction; base budget 96, one-shot escalation to 512 on
+finish=length:
+
+| model | relaxed | diagnostics |
+| --- | --- | --- |
+| sonnet-5 | 0.72 | contract_rate 1.00 |
+| opus-4.8 | **0.90** | contract_rate 1.00 |
+| kimi-k2.6 | 0.82 | residual in-content CoT: 16% of calls > 350 ctok at cap 512 |
+| grok-4.20 | 0.04 | 28/50 finish=content_filter |
+
+The same sonnet cell under raw munging (run bench_20260706, n=50): relaxed 0.00, contains
+0.92 — the answers are present, wrapped in working.
+
+**Finding:** instant-regime scores are meaningless without a format-fair extraction contract —
+raw munging bounds sonnet anywhere in 0.00–0.92; the contract pins it at 0.72. Provider safety
+filters are a measurable failure mode: xAI's bio filter (SAFETY_CHECK_TYPE_BIO — the g/v token
+soup reads as gene nomenclature) deterministically blocks 28/50 composite prompts, verified on
+grok-4.20 and grok-4.3 (roster note in `factworld/benchmark.py`). Data:
+`results/v2_pilots/pilot2_contract.jsonl`.
+
+## 9. Anthropic thinking-budget probe — `experiment_v2_pilot_anthropic_budget.py`
+
+s5_concrete@L128, sonnet-5 (n=15) and opus-4.8 (n=8): effort=high vs explicit
+`reasoning.max_tokens`:
+
+| model | arm | relaxed | mean rtok |
+| --- | --- | --- | --- |
+| sonnet-5 | effort=high | **1.00** | 1958 |
+| sonnet-5 | thinking 4096 | 1.00 | 1721 |
+| sonnet-5 | thinking 16000 | 1.00 | 2342 |
+| opus-4.8 | effort=high | **1.00** | 2110 |
+| opus-4.8 | thinking 4096 | 1.00 | 1884 |
+
+**Finding:** effort=high is a valid Claude elicitation; explicit thinking budgets buy nothing
+(every arm 1.00, rtok 1.7–2.3k). The binding constraint is *visible* working — ~12k mean /
+15.6k max ctok per call — so `max_tokens` must cover visible output on top of the thinking
+budget: the arm with 2k visible headroom (6144 total, 4096 thinking) scores 0.00 with 15/15
+finish=length (kept as `pilot3_anthropic_budget_rejected.jsonl`). Data:
+`results/v2_pilots/pilot3_anthropic_budget.jsonl`.
+
+## 10. Uniform last-write sampler (composite/binding v2) — `test_composite_v2.py`, `validate_suite.py`
+
+The v1 give-stream sampler draws every event's object uniformly, so the queried object's
+resolving write sits ~Geometric(1/4) from the stream *end* at every L; the v2 sampler
+(`TaskSpec.last_write_uniform`) picks the queried object first and places its last write
+uniformly over [0.1·L, L−2]. The strong-recency one-liner (last give's recipient + that
+holder's fact):
+
+| task | L16 | L64 |
+| --- | --- | --- |
+| composite_copy_v1 | 0.325 | 0.225 |
+| composite_copy_v2 | 0.060 | 0.055 |
+
+(chance = 1/16 = 0.063; `validate_suite.py` gates this baseline on every give-stream task.)
+Re-measure on the de-skewed task (run bench_v2_zb2_20260709, zero-budget contract, n=100):
+
+| model | L16 | L64 |
+| --- | --- | --- |
+| opus-4.8 | **0.72** | **0.43** |
+| sonnet-5 | 0.62 | 0.32 |
+| deepseek-v4-pro | 0.44 | 0.19 |
+| glm-5.2 | 0.35 | 0.16 |
+| nemotron-3-ultra | 0.33 | 0.12 |
+| qwen3.7-max | 0.24 | 0.08 |
+| object-filter floor E[1/w] | 0.41 | 0.15 |
+
+(sonnet's escalated @512 diagnostics read 0.76/0.66; canonical = first attempt @96.)
+
+**Finding:** the v1 family measured recency adoption at the low end; v2 separates object
+filtering from genuine last-write resolution, and the floor row is part of the instrument —
+the cheap tier sits at (deepseek 0.44) or below (qwen 0.24) the 0.41 floor while opus 0.72
+and sonnet 0.62 clear it. Local mirror (RTX 5090, gdp_hybrid d256×4, 4,000 steps): binding v1
+0.99/0.77/0.70 → v2 0.82/0.21/0.23 @L16/32/64 — the local headroom was also recency-inflated.
+Data: `results/benchmark/history.jsonl` (run bench_v2_zb2_20260709); local smoke
+`results/local_smoke_20260709/`; sampler pins `tests/test_composite_v2.py`.
+
+## 11. Composition frontier: breadth, not length — `experiment_composite_frontier.py`
+
+glm-5.2 on composite_copy_v2: thinking (effort=high; budgets scale with L — 16384 through
+L256, 32768 at L512+) vs instant (effort=none, contract, 96 tokens); k=32/pool16, two
+replicate cells of n=25 per L (per-L mean):
+
+| arm | L64 | L128 | L256 | L512 | L1024 |
+| --- | --- | --- | --- | --- | --- |
+| thinking | **0.98** | **0.98** | 0.94 | 0.96 | 0.94 |
+| instant | 0.24 | 0.02 | 0.00 | 0.06 | 0.06 |
+| object-filter floor | 0.14 | 0.08 | 0.05 | 0.02 | 0.01 |
+
+Breadth rung: k=64/pool64@L1024 thinking = 0.64 — a budget-censored lower bound (7/25 calls
+at the 32768-token reasoning cap; the one cap-escaping call, 54k rtok, solved its item).
+
+**Finding:** composition-under-thinking is breadth-bound, not length-bound, in the probed
+range — accuracy is flat to L1024 at k=32 while reasoning spend grows only ~linearly
+(≈5–10 rtok/event), and the doubled-breadth rung drops to 0.64. Failure anatomy: every
+non-empty thinking wrong is an *earlier write of the correct object* with consistent value
+lookup; instant falls below the object-filter floor by L128 (0.02 vs 0.08) with
+primacy-dominated picks (mostly the object's first write). Working-set breadth is the
+organizing hypothesis for the frontier benchmark (v3 probes in flight). Data:
+`results/composite_frontier_20260709.jsonl`.
