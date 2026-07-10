@@ -192,9 +192,20 @@ FACETS = {
     # by construction — v1-task history records never satisfy resume for it.
     # composite_copy_v1 is retired (tasks.RETIRED, issue #11): generable for
     # historical reproduction only, never scored.
+    # The scaffolded leg (issue #11 re-measure, 2026-07-10) completes the E1b decomposition
+    # triple on v2 items: query unchanged but the resolved holder is injected into the prompt
+    # ("(the holder is gX)", experiment_autoregressive.scaffold_prompt), so only the recall
+    # leg remains. Gold = the value; scored prefix-commit like binding_only (membership
+    # scoring has a 100% false-positive rate against a value dump). This is a positive-control
+    # ceiling row (predicted ~1.0) bought ONCE to anchor the v2 gap definition — the frontier
+    # report's "recall|holder 0.98-1.00" currently rests on the archived v1 decomposition
+    # facet; exempt from "never buy predicted-ceiling cells" the same way sanity/recall_load
+    # are. binding_only@L16 and composed@L16/L64 already exist on v2 for the whole roster
+    # (bench_v2_zb2_20260709), so this is the only missing leg.
     "zero_budget": {
         "task": "composite_copy_v2", "n": 100,
-        "cells": ((16, None), (64, None), (16, "binding_only"), (16, "replicate")),
+        "cells": ((16, None), (64, None), (16, "binding_only"), (16, "replicate"),
+                  (16, "scaffolded")),
         "format_prompt": "composite", "efforts": "off",
         "contract": True, "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
     # s5 mid-band with reasoning on (owner decision 2026-07-07): L16-64 saturate for

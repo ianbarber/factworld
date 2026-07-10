@@ -46,12 +46,16 @@ relaxed for both API and local models.
 
 ## 2. The tasks
 
-**Which task version each number is on.** The worked example below, the §4 grid, the §5 local
-tables, and the §7 long-context sweeps are on the retired v1 give-stream family; read them as
-diagnostics until the re-measure on the de-skewed v2 sampler lands
-([#11](https://github.com/ianbarber/factworld/issues/11)). §7 is the most recency-exposed
-claim: under the v1 sampler the resolving write sits near the stream end at every L, so "holds
-to L512" was partly recency credit. Cross-model claims defer to the frontier benchmark
+**Which task version each number is on.** The worked example below, the §4 grid, and the §5
+local tables are on the retired v1 give-stream family; read them as diagnostics until the
+re-measure on the de-skewed v2 sampler lands
+([#11](https://github.com/ianbarber/factworld/issues/11); the §5 staged-curriculum re-measure
+is in progress). The §4 dose-response, the §6 scaffolded numbers, and the §7 API sweep are on
+v2 (glm to L1024; kimi at L256 and L512). The §7 LOCAL table is
+NOT recency-exposed: it comes
+from `experiment_dense_supervision.py`, whose streams are swap/cycle permutations
+(`world.sample_hard_chain`), not the give-stream, so the v1 sampler defect never touched it.
+Cross-model claims defer to the frontier benchmark
 ([`frontier-benchmark.md`](frontier-benchmark.md)), which is on v2.
 
 **Composition (`composite_copy_v1`)** is the flagship probe — the state × recall composition. A set of facts maps agents to values,
@@ -132,7 +136,7 @@ rows under reasoning (chain d128 at fixed k=257, s5 @L256) — in an instant (no
 thinking regime, on the de-skewed v2 tasks, with censoring and cleanliness marks and per-cell
 provenance. It supersedes the OpenRouter grid in this section for cross-model claims; the grid
 below remains the pretrained-open-model snapshot on the v1 tasks and the source for the
-reasoning-effort and scaffolding analyses.
+scaffolding analysis. The dose-response below is on the de-skewed v2 sampler.
 
 The default setup for API evaluation is:
 
@@ -156,18 +160,23 @@ These runs use `max_new_tokens=2048` and no early stop so reasoning models can f
 scratchpad; `APIBackend` extracts the final answer span. A short generation budget would truncate
 the scratchpad before the answer.
 
-**Reasoning is required.** With `reasoning={"effort":"none"}` all three models collapse to ~0 on
-composite (no-reasoning files and the flagship table are n=30; the dose-response below is n=100).
-Reasoning effort gives a clear dose-response:
+**Reasoning moves composition, monotonically.** On `composite_copy_v2` @L16 (n=50 per cell,
+answer-span extraction with a holder/value decomposition;
+`results/reasoning_sweep_20260710_125924.jsonl`), reasoning effort gives a clear dose-response
+for both models measured:
 
 | model | none | low | medium | high |
 | --- | --- | --- | --- | --- |
-| kimi-k2.6 | 0.22 | 0.94 | 0.98 | 0.96 |
-| glm-5.2 | 0.14 | 0.74 | 0.78 | 0.81 |
+| kimi-k2.6 | 0.72 | 1.00 | 1.00 | 1.00 |
+| glm-5.2 | 0.38 | 0.92 | 0.96 | 0.98 |
 
-Composition climbs from floor to ~0.8–0.98 as reasoning budget rises. The lever is implicit
+At effort=none the holder leg reads kimi 0.42 / glm 0.22 against the v2 object-filter floor of
+0.41 — object filtering, not established composition (kimi's effort=none arm carries the covert
+reasoning caveat from the frontier benchmark). Low effort already recovers most of the
+composed cell (0.92–1.00), and the curve is monotone through high. The lever is implicit
 reasoning: an explicit "write the holder, then the value" instruction hurts every model,
-including the reasoners that score 0.8–0.98 under a plain prompt.
+including the reasoners that solve the composed cell under a plain prompt (the scaffolding
+analysis below, on v1).
 
 **S₅ is movable by reasoning — under a concrete rendering.** In the standard grid below (token
 rendering, no reasoning) S₅ sits at floor (~0.18). Allow reasoning *and* render the problem
@@ -320,17 +329,23 @@ measures recall-of-the-resolved-holder in isolation.
 
 On the local `gdp_hybrid` model, the scaffolded value score is low (mean 0.147, range
 0.076–0.264 across seeds), which suggests the routing problem is real even when binding is solved. On API models, the
-scaffolded result is much stronger: given the correct holder, models recall the value at
-0.93–1.00. The difference is that the API models can do each leg when the problem is split for
-them, but struggle to compose the two legs in the end-to-end prompt.
+scaffolded result is much stronger: given the correct holder, the frontier roster recalls the
+value at 0.98–1.00 on the `composite_copy_v2` items (n=100 per model, instant protocol; six of
+nine at 1.00, nemotron 0.99, kimi 0.98; qwen3.7-max is not measurable on this leg — empty on 98
+of 100 calls). The difference is that the API models can do each leg when the problem is split
+for them, but struggle to compose the two legs in the end-to-end prompt.
 
 ## 7. Long context
 
 Real sessions are long. We stress both regimes far past their sweet spots — trained models
-evaluated to 32× their training length, pretrained models evaluated from L16 to L512.
+evaluated to 32× their training length, pretrained models evaluated from L16 to L1024.
 
-**Trained recurrent hybrids extrapolate far.** Stressing the §5 comparison to 32× the trained
-length (8 seeds):
+**Trained recurrent hybrids extrapolate far.** This table is the dense-supervised (K=1)
+NON-ABELIAN composite at d256x4 (`experiment_dense_supervision.py`;
+`results/longctx_gdp_20260627_223033.md`, `results/longctx_fprm_20260628_000834.md`) —
+swap/cycle permutation streams via `world.sample_hard_chain`, a different task and scale from
+the §5 comparison, and untouched by the v1 give-stream recency defect. Stressed to 32× the
+trained length (8 seeds):
 
 | arch | L64 | L128 | L256 | L512 |
 | --- | --- | --- | --- | --- |
@@ -339,19 +354,28 @@ length (8 seeds):
 
 The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
 
-**Background reasoning rescues composition at long context.** With reasoning effort swept
-{none, high} at long length (n=30, relaxed match on the final answer span extracted by
-`APIBackend`):
+**Background reasoning holds composition at long context.** On the de-skewed v2 sampler at
+k=32/pool16 (relaxed match, n=25 per cell; thinking = effort=high with a 16,384-token budget
+through L256 and 32,768 at L512+; instant = effort=none with the answer contract;
+`results/composite_frontier_20260709.jsonl`, `results/composite_frontier_20260710.jsonl`):
 
-| model | L128 none | L128 high | L256 none | L256 high | L512 high |
+| model / arm | L64 | L128 | L256 | L512 | L1024 |
 | --- | --- | --- | --- | --- | --- |
-| kimi-k2.6 | 0.47 | **0.97** | 0.73 | **0.97** | **0.93** |
-| glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
+| glm-5.2 thinking | **0.98** | **0.98** | **0.94** | **0.96** | **0.94** |
+| glm-5.2 instant | 0.24 | 0.02 | 0.00 | 0.06 | 0.06 |
+| kimi-k2.6 thinking | n/a | n/a | **1.00** | **0.96** | n/a |
+| *object-filter floor* | 0.14 | 0.08 | 0.05 | 0.02 | 0.01 |
 
-High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ under a
+Thinking holds 0.94–1.00 out to L1024 while the instant arm sits at or below the object-filter
+floor from L128 on — at this breadth, length is not the binding constraint for the thinking
+regime (the doubled-breadth rung k=64/pool64 @L1024 reads 0.64 as a budget-censored lower
+bound). Kimi's measured cells are L256 (1.00, Wilson 95% [0.87, 1.00]) and L512 (0.96,
+[0.80, 0.99]), both with empty rate 0.00 and no budget censoring; its unmeasured lengths are
+predicted-ceiling cells and stay unbought
+([#11](https://github.com/ianbarber/factworld/issues/11)). S₅ under a
 concrete rendering with reasoning holds 0.90 at L128 (Appendix A), degrading gradually rather
 than abruptly; its concrete-rendering sweep so far extends to L128, short of composition's
-L512. Both tasks are reasoning-recoverable under length stress, with task- and model-dependent
+L1024. Both tasks are reasoning-recoverable under length stress, with task- and model-dependent
 limits.
 
 ## 8. S₅ is movable by supervision density (the local, from-scratch regime)

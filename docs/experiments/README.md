@@ -6,7 +6,8 @@ format-fairness, architecture-independence, weaning, and test-time-compute quest
 in review; sections 6–15 log the frontier-benchmark arc (2026-07-05 → 07-10) — completion
 budgets, task validity (chain wrap, give-stream recency), answer contracts, thinking-budget
 elicitation, breadth-vs-length composition probes, operating-point calibration, and the local
-breadth mirror.
+breadth mirror; sections 16–20 log the issue-#11 v2 re-measures and the commutative-rung
+calibration (2026-07-10).
 
 ## 1. Dense-vs-sparse state supervision (the s5 deficit) — `experiment_dense_supervision.py`
 
@@ -440,3 +441,107 @@ depths — a depth-specific circuit that is systematically wrong one hop past tr
 guesser. The depth-extrapolation row of the price table stays open with all three architectures
 now measured; contrast the frontier, where the same composition solves at d16 only in the
 thinking regime (§14). Data: `results/local_chain_arch_20260710.{jsonl,md,json}`.
+
+## 16. Scaffolded leg (recall-given-holder) on v2 — `run_frontier_benchmark.py` (facet `zero_budget`, leg `scaffolded`)
+
+The gap definition's premise — the recall half of the composed cell is free — previously cited
+v1 items. Re-measured on the same `composite_copy_v2` items as the composed cells: all nine
+roster models, @L16, n=100, instant protocol (effort=none, contract, 96-token cap), run
+`bench_20260710_124904`.
+
+| model | relaxed | empty rate |
+| --- | --- | --- |
+| opus-4.8 | 1.00 | 0.00 |
+| sonnet-5 | 1.00 | 0.00 |
+| gpt-5.5 | 1.00 | 0.00 |
+| gemini-3.5-flash | 1.00 | 0.00 |
+| glm-5.2 | 1.00 | 0.00 |
+| deepseek-v4-pro | 1.00 | 0.00 |
+| nemotron-3-ultra | 0.99 | 0.00 |
+| kimi-k2.6 | 0.98 | 0.02 |
+| qwen3.7-max | ⊘ 0.02 | 0.98 |
+
+Scorer note: the scaffolded prompt injects the resolved holder, and models legitimately echo it
+before the value, which the strict prefix-commit extractor scored as wrong (opus's first
+attempt read 0.05 on echoes of the injected holder). The contract extractor in
+`scripts/run_frontier_benchmark.py` now tolerates a holder-prefixed answer span on the
+scaffolded leg; the one mis-scored record was purged (backup
+`results/remeasure_v2/history.pre_scaffold_fix.bak`) and the cell re-run.
+
+**Finding:** recall-given-holder ≈ 1.0 re-founded on the v2 sampler — 0.98–1.00 for every
+measurable roster model; qwen3.7-max returns an empty completion on 98/100 scaffolded calls
+(finish=stop) and is ⊘ on this leg under the contract. The composition gap's foundation now
+cites the same items in both legs. Data: `results/benchmark/history.jsonl`; rendered
+`docs/benchmark/results.md`.
+
+## 17. Reasoning dose-response on v2 — `experiment_reasoning.py`
+
+The v1 dose-response (§ consolidated §4) re-measured on `composite_copy_v2` @L16 (k=32/pool16),
+n=50 per cell, answer-span extraction with holder/value decomposition:
+
+| model | none | low | medium | high | holder/value @none | @high |
+| --- | --- | --- | --- | --- | --- | --- |
+| kimi-k2.6 | 0.72 | 1.00 | 1.00 | 1.00 | 0.42 / 0.40 | 0.98 / 0.98 |
+| glm-5.2 | 0.38 | 0.92 | 0.96 | 0.98 | 0.22 / 0.22 | 0.80 / 0.80 |
+
+**Finding:** the dose-response survives the de-skewed sampler and is monotone for both models.
+The effort=none holder legs (0.42 / 0.22) sit at or below the 0.41 object-filter floor —
+object filtering, not composition (kimi's none-arm carries its covert-reasoning caveat) — and
+low effort already recovers 0.92–1.00 on the answer span. Data:
+`results/reasoning_sweep_20260710_125924.jsonl`.
+
+## 18. Long-context composition on v2, kimi arm — `experiment_composite_frontier.py`
+
+The §11 glm length profile (thinking flat 0.94–0.98 to L1024 at k=32) gets its second model:
+kimi-k2.6, thinking, k=32/pool16, n=25 per cell — @L256 (effort=high, 16,384 tokens) relaxed
+**1.00**, Wilson 95% [0.87, 1.00], ctok median 5,592 (~$0.56); @L512 (32,768 tokens) relaxed
+**0.96**, [0.80, 0.99], ctok median 12,123 (~$1.21). Empty 0.00 and finish=stop 25/25 on both
+cells; reasoning spend roughly doubles with length (rtok median 5,358 → 12,119, ≈ 21–24
+rtok/event) while accuracy holds. Longer kimi cells are predicted-ceiling and stay unbought.
+
+**Finding:** kimi matches glm's flat thinking length profile at both measured points — the
+"reasoning holds composition at long context" claim (consolidated §7) now rests on v2 items
+for both models. Data: `results/composite_frontier_20260710.jsonl`.
+
+## 19. Commutative rung calibration — `experiment_commutative_local.py`, `experiment_commutative_frontier.py`
+
+`commutative_v1` fills the taxonomy rung between last-write and non-abelian state: per-entity
+dial accumulation mod k (k=5 positions; every event matters, order does not; distractor
+entities force per-entity filtering). Validity gate (n=500): chance 1/k = 0.200; four dedicated
+shallow adversaries (initial-only, last-turn, entity-blind-sum, count-mod-k) max at 0.224, all
+gated ≤ 0.4 (`scripts/validate_suite.py`; determinism/oracle/gate tests in
+`tests/test_commutative_v1.py`, 8/8).
+
+Local (d256×4, 8k steps, train L ∈ {4, 8, 16}, 3 seeds, RTX 5090), relaxed match:
+
+| arch | L16 | L32 | L64 |
+| --- | --- | --- | --- |
+| fprm | 0.17±0.00 | 0.18±0.02 | 0.20±0.01 |
+| gdp_hybrid | 0.21±0.02 | 0.19±0.02 | 0.21±0.02 |
+| transformer | 0.16±0.01 | 0.20±0.01 | 0.20±0.02 |
+
+Every run at chance (pconv 0/9), and the documented trace contingency (gdp_hybrid seed 0,
+worked trace) also reads chance (0.22 / 0.17 / 0.20). Frontier calibration (n=25 per cell,
+$0.21): instant (effort=none, contract) floors both probes — glm 0.24 @L16 / 0.12 @L64,
+deepseek 0.20 / 0.12 — while thinking @L64 (effort=high, 8,192 tokens) discriminates:
+deepseek 0.80, glm 0.52, neither at ceiling.
+
+**Finding:** the rung is shallow-proof by construction and reads only in the thinking regime
+at these settings — commutative aggregation does not form locally at the binding operating
+point (dense-supervision analog untested beyond the trace contingency), and instant frontier
+cells sit at the floors. Placed in the taxonomy (AGENTS.md, README, frontier report
+Components) as experimental until a full roster run. Data:
+`results/commutative_local/{sweep,trace}_runs.jsonl`, `results/commutative_frontier/runs.jsonl`.
+
+## 20. Reference baselines re-collected on v2 — `collect_baselines.py`
+
+`docs/results.md` (the d320×4 / 8k-step / seed-0 reference table) rebuilt with `binding_v2` and
+`composite_copy_v2` replacing the retired v1 specs; recall_copy/conflict/chain are unchanged
+tasks re-trained under the same recipe. Headlines of the rebuilt table: binding_v2 orders
+gdp_hybrid (0.99 @L16, 0.85 @L32) over gdn_hybrid (0.74 @L16) over transformer/gru (floor);
+the composite row stays at floor for every architecture at every length — the flat baseline
+recipe does not converge composition on v2 either, consistent with the §13 breadth sweep
+(composed cells locally require the staged curriculum). Single-seed reference numbers: read
+orderings against floors, not third-decimal differences (recall_copy's gdn_hybrid moved from
+mid-scale to ceiling on re-train — seed variance at this scale). Data: `docs/results.md`
+(rendered), 62-minute run, rc=0.

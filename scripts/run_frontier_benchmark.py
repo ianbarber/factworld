@@ -116,7 +116,7 @@ from eval_openrouter_grid import (  # noqa: E402
     COMPOSITE_FORMAT_PROMPT,
     _build_system_prompt,
 )
-from experiment_autoregressive import binding_prompt  # noqa: E402
+from experiment_autoregressive import binding_prompt, scaffold_prompt  # noqa: E402
 
 # The canonical published grid's base system prompt (docs/openrouter/results-natural.jsonl
 # records this verbatim for every non-composite cell). NOTE: this is deliberately NOT
@@ -460,6 +460,12 @@ def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]
                               scorer has a 100% false-positive rate against a
                               holder-dump reply "Answer: g0 g1 g2 ...", which kimi
                               exploited live at effort=none).
+      scaffolded            — the resolved holder is INJECTED into the prompt
+                              ("(the holder is gX)", experiment_autoregressive
+                              scaffold_prompt), so only the recall leg remains
+                              (recall|holder — the E1b upper-bound leg). Gold =
+                              the value alone; same prefix-commit scoring as
+                              binding_only (a value dump must not score).
     Returns (metrics, examples, preds, contract_rate).
     """
     settings = cell["settings"]
@@ -479,6 +485,24 @@ def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]
         base_prompts = [p for p, _g in rewritten]
         golds = [g for _p, g in rewritten]
         contract_line = CONTRACT_LINE_BINDING
+    elif leg == "scaffolded":
+        base_prompts, golds = [], []
+        for e in examples_in:
+            p = scaffold_prompt(e, spec.name)
+            # scaffold_prompt is a silent no-op outside its task allowlist (or when
+            # meta['holder'] is missing) — that would mislabel the full composite as
+            # the recall-given-holder leg. Fail loudly instead (binding_only lesson).
+            if p == e.prompt:
+                raise ValueError(
+                    f"scaffold_prompt did not inject the holder for task {spec.name!r} "
+                    f"(missing from its allowlist, or meta['holder'] absent?)")
+            gold_ct = TK.content_tokens(e.answer)
+            if len(gold_ct) < 2:
+                raise ValueError(
+                    f"scaffolded leg needs a 2-token (holder, value) answer, got {e.answer!r}")
+            base_prompts.append(p)
+            golds.append(f"{gold_ct[1]}.")   # gold = the VALUE alone (recall|holder)
+        contract_line = CONTRACT_LINE_VALUE
     elif leg in (None, "replicate"):
         base_prompts = [e.prompt for e in examples_in]
         golds = [e.answer for e in examples_in]
@@ -503,6 +527,18 @@ def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]
             holder = e.meta.get("holder")
             rel.append(int(holder is not None
                            and TK.content_tokens(pred)[:1] == [holder]))
+        elif leg == "scaffolded":
+            # Prefix-commit on the value (gold is "<value>."), tolerating ONE leading
+            # echo of the INJECTED holder: the prompt both injects "(the holder is gX)"
+            # and asks the composite question, so a legitimate reply is often
+            # "gX vY" (measured live: opus answered the correct value 100/100 in that
+            # shape and prefix-only scored it 0.05). Only the exact injected holder is
+            # stripped; a value dump still commits to its (wrong) first value, and a
+            # wrong-holder echo is not excused.
+            pred_ct = TK.content_tokens(pred)
+            if pred_ct[:1] == [e.meta.get("holder")]:
+                pred_ct = pred_ct[1:]
+            rel.append(int(pred_ct[:1] == TK.content_tokens(gold)[:1]))
         else:
             pred_n, gold_n = Renderer.normalize(pred), Renderer.normalize(gold)
             rel.append(TK.score_relaxed(pred_n, gold_n))

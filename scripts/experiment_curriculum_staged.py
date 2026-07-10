@@ -51,8 +51,16 @@ _SHARED = dict(k=32, value_vocab_size=128, seed=0)
 
 
 def staged_specs():
-    """Task specs for training arms and eval."""
-    binding = TK.RETIRED["binding_v1"].scaled(**_SHARED, name="curriculum_binding")
+    """Task specs for training arms and eval.
+
+    v2 port (issue #11 re-measure, 2026-07-10): the binding/composite arms now derive from
+    the CANONICAL v2 specs (binding_v2 / composite_copy_v2, last_write_uniform=True) instead
+    of the RETIRED recency-defective v1 samplers. Knob parity is automatic: composite_copy_v2
+    is k=32/pool16 like v1, and _SHARED re-applies the same k/value_vocab_size/seed. The
+    published §5 flagship numbers (gdp 0.747 / fprm 0.253 / transformer 0.005 composite k=32)
+    were produced by the v1 arms; re-runs on these v2 arms are the re-measurement.
+    """
+    binding = TK.CANONICAL["binding_v2"].scaled(**_SHARED, name="curriculum_binding")
     recall_easy = TK.CANONICAL["recall_copy_v1"].scaled(
         **_SHARED,
         memorized_recall=False,
@@ -76,10 +84,10 @@ def staged_specs():
     )
     # Composite arms carry the oracle holder trajectory so we can train with
     # dense per-step supervision via --use_trace.
-    composite_p5 = TK.RETIRED["composite_copy_v1"].scaled(
+    composite_p5 = TK.CANONICAL["composite_copy_v2"].scaled(
         **_SHARED, recall_pool=5, worked_trace=True, name="curriculum_composite_p5",
     )
-    composite_p16 = TK.RETIRED["composite_copy_v1"].scaled(
+    composite_p16 = TK.CANONICAL["composite_copy_v2"].scaled(
         **_SHARED, recall_pool=16, worked_trace=True, name="curriculum_composite_p16",
     )
     return {
