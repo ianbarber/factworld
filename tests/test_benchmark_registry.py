@@ -66,7 +66,8 @@ def test_registry_shape():
         assert reg["tier"] in B.TIERS, slug
         assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
         assert isinstance(reg["open_weights"], bool)
-    assert set(B.FACETS) == {"zero_budget", "s5_concrete", "chain_nowrap", "sanity"}
+    assert set(B.FACETS) == {"zero_budget", "recall_load", "s5_concrete",
+                             "chain_nowrap", "chain_instant", "sanity"}
 
 
 def test_arms_for_facets():
@@ -105,6 +106,23 @@ def test_arms_for_facets():
         assert c["settings"]["effort"] == "high"
         assert c["settings"]["max_new_tokens"] == 16384
 
+    # recall_load: the pool-64 instant recall cell (recall under working-set
+    # load; pool = min(L, k) with spec_for_cell scaling k to L). Contract
+    # protocol identical to zero_budget (effort none, 96-token cap).
+    rl = [c for c in opus if c["facet"] == "recall_load"]
+    assert [(c["task"], c["length"], c["n"]) for c in rl] == [("recall_copy_v1", 64, 50)]
+    assert rl[0]["settings"]["effort"] == "none"
+    assert rl[0]["settings"]["contract"] is True
+    assert rl[0]["settings"]["max_new_tokens"] == B.ZERO_BUDGET_MAX_NEW_TOKENS
+
+    # chain_instant: the d16 off arm of the chain staircase (within-item regime
+    # contrast with the chain_nowrap d16 thinking cell — same spec k=33, same n).
+    ci = [c for c in opus if c["facet"] == "chain_instant"]
+    assert [(c["task"], c["length"], c["n"]) for c in ci] == [("chain_v1", 16, 25)]
+    assert ci[0]["settings"]["effort"] == "none"
+    assert ci[0]["settings"]["contract"] is True
+    assert ci[0]["settings"]["max_new_tokens"] == B.ZERO_BUDGET_MAX_NEW_TOKENS
+
     # sanity: unchanged positive controls, effort none, default budget.
     sanity = [c for c in opus if c["facet"] == "sanity"]
     assert [(c["task"], c["length"]) for c in sanity] == [("recall_copy_v1", 6),
@@ -131,7 +149,7 @@ def test_arm_settings_protocol():
             assert isinstance(s["contract"], bool)
             if s["effort"] in B.REASONING_EFFORTS:
                 assert s["max_new_tokens"] >= B.REASONING_MAX_NEW_TOKENS
-            elif cell["facet"] == "zero_budget":
+            elif s["contract"]:  # zero_budget / recall_load / chain_instant
                 assert s["max_new_tokens"] == B.ZERO_BUDGET_MAX_NEW_TOKENS
             else:
                 assert s["max_new_tokens"] == B.DEFAULT_MAX_NEW_TOKENS
@@ -354,7 +372,7 @@ def test_execute_cell_end_to_end():
     model = "z-ai/glm-5.2"
     cells = B.arms_for(model)
     s5_cell = next(c for c in cells if c["facet"] == "s5_concrete" and c["length"] == 128)
-    sanity_cell = next(c for c in cells if c["task"] == "recall_copy_v1")
+    sanity_cell = next(c for c in cells if c["facet"] == "sanity" and c["task"] == "recall_copy_v1")
     zb_cell = _runnable(next(c for c in cells if c["settings"]["leg"] == "binding_only"))
     for c in (s5_cell, sanity_cell, zb_cell):
         c["n"] = 5
@@ -444,6 +462,57 @@ def test_zero_budget_contract_scoring():
         model, bind, n=5, run_id="t", git_commit="d")
     assert set(lines) == {RFB.CONTRACT_LINE_BINDING}
     assert rec2["diagnostics"]["contract_rate"] == 0.0
+
+
+def test_spec_for_cell_recall_load_scaling():
+    """Non-memorized recall past the canonical agent pool scales k to the length
+    (pool = min(L, k), so pool-64 needs k >= 64); the sanity row's L=6 resolves
+    to the untouched canonical spec (its resume keys/streams are pinned)."""
+    spec = B.spec_for_cell("recall_copy_v1", 64)
+    assert (spec.k, spec.family, spec.memorized_recall) == (64, "recall", False)
+    assert B.spec_for_cell("recall_copy_v1", 6) == TK.CANONICAL["recall_copy_v1"]
+    # the generated pool is EXACTLY 64 distinct agents, distractors included
+    import re
+    for e in TK.generate(spec, "test", n=3, length=64):
+        agents = re.findall(r"(g\d+)'s a0 is v\d+\.", e.prompt)
+        assert len(agents) == len(set(agents)) == 64
+    # memorized-recall controls never scale (fixed-map lookup, not load)
+    assert B.spec_for_cell("recall_v1", 64) == TK.CANONICAL["recall_v1"]
+
+
+def test_recall_load_and_chain_instant_contract_cells():
+    """The new instant rows run the contract path with family-matched contract
+    lines (recall -> <value>, chain -> <agent>); an oracle answering through the
+    contract scores 1.0, and chain_instant runs the SAME staircase spec/items as
+    the chain_nowrap d16 thinking cell (within-item regime contrast)."""
+    model = "z-ai/glm-5.2"
+    cells = B.arms_for(model)
+    for facet, line in (("recall_load", RFB.CONTRACT_LINE_VALUE),
+                        ("chain_instant", RFB.CONTRACT_LINE_AGENT)):
+        cell = _runnable(next(c for c in cells if c["facet"] == facet))
+        cell["n"] = 5
+        spec = B.spec_for_cell(cell["task"], cell["length"])
+        gold = {e.prompt: e.answer
+                for e in TK.generate(spec, "test", n=5, length=cell["length"])}
+        seen_lines = []
+
+        def oracle(prompts, mnt, stop):
+            out = []
+            for p in prompts:
+                base, last = p.rsplit("\n", 1)
+                seen_lines.append(last)
+                out.append(f"Answer: {gold[base].rstrip(' .')}")
+            return out
+
+        rec = RFB.execute_cell(FunctionBackend(oracle, name="oracle"), model, cell,
+                               n=5, run_id="t", git_commit="d")
+        assert set(seen_lines) == {line}, facet
+        assert rec["metrics"]["relaxed"] == 1.0, facet
+        assert rec["diagnostics"]["contract_rate"] == 1.0, facet
+        _validate_c3(rec, cell, model)
+    # within-item contrast: chain_instant resolves the same spec as the
+    # chain_nowrap d16 staircase cell (k=2*16+1=33)
+    assert B.spec_for_cell("chain_v1", 16).k == 33
 
 
 def test_binding_leg_rejects_holder_dump():
@@ -618,7 +687,7 @@ def test_no_escalation_below_threshold_or_without_contract():
     assert rec["diagnostics"]["cost_aborted"] is False
 
     # non-contract cells never escalate even at 100% finish=length.
-    sanity = next(c for c in B.arms_for("z-ai/glm-5.2") if c["task"] == "recall_copy_v1")
+    sanity = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "sanity" and c["task"] == "recall_copy_v1")
     sanity["n"] = 5
     backend2 = _MetaBackend([{"finish": "length", "ctok": 96, "rtok": 0, "text": "v0"}])
     rec2 = RFB.execute_cell(backend2, "z-ai/glm-5.2", sanity, n=5,
@@ -633,7 +702,7 @@ def test_finish_errors_counted():
     SEPARATE from api_errors (review F8: 12 finish=error calls were invisible at
     api_errors=0)."""
     backend = _MetaBackend([{"finish": "error", "ctok": 0, "rtok": 0, "text": ""}])
-    sanity = next(c for c in B.arms_for("z-ai/glm-5.2") if c["task"] == "recall_copy_v1")
+    sanity = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "sanity" and c["task"] == "recall_copy_v1")
     sanity["n"] = 5
     rec = RFB.execute_cell(backend, "z-ai/glm-5.2", sanity, n=5,
                            run_id="t", git_commit="d")
@@ -875,7 +944,9 @@ def test_skip_facets_machinery():
     with mock.patch.dict(B.MODELS, {"z-ai/glm-5.2": fake}):
         cells = B.arms_for("z-ai/glm-5.2")
         assert not any(c["facet"] == "zero_budget" for c in cells)
-        assert {c["facet"] for c in cells} == {"s5_concrete", "chain_nowrap", "sanity"}
+        assert {c["facet"] for c in cells} == {"recall_load", "s5_concrete",
+                                               "chain_nowrap", "chain_instant",
+                                               "sanity"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
     assert sum(len(cells) for cells in plan.values()) == 36
     assert sum(1 for cells in plan.values() if cells) == 9

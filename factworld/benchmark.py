@@ -6,7 +6,8 @@ This module is the single source of truth for WHAT the recurring benchmark runs:
   - ``TIERS``: how much of the reasoning-effort sweep each tier gets.
   - ``FACETS``: the scored facets plus the sanity rows — task, lengths/depths,
     default n, and per-facet arm policy (v2 roster 2026-07-08: zero_budget
-    answer-contract battery, s5_concrete mid-band, chain_nowrap staircase, sanity).
+    answer-contract battery, s5_concrete mid-band, chain_nowrap staircase, sanity;
+    2026-07-10: recall_load pool-64 instant cell, chain_instant d16 off arm).
   - ``arms_for(model_slug)``: the exact list of cell dicts the runner executes.
   - ``settings_hash(cell)``: stable resume key for a cell's settings.
   - ``cost_estimate(model_slug, cells)``: price a cell plan before running it.
@@ -205,6 +206,21 @@ FACETS = {
         "task": "s5", "lengths": (128, 256), "n": 25,
         "rendering": "concrete", "efforts": "on",
         "budgets": {128: 16384, 256: 16384}},
+    # recall under load: the recall COMPONENT measured at working-set breadth in
+    # the instant regime. The legacy frontier recall evidence is the sanity row
+    # only (recall_copy_v1 @L6, pool 6 — near ceiling for this roster), so the
+    # composition profile had no under-load recall cell. recall_copy_v1's pool is
+    # min(length, k) (tasks._ex_recall: non-memorized recall samples a pool of
+    # min(L, #agents) agents), so the pool-64 cell runs at L=64 and spec_for_cell
+    # scales the agent pool k up to the length (k=64 -> pool exactly 64; chance
+    # 1/64). Instant protocol as zero_budget: effort none, hard one-line answer
+    # contract, 96-token cap, same escalation machinery. No breadth settings key:
+    # (task recall_copy_v1, L=64) is a distinct cell from the sanity row (L=6),
+    # so resume keys are fresh by construction and sanity is byte-identical.
+    "recall_load": {
+        "task": "recall_copy_v1", "lengths": (64,), "n": 50,
+        "efforts": "off", "contract": True,
+        "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
     # no-wrap deep chains, replacing the invalid wrap-era chain_depth facet (its
     # k=6 cycle wrapped at depth >= 6, collapsing gold to nxt^(depth mod 6)).
     # STAIRCASE protocol: each depth d runs chain_v1.scaled(k=2*d+1). k must
@@ -217,6 +233,17 @@ FACETS = {
     "chain_nowrap": {
         "task": "chain_v1", "lengths": (16, 32, 64, 128), "n": 25,
         "efforts": "on", "max_new_tokens": 16384},
+    # chain d16 INSTANT arm: the within-item regime contrast for recall∘recall
+    # composition. Same staircase spec as the chain_nowrap d16 thinking cell
+    # (chain_v1.scaled(k=2*16+1=33) via spec_for_cell, same deterministic items
+    # and n, chance ~1/33), but reasoning off under the answer contract, so the
+    # instant-vs-thinking contrast is within-item. A dedicated facet, not an
+    # extra chain_nowrap arm: effort policies are facet-wide and this off arm
+    # runs at d16 only (an "off" arm at d32-128 would buy predicted floor cells).
+    "chain_instant": {
+        "task": "chain_v1", "lengths": (16,), "n": 25,
+        "efforts": "off", "contract": True,
+        "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
     # sanity rows: cheap positive controls at each task's first eval length.
     "sanity": {
         "tasks": (("recall_copy_v1", 6), ("conflict_v1", 4)), "n": 30,
@@ -390,11 +417,18 @@ def spec_for_cell(task: str, length: int, breadth: int | None = None,
         raises at generation time if k_fixed <= depth.
       - chain without k_fixed: the no-wrap STAIRCASE k=2*length+1 when the depth
         reaches the spec's cycle (breadth grows with depth by design).
+      - non-memorized recall (recall_copy_v1): the pool is min(length, k)
+        (tasks._ex_recall), so a length past the spec's agent count scales k up
+        to the length — pool == L exactly (the recall_load facet's pool-64 cell
+        is L=64 -> k=64). Lengths within the canonical k (the sanity row's L=6
+        < k=8) resolve to the canonical spec unchanged.
     """
     from . import tasks as TK
     spec = TK.CANONICAL[task]
     if breadth:
         spec = spec.scaled(k=2 * breadth, recall_pool=breadth)
+    if spec.family == "recall" and not spec.memorized_recall and length > spec.k:
+        spec = spec.scaled(k=length)
     if spec.family == "chain":
         if k_fixed:
             spec = spec.scaled(k=k_fixed)

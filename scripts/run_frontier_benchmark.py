@@ -148,6 +148,17 @@ S5_FACETS = ("s5_concrete",)  # cells rendered via factworld.s5_concrete
 # the contract line still scores its committed answer.
 CONTRACT_LINE_COMPOSITE = "Reply with only one line: Answer: <holder> <value>"
 CONTRACT_LINE_BINDING = "Reply with only one line: Answer: <holder>"
+CONTRACT_LINE_VALUE = "Reply with only one line: Answer: <value>"
+CONTRACT_LINE_AGENT = "Reply with only one line: Answer: <agent>"
+# Plain (leg None / replicate) contract cells pick the line by the spec family:
+# composite answers are "<holder> <value>"; recall_load answers a single value
+# token; chain_instant answers a single agent token. Unsupported families fail
+# loudly (KeyError) rather than shipping a mismatched contract.
+CONTRACT_LINES_BY_FAMILY = {
+    "composite": CONTRACT_LINE_COMPOSITE,
+    "recall": CONTRACT_LINE_VALUE,
+    "chain": CONTRACT_LINE_AGENT,
+}
 _ANSWER_LINE_RE = re.compile(r"answer\s*:\s*(.+)", re.IGNORECASE)
 
 # Model-aware cutoff handling (owner requirement; iterated per review — a single
@@ -427,13 +438,15 @@ def _run_s5_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]]:
 
 
 def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str], float]:
-    """One zero-budget answer-contract cell (leg None / binding_only / replicate).
+    """One answer-contract cell (zero_budget legs None / binding_only / replicate,
+    plus the single-answer contract facets recall_load and chain_instant).
 
-    Prompts end with the hard contract line; the backend runs in ``raw`` answer
+    Prompts end with the hard contract line (family-matched for plain cells —
+    see CONTRACT_LINES_BY_FAMILY); the backend runs in ``raw`` answer
     mode and the prediction is the span after the LAST "Answer:" line of the
     visible output (empty when no line parses — the contract miss also counts as
     an empty pred). Scoring:
-      leg None / replicate  — the unmodified composite prompt, canonical relaxed
+      leg None / replicate  — the unmodified task prompt, canonical relaxed
                               on the extracted span (plus the diagnostic scorers).
                               The replicate leg is INTENTIONALLY the identical
                               prompt to the plain cell: a test-retest arm whose
@@ -469,7 +482,7 @@ def _run_zero_budget_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]
     elif leg in (None, "replicate"):
         base_prompts = [e.prompt for e in examples_in]
         golds = [e.answer for e in examples_in]
-        contract_line = CONTRACT_LINE_COMPOSITE
+        contract_line = CONTRACT_LINES_BY_FAMILY[spec.family]
     else:
         raise ValueError(f"unknown zero_budget leg {leg!r}")
     prompts = [f"{p}\n{contract_line}" for p in base_prompts]

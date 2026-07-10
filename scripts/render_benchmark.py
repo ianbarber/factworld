@@ -140,6 +140,14 @@ S5_EFF_LENGTH = 128          # matched efficiency cell: s5_concrete @ L128 (F10)
 CHAIN_STRESS_DEPTH = 128
 CHAIN_STRESS_K = 2 * CHAIN_STRESS_DEPTH + 1  # staircase k=2d+1 -> 257
 S5_STRESS_LENGTH = 256
+# Instant component-stress cells beyond the composite headline (facets
+# recall_load / chain_instant): single-query deferred recall under working-set
+# load (the pool scales with the length) and the chain d16 off arm of the
+# staircase (the same items as the thinking d16 cell). Floors are first-class
+# rows: the uniform guess over the recall pool and over the staircase agent set.
+RECALL_LOAD_LENGTH = 64                       # recall_copy_v1 @L64, pool == L
+CHAIN_INSTANT_DEPTH = 16
+CHAIN_INSTANT_K = 2 * CHAIN_INSTANT_DEPTH + 1  # staircase k=2d+1 -> 33
 CENSORED_CELL = "⊘ >budget"  # majority finish=length: not measurable at this budget
 # The runner's test-retest leg was renamed end_to_end -> replicate (review F6);
 # "replicate" headline lookups also accept the pre-rename leg name in old records.
@@ -692,6 +700,66 @@ def model_replicate_noise_str(records, model, zb_task=None) -> str:
     return f"±{abs(va - vb):.2f}"
 
 
+INSTANT_STRESS_NOTE = (
+    "Two instant cells beyond the composite headline, same protocol (reasoning "
+    "off, one-line answer contract, 96-token cap; marks and escalated "
+    "diagnostics as in the headline). recall_load scales the recall pool with "
+    f"the length (recall_copy_v1 @L{RECALL_LOAD_LENGTH}, "
+    f"pool {RECALL_LOAD_LENGTH}, n=50): single-query deferred recall under "
+    f"working-set load. chain_instant runs chain_v1 d{CHAIN_INSTANT_DEPTH} on "
+    f"the same k={CHAIN_INSTANT_K} staircase items as the thinking "
+    f"d{CHAIN_INSTANT_DEPTH} cell (n=25): the within-item regime contrast for "
+    "depth. The floor row is the uniform guess over the answer pool; escalated "
+    "cells show the CANONICAL first attempt with the escalated rerun as a "
+    "parenthesised diagnostic.")
+
+
+def instant_stress_cell(records, facet, model, length):
+    """The model's canonical-arm cell in an instant stress facet
+    (recall_load / chain_instant), or None."""
+    cells = [r for r in by_facet(records, facet)
+             if r["model"] == model and r.get("length") == length
+             and canonical_arm(r)]
+    return cells[0] if cells else None
+
+
+def instant_stress_columns() -> list[str]:
+    """Column headers of the instant stress table, regime-prefixed like the
+    headline columns."""
+    return [
+        "Model",
+        f"instant: recall under load (recall_load, recall_copy_v1 "
+        f"pool-{RECALL_LOAD_LENGTH} @L{RECALL_LOAD_LENGTH})",
+        f"instant: chain d{CHAIN_INSTANT_DEPTH} (chain_instant, chain_v1, "
+        f"k={CHAIN_INSTANT_K})",
+    ]
+
+
+def instant_stress_rows(records):
+    """One row per CURRENT-ROSTER model for the instant stress table, plus the
+    uniform-guess floor row (floors are first-class rows). [] when neither
+    facet has records (older histories render no section)."""
+    if not (by_facet(records, "recall_load")
+            or by_facet(records, "chain_instant")):
+        return []
+    rows = []
+    for m in roster_models(records):
+        minimal = model_effort_minimal(records, m)
+        rows.append([
+            m,
+            zb_value_str(instant_stress_cell(
+                records, "recall_load", m, RECALL_LOAD_LENGTH), minimal),
+            zb_value_str(instant_stress_cell(
+                records, "chain_instant", m, CHAIN_INSTANT_DEPTH), minimal),
+        ])
+    rows.append([
+        "uniform-guess floor (chance)",
+        f"{1 / RECALL_LOAD_LENGTH:.3f} (1/{RECALL_LOAD_LENGTH})",
+        f"{1 / CHAIN_INSTANT_K:.3f} (1/{CHAIN_INSTANT_K})",
+    ])
+    return rows
+
+
 def headline_efficiency(records, model):
     """s5@128 ctok: completion tokens per call on the matched s5_concrete cell at
     L=S5_EFF_LENGTH — the cell every current-roster model runs, replacing the
@@ -1047,6 +1115,17 @@ def write_results_md(records, out_path, history_path):
         f"marked `{CHAIN_INVALID_MARK}` in the tables below and excluded from the chain figure.",
         "",
     ]
+
+    stress = instant_stress_rows(records)
+    if stress:
+        cols = instant_stress_columns()
+        lines += ["## Instant stress rows (recall under load; chain d16)", "",
+                  INSTANT_STRESS_NOTE, "",
+                  "| " + " | ".join(cols) + " |",
+                  "|" + "---|" * len(cols)]
+        for row in stress:
+            lines.append("| " + " | ".join(str(c) for c in row) + " |")
+        lines.append("")
 
     dropped = archived_model_rows(records)
     if dropped:
