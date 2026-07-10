@@ -24,8 +24,8 @@ This is a format-fair ablation, not the headline cross-model comparison; the hea
 
 1. **Reasoning models (kimi/glm) solve composition directly** with the format instruction (kimi 0.97,
    glm 0.75) — no scaffold needed. Their built-in test-time reasoning resolves the binding leg
-   (binding-only: kimi 0.99, glm 0.98) and routes it into recall. The "composition wall" is really a
-   **reasoning-model advantage**: non-reasoners (deepseek 0.13, gpt-4o 0.14) stay at the wall.
+   (binding-only: kimi 0.99, glm 0.98) and routes it into recall. The "composition deficit" is really a
+   **reasoning-model advantage**: non-reasoners (deepseek 0.13, gpt-4o 0.14) stay at floor.
 2. **Structured CoT actively HURTS** — value drops to ~0.00 for every model under the explicit
    `holder:` prompt, including the reasoners that scored 0.75–0.97 under plain `none`. Forcing an
    explicit intermediate disrupts models that reason better implicitly.
@@ -49,7 +49,7 @@ scores are not comparable to the format-fair grid.
 | glm-5.2 | 0.97 / 0.97 / 0.00 | 0.00 / 0.00 / 0.00 | 0.97 / 1.00 / 0.97 | 1.00 / 1.00 / 0.00 |
 
 `s5_v1 @ L32`: every model floors (0.00) under every condition, including scaffolded — under this
-token rendering s5 is a non-abelian state-tracking wall with no decoupled single leg (see
+token rendering s5 is a non-abelian state-tracking deficit with no decoupled single leg (see
 dense-supervision-results.md for the local lever; reasoning plus a concrete rendering moves it at
 the frontier — consolidated report Appendix A).
 
@@ -61,7 +61,7 @@ the frontier — consolidated report Appendix A).
 - **Explicit self-produced intermediates don't help** — they hurt. This matches the local E2 result
   (a trained scratchpad collapses the holder leg) and the local self-correction probe (iterative
   refinement gives zero lift). Implicit reasoning works; explicit step-by-step does not.
-- **s5 is a different wall** — floored under the token rendering even for reasoners; movable by
+- **s5 is a different deficit** — floored under the token rendering even for reasoners; movable by
   dense supervision locally and by reasoning plus a concrete rendering at the frontier
   (`results/s5_horizon_recheck_20260705.jsonl`; consolidated report Appendix A).
 

@@ -21,10 +21,12 @@ class ModelBackend:
         ...
 ```
 
-The returned strings are scored with ``factworld.tasks.score_exact``, which
-compares whitespace-token sequences up to the length of the gold answer.  Extra
-whitespace or trailing tokens are ignored, so a backend does not need to
-terminate generation exactly at ``.``.
+The returned strings are scored with **relaxed match**
+(``factworld.tasks.score_relaxed``), the canonical metric: strip trailing
+punctuation and compare whitespace-token sequences up to the length of the gold
+answer.  Extra whitespace or trailing tokens are ignored, so a backend does not
+need to terminate generation exactly at ``.``.  Exact, containment, and
+last-*n* scorers exist as diagnostics.
 
 ## Built-in backends
 
@@ -222,7 +224,9 @@ python scripts/eval_model.py recall_v1 --backend function --n 5
 ```
 
 This uses the hardcoded function backend and should finish instantly without
-any external dependencies.
+any external dependencies. (`recall_v1` is the parametric control variant —
+memorized-map recall, local-only in the taxonomy — not a scored recall cell;
+it is used here purely as a plumbing check.)
 
 ---
 

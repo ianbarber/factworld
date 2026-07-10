@@ -1,14 +1,14 @@
 # Experiments — index and synthesis
 
-FactWorld's experiment program, post-refactor (natural-language format). Each experiment
+FactWorld's experiment program on the natural-language format. Each experiment
 has a script, a results file, and a finding below. The four pieces here close the power,
 format-fairness, architecture-independence, weaning, and test-time-compute questions raised
-in review; sections 6–13 log the frontier-benchmark arc (2026-07-05 → 07-09) — completion
+in review; sections 6–15 log the frontier-benchmark arc (2026-07-05 → 07-10) — completion
 budgets, task validity (chain wrap, give-stream recency), answer contracts, thinking-budget
 elicitation, breadth-vs-length composition probes, operating-point calibration, and the local
 breadth mirror.
 
-## 1. Dense-vs-sparse state supervision (the s5 wall) — `experiment_dense_supervision.py`
+## 1. Dense-vs-sparse state supervision (the s5 deficit) — `experiment_dense_supervision.py`
 
 10-seed sparsity sweep, gdp_hybrid. K = holder supervised every K events; guided free-run eval.
 
@@ -19,8 +19,8 @@ breadth mirror.
 | 4 | 0.19±0.02 | 0.20 | 0/10 |
 | 8 | 0.21±0.02 | 0.20 | 0/10 |
 
-**Finding:** the s5 wall moves under dense supervision (1.00 in-distribution, 10/10 converge) and
-floors at K≥4 — a sharp, architecture-agnostic learnability cliff. Bimodality is at *length
+**Finding:** the s5 deficit moves under dense supervision (1.00 in-distribution, 10/10 converge) and
+floors at K≥4 — a sharp, architecture-agnostic learnability threshold. Bimodality is at *length
 extrapolation* (L64), not in-distribution. Doc: `dense-supervision-results.md`.
 
 ### Architecture-independence (fprm, transformer at K∈{1,8}, 5 seeds)
@@ -31,7 +31,7 @@ extrapolation* (L64), not in-distribution. Doc: `dense-supervision-results.md`.
 | fprm | 1.00 (5/5) | 0.19 | 0.20 |
 | transformer | 0.86 (4/5) | 0.22 | 0.20 |
 
-**Finding:** the *cliff* is architecture-independent (all floor at K≥4, all form the circuit
+**Finding:** the *threshold* is architecture-independent (all floor at K≥4, all form the circuit
 in-distribution at K=1). **Length extrapolation is not** — only the recurrent hybrid (gdp_hybrid)
 extrapolates the learned circuit (0.75@L64); fprm and transformer solve in-distribution but don't
 generalize in length.
@@ -50,7 +50,7 @@ n=100, composite_copy_v1@L16, output-format instruction given. Value accuracy:
 
 **Finding:** reasoning models (kimi/glm) solve composition given the format; non-reasoners don't;
 **structured CoT actively hurts** (0.00 for all). The recall ceiling is universal (0.93–1.00). The
-"composition wall" is a reasoning-model advantage, and explicit self-produced intermediates are
+"composition deficit" is a reasoning-model advantage, and explicit self-produced intermediates are
 counterproductive. Doc: `autoregressive-api-results.md`.
 
 ## 3. Composition routing vs state-tracking (local) — `experiment_composite_dense.py`
@@ -63,11 +63,11 @@ counterproductive. Doc: `autoregressive-api-results.md`.
 | dense (holder supervised) | 0.40 | 0.40 | 1.00 |
 | dense→wean | 0.37 | 0.37 | 1.00 |
 
-**Finding:** routing is *not* the wall — given the correct holder, every model recalls (1.00). The
-wall is **generating the holder** (free-run holder ≈ free-run value ≈ 0.38; they track perfectly).
+**Finding:** routing is *not* the deficit — given the correct holder, every model recalls (1.00). The
+deficit is **generating the holder** (free-run holder ≈ free-run value ≈ 0.38; they track perfectly).
 Crucially, **dense holder supervision does NOT fix the composite's holder leg** (0.40 vs 0.38),
 unlike s5 where it reaches 1.00 — composite's last-write-wins-over-4-objects binding is harder to
-unroll than s5's single-role tracking. So composition and s5 are **distinct walls** with distinct
+unroll than s5's single-role tracking. So composition and s5 are **distinct deficits** with distinct
 fixes. Weaning to answer-only does not preserve a circuit (none forms to begin with here).
 
 ## 4. Test-time compute — strong null — `experiment_self_correct.py`
@@ -91,7 +91,7 @@ reasoners is tested directly in the reasoning on/off sweep below.
 
 ## Synthesis
 
-| wall | what it is | what moves it | what doesn't |
+| deficit (what fails) | what it is | what moves it | what doesn't |
 | --- | --- | --- | --- |
 | **composition** | generating the holder (last-write-wins over objects) | **background reasoning + format** (kimi 0.22→0.98, glm 0.14→0.81 with effort) | explicit CoT prompting (hurts), dense holder supervision, local self-correction |
 | **s5 / non-abelian** | tracking a single role through permutations | **dense per-step supervision → wean to answer-only** (wean_mixed 8/8), then gdp_hybrid extrapolates 4–8×; at the frontier, **reasoning + a concrete rendering** (consolidated report Appendix A) | reasoning effort under the token rendering (floor at all levels), sparse/answer-only |
@@ -116,7 +116,7 @@ composition *was* test-time compute working. The reasoning on/off/levels sweep
 regardless of effort** (under a concrete rendering with an 8192-token budget, reasoning solves it
 — `results/s5_horizon_recheck_20260705.jsonl`). So: **background reasoning (test-time compute)
 IS a lever for composition; for s5 it works only combined with a concrete rendering.** What does
-not help either wall: explicit structured CoT prompting (hurts), and sampling/self-correction on
+not help either deficit: explicit structured CoT prompting (hurts), and sampling/self-correction on
 non-reasoning local models.
 
 ## 5. Weaning bridge — deep-dive (8 seeds) — `experiment_weaning.py`
@@ -333,36 +333,110 @@ only fair spend unit across providers. Data: `results/v3_probes/`.
 ## 13. Local breadth mirror — `experiment_local_breadth.py`
 
 The frontier breadth rungs, trained from scratch: `composite_copy_v2.scaled(k=2B,
-recall_pool=B)`, m=4, transformer vs gdp_hybrid, d256×4, 8k steps flat next-token training
-(train L ∈ {4, 8, 16}), eval L16 (in-distribution) / L64 (extrapolation), B ∈ {6, 8, 12, 16,
-24} × 3 seeds = 30 runs (RTX 5090). Relaxed match; per-leg content-token decomposition
+recall_pool=B)`, m=4, fprm vs gdp_hybrid vs transformer, d256×4, 8k steps flat next-token
+training (train L ∈ {4, 8, 16}), eval L16 (in-distribution) / L64 (extrapolation), B ∈ {6, 8,
+12, 16, 24} × 3 seeds = 45 runs (RTX 5090). Relaxed match; per-leg content-token decomposition
 (holder = binding leg, value = recall leg); pconv = seeds ≥0.9.
 
 | B | arch | L16 (pconv) | L64 | holder/value @L16 | @L64 |
 | --- | --- | --- | --- | --- | --- |
+| 6 | fprm | 0.15±0.01 (0%) | 0.01 | 1.00 / 0.15 | 0.41 / 0.01 |
 | 6 | gdp_hybrid | 0.04±0.02 (0%) | 0.00 | 0.56 / 0.06 | 0.09 / 0.01 |
 | 6 | transformer | 0.02±0.00 (0%) | 0.01 | 0.23 / 0.07 | 0.18 / 0.03 |
+| 8 | fprm | 0.04±0.01 (0%) | 0.01 | 0.73 / 0.06 | 0.24 / 0.01 |
 | 8 | gdp_hybrid | 0.01±0.01 (0%) | 0.00 | 0.41 / 0.02 | 0.14 / 0.00 |
 | 8 | transformer | 0.00±0.00 (0%) | 0.00 | 0.17 / 0.01 | 0.15 / 0.01 |
+| 12 | fprm | 0.01±0.01 (0%) | 0.00 | 0.64 / 0.02 | 0.28 / 0.01 |
 | 12 | gdp_hybrid | 0.00±0.00 (0%) | 0.00 | 0.43 / 0.01 | 0.19 / 0.01 |
 | 12 | transformer | 0.00±0.00 (0%) | 0.00 | 0.15 / 0.01 | 0.10 / 0.00 |
+| 16 | fprm | 0.01±0.00 (0%) | 0.00 | 0.97 / 0.01 | 0.38 / 0.01 |
 | 16 | gdp_hybrid | 0.00±0.00 (0%) | 0.00 | 0.41 / 0.01 | 0.16 / 0.01 |
 | 16 | transformer | 0.00±0.00 (0%) | 0.00 | 0.13 / 0.02 | 0.08 / 0.00 |
+| 24 | fprm | 0.00±0.00 (0%) | 0.00 | 0.20 / 0.00 | 0.07 / 0.01 |
 | 24 | gdp_hybrid | 0.01±0.01 (0%) | 0.00 | 0.67 / 0.01 | 0.20 / 0.01 |
 | 24 | transformer | 0.00±0.00 (0%) | 0.00 | 0.08 / 0.01 | 0.03 / 0.00 |
 
-The binding leg is bimodal for gdp_hybrid from B12 up: per-seed @L16 it reads 1.00/0.10/0.21
-@B12, 0.07/0.99/0.18 @B16, 0.98/0.04/1.00 @B24 — single seeds solve binding outright while the
-rest sit near floor, so per-rung means stop being readable above B8. The transformer never
-exceeds 0.26 on any leg and no longer fits the training distribution at B24 (final loss
-1.49–1.65; gdp_hybrid 0.05–0.14 at every rung).
+fprm solves the binding leg @L16 on 9/15 seeds: 1.00/1.00/1.00 @B6, 0.20/0.99/0.99 @B8,
+1.00/0.17/0.75 @B12, 0.97/0.98/0.98 @B16 (the only seed-consistent solve in the sweep). At B24
+it stops fitting the training distribution (final loss 1.02–1.10; holder 0.13–0.30) while
+gdp_hybrid still fits everywhere (loss 0.05–0.14; holder 0.67 @B24). The binding leg is bimodal
+for gdp_hybrid from B12 up: per-seed @L16 it reads 1.00/0.10/0.21 @B12, 0.07/0.99/0.18 @B16,
+0.98/0.04/1.00 @B24 — single seeds solve binding outright while the rest sit near floor, so
+per-rung means stop being readable above B8. The transformer never exceeds 0.26 on any leg and
+no longer fits the training distribution at B24 (final loss 1.49–1.65). At L64 fprm keeps the
+most binding at B6–B16 (0.24–0.41 per-rung means vs the 0.15 object-filter floor; gdp_hybrid
+0.09–0.20) — far from its retired-v1 flagship (binding_v1 0.94 @L64): the arch ordering
+survives on the v2 sampler, the magnitude was v1 recency credit.
 
-**Finding:** at d256×4 / 8k flat training the composed cell reads floor at every rung (best
-single run 0.06 @L16; pconv 0/30) and the instrument reads through the legs: the local
-operating point is B8 — the largest rung where the better architecture is mid-scale
-seed-consistently on the binding leg (gdp_hybrid 0.41 @L16, seeds 0.34–0.48, vs transformer
-0.17; 1/k agent-guess 0.06) — and the composition deficit sits on the recall leg (value ≤0.11
-in all 30 runs, ≤0.02 even on binding-solved seeds), the same leg the d768 staged-curriculum
-decomposition localizes. Local composed-cell numbers require the staged-curriculum recipe
-(consolidated §5); flat training does not converge composition at any rung. Data:
-`results/local_breadth/sweep_runs.jsonl`, `sweep_summary.{md,json}`.
+**Finding:** at d256×4 / 8k flat training the composed cell reads floor at every rung (pconv
+0/45; best single run fprm 0.17 @L16 = solved binding × a 1/6 pool guess) and the instrument
+reads through the legs: the binding leg orders fprm > gdp_hybrid > transformer through B16 with
+an inversion at B24 where only the gated hybrid still fits; the local operating point stays B8,
+the largest rung where gdp_hybrid — the architecture the calibration was set on — is mid-scale
+seed-consistently (0.41 @L16, seeds 0.34–0.48, vs transformer 0.17; 1/k agent-guess 0.06); and
+the composition deficit sits on the recall leg for all three architectures (value ≤0.17 in all
+45 runs, at/below the 1/pool guess on binding-solved seeds), the same leg the d768
+staged-curriculum decomposition localizes. Local composed-cell numbers require the
+staged-curriculum recipe (consolidated §5); flat training does not converge composition at any
+rung. Data: `results/local_breadth/sweep_runs.jsonl`, `sweep_summary.{md,json}`.
+
+## 14. Frontier rows: recall under load + chain d16 instant — `run_frontier_benchmark.py` (facets `recall_load`, `chain_instant`)
+
+Two new instant cells per roster model (run `bench_20260710_frontier_rows`), filling the
+benchmark's recall-under-load and within-depth regime-contrast gaps.
+
+**recall_load** — `recall_copy_v1` @L64 with the agent pool scaled to the length (pool 64,
+verified 64 distinct agents/facts per item; chance 1/64 ≈ 0.016), effort=none + contract,
+96-token cap, n=50: **all nine models 1.00**, contract 1.00 and covert working 0.00 everywhere
+(kimi rtok_any 0.38 at ~0.4 tok/call). Single-query deferred recall is at ceiling out to
+pool-64 for this roster — documented ceiling, kept as the recall-under-load row.
+
+**chain_instant** — `chain_v1` d16 on the same k=33 staircase items as the thinking d16 cell
+(chance ≈ 0.03), effort=none + contract, 96-token cap, n=25; canonical = first attempt @96,
+escalated @512 published as a diagnostic:
+
+| model | instant @96 (canonical) | finish=length @96 | @512 diagnostic | thinking (chain_nowrap d16) |
+| --- | --- | --- | --- | --- |
+| opus-4.8 | 0.00 | 25/25 | 0.96 | 1.00 |
+| sonnet-5 | 0.28 | 18/25 | 0.96 | 1.00 |
+| gpt-5.5 | 0.08 | 0/25 | — | 1.00 |
+| gemini-3.5-flash* | 0.00 | 25/25 | 1.00 | 1.00 |
+| kimi-k2.6 | 0.32 | 16/25 | 0.96 | 1.00 |
+| qwen3.7-max | 0.00 | 0/25 | — | 1.00 |
+| glm-5.2 | 0.00 | 1/25 | — | 0.96 |
+| deepseek-v4-pro | 0.00 | 0/25 | — | 1.00 |
+| nemotron-3-ultra | 0.00 | 0/25 | — | 0.44 |
+
+(* = effort=minimal; reasoning cannot be disabled.)
+
+**Finding:** the within-depth regime contrast is clean — every model that answers within the
+instant budget floors at d16 (0.00–0.08 vs chance 0.03) while the same items read 0.96–1.00
+under thinking (nemotron 0.44); the four models with majority finish=length at 96 tokens are
+spending the budget on working, not answers, and their @512 diagnostics (0.96–1.00) are short
+visible working, not in-weights answers. "Multi-hop needs the thinking regime" is now measured,
+not assumed. Runner note: plain-contract cells pick the contract line by spec family
+(composite / recall / chain), failing loudly on unsupported families. Data:
+`results/benchmark/history.jsonl`; rendered `docs/benchmark/results.md`.
+
+## 15. Local chain architecture comparison — `sweep.py --tasks chain_v1`
+
+chain_v1 (recall ∘ recall; the k=6 pointer map) at the canonical baseline recipe: fprm vs
+transformer vs gdp_hybrid, d320×4, 8k steps, registered spec train depths (2, 3) / eval depths
+(4, 5), eval_n=200, seeds 0–2 (RTX 5090; 9 runs). Relaxed match; agent-guess floor 1/6 ≈ 0.17;
+pconv = seeds ≥0.9. fprm's first chain datum, and the multi-architecture chain comparison on 3
+seeds.
+
+| arch | d4 mean±std (pconv) | d5 mean±std (pconv) | final loss |
+| --- | --- | --- | --- |
+| fprm | 0.20±0.01 (0%) | 0.21±0.02 (0%) | 0.38–0.40 |
+| transformer | 0.22±0.01 (0%) | 0.06±0.02 (0%) | 0.40–0.41 |
+| gdp_hybrid | 0.02±0.01 (0%) | 0.00±0.00 (0%) | 0.23–0.25 |
+
+**Finding:** depth does not extrapolate for any architecture — no run converges (pconv 0/9) and
+no cell clears the 1/6 guess. fprm and the transformer sit at the guess floor at d4; fprm stays
+there at d5 while the transformer falls below it (0.03–0.09 per seed); gdp_hybrid fits the
+training distribution best (lowest final loss, 0.23–0.25) yet scores 0.00–0.03 at both held-out
+depths — a depth-specific circuit that is systematically wrong one hop past training, not a
+guesser. The depth-extrapolation row of the price table stays open with all three architectures
+now measured; contrast the frontier, where the same composition solves at d16 only in the
+thinking regime (§14). Data: `results/local_chain_arch_20260710.{jsonl,md,json}`.

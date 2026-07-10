@@ -2,14 +2,21 @@
 
 This page shows a concrete example from every canonical task: what the prompt looks like, what the
 gold answer is, and — for tasks we ran on the OpenRouter grid — one or two real mistakes made by
-strong pretrained models. The goal is to make the difficulty ladder tangible and to show the
-difference between a formatting error and a reasoning error.
+strong pretrained models. The goal is to make each element of the taxonomy tangible and to show
+the difference between a formatting error and a reasoning error.
+
+The taxonomy ([`AGENTS.md`](../AGENTS.md)) orders the page: **components** first — recall
+(`recall_copy_v1`; parametric variants `conflict_v1`/`recall_v1`) and state tracking
+(`binding` = last-write-wins, `s5_v1` = non-abelian) — then their **compositions** — state × recall
+(`composite`) and recall ∘ recall (`chain_v1`). Examples shown on a retired v1 sampler are marked;
+the scored give-stream tasks are the v2 family
+([#11](https://github.com/ianbarber/factworld/issues/11)).
 
 All gold answers come from the symbolic oracle; none are parsed from rendered text.
 
 ---
 
-## `recall_copy_v1` — genuine in-context-copy recall
+## `recall_copy_v1` — component: recall (single-query, deferred-readout MQAR variant)
 
 A random agent→value map is presented in the prompt; the model must copy the queried value.
 
@@ -34,7 +41,7 @@ Stronger models (Kimi K2, Nemotron 3 Ultra, GPT-4o-mini) score 1.000 on this tas
 
 ---
 
-## `conflict_v1` — parametric vs. in-context override
+## `conflict_v1` — component: recall, parametric variant (in-context override)
 
 The model is trained to memorize a fixed agent→value map, but at test time the prompt states a
 different value for the queried agent. The correct answer is the *in-context* value.
@@ -60,10 +67,15 @@ Most strong models override the memorized map correctly at this pool size.
 
 ---
 
-## `binding_v1` — last-write-wins state tracking
+## `binding_v1` — component: state tracking (last-write-wins; retired sampler)
 
 A stream of `give` events changes which agent holds each object. The model must report the current
-holder of the queried object.
+holder of the queried object — last write wins (absorbing updates, not group operations).
+
+> **Retired sampler.** The v1 give-stream sampler grants recency credit; the scored task is
+> `binding_v2` (uniform last-write placement, same rendering —
+> [#11](https://github.com/ianbarber/factworld/issues/11)). The example and mistakes below are
+> from the v1 sampler and read as diagnostics.
 
 **Example prompt**
 
@@ -87,10 +99,14 @@ Kimi K2 scores 0.900 here; binding is scale-sensitive but within reach.
 
 ---
 
-## `composite_copy_v1` — binding × in-context recall
+## `composite_copy_v1` — composition: state × recall (retired sampler)
 
 The model must resolve the current holder of an object (binding) and then recall that agent's value
 from the in-context fact map.
+
+> **Retired sampler.** The scored task is `composite_copy_v2` (de-skewed give-stream sampler,
+> same rendering — [#11](https://github.com/ianbarber/factworld/issues/11)). The example and
+> mistakes below are from the v1 sampler and read as diagnostics.
 
 **Example prompt**
 
@@ -115,7 +131,7 @@ the instruction every model scores 0% because it emits only the value.
 
 ---
 
-## `chain_v1` — depth-*k* pointer chase
+## `chain_v1` — composition: recall ∘ recall (pointer chase, depth at fixed breadth)
 
 Each agent points to another agent via an `a0` fact. The model must follow the chain `depth` times.
 
@@ -140,7 +156,7 @@ Even the best pretrained models peak at 0.300 on this task.
 
 ---
 
-## `s5_v1` — S₅ role-permutation state tracking
+## `s5_v1` — component: state tracking, non-abelian variant (S₅ role permutations)
 
 A sequence of `swap`/`cycle_roles` events permutes which agent holds each of five roles. The query
 asks for the role of a single agent at the end.
@@ -167,7 +183,7 @@ but none of the pretrained models tracks the running S₅ permutation.
 
 ---
 
-## `recall_v1` — memorized-map recall (control)
+## `recall_v1` — component: recall, parametric control (memorized map; local-only)
 
 The agent→value map is fixed and memorizable. This is a positive control, not a genuine recall test.
 
@@ -185,7 +201,7 @@ suite.
 
 ---
 
-## `composite_v1` — binding × memorized recall (control)
+## `composite_v1` — composition control: binding × memorized recall (retired)
 
 The fact map is fixed and memorizable, so this isolates the binding leg of the composite.
 
@@ -199,12 +215,12 @@ what is a0 of the holder of o3 ? :
 
 **Gold answer:** `g2 v52 .`
 
-This task is a control, not a scored benchmark; use `composite_copy_v1` for the real composition
-probe.
+This task is a retired control, never scored; the scored composition probe is
+`composite_copy_v2`.
 
 ---
 
-## `binding_load_v1` — large working set (experimental)
+## `binding_load_v1` — large working set (retired)
 
 Eight active objects instead of four. The larger working set exposes interference and is currently
 experimental.
@@ -218,12 +234,12 @@ what is the holder of o5 ? :
 
 **Gold answer:** `g4 .`
 
-This task is not in the OpenRouter grid; it is flagged experimental while the dense-supervision
-regime is developed.
+This task is retired with the rest of the v1 give-stream family
+([#11](https://github.com/ianbarber/factworld/issues/11)).
 
 ---
 
-## `composite_copy_scale_v1` — scale-experiment configuration (experimental)
+## `composite_copy_scale_v1` — scale-experiment configuration (retired)
 
 The exact small-pool composite configuration used for the paper's §5 scale experiments. The recall
 leg is intentionally easy so that a floor is attributable to composition, not recall capacity.
@@ -239,8 +255,8 @@ what is a0 of the holder of o3 ? :
 
 **Gold answer:** `g0 v109 .`
 
-This task is experimental and excluded from REPORTED; the flagship composition task is
-`composite_copy_v1`.
+This task is retired and excluded from REPORTED; the scored composition task is
+`composite_copy_v2`.
 
 ---
 

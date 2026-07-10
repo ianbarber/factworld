@@ -8,8 +8,7 @@
       24
     ],
     "archs": [
-      "transformer",
-      "gdp_hybrid"
+      "fprm"
     ],
     "seeds": [
       0,
@@ -34,6 +33,24 @@
   },
   "summary": {
     "6": {
+      "fprm": {
+        "16": {
+          "mean": 0.15000000000000002,
+          "std": 0.01414213562373095,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 1.0,
+          "value_acc": 0.15000000000000002
+        },
+        "64": {
+          "mean": 0.006666666666666667,
+          "std": 0.004714045207910317,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.4066666666666667,
+          "value_acc": 0.011666666666666667
+        }
+      },
       "gdp_hybrid": {
         "16": {
           "mean": 0.03666666666666667,
@@ -72,6 +89,24 @@
       }
     },
     "8": {
+      "fprm": {
+        "16": {
+          "mean": 0.04,
+          "std": 0.014142135623730952,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.73,
+          "value_acc": 0.06166666666666667
+        },
+        "64": {
+          "mean": 0.005,
+          "std": 0.004082482904638631,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.245,
+          "value_acc": 0.008333333333333333
+        }
+      },
       "gdp_hybrid": {
         "16": {
           "mean": 0.008333333333333333,
@@ -110,6 +145,24 @@
       }
     },
     "12": {
+      "fprm": {
+        "16": {
+          "mean": 0.013333333333333332,
+          "std": 0.012472191289246471,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.64,
+          "value_acc": 0.02
+        },
+        "64": {
+          "mean": 0.0033333333333333335,
+          "std": 0.004714045207910317,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.2783333333333333,
+          "value_acc": 0.013333333333333334
+        }
+      },
       "gdp_hybrid": {
         "16": {
           "mean": 0.0033333333333333335,
@@ -148,6 +201,24 @@
       }
     },
     "16": {
+      "fprm": {
+        "16": {
+          "mean": 0.006666666666666667,
+          "std": 0.0023570226039551583,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.975,
+          "value_acc": 0.006666666666666667
+        },
+        "64": {
+          "mean": 0.0033333333333333335,
+          "std": 0.0023570226039551583,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.38,
+          "value_acc": 0.006666666666666666
+        }
+      },
       "gdp_hybrid": {
         "16": {
           "mean": 0.0033333333333333335,
@@ -186,6 +257,24 @@
       }
     },
     "24": {
+      "fprm": {
+        "16": {
+          "mean": 0.0016666666666666668,
+          "std": 0.0023570226039551583,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.20333333333333334,
+          "value_acc": 0.0016666666666666668
+        },
+        "64": {
+          "mean": 0.0,
+          "std": 0.0,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.06666666666666667,
+          "value_acc": 0.008333333333333333
+        }
+      },
       "gdp_hybrid": {
         "16": {
           "mean": 0.006666666666666666,
@@ -2144,6 +2233,951 @@
         }
       },
       "final_loss": 0.08326262980699539
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 6,
+      "k": 12,
+      "recall_pool": 6,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 0,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.5,
+      "lengths": {
+        "16": {
+          "overall": 0.17,
+          "prefix": {
+            "0": 0.0,
+            "1": 0.83,
+            "2": 0.17
+          },
+          "holder_acc": 1.0,
+          "value_acc": 0.17
+        },
+        "64": {
+          "overall": 0.01,
+          "prefix": {
+            "0": 0.555,
+            "1": 0.435,
+            "2": 0.01
+          },
+          "holder_acc": 0.445,
+          "value_acc": 0.01
+        }
+      },
+      "final_loss": 0.2896807789802551
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 6,
+      "k": 12,
+      "recall_pool": 6,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 1,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.52,
+      "lengths": {
+        "16": {
+          "overall": 0.14,
+          "prefix": {
+            "0": 0.0,
+            "1": 0.86,
+            "2": 0.14
+          },
+          "holder_acc": 1.0,
+          "value_acc": 0.14
+        },
+        "64": {
+          "overall": 0.01,
+          "prefix": {
+            "0": 0.625,
+            "1": 0.365,
+            "2": 0.01
+          },
+          "holder_acc": 0.375,
+          "value_acc": 0.02
+        }
+      },
+      "final_loss": 0.4142385423183441
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 6,
+      "k": 12,
+      "recall_pool": 6,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 2,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.49,
+      "lengths": {
+        "16": {
+          "overall": 0.14,
+          "prefix": {
+            "0": 0.0,
+            "1": 0.86,
+            "2": 0.14
+          },
+          "holder_acc": 1.0,
+          "value_acc": 0.14
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.6,
+            "1": 0.4,
+            "2": 0.0
+          },
+          "holder_acc": 0.4,
+          "value_acc": 0.005
+        }
+      },
+      "final_loss": 0.41528069972991943
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 8,
+      "k": 16,
+      "recall_pool": 8,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 0,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.56,
+      "lengths": {
+        "16": {
+          "overall": 0.02,
+          "prefix": {
+            "0": 0.8,
+            "1": 0.18,
+            "2": 0.02
+          },
+          "holder_acc": 0.2,
+          "value_acc": 0.085
+        },
+        "64": {
+          "overall": 0.005,
+          "prefix": {
+            "0": 0.95,
+            "1": 0.045,
+            "2": 0.005
+          },
+          "holder_acc": 0.05,
+          "value_acc": 0.015
+        }
+      },
+      "final_loss": 0.3745788335800171
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 8,
+      "k": 16,
+      "recall_pool": 8,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 1,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.51,
+      "lengths": {
+        "16": {
+          "overall": 0.05,
+          "prefix": {
+            "0": 0.005,
+            "1": 0.945,
+            "2": 0.05
+          },
+          "holder_acc": 0.995,
+          "value_acc": 0.05
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.655,
+            "1": 0.345,
+            "2": 0.0
+          },
+          "holder_acc": 0.345,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.41166266798973083
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 8,
+      "k": 16,
+      "recall_pool": 8,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 2,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.42,
+      "lengths": {
+        "16": {
+          "overall": 0.05,
+          "prefix": {
+            "0": 0.005,
+            "1": 0.945,
+            "2": 0.05
+          },
+          "holder_acc": 0.995,
+          "value_acc": 0.05
+        },
+        "64": {
+          "overall": 0.01,
+          "prefix": {
+            "0": 0.66,
+            "1": 0.33,
+            "2": 0.01
+          },
+          "holder_acc": 0.34,
+          "value_acc": 0.01
+        }
+      },
+      "final_loss": 0.4473695456981659
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 12,
+      "k": 24,
+      "recall_pool": 12,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 0,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.55,
+      "lengths": {
+        "16": {
+          "overall": 0.01,
+          "prefix": {
+            "0": 0.0,
+            "1": 0.99,
+            "2": 0.01
+          },
+          "holder_acc": 1.0,
+          "value_acc": 0.01
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.565,
+            "1": 0.435,
+            "2": 0.0
+          },
+          "holder_acc": 0.435,
+          "value_acc": 0.005
+        }
+      },
+      "final_loss": 0.45421528816223145
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 12,
+      "k": 24,
+      "recall_pool": 12,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 1,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.52,
+      "lengths": {
+        "16": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.83,
+            "1": 0.17,
+            "2": 0.0
+          },
+          "holder_acc": 0.17,
+          "value_acc": 0.02
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.95,
+            "1": 0.05,
+            "2": 0.0
+          },
+          "holder_acc": 0.05,
+          "value_acc": 0.01
+        }
+      },
+      "final_loss": 0.564429759979248
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 12,
+      "k": 24,
+      "recall_pool": 12,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 2,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.58,
+      "lengths": {
+        "16": {
+          "overall": 0.03,
+          "prefix": {
+            "0": 0.25,
+            "1": 0.72,
+            "2": 0.03
+          },
+          "holder_acc": 0.75,
+          "value_acc": 0.03
+        },
+        "64": {
+          "overall": 0.01,
+          "prefix": {
+            "0": 0.65,
+            "1": 0.34,
+            "2": 0.01
+          },
+          "holder_acc": 0.35,
+          "value_acc": 0.025
+        }
+      },
+      "final_loss": 0.5639983415603638
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 16,
+      "k": 32,
+      "recall_pool": 16,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 0,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.61,
+      "lengths": {
+        "16": {
+          "overall": 0.005,
+          "prefix": {
+            "0": 0.03,
+            "1": 0.965,
+            "2": 0.005
+          },
+          "holder_acc": 0.97,
+          "value_acc": 0.005
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.63,
+            "1": 0.37,
+            "2": 0.0
+          },
+          "holder_acc": 0.37,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.6447107791900635
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 16,
+      "k": 32,
+      "recall_pool": 16,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 1,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.57,
+      "lengths": {
+        "16": {
+          "overall": 0.005,
+          "prefix": {
+            "0": 0.025,
+            "1": 0.97,
+            "2": 0.005
+          },
+          "holder_acc": 0.975,
+          "value_acc": 0.005
+        },
+        "64": {
+          "overall": 0.005,
+          "prefix": {
+            "0": 0.635,
+            "1": 0.36,
+            "2": 0.005
+          },
+          "holder_acc": 0.365,
+          "value_acc": 0.015
+        }
+      },
+      "final_loss": 0.6546272039413452
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 16,
+      "k": 32,
+      "recall_pool": 16,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 2,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.54,
+      "lengths": {
+        "16": {
+          "overall": 0.01,
+          "prefix": {
+            "0": 0.02,
+            "1": 0.97,
+            "2": 0.01
+          },
+          "holder_acc": 0.98,
+          "value_acc": 0.01
+        },
+        "64": {
+          "overall": 0.005,
+          "prefix": {
+            "0": 0.595,
+            "1": 0.4,
+            "2": 0.005
+          },
+          "holder_acc": 0.405,
+          "value_acc": 0.005
+        }
+      },
+      "final_loss": 0.7187451124191284
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 24,
+      "k": 48,
+      "recall_pool": 24,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 0,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.6,
+      "lengths": {
+        "16": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.875,
+            "1": 0.125,
+            "2": 0.0
+          },
+          "holder_acc": 0.125,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.965,
+            "1": 0.035,
+            "2": 0.0
+          },
+          "holder_acc": 0.035,
+          "value_acc": 0.01
+        }
+      },
+      "final_loss": 1.067908525466919
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 24,
+      "k": 48,
+      "recall_pool": 24,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 1,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.46,
+      "lengths": {
+        "16": {
+          "overall": 0.005,
+          "prefix": {
+            "0": 0.81,
+            "1": 0.185,
+            "2": 0.005
+          },
+          "holder_acc": 0.19,
+          "value_acc": 0.005
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.965,
+            "1": 0.035,
+            "2": 0.0
+          },
+          "holder_acc": 0.035,
+          "value_acc": 0.01
+        }
+      },
+      "final_loss": 1.0205013751983643
+    },
+    {
+      "task": "composite_copy_v2",
+      "B": 24,
+      "k": 48,
+      "recall_pool": 24,
+      "m": 4,
+      "arch": "fprm",
+      "seed": 2,
+      "rungs": [
+        6,
+        8,
+        12,
+        16,
+        24
+      ],
+      "archs": [
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 2.67,
+      "lengths": {
+        "16": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.705,
+            "1": 0.295,
+            "2": 0.0
+          },
+          "holder_acc": 0.295,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.87,
+            "1": 0.13,
+            "2": 0.0
+          },
+          "holder_acc": 0.13,
+          "value_acc": 0.005
+        }
+      },
+      "final_loss": 1.1028300523757935
     }
   ]
 }

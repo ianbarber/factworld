@@ -36,7 +36,7 @@ the value; value stays 0.00 across all efforts.)
 This sharpens the central dissociation: **composition is movable by test-time compute (reasoning)
 for strong models; s5 under the token rendering is not — its frontier lever is reasoning plus a
 concrete rendering, and its local lever is training-time supervision density.** What does NOT help
-either wall: explicit structured CoT prompting (hurts — see `autoregressive-api-results.md` E1b),
+either deficit: explicit structured CoT prompting (hurts — see `autoregressive-api-results.md` E1b),
 and sampling/self-correction on non-reasoning local models.
 
 ## Files

@@ -37,7 +37,7 @@ archived s5-GRPO negative result). That is what motivated the pivot. This path i
 |---|---|---|
 | Infra correctness (losses, routing, ckpt round-trip) — CPU-ok | `python tests/test_mopd.py` | all smoke checks PASS |
 | A weak shared base with RL headroom on both domains | `stage1_base.py --steps 15000` | binding/recall ≈0.4, pass@8≫greedy → `stage1_base.md`, `probe_headroom.md` |
-| Chain is an RL **wall**; binding/recall lift only marginally from scratch | `stage2_teachers.py --lr 3e-4` | teacher−base small/non-monotone → `stage2_teachers.md` |
+| Chain **does not move under outcome-RL**; binding/recall lift only marginally from scratch | `stage2_teachers.py --lr 3e-4` | teacher−base small/non-monotone → `stage2_teachers.md` |
 
 ## Notes
 
