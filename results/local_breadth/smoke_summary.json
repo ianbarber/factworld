@@ -1,0 +1,109 @@
+{
+  "cfg": {
+    "rungs": [
+      6
+    ],
+    "archs": [
+      "gdp_hybrid"
+    ],
+    "seeds": [
+      0
+    ],
+    "steps": 1000,
+    "d_model": 256,
+    "n_layers": 4,
+    "batch": 32,
+    "train_n": 8000,
+    "eval_n": 50,
+    "eval_lengths": [
+      16,
+      64
+    ],
+    "train_lengths": [
+      4,
+      8,
+      16
+    ]
+  },
+  "summary": {
+    "6": {
+      "gdp_hybrid": {
+        "16": {
+          "mean": 0.0,
+          "std": 0.0,
+          "n": 1,
+          "p_converge": 0.0,
+          "holder_acc": 0.26,
+          "value_acc": 0.0
+        },
+        "64": {
+          "mean": 0.0,
+          "std": 0.0,
+          "n": 1,
+          "p_converge": 0.0,
+          "holder_acc": 0.08,
+          "value_acc": 0.02
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "task": "composite_copy_v2",
+      "B": 6,
+      "k": 12,
+      "recall_pool": 6,
+      "m": 4,
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "rungs": [
+        6
+      ],
+      "archs": [
+        "gdp_hybrid"
+      ],
+      "seeds": [
+        0
+      ],
+      "steps": 1000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 50,
+      "eval_lengths": [
+        16,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "wall_min": 0.35,
+      "lengths": {
+        "16": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.74,
+            "1": 0.26,
+            "2": 0.0
+          },
+          "holder_acc": 0.26,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.0,
+          "prefix": {
+            "0": 0.92,
+            "1": 0.08,
+            "2": 0.0
+          },
+          "holder_acc": 0.08,
+          "value_acc": 0.02
+        }
+      },
+      "final_loss": 1.016749382019043
+    }
+  ]
+}

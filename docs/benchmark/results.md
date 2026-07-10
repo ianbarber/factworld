@@ -1,11 +1,11 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-09 11:07 UTC from `results/benchmark/history.jsonl` (502 latest cells).
+Generated 2026-07-09 23:33 UTC from `results/benchmark/history.jsonl` (502 latest cells).
 
 ## Settings
 
 Canonical metric: **relaxed** match. exact / contains / last_n are diagnostics.
-Horizon threshold: relaxed >= 0.8.
+Figures draw a dotted reference line at relaxed 0.8.
 Error bars / intervals: Wilson 95% CI.
 
 Observed generation settings (effort -> max_new_tokens, stop_at):
@@ -24,25 +24,25 @@ Observed generation settings (effort -> max_new_tokens, stop_at):
 
 Current roster only (factworld.benchmark.MODELS); models dropped from the roster render in the archived-models section below.
 
-Columns follow the capability ladder — recall -> state tracking -> composition -> chain depth -> long-horizon state — in two regimes: 'instant (no thinking)' cells run with reasoning off and a hard one-line answer contract (in-weights ability, no visible working); 'thinking' cells run with a generous reasoning budget.
+The benchmark is a composition instrument: recall and state tracking are the component abilities, and 'instant' cells (reasoning off, hard one-line answer contract) measure whether the model composes them in-weights — the composition gap column is the deficit. 'thinking' cells measure composition with reasoning: ~ceiling at canonical settings for this roster, so the state-stress columns (chain d128 at k=257, s5 @L256) carry the thinking discrimination.
 
-Zero-budget (instant) cells: task **composite_copy_v2** with reasoning off (effort=none) under a one-line answer contract (settings.contract=true); relaxed match. Escalated cells show the CANONICAL first attempt at the shared base budget, with the escalated rerun as a parenthesised diagnostic.
+Instant cells: task **composite_copy_v2** with reasoning off (effort=none) under a one-line answer contract (settings.contract=true); relaxed match. Escalated cells show the CANONICAL first attempt at the shared base budget, with the escalated rerun as a parenthesised diagnostic.
 
 History also contains zero-budget cells on composite_copy_v1; the zero-budget columns below use the latest task's records (composite_copy_v2) only — the archived task's cells remain in the per-cell tables.
 
-| Model | instant: recall (sanity, recall_copy_v1) | instant: binding_only @L16 (state tracking, v2) | instant: zero-budget composite @L16 (composition, relaxed, v2) | instant: zero-budget composite @L64 (v2) | instant: replicate @L16 (test-retest, v2) | thinking: chain horizon (chain_nowrap, max depth, relaxed >= 0.8) | thinking: s5 horizon (long-horizon state, max L, relaxed >= 0.8) | thinking: s5@128 ctok |
-|---|---|---|---|---|---|---|---|---|
-| anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | 0.77 | 32 (borderline) | >=128 (budget-censored) | 12683 |
-| anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (0.76 @512)† | 0.32 (0.66 @512)† | 0.65 (0.82 @512)† | 16 (borderline) | >=128 (budget-censored) | 11866 |
-| deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | 0.44 | >=64 (budget-censored) | >=128 (budget-censored) | 10043 |
-| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | 0.65* | >=128 | 128 | 11022 |
-| moonshotai/kimi-k2.6 | 1.00 | 0.94† | 0.77† | 0.93† | 0.83† | 64 | >=256 | 17418 |
-| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | 0.30 | — | — | 12250 |
-| openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | 0.46 | 64 | >=256 | 6989 |
-| qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | 0.25 | >=128 | >=256 | 7904 |
-| z-ai/glm-5.2 | 1.00 | 0.70† | 0.35† | 0.16 | 0.36 | 16 | >=256 | 5980 |
-| recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | 0.04 | — | — | — |
-| object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | 0.41 | — | — | — |
+| Model | instant: recall (sanity, recall_copy_v1) | instant: state tracking (binding_only @L16, v2) | instant: composed @L16 (relaxed, v2) | instant: composed @L64 (v2) | instant: composition gap (binding_only - composed @L16) | instant: replicate noise (|composed - replicate| @L16) | thinking: chain d128 (chain_nowrap, k=257, relaxed) | thinking: s5 @L256 (s5_concrete, relaxed) | thinking: s5@128 ctok |
+|---|---|---|---|---|---|---|---|---|---|
+| anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 | ±0.05 | 0.08 | ⊘ >budget | 12683 |
+| anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (0.76 @512)† | 0.32 (0.66 @512)† | +0.15† | ±0.03 | 0.04 | ⊘ >budget | 11866 |
+| deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | +0.07 | ±0.00 | ⊘ >budget | ⊘ >budget | 10043 |
+| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 | 0.88 | 0.52 | 11022 |
+| moonshotai/kimi-k2.6 | 1.00 | 0.94† | 0.77† | 0.93† | +0.17† | ±0.06 | 0.64‡ | 0.88 | 17418 |
+| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | +0.16 | ±0.03 | ⊘ >budget | ⊘ >budget | 12250 |
+| openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 | ±0.00 | 0.36 | 0.96 | 6989 |
+| qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | +0.27 | ±0.01 | 0.96 | 0.80 | 7904 |
+| z-ai/glm-5.2 | 1.00 | 0.70† | 0.35† | 0.16 | +0.35† | ±0.01 | 0.36 | 0.88 | 5980 |
+| recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | — | — | — | — | — |
+| object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | — | — | — | — | — |
 
 Read small-L zero-budget cells against the object-filter floor, not chance: the floor is inherent to last-write-wins (filter the stream to the queried object, guess among its w writes) and decays only ~1/L, so it sits well above chance at L16 — a score near the floor row shows object filtering, not state tracking; genuine last-write resolution has to clear it.
 
@@ -60,13 +60,15 @@ object-filter floor (<task>): E[1/w] recomputed at render time on the same exact
 
 n/a = facet/cell not run for this model; — = run, but no qualifying value.
 
-replicate @L16 (test-retest): the zero_budget end_to_end leg builds prompts IDENTICAL to the plain composite @L16 cell (same runner path), so the column is a replicate, not a distinct measurement; max observed |plain - replicate| across models = 0.06 — read that as the run-to-run noise bar on the headline numbers. Future runs keep this arm intentionally as leg='replicate'.
+composition gap = state tracking (binding_only @L16) - composed @L16, marks from either input cell propagated. recall|holder is ~1.0 for every roster model (the scaffolded leg), so if composition were free the composed cell would match the binding leg; the gap is the composition deficit.
 
-Horizons marked >=N are censored lower bounds: either the max tested depth/length still qualifies, or ('budget-censored') the first FAILING cell above N was majority finish=length — the model ran out of token budget there, not necessarily ability. Horizons marked (borderline) are threshold calls: the first failing cell's Wilson CI crosses the 0.8 line (e.g. a 0.72 [0.52, 0.86] cell), so N vs the next tested length is not statistically resolved.
+replicate noise: the zero_budget replicate leg (recorded as end_to_end before the F6 rename) builds prompts IDENTICAL to the composed @L16 cell (same runner path), so |composed - replicate| is a test-retest delta; max across models = 0.06 — read that as the run-to-run noise bar on the headline numbers (including the gap column). Future runs keep this arm intentionally as leg='replicate'.
+
+⊘ >budget = not measurable at this budget: the cell's calls were majority finish=length (the token budget ran out before an answer), so the cell has no score at these settings.
 
 s5@128 ctok: completion tokens per call on the matched s5_concrete L128 cell (run by every current-roster model). This replaces ctok/solve, which averaged only over cells a model SOLVED and therefore rewarded models that failed early (selection bias: the published 2.7x opus-vs-kimi ctok/solve gap is ~1.4x on the matched cell).
 
-Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
+The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the d128 cell is k=257). `chain_v1` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
 ## Archived models (dropped from the roster)
 

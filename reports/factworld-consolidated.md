@@ -116,12 +116,14 @@ length. The instrument is sound on the natural-language format.
 ## 4. Evaluating frontier models
 
 For frontier-model comparisons, the canonical source is the recurring benchmark report,
-[`frontier-benchmark.md`](frontier-benchmark.md): the current-roster capability ladder — recall,
-state tracking, composition, chain depth, long-horizon state — in an instant (no-thinking) and a
-thinking regime, on the de-skewed v2 tasks, with shallow-heuristic floors, censoring and
-cleanliness marks, and per-cell provenance. It supersedes the OpenRouter grid in this section for
-cross-model claims; the grid below remains the pretrained-open-model snapshot on the v1 tasks and
-the source for the reasoning-effort and scaffolding analyses.
+[`frontier-benchmark.md`](frontier-benchmark.md): a composition instrument — the component legs
+(recall, binding) against the composed two-hop cell at L16/L64, with a per-model composition gap
+(binding@L16 − composed@L16), shallow-heuristic floors as first-class rows, and two state-stress
+rows under reasoning (chain d128 at fixed k=257, s5 @L256) — in an instant (no-thinking) and a
+thinking regime, on the de-skewed v2 tasks, with censoring and cleanliness marks and per-cell
+provenance. It supersedes the OpenRouter grid in this section for cross-model claims; the grid
+below remains the pretrained-open-model snapshot on the v1 tasks and the source for the
+reasoning-effort and scaffolding analyses.
 
 The default setup for API evaluation is:
 

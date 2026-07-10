@@ -3,9 +3,10 @@
 FactWorld's experiment program, post-refactor (natural-language format). Each experiment
 has a script, a results file, and a finding below. The four pieces here close the power,
 format-fairness, architecture-independence, weaning, and test-time-compute questions raised
-in review; sections 6–11 log the frontier-benchmark arc (2026-07-05 → 07-09) — completion
+in review; sections 6–13 log the frontier-benchmark arc (2026-07-05 → 07-09) — completion
 budgets, task validity (chain wrap, give-stream recency), answer contracts, thinking-budget
-elicitation, and the composition frontier.
+elicitation, breadth-vs-length composition probes, operating-point calibration, and the local
+breadth mirror.
 
 ## 1. Dense-vs-sparse state supervision (the s5 wall) — `experiment_dense_supervision.py`
 
@@ -287,3 +288,81 @@ lookup; instant falls below the object-filter floor by L128 (0.02 vs 0.08) with
 primacy-dominated picks (mostly the object's first write). Working-set breadth is the
 organizing hypothesis for the frontier benchmark (v3 probes in flight). Data:
 `results/composite_frontier_20260709.jsonl`.
+
+## 12. Operating-point calibration (v3 probes) — `experiment_composite_frontier.py`, `experiment_v3_probe_chain.py`
+
+Five probes pin where each benchmark regime reads mid-scale. Calibration facts, not headline
+rows; the benchmark's difficulty settings follow from them.
+
+**P1 — breadth × length under thinking (glm-5.2, composite_copy_v2, effort=high).** The composed
+cell stays near ceiling across the probed grid: 0.96 @k128/L64, 0.92 @k256/L64, 0.88 @k128/L256,
+0.84 @k256/L256, 0.84 @k256/L512, 0.80 @k64/L1024 (n=25 each). What moves is spend, not
+accuracy: ctok/call 756 → 3,347 → 4,880 → 21,059 across the grid, with 4/25 finish=length at
+k64/L1024. No budget-feasible (k, L) places thinking composite mid-scale; the thinking regime
+reads through the state-stress rows (chain d128 @k257, s5 @L256). Data:
+`results/v3_probes/p1_interaction_bridge.jsonl`.
+
+**P2 — instant downsweep (glm-5.2, qwen3.7-max; k∈{8,16,24}, L64, n=50).** Shrinking breadth
+raises the shallow floor faster than the score: glm 0.22/0.18/0.06 and qwen 0.30/0.12/0.12
+against E[max-share] floors 0.47/0.32/0.30 — at or below floor everywhere. The instant regime is
+informative only near canonical settings (L16, k=32, where the object-filter floor is 0.41 and
+the strong tier clears it). Data: `results/v3_probes/p2_instant_downsweep.jsonl`.
+
+**P3 — depth at fixed breadth (chain_v1, k=257, d=16, effort=high, n=15).** glm 0.93, qwen 1.00,
+gemini-flash 1.00 — ceiling at shallow depth at the full k=257 pool (chance 0.004). The
+`chain_nowrap` d128 staircase cells build k=2d+1=257, so this pins them as depth measurements,
+not breadth measurements: depth at fixed breadth stays informative where the composed cell
+saturates. Data: `results/v3_probes/p3_chain_fixedk.jsonl`.
+
+**P4 — interference knob inert (glm-5.2, k=32/L64, m∈{8,16}).** Raising writes-per-object m
+moves the E[1/w] floor 0.30 → 0.51 and the instant score with it (0.32 → 0.54, floor-shaped in
+both cells); thinking holds 0.96 at both. The knob re-prices the floor without separating models.
+Data: `results/v3_probes/p4_interference.jsonl`.
+
+**P5 — billed vs reported thinking tokens (k=128/L256, n=5).** On the same cell, Anthropic
+reports reasoning tokens far below billed completion: sonnet-5 2,128 ctok/call vs 182 rtok,
+opus-4.8 590 vs 107; gpt-5.5 reports rtok ≈ ctok (671 vs 681). Cross-provider token-efficiency
+comparisons must use billed completion tokens (the benchmark's ctok columns), never reported
+reasoning tokens. Data: `results/v3_probes/p5_frontier_rtok.jsonl`.
+
+**Finding:** the instant regime measures in-weights composition only near canonical settings;
+the thinking regime saturates the composed cell at every budget-feasible setting and is measured
+on the state-stress rows; interference is a floor knob, not a difficulty knob; and ctok is the
+only fair spend unit across providers. Data: `results/v3_probes/`.
+
+## 13. Local breadth mirror — `experiment_local_breadth.py`
+
+The frontier breadth rungs, trained from scratch: `composite_copy_v2.scaled(k=2B,
+recall_pool=B)`, m=4, transformer vs gdp_hybrid, d256×4, 8k steps flat next-token training
+(train L ∈ {4, 8, 16}), eval L16 (in-distribution) / L64 (extrapolation), B ∈ {6, 8, 12, 16,
+24} × 3 seeds = 30 runs (RTX 5090). Relaxed match; per-leg content-token decomposition
+(holder = binding leg, value = recall leg); pconv = seeds ≥0.9.
+
+| B | arch | L16 (pconv) | L64 | holder/value @L16 | @L64 |
+| --- | --- | --- | --- | --- | --- |
+| 6 | gdp_hybrid | 0.04±0.02 (0%) | 0.00 | 0.56 / 0.06 | 0.09 / 0.01 |
+| 6 | transformer | 0.02±0.00 (0%) | 0.01 | 0.23 / 0.07 | 0.18 / 0.03 |
+| 8 | gdp_hybrid | 0.01±0.01 (0%) | 0.00 | 0.41 / 0.02 | 0.14 / 0.00 |
+| 8 | transformer | 0.00±0.00 (0%) | 0.00 | 0.17 / 0.01 | 0.15 / 0.01 |
+| 12 | gdp_hybrid | 0.00±0.00 (0%) | 0.00 | 0.43 / 0.01 | 0.19 / 0.01 |
+| 12 | transformer | 0.00±0.00 (0%) | 0.00 | 0.15 / 0.01 | 0.10 / 0.00 |
+| 16 | gdp_hybrid | 0.00±0.00 (0%) | 0.00 | 0.41 / 0.01 | 0.16 / 0.01 |
+| 16 | transformer | 0.00±0.00 (0%) | 0.00 | 0.13 / 0.02 | 0.08 / 0.00 |
+| 24 | gdp_hybrid | 0.01±0.01 (0%) | 0.00 | 0.67 / 0.01 | 0.20 / 0.01 |
+| 24 | transformer | 0.00±0.00 (0%) | 0.00 | 0.08 / 0.01 | 0.03 / 0.00 |
+
+The binding leg is bimodal for gdp_hybrid from B12 up: per-seed @L16 it reads 1.00/0.10/0.21
+@B12, 0.07/0.99/0.18 @B16, 0.98/0.04/1.00 @B24 — single seeds solve binding outright while the
+rest sit near floor, so per-rung means stop being readable above B8. The transformer never
+exceeds 0.26 on any leg and no longer fits the training distribution at B24 (final loss
+1.49–1.65; gdp_hybrid 0.05–0.14 at every rung).
+
+**Finding:** at d256×4 / 8k flat training the composed cell reads floor at every rung (best
+single run 0.06 @L16; pconv 0/30) and the instrument reads through the legs: the local
+operating point is B8 — the largest rung where the better architecture is mid-scale
+seed-consistently on the binding leg (gdp_hybrid 0.41 @L16, seeds 0.34–0.48, vs transformer
+0.17; 1/k agent-guess 0.06) — and the composition deficit sits on the recall leg (value ≤0.11
+in all 30 runs, ≤0.02 even on binding-solved seeds), the same leg the d768 staged-curriculum
+decomposition localizes. Local composed-cell numbers require the staged-curriculum recipe
+(consolidated §5); flat training does not converge composition at any rung. Data:
+`results/local_breadth/sweep_runs.jsonl`, `sweep_summary.{md,json}`.

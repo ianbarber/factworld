@@ -52,6 +52,15 @@ The primary report on the natural-language format is
 one reproducible instrument for both frontier-model evaluation and local-architecture
 experimentation, with the API numbers and local multi-seed results.
 
+📊 **The recurring benchmark** ([`reports/frontier-benchmark.md`](reports/frontier-benchmark.md))
+is a composition instrument. Recall and state tracking are the component abilities; the question
+each model answers is whether they compose. Headline statistic, per model: the binding leg
+(`binding_only`@L16), the composed two-hop cell (@L16 and @L64), and the **composition gap** =
+binding@L16 − composed@L16 — recall given the holder is ~1.0 for every frontier model, so the gap
+is the composition deficit. Two regimes (instant / thinking), shallow-heuristic floors as
+first-class rows, and two state-stress rows under reasoning (chain d128 at k=257, s5 @L256). The
+same statistic, same legs, evaluates local from-scratch architectures.
+
 🧪 **Experiments using FactWorld as an RL/distillation testbed** live under
 [`experiments/`](experiments/):
 - [`experiments/mopd/`](experiments/mopd/README.md) — *Multi-teacher On-Policy Distillation*
@@ -178,7 +187,7 @@ metric — **relaxed match** of the answer span. Each task carries a ``kind``:
 |---|---|---|
 | `recall_copy_v1` | genuine 1-of-N in-context-copy recall | distractor pool (binding load) |
 | `binding_v2` | last-write-wins state (the delta-rule axis) | give-stream length |
-| `composite_copy_v2` | binding × in-context-copy recall — the 2-hop composition probe | binding horizon |
+| `composite_copy_v2` | the composed cell: binding × in-context recall in one query | give-stream length, pool breadth |
 | `conflict_v1` | parametric ↔ in-context override (memorized map vs context) | pool size |
 | `chain_v1` | depth-*k* pointer chase | composition depth |
 
@@ -207,9 +216,9 @@ mistakes are in [`docs/tasks.md`](docs/tasks.md).
 | `recall_copy_v1` | 1-of-N in-context-copy recall | k facts (~0.016) | distractor pool |
 | `conflict_v1` | parametric ↔ in-context override | k facts (~0.016) | memorized map vs. context |
 | `binding_v2` | last-write-wins state tracking | k roles (0.200) | give-stream length |
-| `composite_copy_v2` | binding × in-context recall | k² pairs (~0.031) | binding horizon |
+| `composite_copy_v2` | the composed cell: binding × in-context recall | k² pairs (~0.031) | give-stream length, pool breadth |
 | `chain_v1` | depth-*k* pointer chase | k agents (~0.167) | composition depth |
-| `s5_v1` | S₅ role permutation | 5 roles (0.200) | permutation horizon |
+| `s5_v1` | S₅ role permutation | 5 roles (0.200) | permutation-stream length |
 
 The numbers below are **relaxed match**, the canonical metric. The evaluation pipeline also
 reports exact, semantic-containment, and last-*n* scores to separate formatting artifacts from
@@ -250,7 +259,7 @@ Reading the ladder:
   experiment below decomposes the residual failure: strong reasoners can do the binding leg
   and the recall leg *separately* but fail to **route** the resolved holder into the recall
   lookup without scaffolding.
-- **Depth and non-abelian state are reasoning-movable, with model-dependent horizons.** With
+- **Depth and non-abelian state are reasoning-movable; how far depends on the model.** With
   reasoning and an 8192-token budget, glm-5.2 solves `chain_v1` at its designed depths — 1.00 at
   depth 4, n=30 (`results/chain_reasoning_pilot_20260705.json`) — where the no-reasoning grid
   floors. `chain_v1` measures depth only below its k=6 cycle length; the deeper cells in the
@@ -312,7 +321,7 @@ Staged-curriculum recipe (d=768, 8 layers, 25k steps, 3 seeds); full write-up in
 Relaxed match is the fair cross-regime metric: it handles API models that omit the trailing
 period and local models that append extra tokens after the answer. The decomposition localizes the
 composition gap: every recurrent architecture solves the **holder** (binding) leg but fails the
-**value** (recall-of-the-resolved-holder) leg — the same routing wall the API models hit.
+**value** (recall-of-the-resolved-holder) leg — the same routing failure the API models hit.
 
 **Trained scratchpad (E2, local) makes it worse.** Supervising the per-step oracle trace
 (`prompt→trace→answer`) on the staged curriculum collapses holder accuracy 0.96→0.14 and value
@@ -321,7 +330,7 @@ opposite of the API scaffolded result where the *oracle-provided* holder unlocks
 (0.93–1.00). See `results/curriculum_staged_d768_b64_80k_trace.md` and
 [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
 
-**But the s5 / non-abelian wall is movable with the right supervision**
+**But the s5 / non-abelian floor is movable with the right supervision**
 (`scripts/experiment_dense_supervision.py`). Per-step state supervision every K events (guided
 free-run eval — events forced, holder/value slots generated):
 
@@ -333,9 +342,9 @@ free-run eval — events forced, holder/value slots generated):
 
 Dense K=1 solves s5 in-distribution (1.00) and extrapolates to 4× the trained length (L64 = 0.75);
 K=2 is bimodal at L64 (0.40). The circuit fails to form below a checkpoint every ~2 events.
-**Inference-time compute (self-consistency, up to 30 votes) does not move the wall in either
+**Inference-time compute (self-consistency, up to 30 votes) does not move the result in either
 direction** — seeds with the circuit are already greedy-optimal; seeds without stay at the floor.
-The wall is in *learnability/supervision density*, not test-time compute — consistent with the API
+The bottleneck is *learnability/supervision density*, not test-time compute — consistent with the API
 result that only an *oracle-provided* intermediate helps.
 
 The prior (atomic-token format) non-abelian recipe and its dense-supervision `s5_v1` results
@@ -359,21 +368,21 @@ gradually with length. The dissociations (full write-up:
    glm-5.2 with reasoning solves it where the no-reasoning grid floors; depth beyond k is
    measured by the scaled no-wrap variant (`chain_nowrap`). Explicit CoT prompting does not
    help; background reasoning effort does.
-2. **Non-abelian state-tracking (s5) is movable by reasoning under a concrete rendering, with a
-   model-dependent horizon.** glm-5.2 solves `s5_v1` with reasoning plus a concrete (people/jobs)
+2. **Non-abelian state-tracking (s5) is movable by reasoning under a concrete rendering,
+   degrading with length at a model-dependent rate.** glm-5.2 solves `s5_v1` with reasoning plus a concrete (people/jobs)
    rendering — 1.00 at L32, 0.97 at L64, 0.90 at L128 — while kimi-k2.6 degrades sooner (1.00 at
    L16, 0.83 at L32). Neither reasoning under the token rendering (~0.33) nor a concrete
    rendering without reasoning (~chance) suffices — the combination does. Reasoning cells need a
    large completion budget: cells measured under a 16-token budget undercount reasoning models
-   (27/30 empty predictions at L64); the horizon numbers here use an 8192-token budget
+   (27/30 empty predictions at L64); the length-sweep numbers here use an 8192-token budget
    (`results/s5_horizon_recheck_20260705.jsonl`).
 3. **For local from-scratch models, s5's lever is supervision density.** Dense per-step supervision
    solves it (10/10 seeds at L16), the circuit **survives weaning to answer-only** (wean_mixed 8/8),
    and only the recurrent hybrid (`gdp_hybrid`) **extrapolates** the learned circuit in length
    (L64 0.75, L128 0.50–0.59; `fprm` and `transformer` collapse past the train length).
 
-The levers are **reasoning strength + a concrete rendering** (composition and frontier s5, each
-with a measured model-dependent horizon; chain at its designed depths, with the depth horizon
+The levers are **reasoning strength + a concrete rendering** (composition and API s5, each
+measured at named lengths; chain at its designed depths, with depth beyond k
 belonging to `chain_nowrap`), **supervision density + weaning** (local s5),
 and **recurrent architecture** (s5 length extrapolation). Explicit structured CoT prompting never
 helps (and hurts); recall is trivial once the holder is known.

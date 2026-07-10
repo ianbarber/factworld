@@ -5,22 +5,24 @@ scripts/run_frontier_benchmark.py), keeps the LATEST record per
 ``(model, facet, task, length, {effort, leg, rendering})`` key, and writes into
 ``docs/benchmark/``:
 
-  results.md    capability-ladder headline for the CURRENT roster
-                (factworld.benchmark.MODELS) — 'instant (no thinking)' zero-budget
-                columns plus 'thinking' chain/s5 horizons and s5@128 ctok — with
-                cleanliness footnotes, the recency-heuristic and object-filter
-                floor rows, an "Archived models (dropped from the roster)" section
-                for models no longer on the roster, a "v1 archived facets
-                (pre-redesign)" legacy headline, diagnostics and full per-cell
-                markdown tables. Escalated zero-budget cells publish the
-                CANONICAL first attempt at the shared base budget; the escalated
-                rerun renders as a marked diagnostic.
+  results.md    composition headline for the CURRENT roster
+                (factworld.benchmark.MODELS) — 'instant (reasoning off, answer
+                contract)' columns (recall sanity, state tracking, composed @L16/
+                @L64, the COMPOSITION GAP, replicate noise) plus 'thinking'
+                state-stress scores (chain d128 at k=257, s5 @L256) and s5@128
+                ctok — with cleanliness footnotes, the recency-heuristic and
+                object-filter floor rows, an "Archived models (dropped from the
+                roster)" section for models no longer on the roster, a "v1
+                archived facets (pre-redesign)" legacy headline, diagnostics and
+                full per-cell markdown tables. Escalated zero-budget cells
+                publish the CANONICAL first attempt at the shared base budget;
+                the escalated rerun renders as a marked diagnostic.
   results.csv   flat per-cell export (all metrics + diagnostics incl. contract_rate /
                 covert_cot_rate / rtok_leak_rate / escalated + usage)
   fig_*.png/.svg  facet figures, one per facet with data (PNG 150 dpi for blog upload,
                   SVG for the HTML page); chain_depth cells past chain_v1's design gate
-                  (depth >= k=6, cycle wrap) are excluded from figures and headline horizons
-                  and marked INVALID in the tables
+                  (depth >= k=6, cycle wrap) are excluded from figures and the headline
+                  columns and marked INVALID in the tables
   index.html    self-contained static page (inline CSS, inline SVG, sortable table)
 
 Relaxed match is the canonical metric and is listed first everywhere; exact/contains/last_n
@@ -71,13 +73,13 @@ PALETTE = [
 # (Gemini 3 rejects effort=none), so it sits next to "none" on the effort axis.
 EFFORT_ORDER = ["default", "none", "minimal", "low", "medium", "high"]
 LEG_ORDER = ["binding_only", "end_to_end", "scaffolded"]
-HORIZON_THRESHOLD = 0.8
+REF_THRESHOLD = 0.8  # dotted reference line in the score-vs-depth/length figures
 # chain_v1 builds a single k=6 pointer cycle; its design gate requires depth < k
 # (factworld/tasks.py: "Depths stay < k so the cycle never wraps"). Cells run at
 # depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective
 # difficulty depth mod 6), so they measure the wrapped task, not depth. They stay
 # visible in the per-cell/diagnostics tables with an explicit marker but are
-# excluded from the chain figure and any headline horizon. Depth scaling reports
+# excluded from the chain figure and any headline column. Depth scaling reports
 # under the `chain_nowrap` facet (scaled no-wrap variant), which reuses the same
 # figure code.
 CHAIN_CYCLE_K = 6
@@ -92,7 +94,7 @@ DPI = 150
 # Both are sentinel-dropped at their canonical values (B=16 == composite_copy_v2's
 # recall_pool / no k_fixed), so records WITHOUT the keys are canonical cells.
 # Non-canonical rungs are distinct arms: they get their own dedup key + arm label
-# and are EXCLUDED from the canonical headline columns, horizons and figures
+# and are EXCLUDED from the canonical headline columns and figures
 # (they will publish under their own breadth tables at Checkpoint 1).
 CANONICAL_BREADTH = 16
 BREADTH_FLOOR_NOTE = (
@@ -114,7 +116,7 @@ def k_fixed_of(rec):
 
 def canonical_arm(rec) -> bool:
     """True for cells on the canonical rungs (no breadth override, no fixed-k
-    chain): only these feed the headline columns, horizons and figures."""
+    chain): only these feed the headline columns and figures."""
     return breadth_of(rec) == CANONICAL_BREADTH and not k_fixed_of(rec)
 
 # --- v2 zero-budget headline ---------------------------------------------------
@@ -133,13 +135,19 @@ CTOK_WORKING_LINE = 32.0     # median (per-example) / mean ctok per call above t
 RTOK_LEAK_PER_CALL = 2.0     # mean reasoning tokens per call on the published attempt -> †
 CAP_ESCAPE_RATE = 0.10       # fraction of calls with ctok > max_new_tokens -> ‡
 S5_EFF_LENGTH = 128          # matched efficiency cell: s5_concrete @ L128 (F10)
+# Thinking state-stress cells: chain d128 on the chain_nowrap staircase (k=2d+1,
+# so d128 IS the fixed-breadth k=257 cell across the roster) and s5 @L256.
+CHAIN_STRESS_DEPTH = 128
+CHAIN_STRESS_K = 2 * CHAIN_STRESS_DEPTH + 1  # staircase k=2d+1 -> 257
+S5_STRESS_LENGTH = 256
+CENSORED_CELL = "⊘ >budget"  # majority finish=length: not measurable at this budget
 # The runner's test-retest leg was renamed end_to_end -> replicate (review F6);
 # "replicate" headline lookups also accept the pre-rename leg name in old records.
 REPLICATE_LEG_ALIASES = ("replicate", "end_to_end")
-# (length, leg) in headline column order, following the capability ladder:
-# binding (state tracking) before composite (composition).
+# (length, leg) score columns of the instant regime: state tracking (binding)
+# before the composed cells; the replicate arm feeds the noise column instead.
 ZB_HEADLINE_CELLS = [
-    (16, "binding_only"), (16, None), (64, None), (16, "replicate"),
+    (16, "binding_only"), (16, None), (64, None),
 ]
 
 
@@ -163,32 +171,38 @@ def _task_ver(zb_task) -> str:
 
 
 # Header-row regouping of headline_columns: (group label, colspan). The two
-# regimes are the owner's framing: 'instant' = no thinking, one-line answer
-# (in-weights ability); 'thinking' = generous reasoning budget.
-HEADLINE_GROUPS = [("", 1), ("instant (no thinking)", 5), ("thinking", 3)]
-LADDER_NOTE = (
-    "Columns follow the capability ladder — recall -> state tracking -> composition "
-    "-> chain depth -> long-horizon state — in two regimes: 'instant (no thinking)' "
-    "cells run with reasoning off and a hard one-line answer contract (in-weights "
-    "ability, no visible working); 'thinking' cells run with a generous reasoning "
-    "budget.")
+# regimes are the owner's framing: 'instant' = reasoning off, one-line answer
+# contract (in-weights composition); 'thinking' = generous reasoning budget.
+HEADLINE_GROUPS = [("", 1),
+                   ("instant (reasoning off, answer contract)", 6),
+                   ("thinking", 3)]
+COMPOSITION_NOTE = (
+    "The benchmark is a composition instrument: recall and state tracking are the "
+    "component abilities, and 'instant' cells (reasoning off, hard one-line answer "
+    "contract) measure whether the model composes them in-weights — the composition "
+    "gap column is the deficit. 'thinking' cells measure composition with reasoning: "
+    "~ceiling at canonical settings for this roster, so the state-stress columns "
+    f"(chain d{CHAIN_STRESS_DEPTH} at k={CHAIN_STRESS_K}, s5 @L{S5_STRESS_LENGTH}) "
+    "carry the thinking discrimination.")
 
 
 def headline_columns(zb_task) -> list[str]:
-    """Headline column headers in capability-ladder order (recall -> state tracking
-    -> composition -> chain depth -> long-horizon state), regime-prefixed; the
-    zero-budget columns carry the task version of the records they were built from
-    (the LATEST zero-budget task in history)."""
+    """Headline column headers, regime-prefixed, composition-statistic order:
+    recall (sanity) -> state tracking -> composed @L16/@L64 -> composition gap ->
+    replicate noise -> thinking state-stress scores -> efficiency. The instant
+    columns carry the task version of the records they were built from (the
+    LATEST zero-budget task in history)."""
     ver = _task_ver(zb_task)
     return [
         "Model",
         "instant: recall (sanity, recall_copy_v1)",
-        f"instant: binding_only @L16 (state tracking, {ver})",
-        f"instant: zero-budget composite @L16 (composition, relaxed, {ver})",
-        f"instant: zero-budget composite @L64 ({ver})",
-        f"instant: replicate @L16 (test-retest, {ver})",
-        f"thinking: chain horizon (chain_nowrap, max depth, relaxed >= {HORIZON_THRESHOLD})",
-        f"thinking: s5 horizon (long-horizon state, max L, relaxed >= {HORIZON_THRESHOLD})",
+        f"instant: state tracking (binding_only @L16, {ver})",
+        f"instant: composed @L16 (relaxed, {ver})",
+        f"instant: composed @L64 ({ver})",
+        "instant: composition gap (binding_only - composed @L16)",
+        "instant: replicate noise (|composed - replicate| @L16)",
+        f"thinking: chain d{CHAIN_STRESS_DEPTH} (chain_nowrap, k={CHAIN_STRESS_K}, relaxed)",
+        f"thinking: s5 @L{S5_STRESS_LENGTH} (s5_concrete, relaxed)",
         "thinking: s5@128 ctok",
     ]
 
@@ -235,13 +249,15 @@ FLOOR_NOTE = (
     "object, guess among its w writes) and decays only ~1/L, so it sits well above "
     "chance at L16 — a score near the floor row shows object filtering, not state "
     "tracking; genuine last-write resolution has to clear it.")
-HORIZON_NOTE = (
-    "Horizons marked >=N are censored lower bounds: either the max tested depth/length "
-    "still qualifies, or ('budget-censored') the first FAILING cell above N was majority "
-    "finish=length — the model ran out of token budget there, not necessarily ability. "
-    "Horizons marked (borderline) are threshold calls: the first failing cell's Wilson "
-    "CI crosses the 0.8 line (e.g. a 0.72 [0.52, 0.86] cell), so N vs the next tested "
-    "length is not statistically resolved.")
+GAP_NOTE = (
+    "composition gap = state tracking (binding_only @L16) - composed @L16, marks from "
+    "either input cell propagated. recall|holder is ~1.0 for every roster model (the "
+    "scaffolded leg), so if composition were free the composed cell would match the "
+    "binding leg; the gap is the composition deficit.")
+CENSOR_NOTE = (
+    f"{CENSORED_CELL} = not measurable at this budget: the cell's calls were majority "
+    "finish=length (the token budget ran out before an answer), so the cell has no "
+    "score at these settings.")
 EFFICIENCY_NOTE = (
     f"s5@128 ctok: completion tokens per call on the matched s5_concrete L{S5_EFF_LENGTH} "
     "cell (run by every current-roster model). This replaces ctok/solve, which averaged "
@@ -505,57 +521,32 @@ def headline_composite_length(records, model):
     return pick["metrics"]["relaxed"]
 
 
-def headline_horizon_censored(records, facet, model,
-                              exclude_renderings=("abstract_stated",)):
-    """(max length with canonical relaxed >= HORIZON_THRESHOLD, censor kind).
-
-    Censor kind: 'n/a' (facet never run), 'tested' (the max TESTED length still
-    qualifies), 'budget' (the first FAILING cell above the horizon was majority
-    finish=length — from-below censoring, F4), 'borderline' (the first failing
-    cell's Wilson CI crosses HORIZON_THRESHOLD, so the cutoff between N and the
-    next tested length is not statistically resolved), or None (uncensored)."""
+def stress_cell(records, facet, model, length,
+                exclude_renderings=("abstract_stated",)):
+    """The model's thinking state-stress cell at (facet, length) — canonical arm
+    only (breadth/fixed-k rungs are separate arms), abstract-token floor rendering
+    and wrapped chain_depth cells excluded. None when the cell never ran."""
     cells = [r for r in by_facet(records, facet)
-             if r["model"] == model
+             if r["model"] == model and r.get("length") == length
              and _settings(r).get("rendering") not in exclude_renderings
              and not chain_invalid(r)
-             and canonical_arm(r)]  # breadth/fixed-k rungs are separate arms
-    if not cells:
-        return None, "n/a"
-    good = [r["length"] for r in cells
-            if (canonical_relaxed(r) or 0.0) >= HORIZON_THRESHOLD]
-    if not good:
-        return None, None
-    horizon = max(good)
-    if horizon == max(r["length"] for r in cells):
-        return horizon, "tested"
-    failing = [r for r in cells if r["length"] > horizon
-               and (canonical_relaxed(r) or 0.0) < HORIZON_THRESHOLD]
-    first_fail = min(failing, key=lambda r: r["length"])
-    if majority_finish_length(first_fail):
-        return horizon, "budget"
-    if _ci(first_fail)[1] >= HORIZON_THRESHOLD:
-        return horizon, "borderline"
-    return horizon, None
+             and canonical_arm(r)]
+    return cells[0] if cells else None
 
 
-def headline_horizon(records, facet, model, exclude_renderings=("abstract_stated",)):
-    """Max length with relaxed >= HORIZON_THRESHOLD, or None if no cell qualifies."""
-    return headline_horizon_censored(records, facet, model, exclude_renderings)[0]
-
-
-def _horizon_str(records, facet, model):
-    horizon, kind = headline_horizon_censored(records, facet, model)
-    if kind == "n/a":
+def stress_value_str(rec) -> str:
+    """One thinking state-stress headline cell: the plain relaxed score at the
+    named setting, ‡ when the cell escaped the token cap; CENSORED_CELL when the
+    cell's calls were majority finish=length (not measurable at this budget —
+    never a number); 'n/a' when the cell never ran."""
+    if rec is None:
         return "n/a"
-    if horizon is None:
-        return "—"
-    if kind == "tested":
-        return f">={horizon}"
-    if kind == "budget":
-        return f">={horizon} (budget-censored)"
-    if kind == "borderline":
-        return f"{horizon} (borderline)"
-    return str(horizon)
+    if majority_finish_length(rec):
+        return CENSORED_CELL
+    val = _fmt(canonical_relaxed(rec))
+    if cap_escape(rec):
+        val += "‡"
+    return val
 
 
 def headline_decomposition(records, model):
@@ -662,6 +653,43 @@ def zb_model_marks(records, model, task=None) -> str:
     if not seen and minimal:
         seen.add("*")
     return "".join(c for c in "*†" if c in seen)
+
+
+def composition_gap_str(records, model, zb_task=None) -> str:
+    """THE headline statistic: composition gap = state tracking (binding_only
+    @L16) - composed @L16, rendered '+0.NN' with the input cells' cleanliness
+    marks propagated. recall|holder is ~1.0 across the roster (scaffolded leg),
+    so a free composer would score the composed cell at its binding leg; the gap
+    is the composition deficit. 'n/a' when either cell never ran."""
+    if zb_task is None:
+        zb_task = zb_latest_task(records)
+    bind = zero_budget_cell(records, model, 16, "binding_only", task=zb_task)
+    comp = zero_budget_cell(records, model, 16, None, task=zb_task)
+    if bind is None or comp is None:
+        return "n/a"
+    vb, vc = canonical_relaxed(bind), canonical_relaxed(comp)
+    if vb is None or vc is None:
+        return "—"
+    minimal = model_effort_minimal(records, model)
+    seen = zb_marks(bind, minimal) + zb_marks(comp, minimal)
+    marks = "".join(c for c in "*†" if c in seen)
+    return f"{vb - vc:+.2f}{marks}"
+
+
+def model_replicate_noise_str(records, model, zb_task=None) -> str:
+    """Per-model replicate noise: |composed@L16 - replicate@L16| (the replicate
+    leg builds prompts IDENTICAL to the composed cell — test-retest), rendered
+    '±0.NN'. 'n/a' when either cell never ran."""
+    if zb_task is None:
+        zb_task = zb_latest_task(records)
+    a = zero_budget_cell(records, model, 16, None, task=zb_task)
+    b = zero_budget_cell(records, model, 16, "replicate", task=zb_task)
+    if a is None or b is None:
+        return "n/a"
+    va, vb = canonical_relaxed(a), canonical_relaxed(b)
+    if va is None or vb is None:
+        return "—"
+    return f"±{abs(va - vb):.2f}"
 
 
 def headline_efficiency(records, model):
@@ -805,13 +833,14 @@ def object_filter_floor_label_at(task: str, length: int) -> str:
 
 
 def _floor_row(label, vals):
-    """One floor row in headline-column order. Floors apply to the zero-budget
-    (instant) columns only; recall and the thinking columns render '—'. The
-    replicate column repeats composite@L16 (identical prompts)."""
+    """One floor row in headline-column order. Floors apply to the instant score
+    columns only; recall, the gap/noise columns and the thinking columns render
+    '—' (the floor's binding and composed values coincide by construction, so its
+    gap is 0 by definition, not a measurement)."""
     return [label, "—",
             _fmt(vals["binding_16"]), _fmt(vals["composite_16"]),
-            _fmt(vals["composite_64"]), _fmt(vals["composite_16"]),
-            "—", "—", "—"]
+            _fmt(vals["composite_64"]),
+            "—", "—", "—", "—", "—"]
 
 
 def _zb_floor_n(records, zb_task) -> int:
@@ -870,17 +899,18 @@ def replicate_note(records) -> str:
     noise = replicate_noise(records)
     noise_s = "n/a" if noise is None else f"{noise:.2f}"
     return (
-        "replicate @L16 (test-retest): the zero_budget end_to_end leg builds prompts "
-        "IDENTICAL to the plain composite @L16 cell (same runner path), so the column "
-        "is a replicate, not a distinct measurement; max observed |plain - replicate| "
+        "replicate noise: the zero_budget replicate leg (recorded as end_to_end "
+        "before the F6 rename) builds prompts IDENTICAL to the composed @L16 cell "
+        "(same runner path), so |composed - replicate| is a test-retest delta; max "
         f"across models = {noise_s} — read that as the run-to-run noise bar on the "
-        "headline numbers. Future runs keep this arm intentionally as leg='replicate'.")
+        "headline numbers (including the gap column). Future runs keep this arm "
+        "intentionally as leg='replicate'.")
 
 
 def headline_rows(records):
     """One row per CURRENT-ROSTER model for the headline table, headline_columns
-    (capability-ladder) order — archived models render in their own section, never
-    here. The zero-budget columns use the LATEST zero-budget task's records only
+    (composition-statistic) order — archived models render in their own section,
+    never here. The zero-budget columns use the LATEST zero-budget task's records only
     (older-task cells render 'n/a' here but stay in the per-cell tables); cells
     that never ran say 'n/a' (distinct from '—' = run but no qualifying value,
     F9). The recency-heuristic and object-filter floor rows come last."""
@@ -894,8 +924,12 @@ def headline_rows(records):
         for length, leg in ZB_HEADLINE_CELLS:
             r = zero_budget_cell(records, m, length, leg, task=zb_task)
             row.append(zb_value_str(r, minimal))
-        row.append(_horizon_str(records, "chain_nowrap", m))
-        row.append(_horizon_str(records, "s5_concrete", m))
+        row.append(composition_gap_str(records, m, zb_task))
+        row.append(model_replicate_noise_str(records, m, zb_task))
+        row.append(stress_value_str(
+            stress_cell(records, "chain_nowrap", m, CHAIN_STRESS_DEPTH)))
+        row.append(stress_value_str(
+            stress_cell(records, "s5_concrete", m, S5_STRESS_LENGTH)))
         eff = headline_efficiency(records, m)
         row.append("n/a" if eff is None else f"{eff:.0f}")
         rows.append(row)
@@ -946,7 +980,7 @@ def _settings_block(records) -> list[str]:
     })
     lines = ["## Settings", "",
              "Canonical metric: **relaxed** match. exact / contains / last_n are diagnostics.",
-             f"Horizon threshold: relaxed >= {HORIZON_THRESHOLD}.",
+             f"Figures draw a dotted reference line at relaxed {REF_THRESHOLD}.",
              "Error bars / intervals: Wilson 95% CI.", "",
              "Observed generation settings (effort -> max_new_tokens, stop_at):", ""]
     for effort, mnt, stop in combos:
@@ -978,9 +1012,9 @@ def write_results_md(records, out_path, history_path):
               "Current roster only (factworld.benchmark.MODELS); models dropped from "
               "the roster render in the archived-models section below.",
               "",
-              LADDER_NOTE,
+              COMPOSITION_NOTE,
               "",
-              f"Zero-budget (instant) cells: task **{zb_task or 'n/a'}** with reasoning "
+              f"Instant cells: task **{zb_task or 'n/a'}** with reasoning "
               "off (effort=none) under a one-line answer contract "
               "(settings.contract=true); relaxed match. Escalated cells show the "
               "CANONICAL first attempt at the shared base budget, with the escalated "
@@ -1001,9 +1035,11 @@ def write_results_md(records, out_path, history_path):
         lines += [BREADTH_FLOOR_NOTE, ""]
     for note in ZB_FOOTNOTES:
         lines += [note, ""]
-    lines += [replicate_note(records), "", HORIZON_NOTE, "", EFFICIENCY_NOTE, ""]
+    lines += [GAP_NOTE, "", replicate_note(records), "", CENSOR_NOTE, "",
+              EFFICIENCY_NOTE, ""]
     lines += [
-        "Chain horizons come from the `chain_nowrap` facet only. `chain_v1` builds a single "
+        "The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the "
+        f"d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}). `chain_v1` builds a single "
         f"k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths < k "
         '(`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells '
         f"at depth >= {CHAIN_CYCLE_K} wrapped the cycle (gold == start agent at depths 12/24/48; "
@@ -1240,7 +1276,8 @@ def fig_composite_length(records, out_dir):
     return _save(fig, out_dir, "fig_composite_length")
 
 
-def _horizon_fig(records, out_dir, facet, name, xlabel, title):
+def _stress_fig(records, out_dir, facet, name, xlabel, title):
+    """Score-vs-depth/length figure for a thinking state-stress facet."""
     cells = [r for r in by_facet(records, facet)
              if _settings(r).get("rendering") != "abstract_stated"
              and canonical_arm(r)]  # one line per model: canonical rungs only
@@ -1256,9 +1293,9 @@ def _horizon_fig(records, out_dir, facet, name, xlabel, title):
         _line_ci(ax, [r["length"] for r in mine], mine, colors[m], m)
         for r in mine:
             y = canonical_relaxed(r) or 0.0
-            # F4: hollow marker — the cell FAILS with majority finish=length, so
-            # the failure is budget-censored (ran out of tokens, not ability).
-            if y < HORIZON_THRESHOLD and majority_finish_length(r):
+            # F4: hollow marker — the cell's calls were majority finish=length,
+            # so it is not measurable at this budget (tokens, not ability).
+            if y < REF_THRESHOLD and majority_finish_length(r):
                 ax.plot([r["length"]], [y], marker="o", markersize=6,
                         markerfacecolor="white", markeredgecolor=colors[m],
                         linestyle="none", zorder=5)
@@ -1266,17 +1303,17 @@ def _horizon_fig(records, out_dir, facet, name, xlabel, title):
             if cap_escape(r):
                 ax.annotate("‡", (r["length"], y), textcoords="offset points",
                             xytext=(4, 5), fontsize=9, color=colors[m])
-    ax.axhline(HORIZON_THRESHOLD, color="#888888", linestyle=":", linewidth=1)
+    ax.axhline(REF_THRESHOLD, color="#888888", linestyle=":", linewidth=1)
     ax.set_xscale("log", base=2)
     xt = sorted({r["length"] for r in cells})
     ax.set_xticks(xt, [str(x) for x in xt])
     ax.set_xlabel(xlabel)
     ax.set_ylabel("relaxed accuracy")
-    ax.set_title(title)
+    ax.set_title(title, fontsize=10)
     _style_axes(ax)
     ax.legend(fontsize=7, loc="lower left", frameon=False)
     fig.text(0.01, 0.03,
-             "hollow: failing cell majority finish=length (budget-censored); "
+             "hollow: majority finish=length — not measurable at this budget; "
              "‡: >10% of calls escaped the token cap",
              fontsize=7, color="#555555")
     _caption(fig, cells)
@@ -1284,21 +1321,21 @@ def _horizon_fig(records, out_dir, facet, name, xlabel, title):
     return _save(fig, out_dir, name)
 
 
-def fig_s5_horizon(records, out_dir):
-    return _horizon_fig(records, out_dir, "s5_concrete", "fig_s5_horizon",
-                        "permutation sequence length (log scale)",
-                        "S5 concrete rendering: relaxed vs length "
-                        f"(dotted: horizon threshold {HORIZON_THRESHOLD})")
+def fig_s5_stress(records, out_dir):
+    return _stress_fig(records, out_dir, "s5_concrete", "fig_s5_horizon",
+                       "permutation sequence length (log scale)",
+                       "s5_concrete (thinking): relaxed score vs length "
+                       f"(dotted: {REF_THRESHOLD} reference)")
 
 
 def _fig_chain(records, out_dir, facet, task_label):
     """Chain figure over a chain facet; chain_depth cells past the design gate
     (depth >= k=6, cycle wrap) are excluded — they measure the wrapped task."""
     valid = [r for r in records if not chain_invalid(r)]
-    return _horizon_fig(valid, out_dir, facet, f"fig_{facet}",
-                        "chain depth (log scale)",
-                        f"{task_label}: relaxed vs depth "
-                        f"(dotted: horizon threshold {HORIZON_THRESHOLD})")
+    return _stress_fig(valid, out_dir, facet, f"fig_{facet}",
+                       "chain depth (log scale)",
+                       f"{task_label}: relaxed score vs depth "
+                       f"(dotted: {REF_THRESHOLD} reference)")
 
 
 def fig_chain_depth(records, out_dir):
@@ -1307,23 +1344,27 @@ def fig_chain_depth(records, out_dir):
 
 
 def fig_chain_nowrap(records, out_dir):
-    return _fig_chain(records, out_dir, "chain_nowrap", "chain_nowrap")
+    return _fig_chain(records, out_dir, "chain_nowrap",
+                      "chain_nowrap (staircase k=2d+1)")
 
 
-ZB_GROUPS = [  # (bar label, length, leg) — headline zero-budget cells in ladder
-    # order (binding/state tracking before composite/composition); "replicate"
-    # also matches the pre-F6 leg name end_to_end (REPLICATE_LEG_ALIASES)
-    ("binding_only L16", 16, "binding_only"),
-    ("composite L16", 16, None),
-    ("composite L64", 64, None),
+ZB_GROUPS = [  # (bar label, length, leg) — the composition figure's cells: the
+    # state-tracking leg before the composed cells (the leg-vs-composed delta is
+    # the composition gap); "replicate" also matches the pre-F6 leg name
+    # end_to_end (REPLICATE_LEG_ALIASES)
+    ("state tracking (binding_only) L16", 16, "binding_only"),
+    ("composed L16", 16, None),
+    ("composed L64", 64, None),
     ("replicate L16 (test-retest)", 16, "replicate"),
 ]
 
 
 def fig_zero_budget(records, out_dir):
-    # Like the headline table, the figure shows the LATEST zero-budget task's
-    # cells only (canonical rungs — breadth-rung cells are separate arms); an
-    # archived task's cells stay in the per-cell tables.
+    """The composition figure: component leg (state tracking), composed cells and
+    the per-model composition gap annotation, instant regime. Like the headline
+    table it shows the LATEST zero-budget task's cells only (canonical rungs —
+    breadth-rung cells are separate arms); an archived task's cells stay in the
+    per-cell tables."""
     zb_task = zb_latest_task(records)
     cells = [r for r in by_facet(records, "zero_budget")
              if r.get("task") == zb_task and canonical_arm(r)]
@@ -1365,20 +1406,37 @@ def fig_zero_budget(records, out_dir):
                                   rect.get_height()),
                             textcoords="offset points", xytext=(0, 8),
                             ha="center", fontsize=9, color="#333333")
+    # gap annotation just above each model's bars: binding_only@L16 -
+    # composed@L16 (the composition deficit, the headline statistic)
+    for i, m in enumerate(models):
+        bind = zero_budget_cell(records, m, 16, "binding_only", task=zb_task)
+        comp = zero_budget_cell(records, m, 16, None, task=zb_task)
+        if bind is None or comp is None:
+            continue
+        vb, vc = canonical_relaxed(bind), canonical_relaxed(comp)
+        if vb is None or vc is None:
+            continue
+        tops = [_ci(r)[1] for r in (zero_budget_cell(records, m, L, leg, task=zb_task)
+                                    for _, L, leg in ZB_GROUPS) if r is not None]
+        ax.annotate(f"gap {vb - vc:+.2f}", (i, max(tops) + 0.03), ha="center",
+                    fontsize=6.5, color="#333333")
     ax.set_xticks(range(len(models)),
                   [m + zb_model_marks(records, m, task=zb_task) for m in models],
                   fontsize=6.5, rotation=20, ha="right")
     ax.set_ylabel("relaxed accuracy")
-    ax.set_title(f"Zero budget: {zb_task}, reasoning off, one-line answer contract")
+    ax.set_title(f"Composition (instant): {zb_task}, reasoning off, "
+                 "one-line answer contract", fontsize=10)
     _style_axes(ax)
+    ax.set_ylim(-0.03, 1.14)  # _style_axes resets ylim; keep annotation headroom
     ax.legend(fontsize=7, loc="upper right", frameon=False)
-    fig.text(0.01, 0.03,
-             "canonical first-attempt values (escalated reruns are table diagnostics); "
+    fig.text(0.01, 0.05,
+             "gap = state tracking (binding_only) - composed @L16; canonical "
+             "first-attempt values (escalated reruns are table diagnostics);\n"
              "hatched / *: off-arm ran effort=minimal; †: visible working on the "
-             "canonical attempt; ‡: cap-escape; sorted by composite @L64",
+             "canonical attempt; ‡: cap-escape; sorted by composed @L64",
              fontsize=7, color="#555555")
     _caption(fig, cells)
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    fig.tight_layout(rect=(0, 0.10, 1, 1))
     return _save(fig, out_dir, "fig_zero_budget")
 
 
@@ -1416,7 +1474,7 @@ def fig_decomposition(records, out_dir):
     return _save(fig, out_dir, "fig_decomposition")
 
 
-FIGURES = [fig_zero_budget, fig_dose_response, fig_composite_length, fig_s5_horizon,
+FIGURES = [fig_zero_budget, fig_dose_response, fig_composite_length, fig_s5_stress,
            fig_chain_depth, fig_chain_nowrap, fig_decomposition]
 
 
@@ -1545,16 +1603,16 @@ def write_index_html(records, out_dir, svg_paths, history_path):
 <p class="small">Generated {now} from <code>{html.escape(os.path.basename(history_path))}</code>
 ({len(records)} latest cells). Canonical metric: <strong>relaxed</strong> match;
 exact / contains / last_n are diagnostics. Intervals: Wilson 95% CI.
-Horizons: max length/depth with relaxed &ge; {HORIZON_THRESHOLD}.
-Chain horizons come from the <code>chain_nowrap</code> facet only: <code>chain_v1</code> builds a
+The chain column reads the <code>chain_nowrap</code> facet only (staircase k=2d+1, so the
+d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}): <code>chain_v1</code> builds a
 single k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths &lt; k
 (<code>factworld/tasks.py</code> design gate), so <code>chain_depth</code> cells at depth &ge;
 {CHAIN_CYCLE_K} wrapped the cycle, measure the wrapped task rather than depth, and are marked
 {html.escape(CHAIN_INVALID_MARK)} below and excluded from the chain figure.</p>
 <h2>Headline (current roster)</h2>
 <p class="small">Current roster only (factworld.benchmark.MODELS); models dropped from the
-roster render in the archived-models section below. {html.escape(LADDER_NOTE)}</p>
-<p class="small">Zero-budget (instant) cells: task <strong>{html.escape(zb_task or "n/a")}</strong>
+roster render in the archived-models section below. {html.escape(COMPOSITION_NOTE)}</p>
+<p class="small">Instant cells: task <strong>{html.escape(zb_task or "n/a")}</strong>
 with reasoning off (effort=none) under a one-line answer contract (settings.contract=true);
 relaxed match. Escalated cells show the CANONICAL first attempt at the shared base budget,
 with the escalated rerun as a parenthesised diagnostic.
@@ -1562,8 +1620,9 @@ with the escalated rerun as a parenthesised diagnostic.
 {_html_table(headline_cols, head_rows, groups=HEADLINE_GROUPS)}
 <p class="small">{html.escape(FLOOR_NOTE)}</p>
 <p class="small">{"<br>".join(html.escape(n) for n in ZB_FOOTNOTES)}<br>
+{html.escape(GAP_NOTE)}<br>
 {html.escape(replicate_note(records))}<br>
-{html.escape(HORIZON_NOTE)}<br>
+{html.escape(CENSOR_NOTE)}<br>
 {html.escape(EFFICIENCY_NOTE)}</p>
 {dropped_html}
 {archived_html}

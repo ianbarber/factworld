@@ -5,12 +5,13 @@ Builds a synthetic history fixture that conforms EXACTLY to the C3 record contra
 with contract diagnostics / escalation and the chain_nowrap staircase, x 3 fake
 roster models plus one model dropped from the roster, and sanity/floor rows),
 renders it into a temp directory, and checks every artefact: PNG magic bytes, SVG
-XML validity, HTML table content, CSV shape, the capability-ladder headline
+XML validity, HTML table content, CSV shape, the composition headline
 (current roster only, instant/thinking regime grouping, escalated-canonical
-values, recalibrated † daggers, budget-censored horizons, ‡ cap-escape, the
-replicate/test-retest column, the recency-heuristic + object-filter floor rows,
-s5@128 ctok, n/a-vs-—, finish_errors), the archived-models section, and the
-latest-record-wins dedup rule.
+values, recalibrated † daggers, the composition gap and replicate-noise columns,
+the thinking state-stress scores with '⊘ >budget' censoring, ‡ cap-escape,
+the recency-heuristic + object-filter floor rows, s5@128 ctok, n/a-vs-—,
+finish_errors), the archived-models section, and the latest-record-wins dedup
+rule.
 
 RB.CURRENT_ROSTER is patched to the fixture roster (the real one is
 factworld.benchmark.MODELS): the headline shows roster models only and
@@ -176,12 +177,18 @@ def make_fixture_history(path):
                 recs.append(_record(model, "composite_length", "composite_copy_v1", L, 30,
                                     round(acc, 2), effort=eff))
         # Facet 3: s5_concrete with reasoning (includes the L128 matched
-        # efficiency cell — reasoning-on models spend 900 ctok/call, model-c 8).
+        # efficiency cell — reasoning-on models spend 900 ctok/call, model-c 8;
+        # model-b's L256 state-stress cell is majority finish=length -> the
+        # headline renders it '⊘ >budget', not a number).
         for j, L in enumerate([4, 16, 32, 64, 128, 256]):
             acc = max(0.0, min(1.0, base + 0.1 - 0.16 * j))
+            kw = {}
+            if tier == "cheap_reasoner" and L == 256:
+                kw.update(finish_reasons={"length": 20, "stop": 10},
+                          ex_finish="length")
             recs.append(_record(model, "s5_concrete", "s5", L, 30, round(acc, 2),
                                 effort="high" if tier != "non_reasoning" else None,
-                                rendering="concrete"))
+                                rendering="concrete", **kw))
         # Facet 4: chain_depth with reasoning.
         for j, D in enumerate([4, 8, 12, 16, 24, 32, 48]):
             acc = max(0.0, min(1.0, base + 0.15 - 0.14 * j))
@@ -219,11 +226,12 @@ def make_fixture_history(path):
                     kw.update(ex_ctok=60)
             recs.append(_record(model, "zero_budget", "composite_copy_v1", L, 100,
                                 round(max(0.05, min(1.0, acc)), 2), **kw))
-        # Facet 7 (v2): chain_nowrap staircase — model-a stays >= 0.8 at the max
-        # tested depth (censored horizon ">=128"); model-b passes 16 and its FIRST
-        # failing cell (d32) is majority finish=length (budget-censored horizon,
-        # plus one per-example finish=error with api_errors=0) while d128 escapes
-        # the token cap (per-example ctok 9000 > 8192 -> ‡); model-c never passes.
+        # Facet 7 (v2): chain_nowrap staircase (k=2d+1, so d128 is the k=257
+        # state-stress cell) — model-a scores 0.96 at d128; model-b's d32 is
+        # majority finish=length (plus one per-example finish=error with
+        # api_errors=0) and its d128 escapes the token cap (per-example ctok
+        # 9000 > 8192 -> ‡, score 0.13‡); model-c's d128 is majority
+        # finish=length -> the headline renders '⊘ >budget', not a number.
         for j, D in enumerate([16, 32, 64, 128]):
             drop = 0.03 if tier == "frontier_pair" else 0.25
             acc = max(0.0, min(1.0, base + 0.1 - drop * j))
@@ -234,6 +242,9 @@ def make_fixture_history(path):
                           ex_finish="length", n_error_examples=1)
             if tier == "cheap_reasoner" and D == 128:
                 kw.update(ex_ctok=9000)
+            if tier == "non_reasoning" and D == 128:
+                kw.update(finish_reasons={"length": 15, "stop": 10},
+                          ex_finish="length")
             recs.append(_record(model, "chain_nowrap", "chain_v1", D, 25,
                                 round(acc, 2), **kw))
         # Sanity rows + floor control (s5 abstract token rendering, reasoning off).
@@ -301,9 +312,10 @@ def test_headline_scalars():
     # model-c has no high arm -> falls back to best arm.
     _, eff_c = RB.headline_dose_response(recs, "testlab/model-c")
     assert eff_c == "default"
-    # Horizons respect the 0.8 threshold and ignore the abstract floor row.
-    s5 = RB.headline_horizon(recs, "s5_concrete", "testlab/model-a")
-    assert s5 in (4, 16, 32, 64, 128, 256)
+    # State-stress lookups hit the named cell and ignore the abstract floor row.
+    s5 = RB.stress_cell(recs, "s5_concrete", "testlab/model-a", 256)
+    assert s5 is not None and s5["settings"]["rendering"] == "concrete"
+    assert RB.stress_cell(recs, "s5_concrete", "testlab/model-a", 999) is None
     legs = RB.headline_decomposition(recs, "testlab/model-b")
     assert set(legs) == {"binding_only", "end_to_end", "scaffolded"}
     assert all(v is not None for v in legs.values())
@@ -360,52 +372,43 @@ def test_zero_budget_marks():
     assert RB.zb_value_str(None) == "n/a"
 
 
-def test_horizons_censoring():
-    """F4: >=N when the max tested length qualifies; '>=N (budget-censored)' when
-    the FIRST failing cell above N is majority finish=length; '—' tested-and-failed;
-    'n/a' never run."""
+def test_stress_scores_and_censoring():
+    """Thinking state-stress cells render plain scores at the named settings
+    (chain d128 = staircase k=257, s5 @L256); a majority-finish=length cell
+    renders '⊘ >budget' (not measurable at this budget — never a number);
+    ‡ propagates on cap-escaping cells; 'n/a' when the cell never ran."""
     if not HAS_MPL:
         return
     recs = _fixture_records()
-    assert RB._horizon_str(recs, "chain_nowrap", "testlab/model-a") == ">=128"
-    assert (RB._horizon_str(recs, "chain_nowrap", "testlab/model-b")
-            == ">=16 (budget-censored)")
-    assert RB._horizon_str(recs, "chain_nowrap", "testlab/model-c") == "—"
-    assert RB._horizon_str(recs, "chain_nowrap", ARCHIVED_MODEL) == "n/a"
-    h, kind = RB.headline_horizon_censored(recs, "chain_nowrap", "testlab/model-b")
-    assert (h, kind) == (16, "budget")
-    h, kind = RB.headline_horizon_censored(recs, "chain_nowrap", "testlab/model-a")
-    assert (h, kind) == (128, "tested")
+    assert RB.CHAIN_STRESS_K == 257  # staircase k=2d+1 at d128
+    chain = lambda m: RB.stress_value_str(
+        RB.stress_cell(recs, "chain_nowrap", m, RB.CHAIN_STRESS_DEPTH))
+    s5 = lambda m: RB.stress_value_str(
+        RB.stress_cell(recs, "s5_concrete", m, RB.S5_STRESS_LENGTH))
+    assert chain("testlab/model-a") == "0.96"
+    assert chain("testlab/model-b") == "0.13‡"      # cap-escape mark propagates
+    assert chain("testlab/model-c") == "⊘ >budget"  # majority finish=length
+    assert chain(ARCHIVED_MODEL) == "n/a"           # facet never run
+    assert s5("testlab/model-a") == "0.25"
+    assert s5("testlab/model-b") == "⊘ >budget"
+    assert s5("testlab/model-c") == "0.00"
+    assert RB.stress_value_str(None) == "n/a"
 
 
-def test_horizon_borderline():
-    """A definite horizon is marked (borderline) when the first failing cell's
-    Wilson CI crosses the 0.8 threshold (e.g. 0.72 on n=25 -> [0.52, 0.86]),
-    and stays unmarked when the CI is resolved below the line (0.64 -> hi 0.7975)."""
+def test_composition_gap_and_replicate_noise():
+    """THE headline statistic: gap = binding_only@L16 - composed@L16, rendered
+    +0.NN with the input cells' marks propagated; replicate noise = per-model
+    |composed - replicate| @L16 rendered ±0.NN; 'n/a' when a cell never ran."""
     if not HAS_MPL:
         return
-    with tempfile.TemporaryDirectory() as tmp:
-        path = os.path.join(tmp, "history.jsonl")
-        rows = [
-            _record("testlab/model-d", "chain_nowrap", "chain_v1", 16, 25, 1.00,
-                    effort="high"),
-            _record("testlab/model-d", "chain_nowrap", "chain_v1", 32, 25, 0.72,
-                    effort="high"),  # CI [0.52, 0.86] crosses 0.8
-            _record("testlab/model-e", "chain_nowrap", "chain_v1", 16, 25, 1.00,
-                    effort="high"),
-            _record("testlab/model-e", "chain_nowrap", "chain_v1", 32, 25, 0.64,
-                    effort="high"),  # CI hi 0.7975 < 0.8 -> resolved
-        ]
-        with open(path, "w") as fh:
-            for r in rows:
-                fh.write(json.dumps(r) + "\n")
-        recs = RB.load_latest(path)
-    assert RB.headline_horizon_censored(recs, "chain_nowrap", "testlab/model-d") \
-        == (16, "borderline")
-    assert RB._horizon_str(recs, "chain_nowrap", "testlab/model-d") == "16 (borderline)"
-    assert RB.headline_horizon_censored(recs, "chain_nowrap", "testlab/model-e") \
-        == (16, None)
-    assert RB._horizon_str(recs, "chain_nowrap", "testlab/model-e") == "16"
+    recs = _fixture_records()
+    assert RB.composition_gap_str(recs, "testlab/model-a") == "+0.15"
+    assert RB.composition_gap_str(recs, "testlab/model-b") == "+0.15†"  # † inputs
+    assert RB.composition_gap_str(recs, "testlab/model-c") == "+0.15*"  # minimal
+    assert RB.composition_gap_str(recs, ARCHIVED_MODEL) == "n/a"
+    assert RB.model_replicate_noise_str(recs, "testlab/model-a") == "±0.05"
+    assert RB.model_replicate_noise_str(recs, "testlab/model-c") == "±0.05"
+    assert RB.model_replicate_noise_str(recs, ARCHIVED_MODEL) == "n/a"
 
 
 def test_cap_escape_and_finish_errors():
@@ -473,11 +476,11 @@ def test_recency_heuristic():
     assert abs(vals["binding_16"] - 0.34) < 1e-9
     recs = _fixture_records()
     assert RB.zb_latest_task(recs) == "composite_copy_v1"
-    # ladder order: [label, recall —, binding@16, composite@16, composite@64,
-    # replicate@16 (== composite@16), chain —, s5 —, ctok —]
+    # headline order: [label, recall —, binding@16, composed@16, composed@64,
+    # gap —, replicate noise —, chain —, s5 —, ctok —]
     row = RB.heuristic_row(recs)
     assert row == [RB.heuristic_label("composite_copy_v1"),
-                   "—", "0.34", "0.34", "0.21", "0.34", "—", "—", "—"]
+                   "—", "0.34", "0.34", "0.21", "—", "—", "—", "—", "—"]
     # an unknown task (e.g. v2-task records rendered against an older factworld)
     # degrades to no floor row rather than a wrong-task floor
     assert RB.recency_heuristic("composite_copy_v999", 100) is None
@@ -522,11 +525,11 @@ def test_object_filter_floor():
     # unknown task degrades to no floor row rather than a wrong-task floor
     assert RB.object_filter_floor("composite_copy_v999", 100) is None
     # fixture history is v1-task: the row is labelled with the records' task and
-    # fills the ladder's zero-budget columns only
+    # fills the instant score columns only
     recs = _fixture_records()
     assert RB.object_filter_row(recs) == [
         RB.object_filter_label("composite_copy_v1"),
-        "—", "0.29", "0.29", "0.07", "0.29", "—", "—", "—"]
+        "—", "0.29", "0.29", "0.07", "—", "—", "—", "—", "—"]
     import factworld.tasks as TK
     if ("composite_copy_v2" not in TK.CANONICAL
             and "composite_copy_v2" not in getattr(TK, "RETIRED", {})):
@@ -576,7 +579,7 @@ def test_zero_budget_task_versioning():
 
         assert RB.zb_latest_task(recs) == "composite_copy_v2"
         assert RB.headline_columns("composite_copy_v2")[3] == \
-            "instant: zero-budget composite @L16 (composition, relaxed, v2)"
+            "instant: composed @L16 (relaxed, v2)"
         # v1 and v2 cells coexist in the latest records (task is in the dedup key)
         zb_tasks = {r.get("task") for r in RB.by_facet(recs, "zero_budget")}
         assert zb_tasks == {"composite_copy_v1", "composite_copy_v2"}
@@ -590,15 +593,18 @@ def test_zero_budget_task_versioning():
         rep_v1 = RB.zero_budget_cell(recs, "testlab/model-a", 16, "replicate",
                                      task="composite_copy_v1")
         assert rep_v1["settings"]["leg"] == "end_to_end"  # pre-F6 name still found
-        # headline (ladder order: model, recall, binding, c@16, c@64, replicate,
-        # chain, s5, ctok): model-a publishes the v2 records; model-b (v1-task
-        # only) is n/a
+        # headline (order: model, recall, binding, composed@16, composed@64,
+        # gap, replicate noise, chain, s5, ctok): model-a publishes the v2
+        # records; model-b (v1-task only) is n/a
         rows = RB.headline_rows(recs)
         row_a = next(r for r in rows if r[0].startswith("testlab/model-a"))
         assert row_a[2] == "0.85" and row_a[3] == "0.30"
-        assert row_a[4] == "0.10" and row_a[5] == "0.28"
+        assert row_a[4] == "0.10"
+        assert row_a[5] == "+0.55"   # gap = binding 0.85 - composed 0.30
+        assert row_a[6] == "±0.02"   # |composed 0.30 - replicate 0.28|
         row_b = next(r for r in rows if r[0].startswith("testlab/model-b"))
         assert row_b[3] == "n/a" and row_b[4] == "n/a"
+        assert row_b[5] == "n/a" and row_b[6] == "n/a"
         note = RB._zb_mixed_task_note(recs, "composite_copy_v2")
         assert "composite_copy_v1" in note and "latest task" in note
         # replicate noise pairs within the latest task only: |0.30 - 0.28|
@@ -619,7 +625,7 @@ def test_zero_budget_task_versioning():
         with open(os.path.join(out, "results.md"), encoding="utf-8") as fh:
             md = fh.read()
         assert "task **composite_copy_v2**" in md
-        assert "instant: zero-budget composite @L16 (composition, relaxed, v2)" in md
+        assert "instant: composed @L16 (relaxed, v2)" in md
         assert "use the latest task's records (composite_copy_v2)" in md
         full = md[md.index("## Full per-cell results"):]
         assert "| zero_budget | composite_copy_v1 |" in full   # archived cells kept
@@ -630,7 +636,7 @@ def test_breadth_and_k_fixed_arms():
     """v3 rung settings keys: cells carrying settings.breadth (pool rung) or
     settings.k_fixed (fixed-breadth chain) are SEPARATE arms — own dedup key,
     B=/k_fixed= arm labels, excluded from the canonical headline lookups,
-    horizons and (via canonical_arm) figures — and history renders the
+    stress columns and (via canonical_arm) figures — and history renders the
     per-(m,L) breadth floor note."""
     if not HAS_MPL:
         return
@@ -667,10 +673,11 @@ def test_breadth_and_k_fixed_arms():
         cell = RB.zero_budget_cell(recs, "testlab/model-a", 16, None,
                                    task="composite_copy_v2")
         assert cell["metrics"]["relaxed"] == 0.60
-        # ...and the passing d128 fixed-k cell must not stretch the staircase
-        # horizon (chain_nowrap canonical arms top out at the passing d16)
-        assert RB.headline_horizon_censored(recs, "chain_nowrap", "testlab/model-a") \
-            == (16, "tested")
+        # ...and the d128 fixed-k cell must not feed the headline chain column
+        # (stress_cell reads canonical staircase arms only -> n/a at d128)
+        assert RB.stress_cell(recs, "chain_nowrap", "testlab/model-a",
+                              RB.CHAIN_STRESS_DEPTH) is None
+        assert RB.stress_cell(recs, "chain_nowrap", "testlab/model-a", 16) is not None
         # full render: rung rows stay in the per-cell tables, labelled, with the
         # per-(m, L) floor note
         out = os.path.join(tmp, "out")
@@ -777,11 +784,12 @@ def test_render_end_to_end():
         # regime grouping header row + roster split + floor note mirror in HTML
         assert "Archived models (dropped from the roster)" in page
         assert "v1 archived facets (pre-redesign)" in page
-        assert '<th colspan="5">instant (no thinking)</th>' in page
+        assert '<th colspan="6">instant (reasoning off, answer contract)</th>' in page
         assert '<th colspan="3">thinking</th>' in page
-        assert "capability ladder" in page
+        assert "composition instrument" in page
         assert "object-filter floor" in page
         assert "Read small-L zero-budget cells against the object-filter floor" in page
+        assert "horizon" not in page.lower()  # banned vocabulary
 
         # Markdown has the five sections and relaxed listed before diagnostics metrics.
         with open(os.path.join(out, "results.md"), encoding="utf-8") as fh:
@@ -793,35 +801,40 @@ def test_render_end_to_end():
             assert section in md
         assert md.index("relaxed") < md.index("exact")
 
-        # Ladder headline: regime-prefixed columns in recall -> state tracking ->
-        # composition -> chain depth -> long-horizon state order (with the
-        # replicate/test-retest relabel and the task-version tag read from the
-        # records — this fixture is a v1-task history), cleanliness marks +
-        # footnotes, censoring, and the s5@128 ctok column.
+        # Composition headline: regime-prefixed columns — recall (sanity), state
+        # tracking, composed @L16/@L64, the composition gap, replicate noise,
+        # then the thinking state-stress scores at named settings (with the
+        # task-version tag read from the records — this fixture is a v1-task
+        # history), cleanliness marks + footnotes, ⊘ censoring, s5@128 ctok.
         cols = RB.headline_columns("composite_copy_v1")
         assert cols == [
             "Model",
             "instant: recall (sanity, recall_copy_v1)",
-            "instant: binding_only @L16 (state tracking, v1)",
-            "instant: zero-budget composite @L16 (composition, relaxed, v1)",
-            "instant: zero-budget composite @L64 (v1)",
-            "instant: replicate @L16 (test-retest, v1)",
-            "thinking: chain horizon (chain_nowrap, max depth, relaxed >= 0.8)",
-            "thinking: s5 horizon (long-horizon state, max L, relaxed >= 0.8)",
+            "instant: state tracking (binding_only @L16, v1)",
+            "instant: composed @L16 (relaxed, v1)",
+            "instant: composed @L64 (v1)",
+            "instant: composition gap (binding_only - composed @L16)",
+            "instant: replicate noise (|composed - replicate| @L16)",
+            "thinking: chain d128 (chain_nowrap, k=257, relaxed)",
+            "thinking: s5 @L256 (s5_concrete, relaxed)",
             "thinking: s5@128 ctok",
         ]
         for col in cols:
             assert col in md, f"missing headline column {col!r}"
         assert "task **composite_copy_v1**" in md  # headline names the zb task
-        assert "capability ladder" in md           # regime/ladder framing note
+        assert "composition instrument" in md      # two-regime framing note
+        assert "composition deficit" in md         # the gap footnote
         assert "end_to_end @L16" not in md.split("## Diagnostics per cell")[0]
         assert "off-arm ran effort=minimal" in md
         assert "visible working on the canonical attempt" in md
         assert "cap-escape" in md
-        assert ">=128" in md                       # model-a's censored chain horizon
-        assert ">=16 (budget-censored)" in md      # model-b's from-below censoring
+        assert "⊘ >budget" in md                   # censored state-stress cells
+        assert "not measurable at this budget" in md
         assert "run-to-run noise bar" in md        # replicate noise note (max 0.05)
         assert "0.05" in md
+        # banned vocabulary is gone from every label, note and footnote
+        for word in ("horizon", "wall", "knee", "cliff"):
+            assert word not in md.lower(), f"banned word {word!r} in results.md"
         head = md[md.index("## Headline"):
                   md.index("## Archived models (dropped from the roster)")]
         # 'dose' terminology is purged from all active labels/prose (the historical
@@ -898,7 +911,9 @@ def test_render_end_to_end():
 if __name__ == "__main__":
     for fn in [test_wilson_interval, test_latest_record_wins, test_headline_scalars,
                test_escalated_canonical, test_zero_budget_marks,
-               test_horizons_censoring, test_cap_escape_and_finish_errors,
+               test_stress_scores_and_censoring,
+               test_composition_gap_and_replicate_noise,
+               test_cap_escape_and_finish_errors,
                test_efficiency_matched_cell, test_replicate_noise,
                test_recency_heuristic, test_recency_heuristic_v2_floor_near_chance,
                test_object_filter_floor, test_zero_budget_task_versioning,
