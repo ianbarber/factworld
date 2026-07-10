@@ -1,20 +1,18 @@
 # FactWorld
 
-**Evaluate your own model on a recall × state-tracking × composition benchmark in three commands.**
+**A composition instrument: recall and state tracking, measured independently and composed —
+identically for frontier API models and local from-scratch models.**
 
-> **Refactored to a single natural-language format.** The benchmark renders clean natural
-> language (attached punctuation, one fixed phrasing per statement type — see
-> `factworld/render.py`); the earlier atomic-token format and its papers are archived under
-> [`phases/`](phases/). All headline numbers below are on the natural format (OpenRouter grid +
-> local multi-seed sweeps in `results/`). The autoregressive / test-time-compute experiment and
-> its decomposition (binding vs recall vs routing) is written up in
-> [`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
-
-FactWorld is a synthetic, oracle-validated evaluation instrument. Every task is a
-frozen, versioned ``TaskSpec`` with deterministic examples and one canonical
-metric — **relaxed match** of the answer span (strip trailing punctuation and score the first
-`len(gold)` tokens). Gold answers come from a symbolic **oracle**, never from parsing rendered
-text, so labels cannot leak. A validity gate certifies that no shallow baseline clears floor.
+Recall is well tested by MQAR; state tracking by the S₅ word-problem literature. FactWorld tests
+both, independently *and* in composition, under one protocol for frontier models over an API and
+for small models trained from scratch — so it can place a new frontier model *and* attribute
+capabilities to architectural and training choices. Tasks render as natural language (so
+pretrained models can take them) over a constrained vocabulary (so small-scale experiments can
+too). Every task is a frozen, versioned ``TaskSpec`` with deterministic examples; gold answers
+come from a symbolic **oracle**, never from parsing rendered text, so labels cannot leak; a
+validity gate certifies that no shallow baseline clears floor. The canonical metric is **relaxed
+match** of the answer span (exact / containment / last-*n* are diagnostics). The canonical story
+is anchored in [`AGENTS.md`](AGENTS.md).
 
 > **What this is — and isn't.** FactWorld is a **mechanism probe for the component capabilities that
 > agent workloads depend on** — working-memory recall, state tracking, and multi-step composition —
@@ -25,50 +23,156 @@ text, so labels cannot leak. A validity gate certifies that no shallow baseline 
 > the explicit agentic-behavior gap (tool use, multi-turn carry-over) is tracked separately in
 > [#6](https://github.com/ianbarber/factworld/issues/6).
 
-You can evaluate any model that can continue a prompt: OpenAI-compatible APIs
-(vLLM, ollama, OpenAI), HuggingFace ``transformers``, a tiny model trained
-from-scratch locally, or your own Python callable.
+Evaluate any model that can continue a prompt — OpenAI-compatible APIs (vLLM, ollama, OpenAI),
+HuggingFace ``transformers``, a tiny model trained from scratch locally, or your own Python
+callable — in three commands:
 
 ```bash
 # API fair eval for reasoning models (2048 tokens, no early stop)
-python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50 --no_stop
+python scripts/eval_model.py composite_copy_v2 --backend api --model gpt-4o-mini --n 50 --no_stop
 
 # HuggingFace
-python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
+python scripts/eval_model.py composite_copy_v2 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
 
 # Train a local model from scratch
-python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
+python scripts/run_benchmark.py composite_copy_v2 --arch gdp_hybrid --d_model 320 --steps 8000
 ```
 
 > **Composite-format note:** the API and HuggingFace backends automatically append
-> an output-format instruction for ``composite_copy_v1`` and ``composite_v1`` so
-> chat models emit the required ``<holder> <value> .`` answer span. Use
+> an output-format instruction for composite-family tasks (e.g. ``composite_copy_v2``)
+> so chat models emit the required ``<holder> <value> .`` answer span. Use
 > ``--no-composite-format`` to disable it (e.g. for ablations).
 
-📄 **Prior tech reports (archived in [`phases/`](phases/)):** these ran on the earlier
-atomic-token format; the benchmark now renders clean natural language.
-- [`phases/01-instrument/factworld.md`](phases/01-instrument/factworld.md) — *FactWorld: An
-  Oracle-Validated Instrument for Composing Recall, State-Tracking, and Knowledge.*
-- [`phases/02-non-abelian-state/report.md`](phases/02-non-abelian-state/report.md) — *FactWorld:
-  A Recipe for Length-Generalizing Non-Abelian State-Tracking* (+ reproduction kit,
-  [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md)).
+## The task suite
 
-The primary report on the natural-language format is
-[`reports/factworld-consolidated.md`](reports/factworld-consolidated.md). It treats FactWorld as
-one reproducible instrument for both frontier-model evaluation and local-architecture
-experimentation, with the API numbers and local multi-seed results.
+A frozen, versioned registry (``factworld.tasks.CANONICAL``). The taxonomy — components first,
+then their compositions:
 
-🧪 **Experiments using FactWorld as an RL/distillation testbed** live under
-[`experiments/`](experiments/):
-- [`experiments/mopd/`](experiments/mopd/README.md) — *Multi-teacher On-Policy Distillation*
+| | task | notes |
+|---|---|---|
+| **Component: recall** | `recall_copy_v1` | single-query, deferred-readout MQAR variant; pool breadth = load axis |
+| — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models); `conflict_v1` scores the in-context override |
+| **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates — not group ops) |
+| — non-abelian variant | `s5_v1` | order-sensitive permutation streams; length = sequence stress |
+| **Composition: state × recall** | `composite_copy_v2` | the two-hop; headline statistic = **gap** (binding − composed) |
+| **Composition: recall ∘ recall** | `chain_v1` | pointer chase; depth axis at fixed breadth (the no-wrap staircase builds k=2d+1) |
+
+Each axis tests a different thing: solve rate; pool/breadth (working-set load); depth/length
+(iteration count); regime (**instant** = reasoning off + answer contract = in-weights, vs
+**thinking** = generous budget); reasoning tokens needed to solve. Difficulty knobs are
+**calibration parameters** — used to place each model class mid-scale, never published as axes.
+
+**Retired** — the recency-defective v1 give-stream family (`binding_v1`,
+`binding_load_v1`, `composite_v1`, `composite_copy_v1`, `composite_copy_scale_v1`)
+lives in `tasks.RETIRED`: generable for historical reproduction, never scored
+([#11](https://github.com/ianbarber/factworld/issues/11)). Only `benchmark`-kind
+tasks are scored; the registry never presents confounded tasks as peers.
+
+Scale any task to stress larger models via explicit difficulty knobs:
+
+```python
+hard = CANONICAL["composite_copy_v2"].scaled(k=64, eval_lengths=(32, 64, 128))
+```
+
+## The thesis: no element is free
+
+Each element of the composition is paid for by an architectural or training choice. Current price
+table (local evidence; two rows remain open):
+
+| element | price | evidence |
+|---|---|---|
+| adjacent (1-hop) recall | attention — every architecture aces adjacent readout | [consolidated §3](reports/factworld-consolidated.md) |
+| deferred recall | product recurrence — the transformer aces adjacent, fails deferred (0.19 vs gdp_hybrid 0.73) | consolidated §3; archived provenance [phases/01 §3.2](phases/01-instrument/factworld.md) |
+| last-write state | recurrence, ordered by form — fprm (product recurrence) 1.00 @B6 on the binding leg, over gdp_hybrid (0.56) over transformer (0.23); fprm is first to break under breadth (B24), where only the gated hybrid holds | [frontier benchmark, local regime](reports/frontier-benchmark.md) |
+| non-abelian state (formation) | dense per-step supervision — a state checkpoint every ≤2 events; architecture-independent | [consolidated §8](reports/factworld-consolidated.md); [experiments §1](docs/experiments/README.md); archived provenance [phases/02 §4](phases/02-non-abelian-state/report.md) |
+| non-abelian state (length extrapolation) | recurrent hybrid — gdp_hybrid 0.75 @L64; fprm and transformer collapse past train length | [experiments §1](docs/experiments/README.md) |
+| depth extrapolation | **open** — no measured choice buys it: trained at chain depths 2–3, all three architectures read at or below the 1/6 guess at depths 4–5 | [frontier benchmark, local regime](reports/frontier-benchmark.md); [experiments §15](docs/experiments/README.md) |
+| local composition (value leg) | **open** — value ≤0.17 in all 45 breadth-sweep runs (at/below the 1/pool guess), even on binding-solved seeds of all three architectures | [frontier benchmark, local regime](reports/frontier-benchmark.md) |
+
+## The findings
+
+### 1. Frontier profiles (9 models, two regimes)
+
+Instant regime (reasoning off, one-line answer contract): the binding leg against the composed
+two-hop cell, floors as first-class rows. Relaxed match; marks in plain language — `*` cannot
+disable reasoning (off-arm ran effort=minimal), `†` visible working on the canonical attempt,
+`(x.xx @512)` escalated-budget diagnostic; full glossary in the
+[report](reports/frontier-benchmark.md).
+
+| Model | binding @L16 | composed @L16 | composed @L64 | gap @L16 |
+|---|---|---|---|---|
+| anthropic/claude-opus-4.8 | 0.78 | 0.72 | 0.43 | +0.06 |
+| anthropic/claude-sonnet-5 | 0.77 | 0.62 (0.76 @512)† | 0.32 (0.66 @512)† | +0.15† |
+| deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | +0.07 |
+| google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* |
+| moonshotai/kimi-k2.6 | 0.94† | 0.77† | 0.93† | +0.17† |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | +0.16 |
+| openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 |
+| qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | +0.27 |
+| z-ai/glm-5.2 | 0.70† | 0.35† | 0.16 | +0.35† |
+| *recency heuristic (floor)* | 0.04 | 0.04 | 0.06 | — |
+| *object-filter floor* | 0.41 | 0.41 | 0.15 | — |
+
+Recall is not the constraint: the scaffolded leg reads 0.98–1.00 for every model, and recall
+under load is at ceiling — pool-64 `recall_copy_v1` @L64 reads 1.00 for all nine (chance 0.016).
+The gap is the composition deficit.
+
+Thinking regime (effort=high, 16,384 tokens): two state-stress rows. `⊘` = majority
+finish=length, not measurable at this budget; `‡` = provider ignored the token cap.
+
+| Model | chain d128 (k=257) | s5 @L256 |
+|---|---|---|
+| anthropic/claude-opus-4.8 | 0.08 | ⊘ |
+| anthropic/claude-sonnet-5 | 0.04 | ⊘ |
+| deepseek/deepseek-v4-pro | ⊘ ‡ | ⊘ |
+| google/gemini-3.5-flash | 0.88 | 0.52 |
+| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 |
+| nvidia/nemotron-3-ultra-550b-a55b | ⊘ | ⊘ |
+| openai/gpt-5.5 | 0.36 | 0.96 |
+| qwen/qwen3.7-max | 0.96 | 0.80 |
+| z-ai/glm-5.2 | 0.36 | 0.88 |
+
+The instant and thinking rankings are near-orthogonal — opus and sonnet, the strongest clean
+instant composers, post the weakest measurable chain scores — so profiles are per-axis, never a
+single scalar. Depth also dissociates by regime within a single cell: chain d16 (k=33) floors
+instant for every model that answers cleanly (≤0.08 vs chance 0.03) and reads 0.44–1.00 with
+thinking on the same items. Full narrative: [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md);
+rendered tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchmark/results.md).
+
+### 2. Local attributions
+
+Which architecture or training choice buys which component, on the same tasks trained from
+scratch: product recurrence buys deferred recall and s5 length extrapolation, attention suffices
+only for adjacent readout ([consolidated §3](reports/factworld-consolidated.md)); the composed
+cell's failure localizes to the value leg at every scale
+([consolidated §5](reports/factworld-consolidated.md)); dense per-step supervision (every ≤2
+events) forms the non-abelian circuit on any architecture, and weaning keeps it label-free
+([consolidated §8](reports/factworld-consolidated.md)). The running experiment log is
+[`docs/experiments/README.md`](docs/experiments/README.md).
+
+## Reports and prior work
+
+- 📊 [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md) — the recurring frontier
+  benchmark (finding set 1): components, composed cells, floors, two regimes, protocol.
+- 📄 [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md) — the consolidated
+  natural-language-format report (finding set 2): local multi-seed results, per-leg
+  decomposition, supervision-density experiments, and the API reasoning analyses.
+- 🗂 **Prior tech reports (archived in [`phases/`](phases/); atomic-token format — mechanism
+  conclusions carry, absolute numbers do not):**
+  - [`phases/01-instrument/factworld.md`](phases/01-instrument/factworld.md) — cited for the
+    instrument's validity machinery: the oracle/no-leak render↔parse contract and the validity
+    gate that `scripts/validate_suite.py` continues.
+  - [`phases/02-non-abelian-state/report.md`](phases/02-non-abelian-state/report.md) — cited for
+    the s5 supervision-density and training-length-distribution levers, measured on the
+    atomic-token format (+ reproduction kit,
+    [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md); scoped to that hybrid and scale
+    regime, k=5 S₅, ≤357M).
+- 🧪 **Experiments using FactWorld as an RL/distillation testbed** live under
+  [`experiments/`](experiments/):
+  [`experiments/mopd/`](experiments/mopd/README.md) — *Multi-teacher On-Policy Distillation*
   (MOPD) on FactWorld: RL-specialise Qwen3-1.7B on two abilities (binding, recall) with a
   verifiable reward, then distil both into one model that holds both (LoRA adapters on a shared
   backbone). See [`REPRODUCE.md`](experiments/mopd/REPRODUCE.md).
-
-🔬 **Reproduction code for the non-abelian report:**
-[`phases/02-non-abelian-state/`](phases/02-non-abelian-state/) — every claim maps to one script;
-see [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md). Scoped to this hybrid and scale
-regime (k=5 S₅, ≤357M), not a claim about model scaling in general.
 
 ## Install
 
@@ -93,7 +197,7 @@ from factworld.backends import FunctionBackend
 from factworld.runner import evaluate_task
 from factworld.tasks import CANONICAL
 
-spec    = CANONICAL["composite_copy_v1"]    # binding × in-context-copy recall, in one query
+spec    = CANONICAL["composite_copy_v2"]    # binding × in-context-copy recall, in one query
 backend = FunctionBackend(
     lambda prompts, n, stop: ["g0 ."] * len(prompts),
     name="always-g0",
@@ -104,13 +208,13 @@ print(result["overall"])
 
 ```bash
 # API fair eval for reasoning models (2048 tokens, no early stop)
-python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --n 50 --no_stop
+python scripts/eval_model.py composite_copy_v2 --backend api --model gpt-4o-mini --n 50 --no_stop
 
 # HuggingFace
-python scripts/eval_model.py composite_copy_v1 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
+python scripts/eval_model.py composite_copy_v2 --backend hf --model meta-llama/Llama-2-7b-hf --n 50
 
 # Local from-scratch
-python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
+python scripts/run_benchmark.py composite_copy_v2 --arch gdp_hybrid --d_model 320 --steps 8000
 
 # Run a grid of OpenRouter models (set OPENROUTER_API_KEY)
 python scripts/eval_openrouter_grid.py --n 30
@@ -121,7 +225,7 @@ python scripts/eval_openrouter_grid.py \\
     --n 30 --composite_format --no_reasoning
 
 # Evaluate a local model and merge it into the OpenRouter table
-python scripts/eval_model.py composite_copy_v1 --backend local --arch gdn_hybrid \\
+python scripts/eval_model.py composite_copy_v2 --backend local --arch gdn_hybrid \\
     --d_model 320 --steps 8000 --n 50 --json_out results/local-gdn.json
 python scripts/merge_grid_results.py docs/openrouter-results.json results/local-gdn.json \\
     --out docs/combined-results.md
@@ -150,7 +254,7 @@ class MyBackend(ModelBackend):
         # Return one continuation per prompt, not including the prompt.
         return [my_model.complete(p, max_tokens=max_new_tokens) for p in prompts]
 
-spec = CANONICAL["composite_copy_v1"]
+spec = CANONICAL["composite_copy_v2"]
 result = evaluate_task(MyBackend(), spec, n=50)
 print(result["overall"])
 ```
@@ -166,201 +270,13 @@ backend = FunctionBackend(
     lambda prompts, n, stop: ["g0 ."] * len(prompts),
     name="always-g0",
 )
-result = evaluate_task(backend, CANONICAL["composite_copy_v1"], n=50)
+result = evaluate_task(backend, CANONICAL["composite_copy_v2"], n=50)
 print(result["overall"])
 ```
 
 See [`docs/USAGE.md`](docs/USAGE.md) for the full backend API reference, API
-cost tips, and a custom-backend example.
-
-## The task suite
-
-A frozen, versioned registry (``factworld.tasks.CANONICAL``) with one canonical
-metric — **relaxed match** of the answer span. Each task carries a ``kind``:
-
-**Scored** (``REPORTED``):
-
-| task | what it measures | difficulty axis |
-|---|---|---|
-| `recall_copy_v1` | genuine 1-of-N in-context-copy recall | distractor pool (binding load) |
-| `binding_v1` | last-write-wins state (the delta-rule axis) | give-stream length |
-| `composite_copy_v1` | binding × in-context-copy recall — the 2-hop composition probe | binding horizon |
-| `conflict_v1` | parametric ↔ in-context override (memorized map vs context) | pool size |
-| `chain_v1` | depth-*k* pointer chase | composition depth |
-
-**Controls** — `recall_v1`, `composite_v1` (memorized fixed-map versions; positive
-controls / binding isolation, degenerate as recall scores). **Experimental** —
-`s5_v1` (non-abelian S₅), `binding_load_v1` (large working set),
-`composite_copy_scale_v1` (the exact k=5 configuration used for the paper's §5
-scale result). Only `benchmark`-kind tasks are scored; the registry never
-presents confounded tasks as peers.
-
-Scale any task to stress larger models via explicit difficulty knobs:
-
-```python
-hard = CANONICAL["composite_copy_v1"].scaled(k=64, eval_lengths=(32, 64, 128))
-```
-
-## How the tasks get harder — and who solves them
-
-The suite is ordered by the *kind* of computation each task needs. The further down the table, the
-more the model must maintain latent state over a long stream. Concrete examples and real model
-mistakes are in [`docs/tasks.md`](docs/tasks.md).
-
-| task | what it measures | answer space (floor) | difficulty axis |
-| --- | --- | --- | --- |
-| `recall_copy_v1` | 1-of-N in-context-copy recall | k facts (~0.016) | distractor pool |
-| `conflict_v1` | parametric ↔ in-context override | k facts (~0.016) | memorized map vs. context |
-| `binding_v1` | last-write-wins state tracking | k roles (0.200) | give-stream length |
-| `composite_copy_v1` | binding × in-context recall | k² pairs (~0.031) | binding horizon |
-| `chain_v1` | depth-*k* pointer chase | k agents (~0.167) | composition depth |
-| `s5_v1` | S₅ role permutation | 5 roles (0.200) | permutation horizon |
-
-The numbers below are **relaxed match**, the canonical metric. The evaluation pipeline also
-reports exact, semantic-containment, and last-*n* scores to separate formatting artifacts from
-whether the model actually knows the answer.
-
-### Pretrained open models
-
-OpenRouter grid (n = 30, greedy decoding, **natural-language format**, output-format
-instructions appended for composite/s5). Full table in [`docs/openrouter/results-natural.md`](docs/openrouter/results-natural.md).
-
-`composite_copy_v1@L16` uses `max_new_tokens=2048`, no early stop, and **relaxed** match
-(strip trailing period, score the answer span) so reasoning models can finish their scratchpad
-and trailing-generation artifacts are treated consistently across API and local evals. The
-primary write-up is [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
-
-| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
-| --- | --- | --- | --- | --- | --- | --- |
-| glm-5.2 | 1.000 | 1.000 | **0.767** | 0.133 | **0.867** | 0.167 |
-| kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | 0.867 | 0.200 |
-| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | 0.767 | 0.167 |
-| gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.133 |
-| deepseek-chat | 1.000 | 1.000 | 0.333 | 0.033 | 0.167 | 0.133 |
-| gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.133 |
-| claude-3-haiku | 0.600 | 0.767 | 0.433 | 0.100 | 0.100 | 0.300 |
-
-Reading the ladder:
-
-- **Single-hop recall and conflict are easy.** Strong models sit at ceiling.
-- **Composition is format-gated and reasoning-bounded.** With enough tokens for reasoning,
-  glm-5.2, kimi-k2.6, and llama-3.3-70b all clear `composite_copy_v1`. The autoregressive
-  experiment below decomposes the residual failure: strong reasoners can do the binding leg
-  and the recall leg *separately* but fail to **route** the resolved holder into the recall
-  lookup without scaffolding.
-- **Depth stays at floor; non-abelian state is reasoning-movable under a concrete rendering.**
-  `chain_v1` floors for every pretrained model. `s5_v1` floors under the standard token rendering,
-  but a strong reasoner solves it under a concrete (people/jobs) rendering — glm-5.2 holds
-  0.93–1.00 from L4 to L32, then cliffs at L64 (Appendix A).
-
-**Autoregressive / test-time-compute experiment (E1b).** Format-fair leg-isolation on
-`composite_copy_v1@L16` (n=100) — full write-up in
-[`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md):
-
-| model | binding-only (holder leg) | scaffolded (recall given holder) |
-| --- | --- | --- |
-| kimi-k2.6 | **0.99** | 1.00 |
-| glm-5.2 | **0.98** | 1.00 |
-| deepseek-chat | 0.60 | 0.99 |
-| llama-3.3-70b | 0.34 | 0.93 |
-| gpt-4o-mini | 0.28 | 1.00 |
-
-Given the correct holder, every model recalls the value (0.93–1.00) — **recall is not the
-bottleneck**. Reasoning models (kimi/glm) also solve the **binding** leg in isolation (0.98–0.99).
-The residual failure in the end-to-end prompt is **routing** the resolved holder into the recall
-lookup: without an oracle-provided holder, the same models that recall perfectly when the holder is
-given still fail to produce the correct value. Explicit structured CoT does not fix this; in the
-format-fair ablation it drops the strong reasoners to ~0 (see
-[`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md)).
-Background reasoning effort, not explicit step-by-step prompting, is the inference-time lever that
-lifts end-to-end composition (kimi 0.22→0.98, glm 0.14→0.81).
-
-### Custom-trained recurrent models
-
-Local multi-seed sweep (natural-language format, d=256, 4 layers, 8k steps, 5 seeds, holder/value
-decomposition). Full table in [`results/sweep_main_*.md`](results/). `fprm` is a weight-tied looped
-conv+attention block (the architecture the external FPRM work motivates); `gdp_hybrid` is the
-`[recurrent, recurrent, attn, recurrent]` stack from `factworld/models.py`.
-
-**`binding_v1` (length extrapolation) — relaxed match mean±std / p(converge)**
-
-| arch | L16 | L32 | L64 |
-| --- | --- | --- | --- |
-| fprm | 1.00 / 100% | 0.97 / 100% | **0.94 / 100%** |
-| gdp_hybrid | 0.99 / 100% | 0.58 / 0% | 0.55 / 0% |
-| transformer | 0.45 / 0% | 0.35 / 0% | 0.33 / 0% |
-
-**`composite_copy_v1` (k=32) @L16 — relaxed match mean±std**
-
-Staged-curriculum recipe (d=768, 8 layers, 25k steps, 3 seeds); full write-up in
-[`reports/factworld-consolidated.md`](reports/factworld-consolidated.md) §5.
-
-| arch | composite_p16@L16 relaxed |
-| --- | --- |
-| gdp_hybrid | **0.747 ± 0.174** |
-| fprm | 0.253 ± 0.178 |
-| transformer | 0.005 ± 0.005 |
-
-Relaxed match is the fair cross-regime metric: it handles API models that omit the trailing
-period and local models that append extra tokens after the answer. The decomposition localizes the
-composition gap: every recurrent architecture solves the **holder** (binding) leg but fails the
-**value** (recall-of-the-resolved-holder) leg — the same routing wall the API models hit.
-
-**Trained scratchpad (E2, local) makes it worse.** Supervising the per-step oracle trace
-(`prompt→trace→answer`) on the staged curriculum collapses holder accuracy 0.96→0.14 and value
-accuracy 0.79→0.02 — the model emits a structured-but-wrong trace that compounds errors, the
-opposite of the API scaffolded result where the *oracle-provided* holder unlocks recall
-(0.93–1.00). See `results/curriculum_staged_d768_b64_80k_trace.md` and
-[`docs/experiments/autoregressive-api-results.md`](docs/experiments/autoregressive-api-results.md).
-
-**But the s5 / non-abelian wall is movable with the right supervision** (reproduced on the natural
-format, `scripts/experiment_dense_supervision.py`). Per-step state supervision every K events (guided
-free-run eval — events forced, holder/value slots generated):
-
-| K (stride) | value @L16 | value @L64 |
-| --- | --- | --- |
-| 1 (dense) | **1.00** | **0.75** |
-| 2 | 0.98 | 0.40 (bimodal) |
-| 4, 8 | ~0.20 | ~0.20 (floor) |
-
-Dense K=1 solves s5 in-distribution (1.00) and extrapolates to 4× the trained length (L64 = 0.75);
-K=2 is bimodal at L64 (0.40). The circuit fails to form below a checkpoint every ~2 events.
-**Inference-time compute (self-consistency, up to 30 votes) does not move the wall in either
-direction** — seeds with the circuit are already greedy-optimal; seeds without stay at the floor.
-The wall is in *learnability/supervision density*, not test-time compute — consistent with the API
-result that only an *oracle-provided* intermediate helps.
-
-The prior (atomic-token format) non-abelian recipe and its dense-supervision `s5_v1` results
-(0.94–0.99) are archived in [`phases/02-non-abelian-state/`](phases/02-non-abelian-state/).
-
-**External context.** Movahedi et al. (2026) report strong `s5_v1` length generalization with a
-looped-transformer architecture (FPRM) that uses a causal 1-D convolution / unroll-to-convergence
-mechanism. Our `fprm` implements a weight-tied variant of that block; on `binding_v1` it is the
-strongest length-extrapolator (0.94 @L64), but like every architecture it floors `s5_v1` under
-answer-only supervision.
-
-In short: the suite climbs from easy single-hop recall, through binding and composition, to
-non-abelian state tracking — solvable by strong reasoners under a concrete rendering up to a ~L64
-cliff. The dissociations (full write-up: [`docs/experiments/`](docs/experiments/), Appendix A):
-
-1. **Composition is movable by test-time compute** for strong reasoning models. A reasoning-effort
-   dose-response sweep shows composite value climbing with effort (kimi 0.22→0.98, glm 0.14→0.81);
-   given the output format, reasoners solve it. Non-reasoners floor. Explicit CoT prompting does
-   not help; background reasoning effort does.
-2. **Non-abelian state-tracking (s5) is movable by reasoning under a concrete rendering, with a
-   length cliff.** glm-5.2 solves `s5_v1` at 0.93–1.00 from L4 to L32 with reasoning plus a
-   concrete (people/jobs) rendering, then collapses at L64 (0.10). Neither reasoning under the
-   token rendering (~0.33) nor a concrete rendering without reasoning (~chance) suffices — the
-   combination does, up to the cliff.
-3. **For local from-scratch models, s5's lever is supervision density.** Dense per-step supervision
-   solves it (10/10 seeds at L16), the circuit **survives weaning to answer-only** (wean_mixed 8/8),
-   and only the recurrent hybrid (`gdp_hybrid`) **extrapolates** the learned circuit in length
-   (L64 0.75, L128 0.50–0.59; `fprm` and `transformer` collapse past the train length).
-
-The levers are **reasoning strength + a concrete rendering** (composition and frontier s5, the
-latter to a ~L64 cliff), **supervision density + weaning** (local s5), and **recurrent
-architecture** (s5 length extrapolation). Explicit structured CoT prompting never helps (and hurts);
-recall is trivial once the holder is known.
+cost tips, and a custom-backend example. Concrete prompts, gold answers, and real model
+mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 ## Repository layout
 
@@ -374,6 +290,7 @@ docs/
   related-work.md         related work with verified citations
   results.md              4-arch reference baselines (relaxed match)
   results-ci.md           3-seed CIs on the dissociating cells + attention-free recall ablation
+  benchmark/              rendered frontier-benchmark tables, figures, results.csv
   openrouter/             external LLM API grid results
     results.md              benchmark tasks
     s5-results.md           experimental `s5_v1` task
@@ -383,11 +300,12 @@ docs/
     results.md              small-scale composite diagnostic + decomposition
   state-tracking/         state-tracking-capability results
     dense-supervised.md     dense-supervised S5/A5 word problem (§3.1 probe)
-    scale.md                archived k=5 ~45M param-matched scale + LR sweeps (composite_copy_scale_v1; distinct from the report's §5 composite scale sweep)
+    scale.md                archived k=5 compute-matched scale + LR sweeps (retired composite_copy_scale_v1; distinct from the report's §5 composite scale sweep)
 factworld/                the instrument (torch-free data/oracle/eval + the model zoo)
   world.py, oracle.py     deterministic KB + symbolic ground-truth solver
   render.py               template renderer + its exact inverse parser (no-leak contract)
   tasks.py                the frozen, scalable task registry + canonical metric
+  benchmark.py            the frontier-benchmark registry (models, facets, budgets)
   backends.py             ModelBackend interface + local/hf/api/function backends
   runner.py               task-agnostic evaluate_task() entry point
   models.py, train.py     transformer / mamba2 / gdp_hybrid / gdn_hybrid / gru on one skeleton
@@ -408,7 +326,7 @@ uv run --with pytest pytest -q        # full suite
 ```
 
 <details>
-<summary><b>Reproducing the paper</b></summary>
+<summary><b>Reproducing the reports</b></summary>
 
 ## Reproducing the reports
 
@@ -422,14 +340,18 @@ rest print their tables to stdout (transcribed into the cited doc).
 python scripts/validate_suite.py          # validity gate: no majority/recency/first-pos shortcut clears floor (prints PASS)
 
 # 1-command benchmark entry point (any task / scaled variant)
-python scripts/run_benchmark.py composite_copy_v1 --arch gdp_hybrid --d_model 320 --steps 8000
+python scripts/run_benchmark.py composite_copy_v2 --arch gdp_hybrid --d_model 320 --steps 8000
+
+# Frontier benchmark (registry-driven; resume-skips existing cells)
+python scripts/run_frontier_benchmark.py --dry-run   # plan + cost preview
+python scripts/render_benchmark.py                   # re-render docs/benchmark/
 
 # Section 3.1 — state-tracking dissociation                 -> docs/state-tracking/dense-supervised.md
 python scripts/dense_s5.py --group s5     # S5 matrix: gdp_pure / n_h=1 null / gdn / transformer / gru, 3 seeds
 python scripts/dense_s5.py --group a5     # A5 not-S5-specific control panel
 
 # Section 3.2 — recall                                       -> docs/results-ci.md, docs/recall/readout.md
-python scripts/ci_dissociation.py         # recall_copy_v1 + binding_v1, 4 archs x 3 seeds (pool-2 dissociation CIs)
+python scripts/ci_dissociation.py         # recall_copy_v1 + binding_v2, 4 archs x 3 seeds (pool-2 dissociation CIs)
 python scripts/recall_attention_test.py   # attention-free attribution: gdp_pure / gdn_pure / gdp_hybrid across pools 2..8
 python scripts/recall_fair.py             # the 1-hop-vs-deferred differential (onehop/defsep/defpad; n_heads 4 vs 8)
 

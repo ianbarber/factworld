@@ -22,18 +22,21 @@ last_n = committed-answer accuracy after the reasoning preamble.
 (glm gets the *holder/role* partially right at higher effort — 0.50–0.53 — but never routes it to
 the value; value stays 0.00 across all efforts.)
 
-## Finding — background reasoning helps composition, not s5
+## Finding — background reasoning helps composition; s5 needs a concrete rendering too
 
 - **composition**: clear monotonic dose-response (kimi 0.22→0.98, glm 0.14→0.81). Background
   reasoning **is** a test-time-compute lever for composition. The earlier "test-time doesn't help"
   claim was wrong — it held only for *explicit CoT prompting* and for *non-reasoning local models*.
-- **s5**: floor at every effort, for both models, on the value leg. Non-abelian state-tracking is
-  **not movable by reasoning** — it needs dense training-time supervision (see
-  `dense-supervision-results.md`).
+- **s5** (token rendering): floor at every effort, for both models, on the value leg. Reasoning
+  alone does not move non-abelian state-tracking under this rendering; combined with a concrete
+  (people/jobs) rendering and an 8192-token completion budget it does — glm 1.00 @L32, 0.97 @L64,
+  0.90 @L128 (`results/s5_horizon_recheck_20260705.jsonl`; consolidated report Appendix A). The
+  local training-time lever is dense supervision (see `dense-supervision-results.md`).
 
 This sharpens the central dissociation: **composition is movable by test-time compute (reasoning)
-for strong models; s5 is movable only by training-time supervision density.** What does NOT help
-either wall: explicit structured CoT prompting (hurts — see `autoregressive-api-results.md` E1b),
+for strong models; s5 under the token rendering is not — its frontier lever is reasoning plus a
+concrete rendering, and its local lever is training-time supervision density.** What does NOT help
+either deficit: explicit structured CoT prompting (hurts — see `autoregressive-api-results.md` E1b),
 and sampling/self-correction on non-reasoning local models.
 
 ## Files

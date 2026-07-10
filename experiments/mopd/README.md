@@ -23,7 +23,7 @@ teachers on both domains** (normalised score 1.07±0.12 avg for the policy-gradi
 1.06±0.09 for exact reverse-KL), whereas no single teacher reliably does both. A from-scratch
 control shows why a
 pretrained base matters: outcome-RL barely specialises a small from-scratch transformer on these
-tasks (they are supervision-density-limited), and `chain`/`s5` are outright RL walls.
+tasks (they are supervision-density-limited), and `chain`/`s5` stay at floor under outcome-RL.
 
 ## 1. Method
 
@@ -60,9 +60,9 @@ the per-domain teacher — averaged over eval lengths and domains.
 | recall_copy@6 | 0.95 (contains) | near-ceiling |
 | conflict@4 | 0.90 (contains) | near-ceiling |
 | **binding@16** | **0.33** | **partial → RL headroom** |
-| composite_copy@16 | 0.00 | wall (emits 1 token, needs 2) |
-| chain@4 | 0.08 | wall |
-| s5@32 | 0.00 | wall |
+| composite_copy@16 | 0.00 | floored (emits 1 token, needs 2) |
+| chain@4 | 0.08 | floored |
+| s5@32 | 0.00 | floored |
 
 We pick the two domains where the base is genuinely *partial* (real headroom, distinct
 computations): **binding** and **recall under a large distractor pool** (`recall_copy` scaled to
@@ -112,7 +112,7 @@ does both* while the MOPD student does — every seed.
 
 The original plan RL-specialised a small **from-scratch** transformer (the repo's own model zoo).
 On FactWorld's tasks that barely works: outcome-RL lifts a from-scratch binding/recall model only
-marginally and non-monotonically, and `chain` is an outright RL wall — the base sits at the random
+marginally and non-monotonically, and `chain` does not move under outcome-RL — the base sits at the random
 floor even in-distribution and GRPO merely memorises the training pool (0 generalisation),
 matching the archived s5-GRPO negative result. These tasks are **supervision-density-limited** (the
 FactWorld thesis: dense SFT climbs them, sparse outcome-reward does not), so a from-scratch base

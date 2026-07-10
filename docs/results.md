@@ -1,6 +1,6 @@
 # FactWorld reference baselines
 
-Scored suite (`REPORTED`), from-scratch, position-strict exact match (canonical metric). Recipe: d_model=320, n_layers=4, 8000 steps, seed=0, **matched across architectures**. This is the **baseline scale**; composite tasks are expected near the wall here (see §5 for the scale step that lifts the flagship composite). Columns are eval lengths tagged **(id)** in-distribution / **(ood)** held-out; `length` = depth for chain_v1, #facts for recall_copy_v1/conflict_v1, binding-chain length otherwise.
+Scored suite (`REPORTED`), from-scratch, relaxed match (canonical metric; exact/contains/last_n are diagnostics). Recipe: d_model=320, n_layers=4, 8000 steps, seed=0, **matched across architectures**. This is the **baseline scale**; composite tasks are expected near floor here (see §5 for the scale step that lifts the flagship composite). Columns are eval lengths tagged **(id)** in-distribution / **(ood)** held-out; `length` = depth for chain_v1, #facts for recall_copy_v1/conflict_v1, binding-chain length otherwise.
 
 
 ## recall_copy_v1  (floor ≈ 0.016)

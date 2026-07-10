@@ -25,6 +25,12 @@ from .world import Event
 # 'loc' must precede the single-char alternatives so "loc3" isn't read as an object.
 _TOK = re.compile(r"^(?:[A-Za-z0-9]+_)?(loc|[eavogrs])(\d+)$")
 
+# Markdown emphasis / inline-code characters stripped from token EDGES by ``normalize``:
+# chat models decorate answers ("**g22**", "`g22`", "_g22_") and the tokens-path scorers
+# must treat those as the bare token. Edge-only, so namespaced ids with an INTERNAL
+# underscore ("aux1_g0") are untouched.
+_MD_EDGE_CHARS = "*_`"
+
 
 def classify(token: str) -> str | None:
     m = _TOK.match(token)
@@ -121,15 +127,24 @@ class Renderer:
     def normalize(text: str) -> str:
         """Detach attached punctuation so scoring/parsing work on canonical whitespace tokens.
 
+        Also strips markdown emphasis / inline-code from token edges ("**g22**", "`g22`",
+        "_g22_" -> "g22") so a chat model's decoration cannot flip a correct answer to 0.
+        Edge-only: namespaced ids with an internal underscore ("aux1_g0") are untouched,
+        and matching stays positional over whitespace tokens (prefix-commit), so a correct
+        answer buried mid-prose still scores 0.
+
         Examples:
             "g9's a0 is v26." -> "g9 's a0 is v26 ."
             "s1 gives o0 to g0." -> "s1 gives o0 to g0 ."
             "what is a0 of g7?" -> "what is a0 of g7 ?"
+            "**g22**." -> "g22 ."
         """
         text = text.strip()
         text = re.sub(r"([a-zA-Z0-9]+)'s\b", r"\1 's", text)   # g9's -> g9 's
         text = re.sub(r"(?<=\S)([.,?!])", r" \1", text)          # v26. -> v26 .
-        return text
+        # markdown emphasis off token edges; tokens that were PURE markdown ("**") vanish
+        toks = (t.strip(_MD_EDGE_CHARS) for t in text.split())
+        return " ".join(t for t in toks if t)
 
     # ----- parse (exact inverse) -----
     def _typed(self, text: str):

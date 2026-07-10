@@ -45,6 +45,8 @@ Every non-punctuation token in the gold answer appears somewhere in the predicti
 
 - Exact match is the canonical metric; semantic containment is reported to separate formatting/tokenizer artifacts from whether the model knows the answer.
 - `APIBackend` normalizes common answer prefixes ('The answer is...') and a trailing period glued to the preceding token (e.g. `v56.` → `v56 .`).
+- `chain_v1` and `s5_v1` cells here are measured without reasoning under a short completion budget. Reasoning-model cells require a large budget (`max_new_tokens=8192`, no early stop): with reasoning, glm-5.2 solves `chain_v1` at its designed depths (1.00 at depth 4, n=30; `results/chain_reasoning_pilot_20260705.json`) and s5 under a concrete rendering holds 0.90 at L128 (`results/s5_horizon_recheck_20260705.jsonl`).
+- The `chain_v1` column above runs at depth 16. `chain_v1` builds a single k=6 pointer cycle and measures depth only at depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); at depth 16 the chain wraps (effective difficulty depth mod 6), so the column is a wrapped-task floor check, not a depth score. Depth >= k belongs to the scaled no-wrap variant (`chain_nowrap`); the deeper cells in the pilot files (depths 6–32) likewise ran the wrapped task.
 
 
 ## Raw data

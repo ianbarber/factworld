@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from factworld.config import WorldConfig  # noqa: E402
 from factworld.eval import easy_suite, hard_suite, recall_suite  # noqa: E402
 from factworld.oracle import Oracle  # noqa: E402
-from factworld.render import Renderer  # noqa: E402
+from factworld.render import Renderer, classify  # noqa: E402
 from factworld.world import World  # noqa: E402
 
 
@@ -125,6 +125,58 @@ def test_as_of_t_query_references_correct_step():
         q = r.parse(r.render_query("state_hard", target=it.target, t=it.t))
         assert q["step"] == f"s{it.t - 1}"
         assert o.hard_role(list(it.episode.events), it.target, it.t) == it.gold
+
+
+# --- markdown-strip normalization (F1: '**g22**' must score like 'g22') --------------------
+
+def _tokens_path_relaxed(pred: str, gold: str) -> int:
+    # exactly the tokens-path scoring pipeline (runner.evaluate_task / benchmark cells)
+    from factworld.tasks import score_relaxed
+    return score_relaxed(Renderer.normalize(pred), Renderer.normalize(gold))
+
+
+def test_normalize_strips_markdown_emphasis_from_token_edges():
+    from factworld.tasks import score_contains, score_exact, score_last_n, score_relaxed
+    gold = "g22."  # attached-punctuation gold, exactly as chain cells render it
+    gold_n = Renderer.normalize(gold)
+    # the exact live sonnet chain_nowrap pattern, plus backtick and underscore decoration
+    for pred in ("**g22**", "**g22**.", "`g22`", "_g22_", "**g22", "g22**", "** g22 **"):
+        pred_n = Renderer.normalize(pred)
+        assert score_relaxed(pred_n, gold_n) == 1, pred
+        assert score_contains(pred_n, gold_n) == 1, pred
+        assert score_last_n(pred_n, gold_n) == 1, pred
+        # exact agrees with the same pred minus its decoration (semantics otherwise unchanged)
+        undecorated = pred.replace("*", "").replace("`", "").replace("_", "")
+        assert score_exact(pred_n, gold_n) == score_exact(Renderer.normalize(undecorated), gold_n), pred
+    # multi-token composite answer decorated as a span
+    assert _tokens_path_relaxed("**g30 v73**", "g30 v73.") == 1
+
+
+def test_normalize_markdown_strip_is_edge_only():
+    # internal underscores are token-structural (namespaced ids), never stripped
+    assert Renderer.normalize("aux1_g0") == "aux1_g0"
+    assert classify("aux1_g0") == "g"
+    # non-markdown text is normalized exactly as before
+    assert Renderer.normalize("g9's a0 is v26.") == "g9 's a0 is v26 ."
+    assert Renderer.normalize("s1 gives o0 to g0.") == "s1 gives o0 to g0 ."
+
+
+def test_prose_buried_answer_still_scores_zero():
+    # prefix-commit is intentional: a correct answer buried mid-prose scores 0 (the kimi
+    # chain d128 pattern — markdown stripping must NOT relax positional matching)
+    pred = "Counting to index 128 we land on g20 in this cycle, so the answer follows."
+    assert _tokens_path_relaxed(pred, "g20.") == 0
+    # ...whereas a committed (first-token) markdown answer scores 1
+    assert _tokens_path_relaxed("**g20** is the answer", "g20.") == 1
+
+
+def test_s5_content_tokens_strip_markdown():
+    # s5_concrete.score goes through tasks.content_tokens -> Renderer.normalize
+    from factworld.tasks import content_tokens
+    assert content_tokens("**Driver**.") == ["Driver"]
+    assert content_tokens("Driver") == ["Driver"]
+    # first-content-token commit still fails when prose precedes the answer
+    assert content_tokens("The role is Driver")[0] != "Driver"
 
 
 def test_eval_layer_is_kb_derived_not_text():

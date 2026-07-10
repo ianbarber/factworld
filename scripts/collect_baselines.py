@@ -2,10 +2,10 @@
 
 A benchmark without baselines is just a task generator. This trains each scored (REPORTED)
 task from scratch under a fixed, modest, compute-matched recipe for two principal architectures
-(product-structured recurrent hybrid vs transformer) and records the canonical position-strict exact-match
+(product-structured recurrent hybrid vs transformer) and records the canonical relaxed-match accuracy
 at every eval length. Results are written to docs/results.md after EACH cell, so a crash or interrupt keeps
 all completed numbers. This is the baseline scale (d320x4, ~8k steps) — composite tasks are expected to
-sit near the wall here (cf. §5 for the scale step that lifts the flagship composite).
+sit near floor here (cf. §5 for the scale step that lifts the flagship composite).
 
   .venv/bin/python scripts/collect_baselines.py
 """
@@ -47,9 +47,10 @@ def write_md(rows, floors):
     """rows: {(task, arch): {L: acc}}. Rebuild the whole file from accumulated rows each time."""
     lines = [
         "# FactWorld reference baselines\n",
-        f"Scored suite (`REPORTED`), from-scratch, position-strict exact match (canonical metric). Recipe: "
+        f"Scored suite (`REPORTED`), from-scratch, relaxed match (canonical metric; exact/contains/last_n "
+        f"are diagnostics). Recipe: "
         f"d_model={D_MODEL}, n_layers={N_LAYERS}, {STEPS} steps, seed={SEED}, **matched across "
-        "architectures**. This is the **baseline scale**; composite tasks are expected near the wall here "
+        "architectures**. This is the **baseline scale**; composite tasks are expected near floor here "
         "(see §5 for the scale step that lifts the flagship composite). Columns are eval lengths tagged "
         "**(id)** in-distribution / **(ood)** held-out; `length` = depth for chain_v1, #facts for "
         "recall_copy_v1/conflict_v1, binding-chain length otherwise.\n",

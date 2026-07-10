@@ -216,6 +216,202 @@ def test_api_backend_mock():
     assert preds3 == ["g4"]
 
 
+def _fake_client(response):
+    """Build a fake OpenAI-style client whose ``create`` returns ``response``."""
+    return types.SimpleNamespace(
+        chat=types.SimpleNamespace(
+            completions=types.SimpleNamespace(create=lambda **kwargs: response)
+        )
+    )
+
+
+_FAKE_OPENAI = types.SimpleNamespace(OpenAI=lambda **kwargs: None)
+
+
+def _make_backend(response, **kwargs):
+    import factworld.backends as B
+
+    client = _fake_client(response)
+    with patch.dict(sys.modules, {"openai": _FAKE_OPENAI}):
+        return B.APIBackend("test-model", client=client, **kwargs)
+
+
+def test_api_backend_answer_mode_validation():
+    try:
+        _make_backend(None, answer_mode="sentences")
+    except ValueError as exc:
+        assert "answer_mode" in str(exc)
+    else:
+        raise AssertionError("APIBackend should reject unknown answer_mode")
+
+
+def test_api_backend_words_mode():
+    # 'Driver .' must survive intact as 'Driver' (tokens mode would keep 'Driver .').
+    message = types.SimpleNamespace(content="Driver .")
+    choice = types.SimpleNamespace(message=message, finish_reason="stop")
+    response = types.SimpleNamespace(choices=[choice])
+    backend = _make_backend(response, answer_mode="words")
+    assert backend.generate(["who is p3 ?"], max_new_tokens=4, stop_at=None) == ["Driver"]
+
+    # <think> blocks are still stripped; prose munging (colon split, comma rsplit,
+    # prefix regexes) is skipped, and the pre-period span is kept.
+    message2 = types.SimpleNamespace(content="<think>swap, swap: hm</think>\n Nurse, the last one.")
+    choice2 = types.SimpleNamespace(message=message2, finish_reason="stop")
+    response2 = types.SimpleNamespace(choices=[choice2])
+    backend2 = _make_backend(response2, answer_mode="words")
+    assert backend2.generate(["p"], max_new_tokens=4, stop_at=None) == ["Nurse, the last one"]
+
+    # Unclosed think block -> no committed answer.
+    message3 = types.SimpleNamespace(content="<think>still thinking")
+    choice3 = types.SimpleNamespace(message=message3, finish_reason="length")
+    response3 = types.SimpleNamespace(choices=[choice3])
+    backend3 = _make_backend(response3, answer_mode="words")
+    assert backend3.generate(["p"], max_new_tokens=4, stop_at=None) == [""]
+
+
+def test_api_backend_raw_mode():
+    # Raw mode: visible output untouched except <think> stripping — the caller
+    # (the zero-budget contract battery) owns extraction.
+    content = "Let me work through the swaps...\ng3 has o2.\nAnswer: g3 v9"
+    message = types.SimpleNamespace(content=f"<think>hmm: a, b</think>{content}")
+    choice = types.SimpleNamespace(message=message, finish_reason="stop")
+    response = types.SimpleNamespace(choices=[choice])
+    backend = _make_backend(response, answer_mode="raw")
+    assert backend.generate(["p"], max_new_tokens=96, stop_at=None) == [content]
+
+    # Unclosed think block -> no committed answer, even in raw mode.
+    message2 = types.SimpleNamespace(content="<think>still going")
+    choice2 = types.SimpleNamespace(message=message2, finish_reason="length")
+    response2 = types.SimpleNamespace(choices=[choice2])
+    backend2 = _make_backend(response2, answer_mode="raw")
+    assert backend2.generate(["p"], max_new_tokens=96, stop_at=None) == [""]
+
+
+def test_api_backend_pop_example_meta_order_aligned():
+    """Per-example metadata comes back in PROMPT order even when later-submitted
+    calls finish first on the thread pool (futures collected by position)."""
+    import time as _time
+
+    def create(**kwargs):
+        i = int(kwargs["messages"][-1]["content"])
+        _time.sleep(0.002 * (8 - i))  # later prompts finish earlier
+        usage = types.SimpleNamespace(prompt_tokens=10, completion_tokens=100 + i,
+                                      reasoning_tokens=i)
+        message = types.SimpleNamespace(content=f"g{i}")
+        finish = "stop" if i % 2 == 0 else "length"
+        choice = types.SimpleNamespace(message=message, finish_reason=finish)
+        return types.SimpleNamespace(choices=[choice], usage=usage, model="m")
+
+    client = types.SimpleNamespace(
+        chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=create))
+    )
+    with patch.dict(sys.modules, {"openai": _FAKE_OPENAI}):
+        import factworld.backends as B
+        backend = B.APIBackend("test-model", client=client, max_workers=4)
+
+    preds = backend.generate([str(i) for i in range(8)], max_new_tokens=4, stop_at=None)
+    assert preds == [f"g{i}" for i in range(8)]
+    metas = backend.pop_example_meta()
+    assert [m["completion_tokens"] for m in metas] == [100 + i for i in range(8)]
+    assert [m["reasoning_tokens"] for m in metas] == list(range(8))
+    assert [m["finish_reason"] for m in metas] == ["stop" if i % 2 == 0 else "length"
+                                                   for i in range(8)]
+    # pop clears; the aggregate view is unaffected by the per-example pop.
+    assert backend.pop_example_meta() == []
+    meta = backend.pop_call_meta()
+    assert meta["calls"] == 8
+    assert meta["usage"]["completion_tokens"] == sum(100 + i for i in range(8))
+    assert meta["finish_reasons"] == {"stop": 4, "length": 4}
+
+    # Successive generate calls accumulate in call order until popped.
+    backend.generate(["3"], max_new_tokens=4, stop_at=None)
+    backend.generate(["5"], max_new_tokens=4, stop_at=None)
+    assert [m["reasoning_tokens"] for m in backend.pop_example_meta()] == [3, 5]
+
+
+def test_api_backend_tokens_mode_unchanged_with_explicit_kwarg():
+    # answer_mode="tokens" must be byte-identical to the historical default path.
+    message = types.SimpleNamespace(content="The final holders are g0, g2, g4")
+    choice = types.SimpleNamespace(message=message, finish_reason=None)
+    response = types.SimpleNamespace(choices=[choice])
+    backend = _make_backend(response, answer_mode="tokens")
+    assert backend.generate(["p"], max_new_tokens=4, stop_at=None) == ["g4"]
+
+
+def test_api_backend_pop_call_meta_aggregates_and_clears():
+    usage = types.SimpleNamespace(
+        prompt_tokens=100,
+        completion_tokens=40,
+        completion_tokens_details=types.SimpleNamespace(reasoning_tokens=25),
+    )
+    message = types.SimpleNamespace(content="g3 .")
+    choice = types.SimpleNamespace(message=message, finish_reason="stop")
+    response = types.SimpleNamespace(
+        choices=[choice], usage=usage, model="test-model-2026", provider="FakeCloud"
+    )
+    backend = _make_backend(response)
+
+    # Concurrent path: appends happen from ThreadPoolExecutor worker threads.
+    backend.generate(["a", "b", "c"], max_new_tokens=4, stop_at=".")
+    meta = backend.pop_call_meta()
+    assert meta["calls"] == 3
+    assert meta["errors"] == 0
+    assert meta["usage"] == {"prompt_tokens": 300, "completion_tokens": 120, "reasoning_tokens": 75}
+    assert meta["served_models"] == ["test-model-2026"]
+    assert meta["providers"] == ["FakeCloud"]
+    assert meta["finish_reasons"] == {"stop": 3}
+
+    # pop clears: a second pop reports zero calls.
+    meta2 = backend.pop_call_meta()
+    assert meta2["calls"] == 0
+    assert meta2["usage"] == {"prompt_tokens": 0, "completion_tokens": 0, "reasoning_tokens": 0}
+    assert meta2["served_models"] == []
+    assert meta2["finish_reasons"] == {}
+
+
+def test_api_backend_pop_call_meta_openrouter_style_usage():
+    # OpenRouter reports reasoning tokens directly on usage, with no
+    # completion_tokens_details object.
+    usage = types.SimpleNamespace(prompt_tokens=10, completion_tokens=5, reasoning_tokens=3)
+    message = types.SimpleNamespace(content="g1")
+    choice = types.SimpleNamespace(message=message, finish_reason="stop")
+    response = types.SimpleNamespace(choices=[choice], usage=usage, model="served/model")
+    backend = _make_backend(response)
+    backend.generate(["p"], max_new_tokens=4, stop_at=None)
+    meta = backend.pop_call_meta()
+    assert meta["usage"]["reasoning_tokens"] == 3
+    assert meta["providers"] == []  # provider field absent -> omitted, not None
+
+
+def test_api_backend_error_path_records_meta():
+    import factworld.backends as B
+
+    def boom(**kwargs):
+        # ValueError is in APIBackend's transient-fault except tuple
+        # (JSONDecodeError is a ValueError), so this exercises the
+        # retry-then-give-up path without needing real openai exceptions.
+        raise ValueError("upstream returned garbage")
+
+    client = types.SimpleNamespace(
+        chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=boom))
+    )
+    with patch.dict(sys.modules, {"openai": _FAKE_OPENAI}):
+        backend = B.APIBackend("test-model", client=client)
+
+    with patch("time.sleep"):  # skip retry backoff
+        preds = backend.generate(["p"], max_new_tokens=4, stop_at=None)
+    assert preds == [""]  # retry exhaustion still yields an empty prediction
+    # the failed call still contributes an aligned per-example entry (zeros/None)
+    assert backend.pop_example_meta() == [
+        {"completion_tokens": 0, "reasoning_tokens": 0, "finish_reason": None}
+    ]
+    meta = backend.pop_call_meta()
+    assert meta["calls"] == 1
+    assert meta["errors"] == 1
+    assert meta["usage"] == {"prompt_tokens": 0, "completion_tokens": 0, "reasoning_tokens": 0}
+    assert meta["finish_reasons"] == {}
+
+
 # --- LocalBackend (torch-dependent) -----------------------------------------
 
 def test_local_backend_builds_tokenizer_if_torch_available():
@@ -242,10 +438,20 @@ def test_local_backend_builds_tokenizer_if_torch_available():
 
 def _run() -> int:
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    n_passed = 0
+    n_skipped = 0
     for fn in fns:
-        fn()
+        try:
+            fn()
+        except BaseException as exc:  # noqa: BLE001 - pytest.skip raises a BaseException subclass
+            if type(exc).__name__ == "Skipped":
+                print(f"  skip {fn.__name__} ({exc})")
+                n_skipped += 1
+                continue
+            raise
         print(f"  ok  {fn.__name__}")
-    print(f"\n{len(fns)} tests passed.")
+        n_passed += 1
+    print(f"\n{n_passed} tests passed, {n_skipped} skipped.")
     return 0
 
 

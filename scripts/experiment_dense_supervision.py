@@ -224,7 +224,7 @@ def main():
     ap.add_argument("--out_prefix", default=None)
     a = ap.parse_args()
 
-    spec = TK.CANONICAL["composite_copy_scale_v1"].scaled(k=5)   # k=5 non-abelian composite
+    spec = TK.RETIRED["composite_copy_scale_v1"].scaled(k=5)   # k=5 non-abelian composite
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     from pathlib import Path
     prefix = Path(a.out_prefix or f"results/dense_sweep_{ts}")

@@ -2,7 +2,8 @@
 
 The single-seed baseline (docs/results.md) shows the load-bearing dissociation — gdn best at isolated
 binding (0.78 @4× vs gdp 0.40), gdp best at recall (1.00 vs ≈0.5 for the rest) — but those rest on seed 0.
-This reruns just the two dissociation tasks (recall_copy_v1, binding_v1) across the 4 archs at seeds
+This reruns just the two dissociation tasks (recall_copy_v1, binding_v2 — the uniform-last-write
+binding spec; the recency-defective binding_v1 is retired, see tasks.RETIRED / issue #11) across the 4 archs at seeds
 {0,1,2} and reports mean±std per length, writing docs/results-ci.md incrementally so partial progress
 survives. (composite_copy floors for all → no CI needed; conflict/chain CIs are a cheap follow-up.)
 
@@ -21,7 +22,7 @@ from factworld import tasks as TK            # noqa: E402
 from run_benchmark import run_task           # noqa: E402
 
 ARCHS = ["gdp_hybrid", "gdn_hybrid", "transformer", "gru"]
-TASKS = ["recall_copy_v1", "binding_v1"]
+TASKS = ["recall_copy_v1", "binding_v2"]
 SEEDS = [0, 1, 2]
 D_MODEL, N_LAYERS, STEPS = 320, 4, 8000
 OUT = os.path.join(REPO, "docs", "results-ci.md")
@@ -47,7 +48,7 @@ def write_md(rows):
         "generalist. Columns tagged (id)/(ood).\n",
     ]
     for task in TASKS:
-        spec = TK.CANONICAL[task]
+        spec = TK.spec_for(task)
         pts = eval_points(spec)
         lines.append(f"\n## {task}\n")
         lines.append("| arch | " + " | ".join(f"L{L} ({t})" for L, t in pts) + " |")
@@ -67,7 +68,7 @@ def main():
     rows = {}
     write_md(rows)
     for task in TASKS:
-        spec = TK.CANONICAL[task]
+        spec = TK.spec_for(task)
         union = tuple(L for L, _ in eval_points(spec))
         espec = spec.scaled(eval_lengths=union)
         for arch in ARCHS:

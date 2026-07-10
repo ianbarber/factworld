@@ -55,16 +55,19 @@ def pure_copy(w, r, n, seed, with_cot):
 
 
 def composite(w, r, n, seed, with_cot):
-    """Random map, binding + copy: resolve holder then copy its value."""
-    from factworld.world import Event
+    """Random map, binding + copy: resolve holder then copy its value.
+
+    Give-streams come from the uniform-last-write (v2) sampler in factworld.tasks — the old
+    script-local copy drew every event's object uniformly, reproducing the retired v1 recency
+    defect (the resolving write clustered near the stream end; see tasks.RETIRED / issue #11)."""
+    from factworld.tasks import _uniform_last_write_stream
     rng = random.Random(seed)
     out = []
     for _ in range(n):
         og = _rand_origins(w, rng)
         L = rng.choice(GIVE) if with_cot else n  # n overloaded as L for eval builder below
-        events = [Event("give", (rng.choice(w.objects), rng.choice(w.agents))) for _ in range(L)]
-        obj = rng.choice(sorted({e.args[0] for e in events}))
-        holder = [e.args[1] for e in events if e.args[0] == obj][-1]
+        obj, p, events = _uniform_last_write_stream(rng, L, list(w.objects), list(w.agents))
+        holder = events[p].args[1]
         facts = " ".join(r.render_fact(a, "a0", og[a], key=f"{a}|{rng.random()}") for a in w.agents)
         hist = " ".join(r.render_history(tuple(events), with_steps=True))
         prompt = f"{facts} {hist} what is a0 of the holder of {obj} ? : "
@@ -73,14 +76,14 @@ def composite(w, r, n, seed, with_cot):
 
 
 def composite_eval(w, r, L, n, seed):
-    from factworld.world import Event
+    """Eval items on the same uniform-last-write (v2) give-stream sampler as composite()."""
+    from factworld.tasks import _uniform_last_write_stream
     rng = random.Random(seed)
     out = []
     for _ in range(n):
         og = _rand_origins(w, rng)
-        events = [Event("give", (rng.choice(w.objects), rng.choice(w.agents))) for _ in range(L)]
-        obj = rng.choice(sorted({e.args[0] for e in events}))
-        holder = [e.args[1] for e in events if e.args[0] == obj][-1]
+        obj, p, events = _uniform_last_write_stream(rng, L, list(w.objects), list(w.agents))
+        holder = events[p].args[1]
         facts = " ".join(r.render_fact(a, "a0", og[a], key=f"{a}|{rng.random()}") for a in w.agents)
         hist = " ".join(r.render_history(tuple(events), with_steps=True))
         out.append((f"{facts} {hist} what is a0 of the holder of {obj} ? : ", holder, og[holder], L))

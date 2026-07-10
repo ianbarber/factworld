@@ -11,7 +11,7 @@ scaffolded upper bound) and is structured so the local trained-scratchpad side
 Run (API):
     set -a; source .env; set +a
     .venv-api/bin/python scripts/experiment_autoregressive.py \\
-        --tasks composite_copy_v1 s5_v1 --n 30
+        --tasks composite_copy_v2 s5_v1 --n 30
 
 Conditions (E1):
     none        — answer directly (baseline).
@@ -91,7 +91,8 @@ def scaffold_prompt(example, task_name: str) -> str:
 
     This is the recall-leg upper bound: given the binding answer, can the model recall?
     """
-    if task_name in ("composite_copy_v1", "composite_copy_scale_v1", "composite_v1"):
+    if task_name in ("composite_copy_v2", "composite_copy_v1",
+                     "composite_copy_scale_v1", "composite_v1"):
         holder = example.meta.get("holder")
         if holder is None:
             return example.prompt
@@ -107,7 +108,8 @@ def binding_prompt(example, task_name: str) -> str:
     tracking is needed. Gold becomes the holder alone. This localizes whether the API
     composition failure is binding itself (state-tracking) or routing the holder into recall.
     """
-    if task_name not in ("composite_copy_v1", "composite_copy_scale_v1", "composite_v1"):
+    if task_name not in ("composite_copy_v2", "composite_copy_v1",
+                         "composite_copy_scale_v1", "composite_v1"):
         return example.prompt, example.answer
     obj = example.meta.get("obj")
     holder = example.meta.get("holder")
@@ -195,7 +197,7 @@ def main():
     ap.add_argument("--models", nargs="+", default=[
         "meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat",
         "openai/gpt-4o-mini", "google/gemini-2.5-flash-lite"])
-    ap.add_argument("--tasks", nargs="+", default=["composite_copy_v1", "s5_v1"])
+    ap.add_argument("--tasks", nargs="+", default=["composite_copy_v2", "s5_v1"])
     ap.add_argument("--conditions", nargs="+",
                     default=["none", "free", "structured", "scaffolded"])
     ap.add_argument("--n", type=int, default=30)
@@ -229,7 +231,7 @@ def main():
     print(f"=== autoregressive API experiment -> {jsonl} ===", flush=True)
     for model in a.models:
         for task in a.tasks:
-            spec = TK.CANONICAL[task]
+            spec = TK.spec_for(task)
             length = a.length or spec.eval_lengths[0]
             # Format-fair: append the composite format instruction so the only variable
             # across conditions is the reasoning regime (not whether the model knows the output shape).

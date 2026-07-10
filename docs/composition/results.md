@@ -14,7 +14,7 @@ agent→value map is resampled per example — distinguishing the memorized shor
 
 So the small-scale composite holds up at length **only when the recall degenerates to a memorized lookup**.
 
-## Binding × memorized recall — survivorship with horizon (k=5, 3 seeds; eval to 4×)
+## Binding × memorized recall — survivorship with length (k=5, 3 seeds; eval to 4×)
 
 | arch | L4 | L8 | L16 | L32 | L64 |
 |---|---|---|---|---|---|
@@ -23,7 +23,7 @@ So the small-scale composite holds up at length **only when the recall degenerat
 | gdn_hybrid | 0.45±.04 | 0.42±.04 | 0.35±.01 | 0.27±.04 | 0.23±.02 |
 | **gdp_hybrid** | **0.92±.12** | **0.84±.19** | **0.74±.27** | **0.58±.26** | **0.56±.25** |
 
-On the *memorized*-recall composite, gdp_hybrid is the only arch well above floor at long horizons (0.56 vs
+On the *memorized*-recall composite, gdp_hybrid is the only arch well above floor at long lengths (0.56 vs
 ≈0.21 at L64); the field collapses to floor and only the unified arch stays functional. The variance (±0.25)
 is convergence variance, not a capacity ceiling (lr≤1e-3 reliably solves it; lr=2e-3 breaks).
 

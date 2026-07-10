@@ -11,10 +11,18 @@ Pass conditions (thresholds tunable; existence non-negotiable):
 The KL of an empirical distribution from uniform is biased upward by ~(k-1)/(2n) even when the
 true distribution IS uniform; we subtract that bias and gate on the excess.
 
+This module also hosts the STRONG recency baseline for the task suite (``strong_recency_pred`` /
+``strong_recency_accuracy``, consumed by scripts/validate_suite.py): predict the LAST give-event's
+recipient (binding), plus that holder's stated a0 fact (composite). This is the adversary that
+exposed the v1 give-stream sampler (resolving write clustered near the stream end: ~0.34@L16 on
+the now-RETIRED composite_copy_v1 — see tasks.RETIRED, issue #11) and that the registered
+last_write_uniform v2 specs hold at ~chance (gated by scripts/validate_suite.py).
+
 Run directly to print the report:  python3 -m factworld.validity
 """
 from __future__ import annotations
 
+import re
 from collections import Counter
 
 from .baselines import (
@@ -92,6 +100,44 @@ def run_gate(seed: int = 0, n_dist: int = 2000, n_leak: int = 400,
         "hard_state_no_structural_shortcut": ident <= fh + LEAK_MARGIN,
     }
     return {"families": families, "checks": checks, "passed": all(checks.values())}
+
+
+# ---------------------------------------------------------------------------
+# STRONG recency baseline over rendered task-suite prompts (tasks.Example lists).
+# Registered like the other shallow baselines: a heuristic ADVERSARY scored against the oracle gold
+# (never a label source). It reads the canonical renderer grammar directly ("sN gives oX to gY."
+# events, "gY's a0 is vZ." facts) — the exact one-liner a lazy model could implement.
+# ---------------------------------------------------------------------------
+_GIVE_RE = re.compile(r"\bs\d+ gives (o\d+) to (g\d+)\.")
+_FACT_RE = re.compile(r"\b(g\d+)'s a0 is (v\d+)\.")
+
+
+def strong_recency_pred(prompt: str, family: str) -> str | None:
+    """The strong recency heuristic's answer for one rendered prompt.
+
+    binding:   the LAST give-event's recipient ("whoever was given something most recently").
+    composite: that recipient plus his stated a0 fact (the full 2-token composite answer).
+    Returns the answer in canonical rendered form (attached trailing period) or None when the
+    prompt has no give events / the family has no recency structure to exploit.
+    """
+    gives = _GIVE_RE.findall(prompt)
+    if not gives:
+        return None
+    holder = gives[-1][1]
+    if family == "binding":
+        return f"{holder}."
+    if family == "composite":
+        facts = dict(_FACT_RE.findall(prompt))
+        value = facts.get(holder)
+        return f"{holder} {value}." if value is not None else None
+    return None
+
+
+def strong_recency_accuracy(examples, family: str) -> float:
+    """Accuracy of ``strong_recency_pred`` over a list of tasks.Example — near the random floor on a
+    valid binding/composite task; well above it under the retired v1 sampler's end-clustered
+    resolving write (the defect-documentation tests pin that contrast via tasks.RETIRED)."""
+    return sum(strong_recency_pred(e.prompt, family) == e.answer for e in examples) / len(examples)
 
 
 def _fmt(report: dict) -> str:

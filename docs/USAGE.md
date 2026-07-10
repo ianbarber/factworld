@@ -21,10 +21,12 @@ class ModelBackend:
         ...
 ```
 
-The returned strings are scored with ``factworld.tasks.score_exact``, which
-compares whitespace-token sequences up to the length of the gold answer.  Extra
-whitespace or trailing tokens are ignored, so a backend does not need to
-terminate generation exactly at ``.``.
+The returned strings are scored with **relaxed match**
+(``factworld.tasks.score_relaxed``), the canonical metric: strip trailing
+punctuation and compare whitespace-token sequences up to the length of the gold
+answer.  Extra whitespace or trailing tokens are ignored, so a backend does not
+need to terminate generation exactly at ``.``.  Exact, containment, and
+last-*n* scorers exist as diagnostics.
 
 ## Built-in backends
 
@@ -40,7 +42,7 @@ path, train a model with ``factworld.train`` and assign it to ``backend.model``.
 from factworld import tasks as TK, train as T
 from factworld.backends import LocalBackend
 
-spec = TK.CANONICAL["composite_copy_v1"]
+spec = TK.CANONICAL["composite_copy_v2"]
 w, _ = TK.build_world(spec)
 train = TK.generate(spec, "train", n=8000)
 tok, docs, _ = T.prepare([f"{e.prompt}{e.answer}" for e in train], [], [w])
@@ -113,19 +115,19 @@ backend = FunctionBackend(
 
 ## Composite output format
 
-`composite_copy_v1` and `composite_v1` require a two-token answer span
+Composite-family tasks (e.g. `composite_copy_v2`) require a two-token answer span
 (``<holder> <value> .``). Naive chat-model prompts tend to emit only the value,
 so the built-in CLI appends an explicit format instruction for API and HF
 backends:
 
 ```bash
-python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini
+python scripts/eval_model.py composite_copy_v2 --backend api --model gpt-4o-mini
 ```
 
 To disable it (e.g. for ablations):
 
 ```bash
-python scripts/eval_model.py composite_copy_v1 --backend api --model gpt-4o-mini --no-composite-format
+python scripts/eval_model.py composite_copy_v2 --backend api --model gpt-4o-mini --no-composite-format
 ```
 
 When using ``APIBackend`` directly, include the instruction in the
@@ -161,7 +163,7 @@ class MyBackend(ModelBackend):
     def generate(self, prompts, max_new_tokens, stop_at=None):
         return [my_model.complete(p, max_tokens=max_new_tokens, stop=stop_at) for p in prompts]
 
-spec = CANONICAL["composite_copy_v1"]
+spec = CANONICAL["composite_copy_v2"]
 result = evaluate_task(MyBackend(), spec, n=50)
 print(result["overall"])
 ```
@@ -222,7 +224,9 @@ python scripts/eval_model.py recall_v1 --backend function --n 5
 ```
 
 This uses the hardcoded function backend and should finish instantly without
-any external dependencies.
+any external dependencies. (`recall_v1` is the parametric control variant —
+memorized-map recall, local-only in the taxonomy — not a scored recall cell;
+it is used here purely as a plumbing check.)
 
 ---
 

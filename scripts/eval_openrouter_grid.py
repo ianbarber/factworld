@@ -6,15 +6,15 @@ Examples:
     # Default grid at the first eval length of each task
     python scripts/eval_openrouter_grid.py --n 30 --max_workers 4
 
-    # Length sweep for composite_copy_v1
+    # Length sweep for composite_copy_v2
     python scripts/eval_openrouter_grid.py \
         --models meta-llama/llama-3.3-70b-instruct openai/gpt-4o-mini \
-        --tasks composite_copy_v1 --lengths 16 32 64 --n 30
+        --tasks composite_copy_v2 --lengths 16 32 64 --n 30
 
     # Composite format-prompt ablation
     python scripts/eval_openrouter_grid.py \
-        --tasks composite_copy_v1 \
-        --task_prompts '{"composite_copy_v1": "Answer with the holder name followed by the value."}'
+        --tasks composite_copy_v2 \
+        --task_prompts '{"composite_copy_v2": "Answer with the holder name followed by the value."}'
 """
 from __future__ import annotations
 
@@ -88,7 +88,7 @@ def run_grid(models, tasks, n, lengths, max_workers, base_url,
     for model in models:
         print(f"\n>>> {model}")
         for task_name in tasks:
-            spec = TK.CANONICAL[task_name]
+            spec = TK.spec_for(task_name)  # RETIRED fallback: historical reproduction only
             task_lengths = lengths if lengths else [spec.eval_lengths[0]]
             prompt = _build_system_prompt(system_prompt, task_name, task_prompts)
             extra_body = {"reasoning": {"effort": "none"}} if no_reasoning else None
@@ -240,7 +240,7 @@ def write_markdown(results: list[dict], path: str):
             "## Semantic containment results (tokenizer-robust)",
             "",
             "Every non-punctuation token in the gold answer appears somewhere in the prediction. "
-            "For `composite_copy_v1` this means both the holder and value are present; for "
+            "For `composite_copy_v2` this means both the holder and value are present; for "
             "single-token tasks it is equivalent to 'the correct token appears anywhere'.",
             "",
             "| model | " + " | ".join(tasks) + " |",
@@ -310,8 +310,9 @@ def main():
     ap.add_argument("--models", nargs="+", default=DEFAULT_MODELS,
                     help="OpenRouter model IDs to evaluate.")
     ap.add_argument("--tasks", nargs="+", default=DEFAULT_TASKS,
-                    choices=list(TK.CANONICAL),
-                    help="FactWorld tasks to evaluate.")
+                    choices=[*TK.CANONICAL, *TK.RETIRED],
+                    help="FactWorld tasks to evaluate (RETIRED names allowed for "
+                         "historical reproduction only; scored runs use CANONICAL).")
     ap.add_argument("--n", type=int, default=30,
                     help="Number of examples per task/length.")
     ap.add_argument("--length", type=int, default=None,
@@ -325,7 +326,7 @@ def main():
     ap.add_argument("--system_prompt", default=DEFAULT_SYSTEM_PROMPT,
                     help="Base system prompt sent to chat models.")
     ap.add_argument("--task_prompts", default=None,
-                    help='JSON mapping task name -> extra instruction, e.g. \'{"composite_copy_v1": "..."}\'.')
+                    help='JSON mapping task name -> extra instruction, e.g. \'{"composite_copy_v2": "..."}\'.')
     ap.add_argument("--composite_format", action="store_true",
                     help="Shorthand: append the composite two-token format instruction.")
     ap.add_argument("--s5_format", action="store_true",
@@ -354,8 +355,10 @@ def main():
     if a.task_prompts:
         task_prompts = json.loads(a.task_prompts)
     if a.composite_format:
-        task_prompts.setdefault("composite_copy_v1", COMPOSITE_FORMAT_PROMPT)
-        task_prompts.setdefault("composite_v1", COMPOSITE_FORMAT_PROMPT)
+        # any composite-family task (canonical v2 or a retired-name repro run)
+        for t in a.tasks:
+            if TK.spec_for(t).family == "composite":
+                task_prompts.setdefault(t, COMPOSITE_FORMAT_PROMPT)
     if a.s5_format:
         task_prompts.setdefault("s5_v1", S5_FORMAT_PROMPT)
 

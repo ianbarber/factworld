@@ -12,7 +12,7 @@ the end and after every aggregation pass.
 
 Example:
     .venv-train/bin/python scripts/sweep.py \\
-        --tasks binding_v1,composite_copy_scale_v1 \\
+        --tasks binding_v2,composite_copy_v2 \\
         --archs gdp_hybrid,fprm,transformer \\
         --seeds 0 1 2 3 4 --steps 8000 --d_model 256
 """
@@ -150,7 +150,7 @@ def write_markdown(summary, cfg, path):
                  f"seeds={cfg['seeds']} train_n={cfg['train_n']} eval_n={cfg['eval_n']}")
     lines.append("")
     for task, archs in summary.items():
-        spec = TK.CANONICAL[task]
+        spec = TK.spec_for(task)
         lens = [str(L) for L in spec.eval_lengths]
         lines.append(f"## {task}  (eval lengths {', '.join(lens)})")
         header = "| arch | " + " | ".join(f"L{L} mean±std (pconv)" for L in lens) + " | holder/value @L" + lens[0] + " |"
@@ -173,8 +173,9 @@ def write_markdown(summary, cfg, path):
 
 def main():
     ap = argparse.ArgumentParser(description="Multi-seed local architecture sweep.")
-    ap.add_argument("--tasks", default="binding_v1,composite_copy_scale_v1",
-                    help="Comma-separated canonical task names.")
+    ap.add_argument("--tasks", default="binding_v2,composite_copy_v2",
+                    help="Comma-separated canonical task names (RETIRED names accepted "
+                         "for historical reproduction only; see tasks.RETIRED).")
     ap.add_argument("--archs", default="gdp_hybrid,fprm,transformer",
                     help="Comma-separated architectures (gdp_hybrid_shortconv => gdp_hybrid+shortconv).")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2, 3, 4])
@@ -186,8 +187,8 @@ def main():
     ap.add_argument("--eval_n", type=int, default=100, help="Test examples per length.")
     ap.add_argument("--use_trace", action="store_true", help="Append oracle worked-trace (s5/composite).")
     ap.add_argument("--worked_trace", action="store_true",
-                    help="Force worked_trace=True on the spec (needed for composite_copy_scale_v1, "
-                         "whose default is False). Implies --use_trace.")
+                    help="Force worked_trace=True on the spec (needed for the composite "
+                         "tasks, whose default is False). Implies --use_trace.")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--out_prefix", default=None,
                     help="Output prefix (default: results/sweep_<task0>_<timestamp>).")
@@ -211,7 +212,7 @@ def main():
     done = 0
     print(f"=== sweep: {total} runs -> {log_path} ===", flush=True)
     for task in tasks:
-        spec = TK.CANONICAL[task]
+        spec = TK.spec_for(task)
         if a.worked_trace:
             spec = spec.scaled(worked_trace=True)
         for arch in archs:

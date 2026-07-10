@@ -39,7 +39,7 @@ Nemotron 3 models were evaluated with built-in chain-of-thought disabled (`reaso
 
 - **Single-hop tasks are easy.** `recall_copy_v1` and `conflict_v1` are at or near ceiling for strong models.
 - **Binding is scale-sensitive.** Kimi K2 (0.900) and Kimi K2.6 (0.867) lead; Nemotron 3 Ultra (0.733) and Llama 3.3 70B (0.700) follow.
-- **Chain remains hard.** Even the best models are ≤ 0.300 on `chain_v1@L4`, consistent with the paper's depth-extrapolation claim.
+- **Chain remains hard without reasoning.** Even the best models are ≤ 0.300 on `chain_v1@L4` in this short-budget, no-reasoning setup. With reasoning and an 8192-token completion budget, glm-5.2 solves it at the designed depths (1.00 at depth 4, n=30; `results/chain_reasoning_pilot_20260705.json`); short budgets truncate a reasoning trace before the answer. `chain_v1` measures depth only below its k=6 cycle length (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); the deeper cells in the pilot files (depths 6–32) wrapped the cycle (effective difficulty depth mod 6) and are records of the wrapped task, not depth results — depth >= k belongs to the scaled no-wrap variant (`chain_nowrap`).
 - **Composition is the bottleneck — but hybrid models break through.** With an explicit output-format instruction, `composite_copy_v1` rises well above zero. Nemotron 3 Ultra scores **0.767** and Kimi K2 scores **0.733**, both well above the earlier best (DeepSeek 0.600). Without the format instruction every model scored 0%.
 
 ## Hybrid / state-space / MoE models

@@ -37,7 +37,7 @@ is the single most direct prediction:
   *teacher-forced* one, and does it extrapolate OOD?
 - **H3 (trained vs API):** API models CoT natively; from-scratch models must be
   **trained** to emit a useful trace. Sub-question: does a trained scratchpad
-  extrapolate to longer horizons better than answer-only (compute-vs-memorize)?
+  extrapolate to longer lengths better than answer-only (compute-vs-memorize)?
 
 ## Experiments
 
@@ -55,7 +55,7 @@ Four conditions on `composite_copy_v1` and `chain_v1` (and `s5_v1`), n≥30:
 
 Read with the holder/value decomposition: the CoT win is real only if condition 3
 lifts *value_acc* (not just *holder_acc*), and condition 4 tells you how much
-headroom remains. **Knob:** `max_new_tokens` must scale with horizon (≥ length +
+headroom remains. **Knob:** `max_new_tokens` must scale with the eval length (≥ length +
 answer); the runner already takes it as an argument.
 
 Deliverable: per-condition `(overall, holder_acc, value_acc)`; conclusion = does
@@ -73,7 +73,7 @@ Train `gdp_hybrid` / `fprm` / `transformer` on `composite_copy_scale_v1` and
   answer** with `score_last_n`.
 
 Hypothesis (H3): B extrapolates further OOD (L64/L128) because the state is
-*regenerated* rather than retrieved from a fixed-horizon latent. Compare at
+*regenerated* rather than retrieved from a fixed-length latent. Compare at
 **matched token budget**: B generates ~`length` extra tokens, so also run A with
 `max_new_tokens` padded to match, to separate "more compute" from "structured
 unrolling".
@@ -106,7 +106,7 @@ stack with it? This is the clean architecture × test-time-compute interaction.
   that lets the model echo the last-seen token).
 - **Compute matching:** always pair CoT with a token-budget-matched answer-only
   baseline so "more tokens" is not confounded with "structured reasoning".
-- **Format discipline:** raise `max_new_tokens` with horizon; keep `stop_at="."`
+- **Format discipline:** raise `max_new_tokens` with the eval length; keep `stop_at="."`
   so traces terminate. Document the per-task budget formula.
 - **Scoring robustness:** use `score_last_n` (final answer after trace) plus the
   holder/value decomposition; never score the trace *as* the answer.
@@ -132,7 +132,7 @@ stack with it? This is the clean architecture × test-time-compute interaction.
 | `s5_v1` | **large if unrolled** | turns latent non-abelian tracking into step-wise computation |
 
 The headline question this answers for the consolidated report: **is the
-composition/state-tracking wall a capacity limit or a routing limit?** If a
+composition/state-tracking deficit a capacity limit or a routing limit?** If a
 self-generated scratchpad recovers the value leg (E1/E2) while the scaffolded
-ceiling (E1.4) is high, the wall is routing — movable at inference time — not
+ceiling (E1.4) is high, the deficit is routing — movable at inference time — not
 capacity.

@@ -75,7 +75,7 @@ def summarize(rows):
 def main():
     ap = argparse.ArgumentParser(description="Reasoning on/off/levels sweep.")
     ap.add_argument("--models", nargs="+", default=REASONING_MODELS)
-    ap.add_argument("--tasks", nargs="+", default=["composite_copy_v1", "s5_v1"])
+    ap.add_argument("--tasks", nargs="+", default=["composite_copy_v2", "s5_v1"])
     ap.add_argument("--efforts", nargs="+", default=EFFORTS,
                     help="Reasoning effort levels (OpenRouter). Add 'default' for the model default.")
     ap.add_argument("--n", type=int, default=100)
@@ -101,7 +101,7 @@ def main():
     all_rows = []
     for model in a.models:
         for task in a.tasks:
-            spec = TK.CANONICAL[task]
+            spec = TK.spec_for(task)
             length = a.length or spec.eval_lengths[0]
             for effort in a.efforts:
                 tag = f"{model.split('/')[-1]} | {task}@L{length} | effort={effort}"

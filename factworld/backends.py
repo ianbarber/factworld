@@ -16,6 +16,7 @@ environments (e.g. for the ``FunctionBackend`` smoke test path).
 from __future__ import annotations
 
 import re
+import threading
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -219,6 +220,30 @@ class APIBackend(ModelBackend):
     By default calls are issued concurrently via a small thread pool
     (``max_workers``). Set ``max_workers=1`` for sequential execution, or use a
     local endpoint for large ``n``.
+
+    ``answer_mode`` controls post-processing of the model's reply:
+
+      - ``"tokens"`` (default): full FactWorld-token munging — strip
+        ``<think>`` blocks, re-attach the stop token, strip prose prefixes,
+        split on colons/commas, and normalize a glued trailing period. This is
+        the historical behavior for FactWorld's atomic-token answers (``g3 .``).
+      - ``"words"``: for natural-word answers (e.g. concrete renderings whose
+        gold is ``Driver``). Still strips ``<think>`` blocks and whitespace and
+        keeps only the pre-period answer span, but skips the token-specific
+        munging (colon split, comma rsplit, prefix regexes) that corrupts
+        natural-language answers.
+      - ``"raw"``: the visible output untouched except for ``<think>`` block
+        stripping. For callers that do their own extraction (e.g. the
+        zero-budget answer-contract battery, which regexes the last
+        ``Answer:`` line out of the visible text).
+
+    Every completed or failed API call also records lightweight metadata
+    (token usage, served model, provider, finish reason, error) in a
+    thread-safe internal list; ``pop_call_meta()`` returns and clears an
+    aggregate. ``generate`` additionally keeps a per-example view —
+    ``{completion_tokens, reasoning_tokens, finish_reason}`` order-aligned
+    with the prompts — retrievable via ``pop_example_meta()``. Callers that
+    never call either pop are unaffected.
     """
 
     def __init__(
@@ -230,6 +255,8 @@ class APIBackend(ModelBackend):
         max_workers: int = 4,
         system_prompt: str | None = None,
         extra_body: dict[str, Any] | None = None,
+        answer_mode: str = "tokens",
+        timeout: float | None = None,
     ):
         try:
             from openai import OpenAI
@@ -239,13 +266,130 @@ class APIBackend(ModelBackend):
                 "Install it with: pip install openai"
             ) from exc
 
+        if answer_mode not in ("tokens", "words", "raw"):
+            raise ValueError(f"answer_mode must be 'tokens', 'words' or 'raw', got {answer_mode!r}")
+
         self.model = model
-        self.client = client if client is not None else OpenAI(api_key=api_key, base_url=base_url)
+        # ``timeout`` (seconds) overrides the openai client's default 600s request
+        # timeout. Long-reasoning cells (16k+ token budgets) can legitimately
+        # generate for >10 minutes; at the default, such calls time out and the
+        # retry loop re-runs the whole generation (billed server-side each time)
+        # until retries exhaust — manufacturing empty preds on exactly the cells
+        # with the longest traces. None keeps the client default.
+        if client is not None:
+            self.client = client
+        else:
+            kwargs: dict[str, Any] = {"api_key": api_key, "base_url": base_url}
+            if timeout is not None:
+                kwargs["timeout"] = timeout
+            self.client = OpenAI(**kwargs)
         self.max_workers = max_workers
         self.system_prompt = system_prompt
         self.extra_body = extra_body
+        self.answer_mode = answer_mode
+        # Per-call metadata, guarded by a lock: ``generate`` fans calls out to a
+        # ThreadPoolExecutor, so appends happen from worker threads.
+        self._meta_lock = threading.Lock()
+        self._call_meta: list[dict[str, Any]] = []
+        # Per-example metadata, appended prompt-order-aligned by ``generate``
+        # itself (main thread), so successive generate calls accumulate in order.
+        self._example_meta: list[dict[str, Any]] = []
 
-    def _call_one(self, prompt: str, max_new_tokens: int, stop: list[str] | None, stop_at: str | None) -> str:
+    def _record_call(self, response: Any | None, error: str | None = None) -> dict[str, Any]:
+        """Append and return one per-call metadata record (thread-safe).
+
+        All field extraction is defensive ``getattr``: the openai client's
+        pydantic models allow extra fields (``extra="allow"``), so OpenRouter's
+        ``provider`` and ``usage.reasoning_tokens`` are attribute-accessible
+        when present and simply absent otherwise.
+        """
+        usage = getattr(response, "usage", None)
+        details = getattr(usage, "completion_tokens_details", None)
+        reasoning_tokens = getattr(details, "reasoning_tokens", None)
+        if reasoning_tokens is None:
+            # OpenRouter reports reasoning tokens directly on the usage object.
+            reasoning_tokens = getattr(usage, "reasoning_tokens", None)
+        choices = getattr(response, "choices", None) or []
+        finish_reason = getattr(choices[0], "finish_reason", None) if choices else None
+        record = {
+            "usage": {
+                "prompt_tokens": getattr(usage, "prompt_tokens", 0) or 0,
+                "completion_tokens": getattr(usage, "completion_tokens", 0) or 0,
+                "reasoning_tokens": reasoning_tokens or 0,
+            },
+            "served_model": getattr(response, "model", None),
+            "provider": getattr(response, "provider", None),
+            "finish_reason": finish_reason,
+            "error": error,
+        }
+        with self._meta_lock:
+            self._call_meta.append(record)
+        return record
+
+    @staticmethod
+    def _example_meta_from(record: dict[str, Any]) -> dict[str, Any]:
+        """The per-example slice of a call record (the pass-at-budget fields)."""
+        return {
+            "completion_tokens": record["usage"]["completion_tokens"],
+            "reasoning_tokens": record["usage"]["reasoning_tokens"],
+            "finish_reason": record["finish_reason"],
+        }
+
+    def pop_example_meta(self) -> list[dict[str, Any]]:
+        """Return and clear per-example metadata, order-aligned with prompts.
+
+        One ``{completion_tokens, reasoning_tokens, finish_reason}`` dict per
+        prompt passed to ``generate`` since the last pop, in prompt order
+        (successive ``generate`` calls accumulate in call order). Failed calls
+        (retries exhausted) contribute a zeros/None entry, keeping alignment.
+        """
+        with self._meta_lock:
+            metas = self._example_meta
+            self._example_meta = []
+        return metas
+
+    def pop_call_meta(self) -> dict[str, Any]:
+        """Return and clear an aggregate of per-call metadata recorded so far.
+
+        Returns:
+            ``{calls, errors, usage: {prompt_tokens, completion_tokens,
+            reasoning_tokens}, served_models: [...], providers: [...],
+            finish_reasons: {reason: count}}`` where ``served_models`` and
+            ``providers`` are deduplicated in first-seen order (``None``
+            values omitted) and ``errors`` counts failed calls.
+        """
+        with self._meta_lock:
+            records = self._call_meta
+            self._call_meta = []
+        usage = {"prompt_tokens": 0, "completion_tokens": 0, "reasoning_tokens": 0}
+        served_models: list[str] = []
+        providers: list[str] = []
+        finish_reasons: dict[str, int] = {}
+        errors = 0
+        for rec in records:
+            for key in usage:
+                usage[key] += rec["usage"][key]
+            if rec["served_model"] is not None and rec["served_model"] not in served_models:
+                served_models.append(rec["served_model"])
+            if rec["provider"] is not None and rec["provider"] not in providers:
+                providers.append(rec["provider"])
+            if rec["finish_reason"] is not None:
+                finish_reasons[rec["finish_reason"]] = finish_reasons.get(rec["finish_reason"], 0) + 1
+            if rec["error"] is not None:
+                errors += 1
+        return {
+            "calls": len(records),
+            "errors": errors,
+            "usage": usage,
+            "served_models": served_models,
+            "providers": providers,
+            "finish_reasons": finish_reasons,
+        }
+
+    def _call_one(
+        self, prompt: str, max_new_tokens: int, stop: list[str] | None, stop_at: str | None
+    ) -> tuple[str, dict[str, Any]]:
+        """One API call (with retries) -> ``(post-processed text, per-example meta)``."""
         messages: list[dict[str, str]] = []
         if self.system_prompt is not None:
             messages.append({"role": "system", "content": self.system_prompt})
@@ -267,6 +411,7 @@ class APIBackend(ModelBackend):
                 break
             except openai.RateLimitError as exc:
                 if attempt == max_retries - 1:
+                    self._record_call(None, error=f"{type(exc).__name__}: {exc}")
                     raise
                 headers = getattr(exc.response, "headers", {}) or {}
                 # Case-insensitive header lookup.
@@ -285,9 +430,17 @@ class APIBackend(ModelBackend):
                 # is a ValueError), gateway 5xx, connection drops. Retry with backoff rather
                 # than crashing the whole eval grid on a single bad cell.
                 if attempt == max_retries - 1:
-                    return ""          # exhausted retries -> empty prediction (scored as wrong)
+                    # exhausted retries -> empty prediction (scored as wrong),
+                    # but the failure is recorded in call meta rather than silent.
+                    rec = self._record_call(None, error=f"{type(exc).__name__}: {exc}")
+                    return "", self._example_meta_from(rec)
                 time.sleep(2 ** attempt)
 
+        rec = self._record_call(response)
+        return self._postprocess(response, stop_at), self._example_meta_from(rec)
+
+    def _postprocess(self, response: Any, stop_at: str | None) -> str:
+        """Reduce one raw API response to the scored answer text (see ``answer_mode``)."""
         choices = getattr(response, "choices", None)
         if not choices:
             return ""
@@ -301,6 +454,19 @@ class APIBackend(ModelBackend):
             text = text.rsplit("</think>", 1)[1]
         elif "<think>" in text:
             text = ""
+        if self.answer_mode == "raw":
+            # Visible output as-is: the caller owns extraction (e.g. the
+            # answer-contract regex over the last "Answer:" line).
+            return text
+        if self.answer_mode == "words":
+            # Natural-word answers (e.g. "Driver ." or "Driver."): keep only the
+            # pre-period answer span and strip whitespace. The FactWorld-token
+            # munging below (prefix regexes, colon split, comma rsplit, glued-period
+            # normalization) corrupts natural-language answers, so skip it.
+            text = text.strip()
+            if "." in text:
+                text = text.split(".", 1)[0]
+            return text.strip()
         # OpenAI excludes the stop token from the returned text; re-attach it
         # so downstream exact-match scoring sees the same span as local backends.
         if stop_at is not None and getattr(choice, "finish_reason", None) == "stop" and not text.endswith(stop_at):
@@ -341,16 +507,23 @@ class APIBackend(ModelBackend):
     def generate(self, prompts: list[str], max_new_tokens: int, stop_at: str | None = None) -> list[str]:
         stop = [stop_at] if stop_at is not None else None
         if self.max_workers == 1 or len(prompts) == 1:
-            return [self._call_one(p, max_new_tokens, stop, stop_at) for p in prompts]
+            results = [self._call_one(p, max_new_tokens, stop, stop_at) for p in prompts]
+        else:
+            from concurrent.futures import ThreadPoolExecutor
 
-        from concurrent.futures import ThreadPoolExecutor
-
-        with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
-            futures = [
-                pool.submit(self._call_one, p, max_new_tokens, stop, stop_at)
-                for p in prompts
-            ]
-            return [f.result() for f in futures]
+            with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
+                futures = [
+                    pool.submit(self._call_one, p, max_new_tokens, stop, stop_at)
+                    for p in prompts
+                ]
+                # The futures list is in submission (= prompt) order and results
+                # are collected by position, so both the returned texts and the
+                # per-example metadata stay aligned with ``prompts`` regardless
+                # of which worker thread finished first.
+                results = [f.result() for f in futures]
+        with self._meta_lock:
+            self._example_meta.extend(meta for _text, meta in results)
+        return [text for text, _meta in results]
 
     @property
     def name(self) -> str:

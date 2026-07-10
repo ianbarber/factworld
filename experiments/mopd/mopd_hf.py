@@ -45,7 +45,8 @@ MAX_NEW = 8              # no thinking: answers are 1-2 content tokens (+ '.')
 
 # The two RL-teacher domains (both partial on the base; see bench_qwen.py / config sweep).
 DOMAINS: dict[str, Any] = {
-    "binding": lambda: TK.CANONICAL["binding_v1"].scaled(
+    # binding_v1 pin unchanged (RETIRED handle — the v2 re-pin is a separate PR, issue #11)
+    "binding": lambda: TK.RETIRED["binding_v1"].scaled(
         train_lengths=(8, 16), eval_lengths=(16, 24, 32)),
     "recall": lambda: TK.CANONICAL["recall_copy_v1"].scaled(
         k=64, value_vocab_size=128, train_lengths=(12, 16), eval_lengths=(16, 24)),

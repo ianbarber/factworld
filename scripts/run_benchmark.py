@@ -4,10 +4,10 @@ This is the single entry point that makes the frozen task suite (`factworld.task
 canonical task (or a scaled variant), train a model on its `train` split, and score its `test` splits at
 each OOD length with the one canonical metric (relaxed match of the final answer span).
 
-  .venv/bin/python scripts/run_benchmark.py composite_v1 --arch gdp_hybrid --d_model 256 --steps 4000
+  .venv/bin/python scripts/run_benchmark.py composite_copy_v2 --arch gdp_hybrid --d_model 256 --steps 4000
   # programmatic:
   from run_benchmark import run_task
-  acc = run_task("composite_copy_v1", arch="gdp_hybrid", d_model=512, n_layers=8, steps=25000)
+  acc = run_task("composite_copy_v2", arch="gdp_hybrid", d_model=512, n_layers=8, steps=25000)
 """
 import argparse
 import os
@@ -44,7 +44,7 @@ def run_task(name, *, spec=None, arch="gdp_hybrid", d_model=256, n_layers=4, d_f
 
     from factworld import train as T
 
-    spec = spec or TK.CANONICAL[name]
+    spec = spec or TK.spec_for(name)  # RETIRED fallback: historical reproduction only
     d_ff = d_ff or 4 * d_model
     w, r = TK.build_world(spec)
     train = TK.generate(spec, "train", n=train_n)
@@ -67,7 +67,7 @@ def run_task(name, *, spec=None, arch="gdp_hybrid", d_model=256, n_layers=4, d_f
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("task", choices=list(TK.CANONICAL))
+    ap.add_argument("task", choices=[*TK.CANONICAL, *TK.RETIRED])
     ap.add_argument("--arch", default="gdp_hybrid")
     ap.add_argument("--d_model", type=int, default=256)
     ap.add_argument("--n_layers", type=int, default=4)

@@ -46,7 +46,15 @@ relaxed for both API and local models.
 
 ## 2. The tasks
 
-**Composition (`composite_copy_v1`)** is the flagship probe. A set of facts maps agents to values,
+**Which task version each number is on.** The worked example below, the §4 grid, the §5 local
+tables, and the §7 long-context sweeps are on the retired v1 give-stream family; read them as
+diagnostics until the re-measure on the de-skewed v2 sampler lands
+([#11](https://github.com/ianbarber/factworld/issues/11)). §7 is the most recency-exposed
+claim: under the v1 sampler the resolving write sits near the stream end at every L, so "holds
+to L512" was partly recency credit. Cross-model claims defer to the frontier benchmark
+([`frontier-benchmark.md`](frontier-benchmark.md)), which is on v2.
+
+**Composition (`composite_copy_v1`)** is the flagship probe — the state × recall composition. A set of facts maps agents to values,
 and a stream of `give` events moves objects between agents. The query asks for the value of the
 agent that currently holds a given object:
 
@@ -65,14 +73,15 @@ so the value is read from context, not from weights.
 roles of a set of agents, and the query asks for one agent's final role. Unlike last-write-wins,
 the running permutation must be carried step by step.
 
-**Simpler tasks** round out the suite and act as positive controls:
+**The remaining tasks**, grouped as components and compositions per the taxonomy
+([`AGENTS.md`](../AGENTS.md)):
 
-| task | behavior | difficulty axis |
-| --- | --- | --- |
-| `recall_copy_v1` | 1-of-N in-context-copy recall | distractor pool |
-| `binding_v1` | last-write-wins state tracking | give-stream length |
-| `chain_v1` | depth-*k* pointer chase | composition depth |
-| `conflict_v1` | parametric ↔ in-context override | memorized map vs. context |
+| task | role | behavior | difficulty axis |
+| --- | --- | --- | --- |
+| `recall_copy_v1` | component: recall | single-query, deferred-readout MQAR variant | pool breadth |
+| `conflict_v1` | component: recall (parametric variant) | parametric ↔ in-context override | memorized map vs. context |
+| `binding_v1` | component: state tracking | last-write-wins (absorbing updates — not group ops) | give-stream length |
+| `chain_v1` | composition: recall ∘ recall | pointer chase at fixed breadth | depth |
 
 ## 3. Validating the instrument
 
@@ -115,6 +124,16 @@ length. The instrument is sound on the natural-language format.
 
 ## 4. Evaluating frontier models
 
+For frontier-model comparisons, the canonical source is the recurring benchmark report,
+[`frontier-benchmark.md`](frontier-benchmark.md): a composition instrument — the component legs
+(recall, binding) against the composed two-hop cell at L16/L64, with a per-model composition gap
+(binding@L16 − composed@L16), shallow-heuristic floors as first-class rows, and two state-stress
+rows under reasoning (chain d128 at fixed k=257, s5 @L256) — in an instant (no-thinking) and a
+thinking regime, on the de-skewed v2 tasks, with censoring and cleanliness marks and per-cell
+provenance. It supersedes the OpenRouter grid in this section for cross-model claims; the grid
+below remains the pretrained-open-model snapshot on the v1 tasks and the source for the
+reasoning-effort and scaffolding analyses.
+
 The default setup for API evaluation is:
 
 - `max_new_tokens=2048` — enough for reasoning models to finish a scratchpad.
@@ -153,7 +172,8 @@ including the reasoners that score 0.8–0.98 under a plain prompt.
 **S₅ is movable by reasoning — under a concrete rendering.** In the standard grid below (token
 rendering, no reasoning) S₅ sits at floor (~0.18). Allow reasoning *and* render the problem
 concretely (people and jobs, initial assignment stated), and a strong reasoner solves it: GLM-5.2
-holds 0.93–1.00 from L4 through L32, then hits a sharp cliff at L64 (0.10). The lever is the
+holds 1.00 at L32, 0.97 at L64, and 0.90 at L128, degrading gradually with length
+(`results/s5_horizon_recheck_20260705.jsonl`, 8192-token budget). The lever is the
 combination — reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering
 without reasoning leaves it at chance. Appendix A gives the full curve, the reasoning × rendering
 interaction, and the per-example failure mode.
@@ -161,9 +181,12 @@ interaction, and the per-example failure mode.
 The wider API capability grid below uses the standard zero-shot grid (default decoding,
 `max_new_tokens=16`, `stop_at="."`) — no reasoning — for all tasks except `composite_copy_v1`,
 which uses the long-token setup above. S₅ floors in this no-reasoning grid but is movable by
-reasoning under a concrete rendering (paragraph above; Appendix A).
+reasoning under a concrete rendering (paragraph above; Appendix A); `chain_v1` floors here but
+is reasoning-solvable at its designed depths under an 8192-token budget (below). The `chain_v1`
+column runs at depth 16 — past the task's design gate — so it is a wrapped-task floor check,
+not a depth score (below).
 
-| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 | composite_copy_v1 | s5_v1@L16 |
+| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 @d16 (wrapped) | composite_copy_v1 | s5_v1@L16 |
 | --- | --- | --- | --- | --- | --- | --- |
 | glm-5.2 | 1.000 | 1.000 | 0.767 | 0.133 | **0.867** | 0.200 |
 | kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | **0.867** | 0.200 |
@@ -173,9 +196,18 @@ reasoning under a concrete rendering (paragraph above; Appendix A).
 | gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.200 |
 
 Single-hop recall and conflict are solved across the board. Binding and composition separate the
-stronger models. Depth-*k* composition (`chain_v1`) sits near floor for everyone; non-abelian
-state-tracking (`s5_v1`) floors in this no-reasoning grid but is movable by reasoning under a
-concrete rendering (Appendix A).
+stronger models. Depth-*k* composition (`chain_v1`) sits near floor in this no-reasoning grid,
+but with reasoning and `max_new_tokens=8192` glm-5.2 solves it at its designed depths — 1.00 at
+depth 4, n=30 (`results/chain_reasoning_pilot_20260705.json`). `chain_v1` builds a single k=6
+pointer cycle and measures depth only at depths < k (`factworld/tasks.py`: "Depths stay < k so
+the cycle never wraps"); at depth >= 6 the chain wraps — gold returns to the start agent at
+multiples of 6 and effective difficulty is depth mod 6 — so cells run deeper (the grid column
+above at depth 16, and the depth 6–32 cells in the pilot files) exercise the wrapped task and
+are not depth results. Measuring depth beyond k is the axis of the scaled no-wrap variant
+(`chain_nowrap`). Non-abelian state-tracking (`s5_v1`) floors here but is movable by reasoning
+under a concrete rendering (Appendix A). Reasoning-model cells require a large completion
+budget: a short budget truncates the reasoning trace before the answer and reads as an empty
+prediction.
 
 ## 5. Evaluating local architectures
 
@@ -232,7 +264,7 @@ period issue):
 
 `gdp_hybrid` solves the binding leg and does most of the recall leg. `fprm` partially tracks
 holders but fails to recall the value of the resolved holder. The transformer fails both legs.
-This is the same routing wall the API models hit: even when the holder is correct, the model
+This is the same routing deficit the API models hit: even when the holder is correct, the model
 must route that holder into the in-context recall lookup.
 
 ### Scale robustness (compute-matched sweep)
@@ -260,8 +292,8 @@ large ~18–269M / ~418–540. Raw runs + the holder/value decomposition are in
   throughout (medium: 0.06 vs 0.99 across seeds). The **transformer floors at every scale,
   including 202M params / 417 GFLOP·tok** — so §5's "transformer fails" is not a small-model
   artifact; compute-matching does not rescue it.
-- **The routing wall is scale-invariant.** Wherever an architecture fails, the holder (binding) leg
-  holds and the value (recall-of-resolved-holder) leg collapses — the same wall §6 localizes. This
+- **The routing deficit is scale-invariant.** Wherever an architecture fails, the holder (binding) leg
+  holds and the value (recall-of-resolved-holder) leg collapses — the same deficit §6 localizes. This
   includes `gdp_hybrid` at large: both seeds solve binding (0.85 / 0.84) but one seed's value leg
   collapses to 0.00.
 - **Caveat at the largest size.** `gdp_hybrid` itself goes bimodal at large (per-seed value 0.56 /
@@ -281,7 +313,7 @@ per-leg decomposition. A composite example requires two distinct computations:
 By scoring each leg independently, the suite can localize failures and test interventions:
 
 - **Ceiling probe:** give the model the correct holder and ask only for the value. If recall is
-then perfect, the wall is state-tracking, not recall.
+then perfect, the deficit is state-tracking, not recall.
 - **Scaffolded eval:** the oracle provides the holder; the model generates only the value. This
 measures recall-of-the-resolved-holder in isolation.
 - **Binding-only eval:** ask only "who holds the object?" to measure state-tracking without recall.
@@ -298,7 +330,7 @@ Real sessions are long. We stress both regimes far past their sweet spots — tr
 evaluated to 32× their training length, pretrained models evaluated from L16 to L512.
 
 **Trained recurrent hybrids extrapolate far.** Stressing the §5 comparison to 32× the trained
-horizon (8 seeds):
+length (8 seeds):
 
 | arch | L64 | L128 | L256 | L512 |
 | --- | --- | --- | --- | --- |
@@ -316,10 +348,11 @@ The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
 | kimi-k2.6 | 0.47 | **0.97** | 0.73 | **0.97** | **0.93** |
 | glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
 
-High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ does not
-follow it: even under a concrete rendering with reasoning, S₅ cliffs at ~L64 (Appendix A), so at
-these lengths (L128+) it is at floor. The two tasks hold distinct characters under horizon stress
-— composition is reasoning-recoverable at long context, S₅ is not.
+High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ under a
+concrete rendering with reasoning holds 0.90 at L128 (Appendix A), degrading gradually rather
+than abruptly; its concrete-rendering sweep so far extends to L128, short of composition's
+L512. Both tasks are reasoning-recoverable under length stress, with task- and model-dependent
+limits.
 
 ## 8. S₅ is movable by supervision density (the local, from-scratch regime)
 
@@ -337,7 +370,7 @@ into the training stream (K=1 is dense), and evaluate free-running. 10 seeds:
 | 8 | 0.21 | 0.20 | 0/10 |
 
 The circuit forms reliably down to a checkpoint every other step and is gone below. This is a
-sharp learnability cliff.
+sharp learnability threshold.
 
 **The circuit survives weaning to label-free deployment.** Train dense, then fine-tune on a mix
 of densities including answer-only, and evaluate free-running. 8 seeds:
@@ -361,13 +394,17 @@ finding about "routing the resolved holder into recall" can be checked in both s
 The takeaways are:
 
 - **Composition responds to reasoning.** It is movable at inference by background reasoning,
-including at long context (recovered to 0.80–0.97 at L512), for models that can reason. Explicit
-prompting does not substitute.
+including at long context (recovered to 0.80–0.97 at L512), for models that can reason. Depth-*k*
+composition (`chain_v1`) follows at its designed depths (< k=6, before the pointer cycle wraps):
+with reasoning and an 8192-token budget glm-5.2 solves it where the no-reasoning grid floors;
+depth behaviour beyond k is measured by the scaled no-wrap variant (`chain_nowrap`), not by
+`chain_v1`. Explicit prompting does not substitute.
 - **Non-abelian state-tracking also responds to reasoning — but only under a concrete rendering,
-and with a sharp length cliff.** GLM-5.2 solves `s5_v1` at 0.93–1.00 from L4 to L32 with reasoning
-plus a concrete (people/jobs) rendering, then collapses at L64 (0.10). Neither reasoning under the
-token rendering (~0.33) nor a concrete rendering without reasoning (~chance) suffices — the
-combination does, up to the cliff. Composition, by contrast, recovers out to L512.
+and with a model-dependent length limit.** GLM-5.2 solves `s5_v1` with reasoning plus a concrete
+(people/jobs) rendering — 1.00 at L32, 0.97 at L64, 0.90 at L128 — while kimi-k2.6 degrades
+sooner (1.00 at L16, 0.83 at L32). Neither reasoning under the token rendering (~0.33) nor a
+concrete rendering without reasoning (~chance) suffices — the combination does. Composition
+recovers out to L512.
 - **For local from-scratch models, S₅'s lever is supervision density.** Dense per-step state
 supervision develops a length-extrapolating circuit that weans to label-free deployment (§8) — a
 distinct regime from frontier inference.
@@ -390,13 +427,53 @@ scale with reasoning tokens. The natural-language format differs from the atomic
 used in prior work on this instrument; absolute numbers are not comparable across formats, though
 the mechanism conclusions reproduced.
 
-**Related work.** Prior work on this instrument established the single-capability dissociations
-and the non-abelian recipe on the atomic-token format ([`phases/`](phases/)); this report
-reproduces their takeaways on the natural-language format and adds the API evaluation and the
-long-context results. The `fprm` architecture is a probe inspired by Movahedi et al. (2026); we
-did not run their model. The shortcut-learning and length-extrapolation results engage a
-substantial literature on transformer state-tracking brittleness (Liu et al., 2023) and recurrent
-extrapolation, which we extend rather than survey.
+**Related work.** The `fprm` architecture is a probe inspired by Movahedi et al. (2026), who
+report strong `s5_v1` length generalization with a looped-transformer architecture (FPRM) that
+uses a causal 1-D convolution / unroll-to-convergence mechanism; our `fprm` is a weight-tied
+variant of that block, and we did not run their model. Its strongest result here — best
+length extrapolation on the binding leg — is on the retired v1 sampler and reads as a diagnostic
+until its v2 re-measure lands ([#11](https://github.com/ianbarber/factworld/issues/11)). The
+shortcut-learning and length-extrapolation results engage a substantial literature on
+transformer state-tracking brittleness (Liu et al., 2023) and recurrent extrapolation, which we
+extend rather than survey.
+
+### Provenance: what the archived phases established
+
+Prior work on this instrument ran on an earlier atomic-token format
+([`phases/`](../phases/)); mechanism conclusions carry across formats, absolute numbers do not.
+
+**Phase 1** ([`phases/01-instrument/factworld.md`](../phases/01-instrument/factworld.md)) is the
+instrument's provenance. Its oracle/no-leak render↔parse contract and validity gate (§1
+contribution list; §2 "validity gate") still certify the current suite via
+`scripts/validate_suite.py`, including the design choices the gate forced (identity initial role
+assignment, touched-object queries, shared opaque value vocabulary). Its single-capability
+dissociations — §3.1 (S₅/A₅ extrapolation under dense per-token supervision: product recurrence
+extrapolates, transformer collapses) and §3.2 (attention aces adjacent/1-hop recall while
+deferred readout needs product recurrence) — are reproduced on the natural-language format in §3
+above, which supersedes the phase numbers. Its §4 resolve-then-recall pipeline finding is the
+mechanism ancestor of this report's per-leg decomposition. Its §5 scale numbers are on a retired
+task and metric and are superseded outright (the compute-matched comparison is §5 above:
+10/76/101M params, matched on FLOPs, not the "~45M matched" framing of earlier drafts).
+
+**Phase 2** ([`phases/02-non-abelian-state/report.md`](../phases/02-non-abelian-state/report.md))
+is the provenance of the s5 supervision-density row. Its §4 density sweep (a state checkpoint
+every ≤2 events, floor below) reproduces on the natural format (§8 above;
+[`docs/experiments/README.md`](../docs/experiments/README.md) §1, where it is also shown
+architecture-independent) — that reproduction is what makes the row format-independent. Its §3
+"recall is free given a resolved pointer" (P(value|holder✓)=1.0) is the archived ancestor of the
+frontier benchmark's scaffolded-leg argument. Levers not yet re-measured on the natural format
+stay citable with atomic-token scoping: the scale ladder to 357M (capacity is not the
+extrapolation lever; §5), the training-length-distribution threshold and
+concentration-beats-coverage (§6), post-training deep-state coverage to ≈8× label-free with
+clean-base selection (§6.1), the outcome-reward GRPO null (§4 — evidence the density requirement
+spans training paradigms), and the CWM code-rendering bridge (§4.1 — the difficulty is the
+computation, not the surface).
+
+**One phase-2 headline does not carry.** Phase 2 reported that weaning internalizes the circuit
+but never extrapolates. This report's §8 weaning result contradicts that on the natural format:
+8/8 seeds converge and extrapolate on par with dense-only (L64 0.50–0.54). The reconciliation is
+scope: the phase claim was measured on its atomic-token composite with a different supervision
+target, and stays scoped there; §8 is the current claim.
 
 ## 11. Reproducibility
 
@@ -469,10 +546,11 @@ python scripts/experiment_dense_supervision.py
 ## Appendix A. S₅ — what frontier models can track, and where it breaks
 
 S₅ (`s5_v1`) is non-abelian state tracking (§2). Without reasoning it floors at every length; with
-reasoning under a concrete rendering a strong model solves it through L32, then hits a sharp cliff
-at L64. This appendix gives the no-reasoning failure mode, the reasoning × rendering interaction
-that unlocks the task, and the length cliff. Data: `docs/openrouter/s5-{length-sweep,framing,
-framing-reasoning,horizon}.jsonl`; scripts: `scripts/experiment_s5_framing.py`,
+reasoning under a concrete rendering a strong model solves it, degrading gradually with length
+(GLM-5.2 holds 0.90 at L128). This appendix gives the no-reasoning failure mode, the reasoning ×
+rendering interaction that unlocks the task, and how far it holds with length. Data:
+`docs/openrouter/s5-{length-sweep,framing,framing-reasoning,horizon}.jsonl`,
+`results/s5_horizon_recheck_20260705.jsonl`; scripts: `scripts/experiment_s5_framing.py`,
 `scripts/analyze_s5_tracking.py`. All cells n=30, relaxed match, chance floor 0.20.
 
 ### A.1 The computation
@@ -535,30 +613,47 @@ Turn reasoning on and the two renderings split sharply. Relaxed accuracy, reason
 reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering without reasoning
 leaves it at chance. **The combination** — reasoning plus a concrete rendering — solves S₅ at
 short lengths. The token rendering is the bottleneck on the reasoning arm: it is hard for the model
-to track abstract IDs through a scratchpad, where named people and jobs are not.
+to track abstract IDs through a scratchpad, where named people and jobs are not. One caveat on
+the reasoning-on cells: they use the framing script's 16-token completion budget, which
+undercounts models that emit long traces — kimi's concrete L16 cell reads 0.33 here (20/30
+empty predictions) but is 1.00 under an 8192-token budget, with 0.83 at L32
+(`results/s5_horizon_recheck_20260705.jsonl`). A.4 gives the budget-controlled length profile
+for the concrete arm.
 
-### A.4 The length cliff
+### A.4 The length profile
 
-Where does the reasoning-plus-concrete advantage give out? Sweeping GLM-5.2 (reasoning on) to long
-lengths:
+How far does the reasoning-plus-concrete advantage track? Budget matters here: reasoning traces
+grow with sequence length, and cells measured under the framing script's 16-token completion
+budget undercount reasoning models — the concrete L64 cell below is 27/30 empty predictions
+(`docs/openrouter/s5-horizon.jsonl`). Sweeping GLM-5.2 (reasoning on) under that 16-token budget:
 
 | rendering | L4 | L8 | L16 | L32 | L64 | L128 |
 | --- | --- | --- | --- | --- | --- | --- |
 | concrete | 0.97 | 1.00 | 0.93 | **0.97** | **0.10** | 0.00 |
 | token | 0.60 | 0.33 | 0.33 | 0.13 | 0.00 | 0.00 |
 
-GLM solves S₅ at 0.93–1.00 from L4 through **L32**, then collapses at **L64** (0.10) — a sharp
-cliff, not a gradual decay. This ~32-op horizon is the real capability frontier for non-abelian
-tracking here, and it is only visible under the concrete+reasoning setting; under the token
-rendering or without reasoning the task looks unsolvable at every length (A.2). Kimi-2.6 (A.3)
-tracks less far (~through L8) — the cliff is model-dependent as well as length-dependent.
+Under an 8192-token budget (`max_new_tokens=8192`, no early stop, n=30;
+`results/s5_horizon_recheck_20260705.jsonl`) the concrete+reasoning curve degrades gradually:
+
+| model | L16 | L32 | L64 | L128 |
+| --- | --- | --- | --- | --- |
+| glm-5.2 | — | **1.00** | **0.97** | **0.90** |
+| kimi-k2.6 | 1.00 | 0.83 | — | — |
+
+GLM's empty-prediction rate under the large budget is 0/30 at L32 and L64 and 2/30 at L128 — the
+residual errors are genuine wrong answers, not truncation. Kimi's 0.83 at L32 carries 5/30 empty
+predictions (it emits very long traces, so 0.83 is an underestimate). The degradation point is
+model-dependent (glm ≫ kimi), and the degradation is gradual — GLM holds 0.90 at L128, with no abrupt break. The capability is only visible under the concrete+reasoning setting; under the token
+rendering or without reasoning the task looks unsolvable at every length (A.2).
 
 ### A.5 Two regimes, two levers
 
-For **frontier inference**, S₅ is movable by reasoning under a concrete rendering, up to the L64
-cliff (A.3–A.4). For **local from-scratch training**, the lever is supervision density: dense
-per-step state supervision develops a length-extrapolating circuit that weans to label-free
-deployment (§8). These are different questions — what a frontier reasoner can do at inference vs.
-what a small model can learn from scratch — and both hold. The clean dissociation from composition
-(§9) is that composition is reasoning-recoverable out to L512, while S₅ cliffs at ~L64 even under
-its most favorable setting.
+For **frontier inference**, S₅ is movable by reasoning under a concrete rendering, degrading
+gradually in length with a model-dependent limit (A.3–A.4). For **local from-scratch training**,
+the lever is supervision density: dense per-step state supervision develops a length-extrapolating
+circuit that weans to label-free deployment (§8). These are different questions — what a frontier
+reasoner can do at inference vs. what a small model can learn from scratch — and both hold.
+Composition, chain (at its designed depths < k=6), and S₅ are all reasoning-movable at inference
+(§9); what differs is how far each holds — composition recovers out to L512 and S₅ holds 0.90 at
+L128 for GLM, while chain's depth behaviour is measured by the scaled no-wrap variant
+(`chain_nowrap`), since `chain_v1`'s pointer cycle wraps past depth 5.
