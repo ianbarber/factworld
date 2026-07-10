@@ -76,9 +76,12 @@ def test_arms_for_facets():
     # zero_budget: explicit (length, leg) cells, effort none, tight budget, contract on.
     # The "replicate" leg (review F6, replacing the mislabeled "end_to_end") is a
     # deliberate test-retest duplicate of the plain L16 cell.
+    # The scaffolded leg (issue #11 re-measure): recall-given-holder on the v2 items,
+    # completing the E1b decomposition triple (a one-shot positive-control ceiling row).
     zb = [c for c in opus if c["facet"] == "zero_budget"]
     assert [(c["length"], c["settings"]["leg"]) for c in zb] == [
-        (16, None), (64, None), (16, "binding_only"), (16, "replicate")]
+        (16, None), (64, None), (16, "binding_only"), (16, "replicate"),
+        (16, "scaffolded")]
     assert not any(c["settings"]["leg"] == "end_to_end" for c in zb)
     for c in zb:
         # composite_copy_v2: the uniform-last-write sampler (v1's queried-object
@@ -234,7 +237,7 @@ def test_plan_has_no_rung_keys_and_facet_breadths_expand():
     fake = {**B.FACETS["zero_budget"], "breadths": (4, B.CANONICAL_BREADTH, 64)}
     with mock.patch.dict(B.FACETS, {"zero_budget": fake}):
         cells = [c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "zero_budget"]
-        assert len(cells) == 4 * 3  # 4 (length, leg) cells x 3 pool rungs
+        assert len(cells) == 5 * 3  # 5 (length, leg) cells x 3 pool rungs
         rungs = {(c["length"], c["settings"]["leg"], c["settings"].get("breadth"))
                  for c in cells}
         # canonical rung: key omitted (None); non-canonical rungs carried verbatim
@@ -948,7 +951,7 @@ def test_skip_facets_machinery():
                                                "chain_nowrap", "chain_instant",
                                                "sanity"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
-    assert sum(len(cells) for cells in plan.values()) == 36
+    assert sum(len(cells) for cells in plan.values()) == 45  # 9 models x 5 zero_budget cells
     assert sum(1 for cells in plan.values() if cells) == 9
 
 

@@ -140,6 +140,62 @@ def strong_recency_accuracy(examples, family: str) -> float:
     return sum(strong_recency_pred(e.prompt, family) == e.answer for e in examples) / len(examples)
 
 
+# ---------------------------------------------------------------------------
+# Commutative-rung shallow adversaries (commutative_v1), in the strong_recency_pred idiom:
+# regexes over the canonical rendered grammar ("g3's dial is at p2." initials, "sN turns g3's
+# dial 2 clicks." events), scored against the oracle gold — heuristic ADVERSARIES, never a
+# label source. These are the four one-liner cheats the task design must (and does) depress:
+# each is gated <= 2x chance by scripts/validate_suite.py + tests/test_commutative_v1.py.
+# Expected floors (Monte-Carlo n=200k, k=5, m=4, w_q>=2; chance 0.200):
+#   initial_only      0.224@L4 -> 0.201@L16 (analytic 1/k + (1-1/k)(-1/(k-1))^w)
+#   last_turn_only    0.106@L4 -> 0.199@L16+ (w=2 leaves ONE nonzero residual, never ≡ 0 mod 5)
+#   entity_blind_sum  ~0.200 (m=4 active dials force per-entity filtering)
+#   count_mod_k       ~0.194-0.200 (amounts vary over {1..4}, so event count is uninformative)
+# ---------------------------------------------------------------------------
+_TURN_RE = re.compile(r"\bs\d+ turns (g\d+)'s dial (\d+) clicks?\.")
+_DIAL_RE = re.compile(r"\b(g\d+)'s dial is at p(\d+)\.")
+_COMM_QUERY_RE = re.compile(r"what position is (g\d+)'s dial\?")
+
+
+def comm_shallow_preds(prompt: str, k: int) -> dict[str, str | None]:
+    """The four commutative shallow adversaries' answers for one rendered prompt.
+
+    Returns {name: answer} in canonical rendered form (attached trailing period), or None
+    values when the prompt has no parseable dial structure.
+      initial_only     — the queried agent's STATED initial position (the no-op / identity cheat)
+      last_turn_only   — initial + the LAST matching amount only (the last-event cheat)
+      entity_blind_sum — initial + sum of ALL amounts mod k, no per-entity filtering
+      count_mod_k      — initial + (#matching events) mod k, ignoring amounts
+    """
+    names = ("initial_only", "last_turn_only", "entity_blind_sum", "count_mod_k")
+    m = _COMM_QUERY_RE.search(prompt)
+    initials = {g: int(d) for g, d in _DIAL_RE.findall(prompt)}
+    if not m or m.group(1) not in initials:
+        return {n: None for n in names}
+    target = m.group(1)
+    p0 = initials[target]
+    turns = [(g, int(a)) for g, a in _TURN_RE.findall(prompt)]
+    mine = [a for g, a in turns if g == target]
+    preds = {
+        "initial_only": p0,
+        "last_turn_only": (p0 + (mine[-1] if mine else 0)) % k,
+        "entity_blind_sum": (p0 + sum(a for _g, a in turns)) % k,
+        "count_mod_k": (p0 + len(mine)) % k,
+    }
+    return {n: f"p{v}." for n, v in preds.items()}
+
+
+def comm_shallow_accuracy(examples, k: int) -> dict[str, float]:
+    """Accuracy of each commutative shallow adversary over a list of tasks.Example."""
+    hits: Counter = Counter()
+    names = ("initial_only", "last_turn_only", "entity_blind_sum", "count_mod_k")
+    for e in examples:
+        preds = comm_shallow_preds(e.prompt, k)
+        for name in names:
+            hits[name] += int(preds[name] == e.answer)
+    return {name: hits[name] / len(examples) for name in names}
+
+
 def _fmt(report: dict) -> str:
     lines = ["FactWorld — validity gate", "=" * 46, ""]
     lines.append(f"{'family':<12}{'floor':>8}{'KLexc':>8}{'major':>8}{'recency':>9}{'n.bayes':>9}")

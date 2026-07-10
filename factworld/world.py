@@ -63,6 +63,12 @@ class World:
         self.agents: tuple[str, ...] = tuple(f"{ns}g{i}" for i in range(config.k))
         self.roles: tuple[str, ...] = tuple(f"{ns}r{i}" for i in range(config.k))
 
+        # commutative-state: the closed dial-position answer set (p0..p{k_positions-1}).
+        # Deterministic f-strings, NO rng draws — every pre-existing stream stays byte-identical.
+        # Initial dial positions are PER-EXAMPLE (drawn in tasks.py), not world state: a fixed
+        # world-level initial would make the "initial_only" shallow baseline a constant map.
+        self.positions: tuple[str, ...] = tuple(f"{ns}p{i}" for i in range(config.k_positions))
+
         # hard-state: k agents hold k roles. The initial assignment is the IDENTITY (g_i holds r_i)
         # — the canonical S_k word-problem start. A random hidden initial would be unidentifiable
         # from history-only training data, making the IWL-history-only hard task ill-posed (the
