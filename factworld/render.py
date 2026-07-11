@@ -23,7 +23,8 @@ from .world import Event
 
 # Classify an atomic token by its type prefix (optionally namespaced, e.g. "aux1_g0").
 # 'loc' must precede the single-char alternatives so "loc3" isn't read as an object.
-_TOK = re.compile(r"^(?:[A-Za-z0-9]+_)?(loc|[eavogrs])(\d+)$")
+# 'p' = dial position (the commutative-state answer set p0..p{k-1}; no other pN token exists).
+_TOK = re.compile(r"^(?:[A-Za-z0-9]+_)?(loc|[eavogrsp])(\d+)$")
 
 # Markdown emphasis / inline-code characters stripped from token EDGES by ``normalize``:
 # chat models decorate answers ("**g22**", "`g22`", "_g22_") and the tokens-path scorers
@@ -56,6 +57,8 @@ class Renderer:
     _CYCLE = ("cycles roles: {flows}.",)
     _ROLE = ("{g} has role {r}.",)
     _HOLDER = ("{h} holds {o}.",)
+    _TURN = ("turns {g}'s dial {n} {clicks}.",)
+    _DIAL = ("{g}'s dial is at {p}.",)
 
     # Role-flow arrow in the compact cycle notation: "g0 -> g1 -> g2" means g0's role
     # passes to g1, g1's to g2, and g2's back to g0 (the canonical cycle_roles args).
@@ -83,6 +86,9 @@ class Renderer:
             s = self._pick(self._SWAP, k).format(a=event.args[0], b=event.args[1])
         elif event.kind == "cycle_roles":
             s = self._pick(self._CYCLE, k).format(flows=self._CYCLE_ARROW.join(event.args))
+        elif event.kind == "turn_dial":
+            clicks = "click" if event.args[1] == "1" else "clicks"
+            s = self._pick(self._TURN, k).format(g=event.args[0], n=event.args[1], clicks=clicks)
         else:
             raise ValueError(f"unknown event kind {event.kind!r}")
         return f"{step} {s}" if step is not None else s
@@ -108,6 +114,10 @@ class Renderer:
     def render_holder(self, obj: str, holder: str, step: str | None = None, key: str | None = None) -> str:
         return self._pick(self._HOLDER, key or f"holder|{obj}").format(o=obj, h=holder)
 
+    def render_dial(self, agent: str, position: str, step: str | None = None, key: str | None = None) -> str:
+        """Commutative-state initial-condition line: ``g3's dial is at p2.``"""
+        return self._pick(self._DIAL, key or f"dial|{agent}").format(g=agent, p=position)
+
     def render_query(self, family: str, *, entity=None, attribute=None, target=None, t=None) -> str:
         # as-of-t references the (t-1)-th event label; t=None means the final state
         step = None if t is None else f"s{t - 1}"
@@ -120,6 +130,9 @@ class Renderer:
         if family == "state_hard":
             return (f"what role does {target} have?" if step is None
                     else f"what role does {target} have at {step}?")
+        if family == "state_comm":
+            return (f"what position is {target}'s dial?" if step is None
+                    else f"what position is {target}'s dial at {step}?")
         raise ValueError(f"unknown query family {family!r}")
 
     # ----- attached-punctuation -> canonical whitespace normalization -----
@@ -148,7 +161,7 @@ class Renderer:
 
     # ----- parse (exact inverse) -----
     def _typed(self, text: str):
-        buckets: dict[str, list[str]] = {t: [] for t in ("e", "a", "v", "o", "loc", "g", "r", "s")}
+        buckets: dict[str, list[str]] = {t: [] for t in ("e", "a", "v", "o", "loc", "g", "r", "s", "p")}
         toks = text.split()
         for tk in toks:
             c = classify(tk)
@@ -162,6 +175,10 @@ class Renderer:
         typed, toks = self._typed(text)
         step = typed["s"][0] if typed["s"] else None
         if "?" in toks:
+            # state_comm FIRST: the dial query ("what position is g3 's dial ?") contains no
+            # where/who/role/e-token and would otherwise fall through to the recall fallback.
+            if "dial" in toks:
+                return {"type": "query", "family": "state_comm", "target": typed["g"][0], "step": step}
             # state_easy queries are interrogated with 'where'/'who'. Do NOT key on the words
             # 'holder'/'holds': the composite recall query 'what is a0 of the holder of o3 ?'
             # also contains 'holder' and would be misrouted, breaking the round-trip.
@@ -181,10 +198,15 @@ class Renderer:
             return {"type": "event", "event": Event("swap_role", tuple(typed["g"])), "step": step}
         if "cycle" in toks or "cycles" in toks:
             return {"type": "event", "event": Event("cycle_roles", tuple(typed["g"])), "step": step}
+        if "turn" in toks or "turns" in toks:                          # commutative dial event
+            amount = next(t for t in toks if t.isdigit())              # the bare click count
+            return {"type": "event", "event": Event("turn_dial", (typed["g"][0], amount)), "step": step}
         if any(w in toks for w in ("move", "moved", "moves", "give", "given", "gives", "receives")):
             kind = "move" if any(w in toks for w in ("move", "moved", "moves")) else "give"
             holder = (typed["loc"] + typed["g"])[0]  # the single non-object holder (location or agent)
             return {"type": "event", "event": Event(kind, (typed["o"][0], holder)), "step": step}
+        if "dial" in toks and typed["p"]:                              # dial assertion (initial-condition line)
+            return {"type": "dial", "agent": typed["g"][0], "position": typed["p"][0], "step": step}
         if typed["g"] and typed["r"]:                                  # role assertion (worked-trace line)
             return {"type": "role", "agent": typed["g"][0], "role": typed["r"][0], "step": step}
         if typed["o"] and (typed["loc"] or typed["g"]):                # holder assertion (easy answer line)

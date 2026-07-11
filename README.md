@@ -53,6 +53,7 @@ then their compositions:
 | **Component: recall** | `recall_copy_v1` | single-query, deferred-readout MQAR variant; pool breadth = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models); `conflict_v1` scores the in-context override |
 | **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates — not group ops) |
+| — commutative variant | `commutative_v1` | order-free accumulation mod k (dial clicks); every event load-bearing; length = load axis; calibrated — discriminates in the thinking regime only (deepseek 0.80 vs glm 0.52 @L64; instant and d256-local at chance); experimental until a full roster run |
 | — non-abelian variant | `s5_v1` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite_copy_v2` | the two-hop; headline statistic = **gap** (binding − composed) |
 | **Composition: recall ∘ recall** | `chain_v1` | pointer chase; depth axis at fixed breadth (the no-wrap staircase builds k=2d+1) |

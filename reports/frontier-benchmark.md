@@ -12,7 +12,10 @@ parameters chosen to place each model class mid-scale, never axes of the headlin
 
 Where this sits in the literature: `recall_copy` is a single-query, deferred-readout variant of
 multi-query associative recall (MQAR), with pool breadth as the load axis. `binding` is
-last-write-wins state — absorbing updates, a different object from the group word problems. `s5`
+last-write-wins state — absorbing updates, a different object from the group word problems.
+`commutative_v1` (experimental) fills the rung between them: per-entity accumulation mod k, where
+every event matters but order does not — commutative-vs-s5 isolates order sensitivity,
+commutative-vs-binding isolates aggregate-all vs last-write. `s5`
 is the non-abelian variant from the S₅ word-problem literature. The instrument's contribution is
 measuring these components independently *and* composed, under one protocol, for API models and
 from-scratch local models alike.
@@ -71,6 +74,21 @@ Opus (0.78), sonnet (0.77), gpt-5.5 (0.80), kimi (0.94†), and glm (0.70†) cl
 decisively; deepseek and qwen (0.51) and nemotron (0.49) sit within noise of it — object
 filtering, not established state tracking.
 
+**Commutative state (experimental).** `commutative_v1` is the rung between last-write and
+non-abelian state: per-entity accumulation mod k — each event turns a named entity's dial some
+clicks, the query asks one dial's final position (closed answer set, k=5) — so every event is
+load-bearing but order is not, and distractor entities force per-entity filtering. Floors:
+chance 1/k = 0.20; the strongest of its four shallow adversaries (initial-only, last-turn,
+entity-blind-sum, count-mod-k) reads 0.22 on the validity gate (n=500, all four gated ≤ 0.4;
+`scripts/validate_suite.py`). Calibration, not a roster row: instant sits at the floors — glm
+0.24 @L16 / 0.12 @L64, deepseek 0.20 / 0.12 (effort=none, contract, n=25) — while thinking @L64
+discriminates: deepseek 0.80, glm 0.52 (effort=high, 8,192 tokens, n=25, neither at ceiling).
+Locally the rung does not form at the binding operating point: d256×4, three architectures ×
+three seeds, every run at chance (0.15–0.24) at L16/32/64, including the worked-trace
+contingency (`results/commutative_local/`, `results/commutative_frontier/runs.jsonl`). The rung
+reads only in the thinking regime at these settings; it stays experimental until a full roster
+run.
+
 ## Composition
 
 The core statistic. The composed cell is the two-hop query in one shot ("what is a0 of the holder
@@ -79,9 +97,11 @@ off, contract, 96-token cap, n=100) at L16 and L64. The **composition gap** is
 binding_only@L16 − composed@L16.
 
 The gap isolates composition because the recall half is free: on the scaffolded leg (E1b) — the
-same query with the resolved holder provided — recall reads 0.98–1.00 for every model measured
-(1.00 for eight of the nine roster models; deepseek 0.98). If composing were free, the composed
-cell would match the binding leg; the gap is the composition deficit.
+same `composite_copy_v2` items with the resolved holder provided (n=100, instant protocol) —
+recall reads 0.98–1.00 for every measurable roster model: 1.00 for six of the nine, nemotron
+0.99, kimi 0.98; qwen3.7-max is ⊘ on this leg (empty completion on 98 of 100 scaffolded calls).
+If composing were free, the composed cell would match the binding leg; the gap is the
+composition deficit.
 
 | Model | recall | binding @L16 | composed @L16 | composed @L64 | gap @L16 |
 |---|---|---|---|---|---|
@@ -120,7 +140,8 @@ cells. Gemini-flash cannot disable reasoning; its off-arm ran effort=minimal thr
 ## Composition under reasoning
 
 With reasoning on, the composed cell reads at or near ceiling at canonical settings across this
-roster — 0.84–1.00 on the effort=high arm of the v1 dose-response cell, and the calibration
+roster — 0.98–1.00 on the effort=high arm of the v2 dose-response cell (kimi 1.00, glm 0.98
+@L16, n=50; `results/reasoning_sweep_20260710_125924.jsonl`), and the calibration
 probes hold glm at 0.92–1.00 on v2 out to L1024 at k=32 (`results/v3_probes/`,
 `results/composite_frontier_20260709.jsonl`). That is a calibration fact about the settings, so
 the thinking regime is read through two state-stress rows, reported as plain scores at named
@@ -215,7 +236,8 @@ read pconv, not the mean).
   0/45. The best single run is fprm's 0.17 @L16 (B6, seed 0), and that number is its solved
   binding leg times a 1/pool value guess (1/6 ≈ 0.17), not composition. At d256 the instrument
   reads through the legs; converging the composed cell locally takes the staged-curriculum
-  recipe ([consolidated §5](factworld-consolidated.md), d768).
+  recipe, and on v2 only gdp_hybrid at d768×8 does it
+  ([consolidated §5](factworld-consolidated.md); 0.83 relaxed, scale-dependent).
 - **Local operating point: B8** (set on the gdp_hybrid/transformer pair). The largest rung where
   gdp_hybrid reads mid-scale seed-consistently on the binding leg: 0.41 @L16 (seeds 0.34–0.48)
   against a 1/k = 0.06 agent-guess. From B12 up gdp_hybrid's leg is bimodal — single seeds solve
@@ -240,13 +262,15 @@ read pconv, not the mean).
   (fprm @B6: binding 1.00, value 0.14–0.17 ≈ 1/6; fprm @B16: binding 0.97–0.98, value ≤0.01;
   gdp_hybrid binding-solved seeds: value ≤0.02): the resolved holder is not routed into the
   lookup. This is the same leg the d768 staged-curriculum decomposition localizes (gdp_hybrid
-  binding 0.97 / value 0.75; wherever an architecture fails, the binding leg holds and the value
-  leg collapses).
+  binding 1.00 / value 0.83 on v2; wherever an architecture fails with binding trained, the
+  binding leg holds and the value leg collapses).
 
 For the v1-family re-measure ([#11](https://github.com/ianbarber/factworld/issues/11)):
 `composite_copy_v2.scaled(k=16, recall_pool=8)` is the d256 calibration cell, and local
 composed-cell numbers keep the staged-curriculum recipe with p(converge) over ≥3 seeds as the
-statistic.
+statistic. The v2 flagship cell (consolidated §5) is the trace-free 3-seed/eval_n=500
+staged-curriculum measurement — gdp_hybrid 0.83±0.09 relaxed (seeds 0.76/0.78/0.96, pconv 1/3) —
+corroborated by the compute-matched sweep's 2-seed medium cell (0.73±0.01).
 
 **Chain (recall ∘ recall) locally: depth does not extrapolate for any architecture.** chain_v1
 at the canonical baseline recipe (d320×4, 8k steps, registered spec: train depths 2–3, eval
@@ -284,7 +308,8 @@ free — each is paid for by an architectural or training choice.** Two rows rem
 
 The two open rows are the instrument's active edge: nothing measured so far buys depth
 extrapolation, and no local training choice yet converges the value leg of the composed cell
-outside the staged-curriculum recipe.
+outside the staged-curriculum recipe — and on v2 that recipe converges it only for gdp_hybrid
+at d768×8 (0.83; the small and large cells of the compute-matched sweep fail the value leg too).
 
 ## Protocol appendix
 
@@ -299,7 +324,7 @@ carries a pinned stream version, so existing cells resume byte-identically and o
 cells run.
 
 **Facets and budgets.** Instant: `zero_budget` (composite_copy_v2; composed @L16 and @L64,
-binding_only @L16, replicate @L16; n=100; effort=none; 96-token cap; hard "Answer:" contract line
+binding_only @L16, scaffolded @L16, replicate @L16; n=100; effort=none; 96-token cap; hard "Answer:" contract line
 with last-line extraction), `sanity` (recall_copy_v1 @L6, conflict_v1 @L4, n=30), `recall_load`
 (recall_copy_v1 @L64 with the agent pool scaled to the length — pool 64; n=50; contract;
 96-token cap), and `chain_instant` (chain_v1 d16 on the same k=33 staircase items as the
@@ -319,8 +344,8 @@ working on the canonical instant attempt. `‡` cap-escape (provider ignored `ma
 `⊘` majority finish=length — not measurable at this budget. `(x.xx @512)` escalated-budget
 diagnostic. `n/a` cell not run; `—` run, no qualifying value.
 
-**Cost.** The full 502-cell history carries an estimated $235.74 of API spend; the 36-cell
-zero-budget v2 battery (9 models x 4 legs, 3,600 calls) cost an estimated $5.08. Adding one model
+**Cost.** The full 529-cell history carries an estimated $237.90 of API spend; the 45-cell
+zero-budget v2 battery (9 models x 5 legs, 4,500 calls) cost an estimated $5.92. Adding one model
 runs from a few dollars for cheap models to a few tens of dollars for frontier pricing with long
 reasoning traces.
 
@@ -339,8 +364,9 @@ python scripts/render_benchmark.py                                   # re-render
   [`docs/benchmark/results.md`](../docs/benchmark/results.md) (with `results.csv` and
   `index.html` alongside).
 - Raw per-cell records (one JSON object per cell, all attempts, usage, diagnostics):
-  `results/benchmark/history.jsonl` (zero-budget battery: run `bench_v2_zb2_20260709`; chain/s5:
-  `bench_v2_20260708`; recall-under-load and chain d16 instant: `bench_20260710_frontier_rows`).
+  `results/benchmark/history.jsonl` (zero-budget battery: run `bench_v2_zb2_20260709`;
+  scaffolded leg: `bench_20260710_124904`; chain/s5: `bench_v2_20260708`; recall-under-load and
+  chain d16 instant: `bench_20260710_frontier_rows`).
 - Operating-point calibration probes: `results/v3_probes/` and
   `results/composite_frontier_20260709.jsonl` (log-only material;
   [`docs/experiments/README.md`](../docs/experiments/README.md) §12).
@@ -351,8 +377,8 @@ python scripts/render_benchmark.py                                   # re-render
 - **Which task version each number is on.** Every instant column in this report is on
   `composite_copy_v2`, the de-skewed sampler (uniform last-write placement; the recency heuristic
   scores chance). The sanity, chain, and s5 cells are unchanged tasks with pinned streams. The
-  scaffolded (E1b) leg is on the v1 composite items (the recall map is unchanged between
-  samplers). The OpenRouter grid and reasoning analyses in
+  scaffolded (E1b) leg is on the same `composite_copy_v2` items as the composed cells (run
+  `bench_20260710_124904`). The OpenRouter grid and reasoning analyses in
   [`factworld-consolidated.md`](factworld-consolidated.md) and the README, and the local
   from-scratch training numbers, are on the retired v1 family; their re-measure on v2 is tracked
   in [#11](https://github.com/ianbarber/factworld/issues/11).

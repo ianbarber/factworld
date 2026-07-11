@@ -1,0 +1,118 @@
+{
+  "cfg": {
+    "task": "commutative_v1",
+    "archs": [
+      "gdp_hybrid"
+    ],
+    "seeds": [
+      0
+    ],
+    "steps": 8000,
+    "d_model": 256,
+    "n_layers": 4,
+    "batch": 32,
+    "train_n": 8000,
+    "eval_n": 200,
+    "eval_lengths": [
+      16,
+      32,
+      64
+    ],
+    "train_lengths": [
+      4,
+      8,
+      16
+    ],
+    "use_trace": true,
+    "k_positions": 5,
+    "m": 4
+  },
+  "summary": {
+    "gdp_hybrid": {
+      "16": {
+        "mean": 0.22,
+        "std": 0.0,
+        "n": 1,
+        "p_converge": 0.0
+      },
+      "32": {
+        "mean": 0.175,
+        "std": 0.0,
+        "n": 1,
+        "p_converge": 0.0
+      },
+      "64": {
+        "mean": 0.2,
+        "std": 0.0,
+        "n": 1,
+        "p_converge": 0.0
+      }
+    }
+  },
+  "runs": [
+    {
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "task": "commutative_v1",
+      "archs": [
+        "gdp_hybrid"
+      ],
+      "seeds": [
+        0
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 6.9,
+      "lengths": {
+        "16": {
+          "overall": 0.22,
+          "prefix": {
+            "0": 0.93,
+            "1": 0.07,
+            "2": 0.0
+          },
+          "holder_acc": 0.07,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.175,
+          "prefix": {
+            "0": 0.845,
+            "1": 0.155,
+            "2": 0.0
+          },
+          "holder_acc": 0.155,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.2,
+          "prefix": {
+            "0": 0.86,
+            "1": 0.14,
+            "2": 0.0
+          },
+          "holder_acc": 0.14,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.35973381996154785
+    }
+  ]
+}

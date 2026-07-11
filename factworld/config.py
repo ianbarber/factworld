@@ -37,6 +37,11 @@ class WorldConfig:
     swap_prob: float = 0.7           # P(transposition); the rest are cycles of length >= min_cycle_len
     min_cycle_len: int = 3           # >= 3 kills the degenerate 2-cycle == transposition (R4-iii)
 
+    # --- commutative-state (per-agent dial accumulation mod k_positions; abelian rung) ---
+    # Number of dial positions (answer set p0..p{k_positions-1}); chance floor = 1/k_positions.
+    # Defaulted + consumed without RNG draws in World.__init__, so existing streams are untouched.
+    k_positions: int = 5
+
     # --- planned chain-length bands (in events), per task; episode generation lives in M2/M3 ---
     easy_train_lengths: tuple[int, ...] = (8, 16)
     easy_ood_lengths: tuple[int, ...] = (4, 32, 64, 128)

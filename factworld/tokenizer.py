@@ -66,6 +66,11 @@ _STRUCTURAL_SEED = {
     "holder",
     # clean natural-language renderer v2 (fixed subject-verb templates + arrow cycles)
     "gives", "receives", "moves", "swaps", "cycles", "holds", "->", "→",
+    # commutative-state rung (turn_dial events, dial assertions, state_comm query):
+    # "s0 turns g3's dial 2 clicks." / "g3's dial is at p2." / "what position is g3's dial?"
+    # Amounts are bare digit tokens (1..k_positions-1); digits 0-9 cover k_positions <= 10.
+    "turn", "turns", "dial", "dial?", "position", "click", "clicks", "click.", "clicks.",
+    *(str(d) for d in range(10)),
 }
 
 
@@ -100,6 +105,7 @@ class Tokenizer:
             tokens.update(w.locations)
             tokens.update(w.agents)
             tokens.update(w.roles)
+            tokens.update(w.positions)
 
         # (c) step tokens.
         tokens.update(f"s{i}" for i in range(max_step))
@@ -141,6 +147,7 @@ class Tokenizer:
         "o":   ("?",),              # object: state_easy / composite-holder query target
         "r":   (".",),              # role: s5 answer
         "loc": (".",),              # location: move destination
+        "p":   (".",),              # dial position: dial assertion + commutative answer
     }
 
     @staticmethod
@@ -152,7 +159,8 @@ class Tokenizer:
         natural document tokenizes without ``<unk>``."""
         forms: set[str] = set()
         for w in worlds:
-            for bucket in (w.entities, w.agents, w.value_vocab, w.objects, w.locations, w.roles):
+            for bucket in (w.entities, w.agents, w.value_vocab, w.objects, w.locations, w.roles,
+                           w.positions):
                 for tk in bucket:
                     c = classify(tk)
                     for suf in Tokenizer._NAT_SUFFIX_BY_TYPE.get(c, ()):
@@ -199,6 +207,15 @@ class Tokenizer:
             agent = world.agents[0]
             yield renderer.render_query("state_hard", target=agent, t=None)
             yield renderer.render_query("state_hard", target=agent, t=5)
+
+        # commutative-state — needs agents and dial positions.
+        if world.agents and world.positions:
+            agent = world.agents[0]
+            yield renderer.render_dial(agent, world.positions[0])
+            for amount in range(1, len(world.positions)):
+                yield renderer.render_event(Event("turn_dial", (agent, str(amount))), step="s0")
+            yield renderer.render_query("state_comm", target=agent, t=None)
+            yield renderer.render_query("state_comm", target=agent, t=5)
 
     # ----- properties -----
     @property

@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-10 11:34 UTC from `results/benchmark/history.jsonl` (520 latest cells).
+Generated 2026-07-10 14:49 UTC from `results/benchmark/history.jsonl` (529 latest cells).
 
 ## Settings
 
@@ -162,6 +162,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 1303 | stop:30 | — |
@@ -205,6 +206,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.67; canonical = first attempt @96 |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.82; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.76; canonical = first attempt @96 |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | escalated @512 diagnostic 0.66; canonical = first attempt @96 |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 7441 | stop:30 | — |
@@ -250,6 +252,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 9852 | stop:30 | — |
@@ -324,6 +327,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 64 | contract, effort=minimal | 0.030 | 0 | 0 | 0 | length:3, stop:97 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=minimal | 0.030 | 0 | 0 | 0 | length:3, stop:97 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | length:1, stop:99 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 64 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
@@ -393,6 +397,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 58 | stop:100 | escalated @512 diagnostic 0.96; canonical = first attempt @96 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.020 | 0 | 0 | 89 | stop:98 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.010 | 0 | 0 | 80 | stop:100 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.020 | 0 | 0 | 40 | stop:100 | — |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.080 | 0 | 0 | 65 | length:1, stop:92 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.030 | 0 | 0 | 81 | stop:98 | ‡ cap-escape |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 5435 | stop:30 | — |
@@ -438,6 +443,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.090 | 0 | 0 | 0 | stop:100 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.010 | 0 | 0 | 0 | stop:100 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.040 | 0 | 0 | 0 | stop:100 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.140 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 3229 | stop:30 | — |
@@ -510,6 +516,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 11331 | stop:30 | — |
@@ -555,6 +562,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.980 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 12612 | stop:30 | — |
@@ -639,6 +647,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 510 | stop:100 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.070 | 0 | 0 | 672 | length:7, stop:93 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.010 | 0 | 0 | 96 | length:1, stop:99 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 158 | stop:100 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.050 | 0 | 0 | 480 | length:5, stop:95 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 
@@ -689,6 +698,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.57 [0.47, 0.66] | 0.00 | 0.57 | 0.57 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.78 [0.69, 0.85] | — | — | — | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.00 | 0.85 | 0.84 | — |
+| anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — | — | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.72 [0.63, 0.80] | 0.00 | 0.79 | 0.78 | — |
 | anthropic/claude-opus-4.8 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.43 [0.34, 0.53] | 0.00 | 0.43 | 0.43 | — |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -732,6 +742,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.28 [0.20, 0.37] | 0.00 | 0.67 | 0.67 | escalated @512 diagnostic 0.67; canonical = first attempt @96 |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.77 [0.68, 0.84] | — | — | — | — |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.65 [0.55, 0.74] | 0.00 | 0.82 | 0.82 | escalated @512 diagnostic 0.82; canonical = first attempt @96 |
+| anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — | — | — |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.62 [0.52, 0.71] | 0.00 | 0.76 | 0.76 | escalated @512 diagnostic 0.76; canonical = first attempt @96 |
 | anthropic/claude-sonnet-5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.32 [0.24, 0.42] | 0.00 | 0.66 | 0.66 | escalated @512 diagnostic 0.66; canonical = first attempt @96 |
 | deepseek/deepseek-v4-pro | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -777,6 +788,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.15 [0.09, 0.23] | 0.00 | 0.15 | 0.15 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.51 [0.41, 0.61] | — | — | — | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.44 [0.35, 0.54] | 0.00 | 0.44 | 0.44 | — |
+| deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — | — | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.44 [0.35, 0.54] | 0.00 | 0.44 | 0.44 | — |
 | deepseek/deepseek-v4-pro | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.19 [0.13, 0.28] | 0.00 | 0.19 | 0.19 | — |
 | google/gemini-3.1-pro-preview | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -851,6 +863,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | google/gemini-3.5-flash | zero_budget | composite_copy_v1 | 64 | contract, effort=minimal | 100 | 0.34 [0.25, 0.44] | 0.00 | 0.34 | 0.34 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=minimal | 100 | 0.66 [0.56, 0.75] | — | — | — | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=minimal | 100 | 0.65 [0.55, 0.74] | 0.00 | 0.66 | 0.66 | — |
+| google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=minimal | 100 | 1.00 [0.96, 1.00] | — | — | — | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | contract, effort=minimal | 100 | 0.64 [0.54, 0.73] | 0.00 | 0.64 | 0.64 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 64 | contract, effort=minimal | 100 | 0.28 [0.20, 0.37] | 0.00 | 0.28 | 0.28 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 30 | 0.20 [0.10, 0.37] | 0.00 | 0.23 | 0.20 | — |
@@ -920,6 +933,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.38 [0.29, 0.48] | 0.00 | 0.97 | 0.96 | escalated @512 diagnostic 0.96; canonical = first attempt @96 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.94 [0.88, 0.97] | — | — | — | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.83 [0.74, 0.89] | 0.00 | 0.87 | 0.87 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 0.98 [0.93, 0.99] | — | — | — | — |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.00 | 0.84 | 0.84 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.93 [0.86, 0.97] | 0.00 | 0.95 | 0.95 | ‡ cap-escape |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -965,6 +979,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.20 [0.13, 0.29] | 0.00 | 0.20 | 0.20 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.49 [0.39, 0.59] | — | — | — | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.30 [0.22, 0.40] | 0.00 | 0.30 | 0.30 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 0.99 [0.95, 1.00] | — | — | — | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.00 | 0.33 | 0.33 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.12 [0.07, 0.20] | 0.00 | 0.12 | 0.12 | — |
 | openai/gpt-5.4 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -1037,6 +1052,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | openai/gpt-5.5 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.59 [0.49, 0.68] | 0.00 | 0.59 | 0.59 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.80 [0.71, 0.87] | — | — | — | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.46 [0.37, 0.56] | 0.00 | 0.46 | 0.46 | — |
+| openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — | — | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.46 [0.37, 0.56] | 0.00 | 0.46 | 0.46 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.00 | 0.33 | 0.33 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -1082,6 +1098,7 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | qwen/qwen3.7-max | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.12 [0.07, 0.20] | 0.00 | 0.12 | 0.12 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.51 [0.41, 0.61] | — | — | — | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.25 [0.18, 0.34] | 0.00 | 0.25 | 0.25 | — |
+| qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 0.02 [0.01, 0.07] | — | — | — | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.24 [0.17, 0.33] | 0.00 | 0.24 | 0.24 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.08 [0.04, 0.15] | 0.00 | 0.08 | 0.08 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 0.00 | 1.00 | 1.00 | — |
@@ -1166,5 +1183,6 @@ relaxed is the CANONICAL value (first attempt for escalated cells; the escalated
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.15 [0.09, 0.23] | 0.00 | 0.17 | 0.16 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.70 [0.60, 0.78] | — | — | — | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.36 [0.27, 0.46] | 0.00 | 0.38 | 0.38 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — | — | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.35 [0.26, 0.45] | 0.00 | 0.36 | 0.36 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.16 [0.10, 0.24] | 0.00 | 0.17 | 0.17 | — |

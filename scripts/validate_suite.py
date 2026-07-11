@@ -26,12 +26,17 @@ sys.path.insert(0, REPO)
 
 from factworld import tasks as TK          # noqa: E402
 from factworld.render import Renderer, classify  # noqa: E402  (atomic-token type by prefix: g/v/r/o/...)
-from factworld.validity import strong_recency_accuracy  # noqa: E402
+from factworld.validity import comm_shallow_accuracy, strong_recency_accuracy  # noqa: E402
 
 N = 500
 
 # The strong recency baseline only has a defined prediction on the give-stream families.
 STRONG_REC_FAMILIES = ("binding", "composite")
+
+# The commutative family gets its own four shallow adversaries (initial-only / last-turn-only /
+# entity-blind-sum / count-mod-k, factworld.validity.comm_shallow_accuracy); the MAX of the four
+# fills the strongrec-style column and folds into the verdict.
+COMM_FAMILIES = ("commutative",)
 
 
 def positional_pred(prompt: str, ans_type: str, which: str):
@@ -71,6 +76,11 @@ def main():
             assert spec.last_write_uniform, \
                 f"{name}: non-uniform (v1) sampler in CANONICAL — v1 specs belong in RETIRED"
             strongrec = strong_recency_accuracy(test, spec.family)
+            ok &= strongrec < 0.5
+            srec_col = f"{strongrec:>10.3f}"
+        elif spec.family in COMM_FAMILIES:
+            # commutative rung: the strongest of the four dial-fold shallow adversaries.
+            strongrec = max(comm_shallow_accuracy(test, spec.k_positions).values())
             ok &= strongrec < 0.5
             srec_col = f"{strongrec:>10.3f}"
         else:

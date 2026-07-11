@@ -46,12 +46,16 @@ relaxed for both API and local models.
 
 ## 2. The tasks
 
-**Which task version each number is on.** The worked example below, the §4 grid, the §5 local
-tables, and the §7 long-context sweeps are on the retired v1 give-stream family; read them as
-diagnostics until the re-measure on the de-skewed v2 sampler lands
-([#11](https://github.com/ianbarber/factworld/issues/11)). §7 is the most recency-exposed
-claim: under the v1 sampler the resolving write sits near the stream end at every L, so "holds
-to L512" was partly recency credit. Cross-model claims defer to the frontier benchmark
+**Which task version each number is on.** The worked example below and the §4 grid are on the
+retired v1 give-stream family — historical snapshots, kept as diagnostics
+([#11](https://github.com/ianbarber/factworld/issues/11)). The §5 local tables are on v2
+(the trace-free 3-seed staged-curriculum measurement, corroborated by the compute-matched scale
+sweep — see §5). The §4 dose-response, the §6 scaffolded numbers, and the §7 API
+sweep are on v2 (glm to L1024; kimi at L256 and L512). The §7 LOCAL table is
+NOT recency-exposed: it comes
+from `experiment_dense_supervision.py`, whose streams are swap/cycle permutations
+(`world.sample_hard_chain`), not the give-stream, so the v1 sampler defect never touched it.
+Cross-model claims defer to the frontier benchmark
 ([`frontier-benchmark.md`](frontier-benchmark.md)), which is on v2.
 
 **Composition (`composite_copy_v1`)** is the flagship probe — the state × recall composition. A set of facts maps agents to values,
@@ -132,7 +136,7 @@ rows under reasoning (chain d128 at fixed k=257, s5 @L256) — in an instant (no
 thinking regime, on the de-skewed v2 tasks, with censoring and cleanliness marks and per-cell
 provenance. It supersedes the OpenRouter grid in this section for cross-model claims; the grid
 below remains the pretrained-open-model snapshot on the v1 tasks and the source for the
-reasoning-effort and scaffolding analyses.
+scaffolding analysis. The dose-response below is on the de-skewed v2 sampler.
 
 The default setup for API evaluation is:
 
@@ -156,18 +160,23 @@ These runs use `max_new_tokens=2048` and no early stop so reasoning models can f
 scratchpad; `APIBackend` extracts the final answer span. A short generation budget would truncate
 the scratchpad before the answer.
 
-**Reasoning is required.** With `reasoning={"effort":"none"}` all three models collapse to ~0 on
-composite (no-reasoning files and the flagship table are n=30; the dose-response below is n=100).
-Reasoning effort gives a clear dose-response:
+**Reasoning moves composition, monotonically.** On `composite_copy_v2` @L16 (n=50 per cell,
+answer-span extraction with a holder/value decomposition;
+`results/reasoning_sweep_20260710_125924.jsonl`), reasoning effort gives a clear dose-response
+for both models measured:
 
 | model | none | low | medium | high |
 | --- | --- | --- | --- | --- |
-| kimi-k2.6 | 0.22 | 0.94 | 0.98 | 0.96 |
-| glm-5.2 | 0.14 | 0.74 | 0.78 | 0.81 |
+| kimi-k2.6 | 0.72 | 1.00 | 1.00 | 1.00 |
+| glm-5.2 | 0.38 | 0.92 | 0.96 | 0.98 |
 
-Composition climbs from floor to ~0.8–0.98 as reasoning budget rises. The lever is implicit
+At effort=none the holder leg reads kimi 0.42 / glm 0.22 against the v2 object-filter floor of
+0.41 — object filtering, not established composition (kimi's effort=none arm carries the covert
+reasoning caveat from the frontier benchmark). Low effort already recovers most of the
+composed cell (0.92–1.00), and the curve is monotone through high. The lever is implicit
 reasoning: an explicit "write the holder, then the value" instruction hurts every model,
-including the reasoners that score 0.8–0.98 under a plain prompt.
+including the reasoners that solve the composed cell under a plain prompt (the scaffolding
+analysis below, on v1).
 
 **S₅ is movable by reasoning — under a concrete rendering.** In the standard grid below (token
 rendering, no reasoning) S₅ sits at floor (~0.18). Allow reasoning *and* render the problem
@@ -217,19 +226,41 @@ composition:
 
 - `gdp_hybrid`, `fprm`, and `transformer`
 - d_model=768, n_layers=8, batch=128
-- 25k steps total, 80k docs total, 3 seeds
-- evaluated on n=500 test examples per seed
+- 25k steps total, 80k docs total
+- 3 seeds, evaluated on n=500 test examples per seed
+  (`results/curriculum_staged_v2_d768_notrace.jsonl`; the specs are the v2 port —
+  `composite_copy_v2`, uniform last-write sampler)
 
 `gdp_hybrid` is a `[recurrent, recurrent, attn, recurrent]` GatedDeltaProduct stack. `fprm` is a
 weight-tied looped conv+attention block. The transformer is a standard decoder-only model.
 
-On the same flagship task `composite_copy_v1@L16`, **relaxed** match:
+On the flagship task `composite_copy_v2` pool-16 @L16, **relaxed** match:
 
 | model | params | per-tok FLOPs | composite_p16@L16 relaxed |
 | --- | --- | --- | --- |
-| **gdp_hybrid** | 101M | 204 GFLOP | **0.747 ± 0.174** |
-| fprm | 10M | 159 GFLOP | 0.253 ± 0.178 |
-| transformer | 76M | 159 GFLOP | 0.005 ± 0.005 |
+| **gdp_hybrid** | 101M | 204 GFLOP | **0.833 ± 0.089** |
+| fprm | 10M | 159 GFLOP | 0.109 ± 0.089 |
+| transformer | 76M | 159 GFLOP | 0.001 ± 0.001 |
+
+The v1 flagship (0.747 ± 0.174, 3 seeds, eval_n=500, retired sampler) reproduces on v2 for
+`gdp_hybrid` — 0.758 / 0.782 / 0.958 across seeds, contains ≈ relaxed, holder leg ≥ 0.998 on all
+three. p(converge) at the ≥0.9 bar is 1/3 for `gdp_hybrid` — the composed cell trains on all
+three seeds, with two landing at 0.758 / 0.782 — and 0/3 for the rest. The v1
+number does not reproduce for `fprm`: its v1 0.253 ± 0.178 collapses to 0.109 on the de-skewed
+sampler (the holder leg still solves at ≥ 0.99; the value leg dies). The transformer stays at
+floor. The medium cell of the compute-matched scale sweep — the same recipe on 2 independent
+seeds at eval_n=200 — reads 0.732 ± 0.013 / 0.033 ± 0.012 / 0.005 ± 0.005, corroborating both
+the ordering and the per-leg story.
+
+*Protocol note.* The dedicated 3-seed/eval_n=500 curriculum re-measure
+(`results/curriculum_staged_v2_d768.jsonl`) was launched with `--use_trace`, and under trace
+training the model emits a self-trace before the answer — the prefix-committed relaxed metric is
+structurally 0 for any trace-emitting model while `contains` stays high (gdp p5 0.981) purely
+from containment leniency over the longer emission. This reproduces the known v1 trace-mode
+control (`results/curriculum_staged_d768_b64_80k_trace.md`: composite 0.00) rather than
+measuring the flagship; composite capability is unmeasurable under that protocol, so those runs
+are excluded (see `results/remeasure_v2/PENDING.md`). The table above is the identical command
+re-run without `--use_trace` — the trace-free v2 measurement.
 
 All three share `(d_model=768, depth=8)`; the match is on **compute, not parameters**. `fprm` is a
 weight-tied looped block (one `FPRMBlock` applied `n_loops` times — see `factworld/models.py`), so
@@ -243,27 +274,28 @@ scale sweep that scales `(d_model, depth)` together across small/medium/large fo
 architectures is in `results/composite_scale_*.md`.
 
 For local models, relaxed match differs from the exact and last-N diagnostics only on formatting
-(a missing trailing period or extra trailing generation). We confirmed this on full-scale runs:
-`gdp_hybrid` relaxed = 0.874 vs last-N = 0.00; `fprm` relaxed = 0.044 vs last-N = 0.00. The low
-last-N scores show that local models often append extra tokens after the answer, so the
-prefix-based relaxed metric is the right canonical choice. The numbers above are the 3-seed
-benchmark means.
+(a missing trailing period or extra trailing generation). On the v2 runs: `gdp_hybrid` relaxed =
+0.758 / 0.782 / 0.958 per seed vs last-N = 0.00 on all three, with contains ≈ relaxed
+(0.768 / 0.788 / 0.958). The
+zero last-N scores show that local models often append extra tokens after the answer, so the
+prefix-based relaxed metric is the right canonical choice; contains ≈ relaxed confirms the score
+is content, not formatting.
 
 The local `gdp_hybrid` is competitive with the API models on this task, despite being trained from
-scratch at ~100M params / 204 GFLOP/token. `fprm` shows high seed variance; the transformer fails
-to learn the task even with the winning recipe.
+scratch at ~100M params / 204 GFLOP/token. `fprm` and the transformer fail to learn the task even
+with the winning recipe at this scale.
 
 **Per-leg decomposition** explains the ranking (content-token accuracy, independent of the
 period issue):
 
 | arch | holder (binding) | value (recall) | overall |
 | --- | --- | --- | --- |
-| gdp_hybrid | 0.969 | 0.747 | 0.747 |
-| fprm | 0.603 | 0.263 | 0.253 |
-| transformer | 0.206 | 0.026 | 0.005 |
+| gdp_hybrid | 0.999 | 0.833 | 0.833 |
+| fprm | 0.998 | 0.109 | 0.109 |
+| transformer | 0.065 | 0.041 | 0.001 |
 
-`gdp_hybrid` solves the binding leg and does most of the recall leg. `fprm` partially tracks
-holders but fails to recall the value of the resolved holder. The transformer fails both legs.
+`gdp_hybrid` solves the binding leg and does most of the recall leg. `fprm` solves the binding
+leg but fails to recall the value of the resolved holder. The transformer fails both legs.
 This is the same routing deficit the API models hit: even when the holder is correct, the model
 must route that holder into the in-context recall lookup.
 
@@ -273,34 +305,41 @@ A natural objection to §5 is that the transformer was never given a fair size. 
 directly: the same staged curriculum and eval at three sizes, with the comparison **matched on
 compute, not parameters** (all architectures share `(d_model, depth)`; `fprm` is weight-tied so its
 FLOPs match the transformer's at ~5–11× fewer params across scales — see the size table in
-`results/composite_scale_*.md`). `composite_copy_v1` pool-16 @L16, relaxed match, 2 seeds, `train_n=80000`
-(the medium cell is a fresh 2-seed/eval_n=200 re-run of the §5 config; it lands higher than §5's
-3-seed/eval_n=500 mean of 0.747, so the sweep corroborates the ranking, not the absolute):
+`results/composite_scale_*.md`). `composite_copy_v2` pool-16 @L16, relaxed match, 2 seeds,
+`train_n=80000` (the medium column is the §5 flagship recipe on 2 seeds/eval_n=200; it
+corroborates the 3-seed flagship table above):
 
 | arch | small (384×6) | medium (768×8) | large (1024×12) |
 | --- | --- | --- | --- |
-| **gdp_hybrid** | **0.98 ± 0.01** | **0.85 ± 0.01** | 0.28 ± 0.28 |
-| fprm | 0.23 ± 0.05 | 0.53 ± 0.47 | 0.03 ± 0.00 |
+| **gdp_hybrid** | 0.12 ± 0.08 | **0.73 ± 0.01** | 0.21 ± 0.21 |
+| fprm | 0.12 ± 0.05 | 0.03 ± 0.01 | 0.03 ± 0.02 |
 | transformer | 0.01 ± 0.00 | 0.01 ± 0.01 | 0.00 ± 0.00 |
 
 (Per-scale params/FLOPs: small ~3–19M / ~31–38 GFLOP·tok; medium ~10–101M / ~159–204;
 large ~18–269M / ~418–540. Raw runs + the holder/value decomposition are in
 `results/composite_scale_*.md`.)
 
-- **The §5 ranking is scale-robust at top and bottom.** `gdp_hybrid` is the only architecture that
-  reliably solves the task — both seeds at small (0.98) and medium (0.85). `fprm` is bimodal
-  throughout (medium: 0.06 vs 0.99 across seeds). The **transformer floors at every scale,
-  including 202M params / 417 GFLOP·tok** — so §5's "transformer fails" is not a small-model
-  artifact; compute-matching does not rescue it.
-- **The routing deficit is scale-invariant.** Wherever an architecture fails, the holder (binding) leg
-  holds and the value (recall-of-resolved-holder) leg collapses — the same deficit §6 localizes. This
-  includes `gdp_hybrid` at large: both seeds solve binding (0.85 / 0.84) but one seed's value leg
-  collapses to 0.00.
-- **Caveat at the largest size.** `gdp_hybrid` itself goes bimodal at large (per-seed value 0.56 /
-  0.00), so its absolute margin shrinks there even though the ranking holds (0.28 ≫ 0.03 ≫ 0.00).
-  With 2 seeds this is a flag, not a measurement: characterizing the large regime (more seeds, an
-  LR study at 269M) is the open follow-up. It is *not* the transformer catching up — the transformer
-  remains at floor (0.00).
+- **Convergence is arch-specific and scale-dependent, peaking at medium.** `gdp_hybrid` at
+  medium is the only cell that converges the composed task (0.720 / 0.745 per seed, holder 1.00
+  on both). At small, `gdp_hybrid` solves binding (holder 1.00 both seeds) but the value leg
+  fails (0.045 / 0.200) — the v1 small cell's 0.98 ± 0.01 was flattered by the retired
+  recency-defective sampler, consistent with the d256 breadth sweep (value ≤ 0.17 in all 45
+  runs). `fprm`'s composed cell is weak at small (0.120 ± 0.045) and dies at medium and large
+  (0.033 / 0.028) even though its binding leg solves through medium (0.99).
+- **The transformer floors at every scale, including 202M params / 417 GFLOP·tok** — contains ~0
+  as well, so this is a real floor, not a formatting miss; §5's "transformer fails" is not a
+  small-model artifact, and compute-matching does not rescue it.
+- **Large is seed-bimodal for `gdp_hybrid`, and the failure is genuine.** Seed 1 scores 0.000
+  with holder 1.000 and contains 0.000 — the gold value token appears nowhere in the emission, a
+  pure value-leg failure. Seed 0's 0.42 comes with the holder leg degraded to 0.68 (the batch-64
+  large recipe trains unstably), so it is not partial convergence at scale. With 2 seeds this is
+  a flag, not a measurement: characterizing the large regime (more seeds, an LR study at 269M)
+  is the open follow-up. It is *not* the transformer catching up — the transformer remains at
+  floor (0.00).
+- **The routing deficit is scale-invariant where binding trains.** Wherever binding is solved
+  and the composed cell fails (`gdp_hybrid` at small and at large seed 1; `fprm` at small,
+  medium, and large seed 0), the value (recall-of-resolved-holder) leg is what collapses — the
+  same deficit §6 localizes.
 
 ## 6. Composition of behaviors
 
@@ -320,17 +359,23 @@ measures recall-of-the-resolved-holder in isolation.
 
 On the local `gdp_hybrid` model, the scaffolded value score is low (mean 0.147, range
 0.076–0.264 across seeds), which suggests the routing problem is real even when binding is solved. On API models, the
-scaffolded result is much stronger: given the correct holder, models recall the value at
-0.93–1.00. The difference is that the API models can do each leg when the problem is split for
-them, but struggle to compose the two legs in the end-to-end prompt.
+scaffolded result is much stronger: given the correct holder, the frontier roster recalls the
+value at 0.98–1.00 on the `composite_copy_v2` items (n=100 per model, instant protocol; six of
+nine at 1.00, nemotron 0.99, kimi 0.98; qwen3.7-max is not measurable on this leg — empty on 98
+of 100 calls). The difference is that the API models can do each leg when the problem is split
+for them, but struggle to compose the two legs in the end-to-end prompt.
 
 ## 7. Long context
 
 Real sessions are long. We stress both regimes far past their sweet spots — trained models
-evaluated to 32× their training length, pretrained models evaluated from L16 to L512.
+evaluated to 32× their training length, pretrained models evaluated from L16 to L1024.
 
-**Trained recurrent hybrids extrapolate far.** Stressing the §5 comparison to 32× the trained
-length (8 seeds):
+**Trained recurrent hybrids extrapolate far.** This table is the dense-supervised (K=1)
+NON-ABELIAN composite at d256x4 (`experiment_dense_supervision.py`;
+`results/longctx_gdp_20260627_223033.md`, `results/longctx_fprm_20260628_000834.md`) —
+swap/cycle permutation streams via `world.sample_hard_chain`, a different task and scale from
+the §5 comparison, and untouched by the v1 give-stream recency defect. Stressed to 32× the
+trained length (8 seeds):
 
 | arch | L64 | L128 | L256 | L512 |
 | --- | --- | --- | --- | --- |
@@ -339,19 +384,28 @@ length (8 seeds):
 
 The recurrent hybrid holds ~0.5 out to L512; the looped block stays at floor.
 
-**Background reasoning rescues composition at long context.** With reasoning effort swept
-{none, high} at long length (n=30, relaxed match on the final answer span extracted by
-`APIBackend`):
+**Background reasoning holds composition at long context.** On the de-skewed v2 sampler at
+k=32/pool16 (relaxed match, n=25 per cell; thinking = effort=high with a 16,384-token budget
+through L256 and 32,768 at L512+; instant = effort=none with the answer contract;
+`results/composite_frontier_20260709.jsonl`, `results/composite_frontier_20260710.jsonl`):
 
-| model | L128 none | L128 high | L256 none | L256 high | L512 high |
+| model / arm | L64 | L128 | L256 | L512 | L1024 |
 | --- | --- | --- | --- | --- | --- |
-| kimi-k2.6 | 0.47 | **0.97** | 0.73 | **0.97** | **0.93** |
-| glm-5.2 | 0.10 | **0.93** | 0.10 | **0.97** | **0.80** |
+| glm-5.2 thinking | **0.98** | **0.98** | **0.94** | **0.96** | **0.94** |
+| glm-5.2 instant | 0.24 | 0.02 | 0.00 | 0.06 | 0.06 |
+| kimi-k2.6 thinking | n/a | n/a | **1.00** | **0.96** | n/a |
+| *object-filter floor* | 0.14 | 0.08 | 0.05 | 0.02 | 0.01 |
 
-High reasoning effort recovers composition to 0.80–0.97 all the way out to L512. S₅ under a
+Thinking holds 0.94–1.00 out to L1024 while the instant arm sits at or below the object-filter
+floor from L128 on — at this breadth, length is not the binding constraint for the thinking
+regime (the doubled-breadth rung k=64/pool64 @L1024 reads 0.64 as a budget-censored lower
+bound). Kimi's measured cells are L256 (1.00, Wilson 95% [0.87, 1.00]) and L512 (0.96,
+[0.80, 0.99]), both with empty rate 0.00 and no budget censoring; its unmeasured lengths are
+predicted-ceiling cells and stay unbought
+([#11](https://github.com/ianbarber/factworld/issues/11)). S₅ under a
 concrete rendering with reasoning holds 0.90 at L128 (Appendix A), degrading gradually rather
 than abruptly; its concrete-rendering sweep so far extends to L128, short of composition's
-L512. Both tasks are reasoning-recoverable under length stress, with task- and model-dependent
+L1024. Both tasks are reasoning-recoverable under length stress, with task- and model-dependent
 limits.
 
 ## 8. S₅ is movable by supervision density (the local, from-scratch regime)

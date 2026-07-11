@@ -57,7 +57,7 @@ CANONICAL_METRIC = "relaxed"
 class TaskSpec:
     """A frozen, reproducible benchmark task. Difficulty knobs are explicit and scalable."""
     name: str
-    family: str                       # 'recall' | 'binding' | 'composite' | 's5'
+    family: str                       # 'recall' | 'binding' | 'composite' | 's5' | 'commutative' | 'conflict' | 'chain'
     version: str = _STREAM_V1         # RNG-stream version: frozen at spec introduction (see _STREAM_V1)
     seed: int = 0
     # 'benchmark' = a scored, discriminating task; 'control' = a positive control / isolation task that is
@@ -99,6 +99,12 @@ class TaskSpec:
     # against this floor, not against 1/pool.
     last_write_uniform: bool = False
 
+    # commutative-only: dial positions mod k_positions (answer set p0..p{k_positions-1}; chance
+    # 1/k_positions). n_objects_active is REUSED as the active-entity count for the commutative
+    # family (the working set of dials that turn — per-entity filtering load, mirroring binding).
+    # Appended + defaulted: _rng does not key on it, so no existing stream is perturbed.
+    k_positions: int = 5
+
     # chain-only: explicit opt-in to depth >= k WRAP semantics. The pointer map is a single k-cycle, so
     # at depth >= k gold collapses to nxt^(depth mod k)(start) — depth is NOT being measured (depth ≡ 0
     # mod k is the identity). Off by default: generate() raises ValueError. The no-wrap deep-chain
@@ -128,7 +134,7 @@ def _rng(spec: TaskSpec, split: str, length: int, idx: int) -> random.Random:
 def _world(spec: TaskSpec) -> tuple[World, Renderer, Oracle]:
     wc = WorldConfig(seed=spec.seed, n_entities=8, n_attributes=2,
                      value_vocab_size=spec.value_vocab_size, n_objects=spec.n_objects,
-                     n_locations=6, k=spec.k)
+                     n_locations=6, k=spec.k, k_positions=spec.k_positions)
     w = World(wc)
     return w, Renderer(), Oracle(w)
 
@@ -234,6 +240,44 @@ def _ex_composite(spec, w, r, oracle, fixed_origins, rng, length, idx):
     if spec.worked_trace:    # oracle worked-trace = optional TRAINING signal, not part of the scored answer
         meta["trace"] = " ".join(oracle.easy_holder(ev, obj, t=t) for t in range(1, length + 1))
     return Example(prompt, _render_answer(f"{holder} {value}"), length, meta)
+
+
+def _ex_commutative(spec, w, r, oracle, rng, length):
+    """Per-entity commutative accumulation mod k_positions (the abelian rung between
+    last-write-wins binding and non-abelian S_k).
+
+    Each event turns one active agent's dial by a NONZERO amount in {1..k_positions-1}
+    (never 0 — every event changes state; never constant — count-of-events mod k is wrong).
+    The answer is the queried agent's final dial position. Order is irrelevant (addition
+    mod k is abelian) but EVERY matching event is load-bearing, so length L reads as
+    aggregation depth (expected target turns = 2 + (L-2)/m grows linearly in L) — there is
+    no recency structure for a sampler to leak (a commutative fold has no "resolving" event).
+
+    Design guards against the shallow adversaries (gated in factworld.validity):
+      - initial positions are PER-EXAMPLE random -> gold is EXACTLY uniform (majority = floor)
+        and the stated-initial baseline decays as (-1/(k-1))^w toward chance;
+      - >= 2 turns on the queried agent are FORCED -> the last-turn-only cheat is depressed
+        BELOW chance at short L (a single leftover nonzero amount is never ≡ 0 mod k);
+      - m = n_objects_active distractor agents stay active -> the entity-blind total sits
+        at chance (per-entity filtering is required, mirroring binding).
+    """
+    assert length >= 2, "commutative stream needs L>=2 (two forced turns on the queried agent)"
+    ents = list(w.agents[:spec.n_objects_active])
+    initial = {g: rng.choice(w.positions) for g in ents}   # per-example random (forces reading it)
+    target = rng.choice(ents)
+    forced = set(rng.sample(range(length), 2))             # guarantee w_q >= 2
+    events = [Event("turn_dial", ((target if i in forced else rng.choice(ents)),
+                                  str(rng.randint(1, spec.k_positions - 1))))
+              for i in range(length)]
+    gold = oracle.comm_position(initial, events, target)
+    init_block = " ".join(r.render_dial(g, initial[g]) for g in ents)
+    hist = " ".join(r.render_history(tuple(events), with_steps=True))
+    q = r.render_query("state_comm", target=target)
+    meta = {"target": target, "initial": initial[target],
+            "w": sum(1 for e in events if e.args[0] == target)}
+    if spec.worked_trace:    # oracle position-trajectory = optional TRAINING signal, not the scored answer
+        meta["trace"] = " ".join(oracle.comm_trace(initial, events, target)[1:])
+    return Example(f"{init_block} {hist} {q}", _render_answer(gold), length, meta)
 
 
 def _ex_s5(spec, w, r, oracle, rng, length, idx):
@@ -347,6 +391,8 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
             out.append(_ex_binding(spec, w, r, oracle, rng, L))
         elif spec.family == "composite":
             out.append(_ex_composite(spec, w, r, oracle, fixed, rng, L, idx))
+        elif spec.family == "commutative":
+            out.append(_ex_commutative(spec, w, r, oracle, rng, L))
         elif spec.family == "s5":
             out.append(_ex_s5(spec, w, r, oracle, rng, L, idx))
         elif spec.family == "chain":
@@ -495,6 +541,17 @@ CANONICAL = {
                                   recall_pool=16, memorized_recall=False, value_vocab_size=128,
                                   train_lengths=(4, 8, 16), eval_lengths=(16, 32, 64),
                                   last_write_uniform=True),
+    # experimental (v3.1): the COMMUTATIVE rung of the state-tracking ladder — per-entity dial
+    # accumulation mod k_positions=5, where EVERY event matters but ORDER does not (retrieval <
+    # last-write < commutative < non-abelian). Operating point mirrors binding_v2: chance 1/5,
+    # working set m=4 (n_objects_active reused as the active-dial count). Length = aggregation
+    # depth (the fold must absorb ~2+(L-2)/4 amounts) — no recency analog exists for a
+    # commutative fold. Shallow-adversary floors (initial-only / last-turn-only /
+    # entity-blind-sum / count-mod-k) are gated in factworld.validity + scripts/validate_suite.py.
+    # kind=experimental until calibrated (local 3-arch + frontier probes), like s5_v1.
+    "commutative_v1":   TaskSpec("commutative_v1", "commutative", version="1.1", kind="experimental",
+                                 k=5, n_objects_active=4, k_positions=5,
+                                 train_lengths=(4, 8, 16), eval_lengths=(16, 32, 64)),
     # experimental: correct non-abelian S5 construct, but not reliably trainable in this harness (answer-only
     # floors in-distribution; worked-trace learns train length but compounds at generation). Needs the
     # dense-per-step regime before it is a scored task. Excluded from REPORTED.

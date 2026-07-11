@@ -1,7 +1,7 @@
 """3-seed confidence intervals for the dissociation cells.
 
-The single-seed baseline (docs/results.md) shows the load-bearing dissociation — gdn best at isolated
-binding (0.78 @4× vs gdp 0.40), gdp best at recall (1.00 vs ≈0.5 for the rest) — but those rest on seed 0.
+The single-seed baseline (docs/results.md) shows the load-bearing dissociation — the hybrids clear
+binding and recall while transformer/gru sit at their floors — but it rests on seed 0.
 This reruns just the two dissociation tasks (recall_copy_v1, binding_v2 — the uniform-last-write
 binding spec; the recency-defective binding_v1 is retired, see tasks.RETIRED / issue #11) across the 4 archs at seeds
 {0,1,2} and reports mean±std per length, writing docs/results-ci.md incrementally so partial progress
@@ -44,8 +44,9 @@ def write_md(rows):
         "# FactWorld dissociation cells — 3-seed CIs\n",
         f"The two architecture-dissociating tasks across {len(ARCHS)} archs, seeds {SEEDS} "
         f"(mean ± std), d_model={D_MODEL}×{N_LAYERS}, {STEPS} steps, matched compute. Firms up the "
-        "single-seed `docs/results.md`: gdn is the binding specialist, gdp the recall/composition "
-        "generalist. Columns tagged (id)/(ood).\n",
+        "single-seed `docs/results.md`: the hybrids dissociate from the transformer/gru floors on "
+        "both cells; gdp reads with tight CIs, gdn is seed-bimodal (stds to ±0.39). "
+        "Columns tagged (id)/(ood).\n",
     ]
     for task in TASKS:
         spec = TK.spec_for(task)

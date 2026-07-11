@@ -14,6 +14,7 @@ vocabulary (so small-scale experiments can too).
 | **Component: recall** | `recall_copy` | single-query, deferred-readout MQAR variant; pool = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models) |
 | **Component: state tracking** | `binding` | last-write-wins (absorbing updates — NOT abelian group ops) |
+| — commutative variant | `commutative_v1` | order-free per-entity accumulation mod k (every event matters, order does not); calibrated — reads only in the thinking regime (instant and d256-local at chance); experimental until a full roster run |
 | — non-abelian variant | `s5` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite` | the two-hop; headline statistic = **gap** (binding − composed) |
 | **Composition: recall ∘ recall** | `chain` | pointer chase; depth axis at fixed breadth |

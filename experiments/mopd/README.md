@@ -11,6 +11,16 @@ its per-token distribution). The student ends up holding every teacher's ability
 FactWorld is a good testbed: every task has a symbolic-oracle gold answer, so RL gets a clean
 **verifiable reward**, and the tasks are small enough to run the full pipeline on one RTX 3090.
 
+> **Confound caveat (issue [#11](https://github.com/ianbarber/factworld/issues/11)).** The
+> binding domain here was trained and evaluated on the retired `binding_v1` sampler, whose
+> queried object's resolving write clusters near the stream end. The base model's "partial
+> capability" (0.33/0.34) sits at that sampler's recency-heuristic floor (~0.4), so the +0.65
+> outcome-RL lift is confounded with learning the recency shortcut, not necessarily
+> last-write-wins tracking. The MOPD *mechanism* result (two teachers distil into one student)
+> is unaffected, but the binding numbers should not be read as a state-tracking capability
+> claim. Re-measure on `binding_v2` pending (~0.5–1 GPU-day; pins to update: the domain specs
+> in `mopd.py`, `mopd_hf.py` and `bench_qwen.py`).
+
 ## Abstract
 
 We RL-specialise a pretrained **Qwen3-1.7B** on two distinct FactWorld abilities — **binding**
