@@ -6,8 +6,8 @@ format-fairness, architecture-independence, weaning, and test-time-compute quest
 in review; sections 6–15 log the frontier-benchmark arc (2026-07-05 → 07-10) — completion
 budgets, task validity (chain wrap, give-stream recency), answer contracts, thinking-budget
 elicitation, breadth-vs-length composition probes, operating-point calibration, and the local
-breadth mirror; sections 16–22 log the issue-#11 v2 re-measures and the commutative-rung
-calibration (2026-07-10).
+breadth mirror; sections 16–23 log the issue-#11 v2 re-measures and the commutative-rung
+calibration (2026-07-10 → 07-11).
 
 ## 1. Dense-vs-sparse state supervision (the s5 deficit) — `experiment_dense_supervision.py`
 
@@ -564,9 +564,9 @@ holder 0.14 / value 0.02 — this run reproduced the known trace-mode failure, n
 
 **Finding:** composite capability is unmeasurable under the trace protocol — the runs are
 excluded, not folded (per-example predictions and checkpoints were not stored, so rescoring is
-impossible). The trace-free v2 flagship number comes from the scale sweep's medium cell (§22);
-the corrected 3-seed/eval_n=500 curriculum measurement is queued: the identical command from
-`scripts/gpu_queue_remeasure_v2.sh` without `--use_trace` (~12–25 GPU-h). Data:
+impossible). The trace-free v2 flagship number comes from the corrected rerun — the identical
+command from `scripts/gpu_queue_remeasure_v2.sh` without `--use_trace` (§23); the scale sweep's
+medium cell (§22) corroborates it. Data (excluded trace runs):
 `results/curriculum_staged_v2_d768.jsonl`.
 
 ## 22. Compute-matched scale sweep on v2 — `experiment_composite_scale.py`
@@ -583,8 +583,8 @@ eval_n=200. Relaxed match, mean±std:
 | fprm | 0.12±0.05 | 0.03±0.01 | 0.03±0.02 |
 | transformer | 0.01±0.00 | 0.01±0.01 | 0.00±0.00 |
 
-The medium column is the exact §5 recipe (d768×8, batch 128, 25k steps, 80k docs) and stands as
-the v2 flagship measurement: gdp_hybrid 0.720 / 0.745 per seed, holder 1.00 on both, contains ≈
+The medium column is the exact §5 recipe (d768×8, batch 128, 25k steps, 80k docs) and
+corroborates the 3-seed flagship measurement (§23): gdp_hybrid 0.720 / 0.745 per seed, holder 1.00 on both, contains ≈
 relaxed (no artifact signature). Small gdp_hybrid solves binding (holder 1.0) but fails the
 value leg (0.045 / 0.200) — v1's small 0.98±0.01 was flattered by the retired sampler. Large
 gdp_hybrid is seed-bimodal with a genuine value-leg failure (seed 1: relaxed 0.000, holder
@@ -597,3 +597,29 @@ the composed cell for gdp_hybrid only, at d768×8 (0.732±0.013), and convergenc
 non-monotone in scale; wherever binding trains and the composed cell fails, the value leg is
 what collapses. Folded into consolidated §5 and the frontier report's local-regime lines. Data:
 `results/composite_scale_20260710_221530.jsonl`.
+
+## 23. Staged-curriculum flagship on v2, trace-free — `experiment_curriculum_staged.py`
+
+The corrected §21 rerun: the identical flagship command (3 archs × 3 seeds, d768×8, batch 128,
+25k steps, 80k docs, eval_n=500, v2 staged specs) without `--use_trace`. Relaxed match,
+mean±std over 3 seeds; pconv = seeds ≥0.9; holder/value at composite p16 @L16:
+
+| arch | comp p16 @L16 (pconv) | per seed | holder / value | binding L16 | recall e/m/h | comp p5 |
+|---|---|---|---|---|---|---|
+| **gdp_hybrid** | **0.83±0.09 (1/3)** | 0.758 / 0.782 / 0.958 | 1.00 / 0.83 | 1.00±0.00 | 0.92 / 0.95 / 0.85 | 0.99±0.00 |
+| fprm | 0.11±0.09 (0/3) | 0.056 / 0.036 / 0.234 | 1.00 / 0.11 | 1.00±0.00 | 0.63 / 0.39 / 0.20 | 0.38±0.29 |
+| transformer | 0.00±0.00 (0/3) | 0.000 / 0.002 / 0.000 | 0.07 / 0.04 | 0.03±0.00 | 0.09 / 0.04 / 0.03 | 0.01±0.01 |
+
+No artifact signature: contains ≈ relaxed on every gdp_hybrid seed (0.768 / 0.788 / 0.958) and
+last-N 0.00 across the board. gdp_hybrid learns the composed cell on all three seeds — one
+clears the ≥0.9 convergence bar, the other two read 0.758 / 0.782 — with the holder leg ≥ 0.998
+everywhere. fprm solves binding on every seed (≥ 0.998) while the value leg stays collapsed
+(0.109 mean), and its recall legs are seed-volatile (easy 0.954 / 0.164 / 0.772). The
+transformer floors both legs on every task.
+
+**Finding:** the §5 flagship on 3 seeds / eval_n=500 reads gdp_hybrid 0.833±0.089,
+fprm 0.109±0.089, transformer 0.001±0.001 (composite p16 @L16, relaxed) — the same ordering and
+the same value-leg localization as the sweep's 2-seed medium cell (0.732±0.013, §22), which
+reads within one seed-std and stands as corroboration. This is the cell the consolidated §5
+flagship table carries. Data: `results/curriculum_staged_v2_d768_notrace.jsonl`
+(log `results/remeasure_v2/curriculum_notrace.log`).

@@ -19,34 +19,33 @@ data.
 
 ## Adjudicated and folded (2026-07-10)
 
-### 1. curriculum_staged_v2 — NEEDS-RERUN (protocol artifact; runs excluded, not folded)
+### 1. curriculum_staged_v2 — DONE (trace artifact adjudicated; trace-free rerun landed, folded 2026-07-11)
 
-- Ran to completion (`results/curriculum_staged_v2_d768.jsonl`) but was launched with
-  `--use_trace` (`scripts/gpu_queue_remeasure_v2.sh` job 4); the v1 flagship it re-measures was
-  `use_trace=False`. Trace-first emission makes the prefix-committed relaxed metric
-  structurally 0 (all nine runs 0.000) while `contains` inflates (gdp p5 0.981) — the known
-  artifact signature; adjudicated on the raw records as artifact, reproducing the v1 trace-mode
-  control (`results/curriculum_staged_d768_b64_80k_trace.md`, composite 0.00). Composite
-  capability is unmeasurable under this protocol; no per-example preds or checkpoints stored,
-  so no rescoring. Experiments §21 logs the artifact.
-- Corrected rerun (identical command, NO `--use_trace`; ~12–25 GPU-h):
+- The `--use_trace` launch (`results/curriculum_staged_v2_d768.jsonl`) stays excluded as a
+  protocol artifact — relaxed structurally 0 on all nine runs, `contains` inflated; experiments
+  §21 logs the adjudication.
+- Trace-free rerun (identical command, no `--use_trace`) DONE:
+  `results/curriculum_staged_v2_d768_notrace.{jsonl,md}`, log
+  `results/remeasure_v2/curriculum_notrace.log`. composite_p16@L16 relaxed, 3 seeds/eval_n=500
+  (mean±pstdev; pconv = seeds ≥0.9):
+  - **gdp_hybrid 0.833±0.089** (0.758/0.782/0.958; pconv 1/3; holder ≥0.998, value 0.833;
+    contains ≈ relaxed, last-N 0.00 — no artifact signature)
+  - fprm 0.109±0.089 (0.056/0.036/0.234; binding ≥0.994, value leg collapsed)
+  - transformer 0.001±0.001 (floor on both legs)
+- This is the §5 flagship cell; the scale sweep's 2-seed/eval_n=200 medium cell (0.732±0.013)
+  stays as corroboration in the scale table. Folded: consolidated §2 versioning note + §5
+  (flagship table, v1-comparison paragraph, relaxed-vs-last-N, per-leg decomposition,
+  scale-table framing), frontier report local-regime lines, experiments §23 (+ §21/§22
+  pointers).
 
-  ```
-  python scripts/experiment_curriculum_staged.py \
-      --archs gdp_hybrid,fprm,transformer --seeds 0 1 2 \
-      --d_model 768 --n_layers 8 --batch 128 --train_n 80000 --eval_n 500 \
-      --schedule 'binding:0.5,recall_easy:0.5:10000;binding:0.25,recall_med:0.35,composite_p5:0.4:7500;binding:0.15,recall_hard:0.25,composite_p5:0.25,composite_p16:0.35:7500' \
-      --out_prefix results/curriculum_staged_v2_d768_notrace
-  ```
-
-- On landing, it upgrades the §5 flagship cell from 2 seeds/eval_n=200 (scale-sweep medium) to
-  3 seeds/eval_n=500; the fold targets are already on v2, so only the numbers move.
+Nothing remains pending in this queue; the only open item repo-wide is the deferred MOPD
+re-pin below.
 
 ### 2. composite_scale_v2 — DONE, folded
 
 - `results/composite_scale_20260710_221530.jsonl` (recomputed from raw, matches the md).
-  VALID: trace-free, v2 staged specs. Its medium cell (the exact §5 recipe) is the standing v2
-  flagship: gdp_hybrid composite_p16@L16 relaxed 0.732±0.013 (0.720/0.745, holder 1.00 both
+  VALID: trace-free, v2 staged specs. Its medium cell (the exact §5 recipe) corroborates the
+  3-seed flagship (item 1): gdp_hybrid composite_p16@L16 relaxed 0.732±0.013 (0.720/0.745, holder 1.00 both
   seeds); fprm 0.033±0.012; transformer 0.005±0.005. Small gdp fails the value leg (0.12±0.08,
   holder 1.0 — v1's 0.98 was sampler-flattered); large gdp seed-bimodal with a genuine
   (contains 0.000) value-leg failure.

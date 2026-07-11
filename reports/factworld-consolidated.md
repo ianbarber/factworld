@@ -49,8 +49,8 @@ relaxed for both API and local models.
 **Which task version each number is on.** The worked example below and the §4 grid are on the
 retired v1 give-stream family — historical snapshots, kept as diagnostics
 ([#11](https://github.com/ianbarber/factworld/issues/11)). The §5 local tables are on v2
-(the compute-matched scale sweep; the dedicated 3-seed curriculum re-measure is queued with a
-corrected protocol — see §5). The §4 dose-response, the §6 scaffolded numbers, and the §7 API
+(the trace-free 3-seed staged-curriculum measurement, corroborated by the compute-matched scale
+sweep — see §5). The §4 dose-response, the §6 scaffolded numbers, and the §7 API
 sweep are on v2 (glm to L1024; kimi at L256 and L512). The §7 LOCAL table is
 NOT recency-exposed: it comes
 from `experiment_dense_supervision.py`, whose streams are swap/cycle permutations
@@ -227,8 +227,8 @@ composition:
 - `gdp_hybrid`, `fprm`, and `transformer`
 - d_model=768, n_layers=8, batch=128
 - 25k steps total, 80k docs total
-- 2 seeds, evaluated on n=200 test examples per seed (the medium cell of the compute-matched
-  scale sweep, `results/composite_scale_20260710_221530.jsonl`; the specs are the v2 port —
+- 3 seeds, evaluated on n=500 test examples per seed
+  (`results/curriculum_staged_v2_d768_notrace.jsonl`; the specs are the v2 port —
   `composite_copy_v2`, uniform last-write sampler)
 
 `gdp_hybrid` is a `[recurrent, recurrent, attn, recurrent]` GatedDeltaProduct stack. `fprm` is a
@@ -238,14 +238,19 @@ On the flagship task `composite_copy_v2` pool-16 @L16, **relaxed** match:
 
 | model | params | per-tok FLOPs | composite_p16@L16 relaxed |
 | --- | --- | --- | --- |
-| **gdp_hybrid** | 101M | 204 GFLOP | **0.732 ± 0.013** |
-| fprm | 10M | 159 GFLOP | 0.033 ± 0.012 |
-| transformer | 76M | 159 GFLOP | 0.005 ± 0.005 |
+| **gdp_hybrid** | 101M | 204 GFLOP | **0.833 ± 0.089** |
+| fprm | 10M | 159 GFLOP | 0.109 ± 0.089 |
+| transformer | 76M | 159 GFLOP | 0.001 ± 0.001 |
 
 The v1 flagship (0.747 ± 0.174, 3 seeds, eval_n=500, retired sampler) reproduces on v2 for
-`gdp_hybrid` — 0.720 / 0.745 across seeds, contains ≈ relaxed, holder leg 1.00 on both. It does
-not reproduce for `fprm`: its v1 0.253 ± 0.178 collapses to 0.033 on the de-skewed sampler (the
-holder leg still solves at 0.99; the value leg dies). The transformer stays at floor.
+`gdp_hybrid` — 0.758 / 0.782 / 0.958 across seeds, contains ≈ relaxed, holder leg ≥ 0.998 on all
+three. p(converge) at the ≥0.9 bar is 1/3 for `gdp_hybrid` — the composed cell trains on all
+three seeds, with two landing at 0.758 / 0.782 — and 0/3 for the rest. The v1
+number does not reproduce for `fprm`: its v1 0.253 ± 0.178 collapses to 0.109 on the de-skewed
+sampler (the holder leg still solves at ≥ 0.99; the value leg dies). The transformer stays at
+floor. The medium cell of the compute-matched scale sweep — the same recipe on 2 independent
+seeds at eval_n=200 — reads 0.732 ± 0.013 / 0.033 ± 0.012 / 0.005 ± 0.005, corroborating both
+the ordering and the per-leg story.
 
 *Protocol note.* The dedicated 3-seed/eval_n=500 curriculum re-measure
 (`results/curriculum_staged_v2_d768.jsonl`) was launched with `--use_trace`, and under trace
@@ -254,8 +259,8 @@ structurally 0 for any trace-emitting model while `contains` stays high (gdp p5 
 from containment leniency over the longer emission. This reproduces the known v1 trace-mode
 control (`results/curriculum_staged_d768_b64_80k_trace.md`: composite 0.00) rather than
 measuring the flagship; composite capability is unmeasurable under that protocol, so those runs
-are excluded and the identical command without `--use_trace` is queued (see
-`results/remeasure_v2/PENDING.md`). The table above is the trace-free v2 measurement.
+are excluded (see `results/remeasure_v2/PENDING.md`). The table above is the identical command
+re-run without `--use_trace` — the trace-free v2 measurement.
 
 All three share `(d_model=768, depth=8)`; the match is on **compute, not parameters**. `fprm` is a
 weight-tied looped block (one `FPRMBlock` applied `n_loops` times — see `factworld/models.py`), so
@@ -270,7 +275,8 @@ architectures is in `results/composite_scale_*.md`.
 
 For local models, relaxed match differs from the exact and last-N diagnostics only on formatting
 (a missing trailing period or extra trailing generation). On the v2 runs: `gdp_hybrid` relaxed =
-0.720 / 0.745 per seed vs last-N = 0.00 on both, with contains ≈ relaxed (0.730 / 0.745). The
+0.758 / 0.782 / 0.958 per seed vs last-N = 0.00 on all three, with contains ≈ relaxed
+(0.768 / 0.788 / 0.958). The
 zero last-N scores show that local models often append extra tokens after the answer, so the
 prefix-based relaxed metric is the right canonical choice; contains ≈ relaxed confirms the score
 is content, not formatting.
@@ -284,9 +290,9 @@ period issue):
 
 | arch | holder (binding) | value (recall) | overall |
 | --- | --- | --- | --- |
-| gdp_hybrid | 1.000 | 0.732 | 0.732 |
-| fprm | 0.992 | 0.033 | 0.033 |
-| transformer | 0.053 | 0.030 | 0.005 |
+| gdp_hybrid | 0.999 | 0.833 | 0.833 |
+| fprm | 0.998 | 0.109 | 0.109 |
+| transformer | 0.065 | 0.041 | 0.001 |
 
 `gdp_hybrid` solves the binding leg and does most of the recall leg. `fprm` solves the binding
 leg but fails to recall the value of the resolved holder. The transformer fails both legs.
@@ -300,7 +306,8 @@ directly: the same staged curriculum and eval at three sizes, with the compariso
 compute, not parameters** (all architectures share `(d_model, depth)`; `fprm` is weight-tied so its
 FLOPs match the transformer's at ~5–11× fewer params across scales — see the size table in
 `results/composite_scale_*.md`). `composite_copy_v2` pool-16 @L16, relaxed match, 2 seeds,
-`train_n=80000` (the medium column is the §5 flagship cell above):
+`train_n=80000` (the medium column is the §5 flagship recipe on 2 seeds/eval_n=200; it
+corroborates the 3-seed flagship table above):
 
 | arch | small (384×6) | medium (768×8) | large (1024×12) |
 | --- | --- | --- | --- |
