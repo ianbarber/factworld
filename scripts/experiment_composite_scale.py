@@ -206,7 +206,7 @@ def write_markdown(summary, size_map, cfg, path: Path):
         "(d_model, depth); `fprm` is weight-tied (one block looped `n_loops` times), so at matched "
         "(d_model, depth) its per-token FLOPs equal the transformer's while its parameter count is "
         "~5–11× lower across scales (≈8× at medium). The size table below reports both axes so neither is hidden. Score = canonical "
-        "**relaxed match** on `composite_copy_v1` pool-16 @L16, with the holder (binding) and value "
+        "**relaxed match** on `composite_copy_v2` pool-16 @L16, with the holder (binding) and value "
         "(recall) legs reported alongside (the routing decomposition).",
         "",
         f"seeds={cfg['seeds']}  n_heads={cfg['n_heads']}  "
@@ -242,7 +242,7 @@ def write_markdown(summary, size_map, cfg, path: Path):
 
     lines += [
         "",
-        f"## `composite_copy_v1` pool-16 @L16 — relaxed match (mean±std over seeds)",
+        f"## `composite_copy_v2` pool-16 @L16 — relaxed match (mean±std over seeds)",
         "",
         "| arch | " + " | ".join(scales) + " |",
         "| " + " | ".join(["---"] * (len(scales) + 1)) + " |",

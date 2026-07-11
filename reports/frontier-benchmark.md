@@ -236,7 +236,8 @@ read pconv, not the mean).
   0/45. The best single run is fprm's 0.17 @L16 (B6, seed 0), and that number is its solved
   binding leg times a 1/pool value guess (1/6 ≈ 0.17), not composition. At d256 the instrument
   reads through the legs; converging the composed cell locally takes the staged-curriculum
-  recipe ([consolidated §5](factworld-consolidated.md), d768).
+  recipe, and on v2 only gdp_hybrid at d768×8 does it
+  ([consolidated §5](factworld-consolidated.md); 0.73 relaxed, scale-dependent).
 - **Local operating point: B8** (set on the gdp_hybrid/transformer pair). The largest rung where
   gdp_hybrid reads mid-scale seed-consistently on the binding leg: 0.41 @L16 (seeds 0.34–0.48)
   against a 1/k = 0.06 agent-guess. From B12 up gdp_hybrid's leg is bimodal — single seeds solve
@@ -261,13 +262,15 @@ read pconv, not the mean).
   (fprm @B6: binding 1.00, value 0.14–0.17 ≈ 1/6; fprm @B16: binding 0.97–0.98, value ≤0.01;
   gdp_hybrid binding-solved seeds: value ≤0.02): the resolved holder is not routed into the
   lookup. This is the same leg the d768 staged-curriculum decomposition localizes (gdp_hybrid
-  binding 0.97 / value 0.75; wherever an architecture fails, the binding leg holds and the value
-  leg collapses).
+  binding 1.00 / value 0.73 on v2; wherever an architecture fails with binding trained, the
+  binding leg holds and the value leg collapses).
 
 For the v1-family re-measure ([#11](https://github.com/ianbarber/factworld/issues/11)):
 `composite_copy_v2.scaled(k=16, recall_pool=8)` is the d256 calibration cell, and local
 composed-cell numbers keep the staged-curriculum recipe with p(converge) over ≥3 seeds as the
-statistic.
+statistic. The current v2 flagship cell (consolidated §5) is on 2 seeds from the compute-matched
+sweep; the 3-seed/eval_n=500 curriculum measurement is queued with a corrected trace-free
+protocol.
 
 **Chain (recall ∘ recall) locally: depth does not extrapolate for any architecture.** chain_v1
 at the canonical baseline recipe (d320×4, 8k steps, registered spec: train depths 2–3, eval
@@ -305,7 +308,8 @@ free — each is paid for by an architectural or training choice.** Two rows rem
 
 The two open rows are the instrument's active edge: nothing measured so far buys depth
 extrapolation, and no local training choice yet converges the value leg of the composed cell
-outside the staged-curriculum recipe.
+outside the staged-curriculum recipe — and on v2 that recipe converges it only for gdp_hybrid
+at d768×8 (0.73; the small and large cells of the compute-matched sweep fail the value leg too).
 
 ## Protocol appendix
 

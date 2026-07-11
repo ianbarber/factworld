@@ -6,7 +6,7 @@ format-fairness, architecture-independence, weaning, and test-time-compute quest
 in review; sections 6–15 log the frontier-benchmark arc (2026-07-05 → 07-10) — completion
 budgets, task validity (chain wrap, give-stream recency), answer contracts, thinking-budget
 elicitation, breadth-vs-length composition probes, operating-point calibration, and the local
-breadth mirror; sections 16–20 log the issue-#11 v2 re-measures and the commutative-rung
+breadth mirror; sections 16–22 log the issue-#11 v2 re-measures and the commutative-rung
 calibration (2026-07-10).
 
 ## 1. Dense-vs-sparse state supervision (the s5 deficit) — `experiment_dense_supervision.py`
@@ -545,3 +545,55 @@ recipe does not converge composition on v2 either, consistent with the §13 brea
 orderings against floors, not third-decimal differences (recall_copy's gdn_hybrid moved from
 mid-scale to ceiling on re-train — seed variance at this scale). Data: `docs/results.md`
 (rendered), 62-minute run, rc=0.
+
+## 21. Staged-curriculum flagship re-measure — trace-mode protocol artifact — `experiment_curriculum_staged.py --use_trace`
+
+The §5 flagship re-measure on v2 specs (3 archs × 3 seeds, d768×8, batch 128, 25k steps,
+80k docs, eval_n=500) was launched with `--use_trace` — the v1 flagship it re-measures
+(gdp 0.747, `use_trace=False`) was not. Under trace training, composite docs are
+"prompt trace answer", so the model emits a ~16-token self-trace before the 2-token gold
+answer, and the prefix-committed relaxed metric is structurally 0 for any trace-emitting model.
+Composite relaxed read 0.000 on all nine runs while `contains` stayed high (gdp p5 0.981 /
+p16 0.742 — containment leniency over the longer emission, tracking pool size). This is the
+known artifact signature (relaxed 0 with contains ~1), and adjudication on the raw records
+confirms artifact, not capability: the trace-aware tail decomposition is also low (gdp p16
+holder 0.221 / value 0.023) and the tail scoring is itself corrupted by budget babble (binding
+relaxed 0.999 on the same models vs tail-scored holder as low as 0.18). The v1-era trace-mode
+control (`results/curriculum_staged_d768_b64_80k_trace.md`) already scored composite 0.00 /
+holder 0.14 / value 0.02 — this run reproduced the known trace-mode failure, not the flagship.
+
+**Finding:** composite capability is unmeasurable under the trace protocol — the runs are
+excluded, not folded (per-example predictions and checkpoints were not stored, so rescoring is
+impossible). The trace-free v2 flagship number comes from the scale sweep's medium cell (§22);
+the corrected 3-seed/eval_n=500 curriculum measurement is queued: the identical command from
+`scripts/gpu_queue_remeasure_v2.sh` without `--use_trace` (~12–25 GPU-h). Data:
+`results/curriculum_staged_v2_d768.jsonl`.
+
+## 22. Compute-matched scale sweep on v2 — `experiment_composite_scale.py`
+
+The §5 flagship and its scale-robustness check, re-measured on the v2 staged specs
+(`composite_copy_v2` pool-16 @L16 via `staged_specs()`, uniform last-write sampler; trace-free).
+Same staged curriculum at three sizes, matched on compute, not parameters (shared
+`(d_model, depth)`; fprm weight-tied at ~5–11× fewer params); 2 seeds, `train_n=80000`,
+eval_n=200. Relaxed match, mean±std:
+
+| arch | small (384×6) | medium (768×8) | large (1024×12) |
+| --- | --- | --- | --- |
+| **gdp_hybrid** | 0.12±0.08 | **0.73±0.01** | 0.21±0.21 |
+| fprm | 0.12±0.05 | 0.03±0.01 | 0.03±0.02 |
+| transformer | 0.01±0.00 | 0.01±0.01 | 0.00±0.00 |
+
+The medium column is the exact §5 recipe (d768×8, batch 128, 25k steps, 80k docs) and stands as
+the v2 flagship measurement: gdp_hybrid 0.720 / 0.745 per seed, holder 1.00 on both, contains ≈
+relaxed (no artifact signature). Small gdp_hybrid solves binding (holder 1.0) but fails the
+value leg (0.045 / 0.200) — v1's small 0.98±0.01 was flattered by the retired sampler. Large
+gdp_hybrid is seed-bimodal with a genuine value-leg failure (seed 1: relaxed 0.000, holder
+1.000, contains 0.000 — the gold value appears nowhere) and an unstable seed 0 (0.42 with holder
+degraded to 0.68 on the batch-64 recipe). fprm's composed cell dies from medium up (v1's
+0.253±0.178 does not carry); the transformer floors at every scale, contains ~0 too.
+
+**Finding:** the v1 flagship claim survives on v2 but narrows — the staged curriculum converges
+the composed cell for gdp_hybrid only, at d768×8 (0.732±0.013), and convergence is
+non-monotone in scale; wherever binding trains and the composed cell fails, the value leg is
+what collapses. Folded into consolidated §5 and the frontier report's local-regime lines. Data:
+`results/composite_scale_20260710_221530.jsonl`.

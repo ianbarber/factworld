@@ -17,37 +17,46 @@ the rebuilt v2 tables (gdp ≥ gdn on binding at L4–L32; gdn seed-bimodal, std
 header string in `scripts/ci_dissociation.py` and the rendered line were updated to match the
 data.
 
-## Still running / queued
+## Adjudicated and folded (2026-07-10)
 
-### 1. curriculum_staged_v2 — the §5 flagship re-measure (GPU queue job 4, started 15:27Z, ~12–25 h, overnight)
+### 1. curriculum_staged_v2 — NEEDS-RERUN (protocol artifact; runs excluded, not folded)
 
-- Master queue PID 1667899 (verified alive; runs jobs 4–5 in sequence); 3 archs × 3 seeds,
-  d768×8, staged curriculum on v2 specs; output `results/curriculum_staged_v2_d768*`; log
-  `results/remeasure_v2/curriculum_staged_v2.log`.
-- Fold targets (all currently on retired `composite_copy_v1`):
-  - `reports/factworld-consolidated.md` §5: the 0.747 ± 0.174 flagship table (gdp_hybrid /
-    fprm / transformer), the relaxed-vs-last-N paragraph, and the per-leg decomposition table
-    (0.969 / 0.747 / 0.747 etc.) — replace with v2 values, read p(converge) + per-leg
-    decomposition, keep the compute-matched framing (10/76/101M params, FLOPs matched).
-  - `reports/factworld-consolidated.md` §2 versioning note: drop "§5 local tables ... v1" once
-    folded.
-  - `reports/frontier-benchmark.md`: the two references to "the staged-curriculum recipe
-    (consolidated §5, d768)" and the d768 decomposition numbers (binding 0.97 / value 0.75) in
-    the breadth-sweep bullets and price table.
-  - New experiments README section (house style: config, table, **Finding:**, Data:).
-- Note: §5's "Scale robustness" subsection numbers come from composite_scale (next job), not
-  this one — do not touch that subsection on this fold.
+- Ran to completion (`results/curriculum_staged_v2_d768.jsonl`) but was launched with
+  `--use_trace` (`scripts/gpu_queue_remeasure_v2.sh` job 4); the v1 flagship it re-measures was
+  `use_trace=False`. Trace-first emission makes the prefix-committed relaxed metric
+  structurally 0 (all nine runs 0.000) while `contains` inflates (gdp p5 0.981) — the known
+  artifact signature; adjudicated on the raw records as artifact, reproducing the v1 trace-mode
+  control (`results/curriculum_staged_d768_b64_80k_trace.md`, composite 0.00). Composite
+  capability is unmeasurable under this protocol; no per-example preds or checkpoints stored,
+  so no rescoring. Experiments §21 logs the artifact.
+- Corrected rerun (identical command, NO `--use_trace`; ~12–25 GPU-h):
 
-### 2. composite_scale_v2 — compute-matched scale sweep (GPU queue job 5, ~1–2 GPU-days)
+  ```
+  python scripts/experiment_curriculum_staged.py \
+      --archs gdp_hybrid,fprm,transformer --seeds 0 1 2 \
+      --d_model 768 --n_layers 8 --batch 128 --train_n 80000 --eval_n 500 \
+      --schedule 'binding:0.5,recall_easy:0.5:10000;binding:0.25,recall_med:0.35,composite_p5:0.4:7500;binding:0.15,recall_hard:0.25,composite_p5:0.25,composite_p16:0.35:7500' \
+      --out_prefix results/curriculum_staged_v2_d768_notrace
+  ```
 
-- Log `results/remeasure_v2/composite_scale_v2.log`; output `results/composite_scale_*`.
-- Fold: `reports/factworld-consolidated.md` §5 "Scale robustness (compute-matched sweep)"
-  table (small/medium/large × 3 archs) and its bullets; README price-table rows that cite the
-  breadth/scale evidence only if the ordering changes; experiments README section.
+- On landing, it upgrades the §5 flagship cell from 2 seeds/eval_n=200 (scale-sweep medium) to
+  3 seeds/eval_n=500; the fold targets are already on v2, so only the numbers move.
 
-If the queue dies, relaunch the remaining `run_job` lines from
-`scripts/gpu_queue_remeasure_v2.sh` (one at a time, same logs); ledger
-`results/remeasure_v2/queue_status.log`.
+### 2. composite_scale_v2 — DONE, folded
+
+- `results/composite_scale_20260710_221530.jsonl` (recomputed from raw, matches the md).
+  VALID: trace-free, v2 staged specs. Its medium cell (the exact §5 recipe) is the standing v2
+  flagship: gdp_hybrid composite_p16@L16 relaxed 0.732±0.013 (0.720/0.745, holder 1.00 both
+  seeds); fprm 0.033±0.012; transformer 0.005±0.005. Small gdp fails the value leg (0.12±0.08,
+  holder 1.0 — v1's 0.98 was sampler-flattered); large gdp seed-bimodal with a genuine
+  (contains 0.000) value-leg failure.
+- Folded: consolidated §5 (flagship table, relaxed-vs-last-N, decomposition, scale-robustness
+  table + bullets, §2 versioning note), frontier report local-regime lines (breadth-sweep
+  bullet, d768 decomposition citation, re-measure paragraph, price-table close), experiments
+  §22.
+
+If relaunching GPU work, use the `run_job` lines from `scripts/gpu_queue_remeasure_v2.sh`
+(minus `--use_trace` for job 4); ledger `results/remeasure_v2/queue_status.log`.
 
 ## Deferred (with reasons)
 
