@@ -7,6 +7,25 @@ place a new frontier model and (b) attribute capabilities to architectural and t
 Tasks render as natural language (so pretrained models can take them) over a constrained
 vocabulary (so small-scale experiments can too).
 
+## The three-part story
+
+Both README.md and reports/frontier-benchmark.md open with part 1 and are structured in this
+order:
+
+1. **The instrument** (the core): certifying recall and state tracking independently and in
+   composition — tasks, floors, marks, regimes, validity machinery.
+2. **Evalling the frontier**: the benchmark built on the instrument — a clear view of current
+   models (9 models, two regimes), with a cheap add-a-model path. The instant and thinking
+   rankings are near-orthogonal; present per-axis ranks and profiles, never a single scalar.
+3. **Exploring the architectures**: which components elicit each capability at small scale —
+   transformers, recurrent hybrids (gdp/gdn), fprm; supervision density and curricula — at
+   matched compute.
+
+History lives in phases/ (linked as provenance) and docs/experiments/README.md (the archival
+log); the main docs describe what the instrument is, with no work-in-progress language — a
+correction appears only as a contained methodological note when it is scientifically
+interesting.
+
 ## The taxonomy
 
 | | Task | Notes |
@@ -14,7 +33,7 @@ vocabulary (so small-scale experiments can too).
 | **Component: recall** | `recall_copy` | single-query, deferred-readout MQAR variant; pool = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models) |
 | **Component: state tracking** | `binding` | last-write-wins (absorbing updates — NOT abelian group ops) |
-| — commutative variant | `commutative_v1` | order-free per-entity accumulation mod k (every event matters, order does not); calibrated — reads only in the thinking regime (instant and d256-local at chance); experimental until a full roster run |
+| — commutative variant | `commutative_v1` | order-free per-entity accumulation mod k (every event matters, order does not); experimental — discriminates in the thinking regime only (instant and d256-local at chance) |
 | — non-abelian variant | `s5` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite` | the two-hop; headline statistic = **gap** (binding − composed) |
 | **Composition: recall ∘ recall** | `chain` | pointer chase; depth axis at fixed breadth |
@@ -32,14 +51,6 @@ aces adjacent readout, fails deferred); adjacent recall ← attention; last-writ
 recurrence; non-abelian state ← dense per-step supervision (to form) + recurrent hybrid (to
 extrapolate); depth extrapolation ← **open**; local composition (value leg) ← **open**.
 
-## The two finding sets
-
-1. **Frontier profiles** (9 models, OpenRouter): per-axis scores + composition gap, two regimes.
-   The instant and thinking rankings are near-orthogonal; present per-axis ranks and profiles,
-   not a single scalar.
-2. **Local attributions**: which architecture/training choice buys which component
-   (transformer vs recurrent hybrids vs fprm; supervision density; curricula).
-
 ## Rules that keep the instrument honest
 
 - Relaxed match is the canonical metric; exact/contains/last_n are diagnostics.
@@ -49,7 +60,7 @@ extrapolate); depth extrapolation ← **open**; local composition (value leg) �
   always "does this improve the composition measurement in either regime?"
 - Reasoning-on cells need explicit large budgets and published empty rates; instant cells need the
   answer contract. Discriminate before spending: never buy cells predicted to sit at ceiling/floor.
-- Tasks are versioned; a defective version is retired outright (see issue #11), never kept scored.
+- Tasks are versioned; a defective version is retired outright, never kept scored.
 
 Primary docs: `reports/frontier-benchmark.md` (narrative), `docs/benchmark/results.md` (rendered),
 `docs/experiments/README.md` (log), `factworld/benchmark.py` (registry).

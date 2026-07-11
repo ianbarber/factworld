@@ -9,9 +9,7 @@ scripts and checked independently by anyone with an API key or a single GPU.
 **Scope.** FactWorld is a *mechanism probe for the component capabilities that agent workloads
 depend on* — working-memory recall, state tracking, and multi-step composition — not an end-to-end
 agent benchmark. Every task is single-turn and single-answer-span, with no tool use, planning, or
-multi-turn action. The component→agent mapping is a motivating analogy, not a proven one (§9);
-closing the explicit agentic-behavior gap is tracked in
-[#6](https://github.com/ianbarber/factworld/issues/6).
+multi-turn action. The component→agent mapping is a motivating analogy, not a proven one (§9).
 
 ## 1. What the instrument is
 
@@ -47,8 +45,9 @@ relaxed for both API and local models.
 ## 2. The tasks
 
 **Which task version each number is on.** The worked example below and the §4 grid are on the
-retired v1 give-stream family — historical snapshots, kept as diagnostics
-([#11](https://github.com/ianbarber/factworld/issues/11)). The §5 local tables are on v2
+retired v1 give-stream family — historical snapshots, kept as diagnostics (the recency
+methodological note in [frontier-benchmark.md](frontier-benchmark.md) covers why the v1 sampler
+was defective). The §5 local tables are on v2
 (the trace-free 3-seed staged-curriculum measurement, corroborated by the compute-matched scale
 sweep — see §5). The §4 dose-response, the §6 scaffolded numbers, and the §7 API
 sweep are on v2 (glm to L1024; kimi at L256 and L512). The §7 LOCAL table is
@@ -401,8 +400,8 @@ floor from L128 on — at this breadth, length is not the binding constraint for
 regime (the doubled-breadth rung k=64/pool64 @L1024 reads 0.64 as a budget-censored lower
 bound). Kimi's measured cells are L256 (1.00, Wilson 95% [0.87, 1.00]) and L512 (0.96,
 [0.80, 0.99]), both with empty rate 0.00 and no budget censoring; its unmeasured lengths are
-predicted-ceiling cells and stay unbought
-([#11](https://github.com/ianbarber/factworld/issues/11)). S₅ under a
+predicted-ceiling cells and stay unbought (the spend rule in [AGENTS.md](../AGENTS.md): never
+buy cells predicted to sit at ceiling or floor). S₅ under a
 concrete rendering with reasoning holds 0.90 at L128 (Appendix A), degrading gradually rather
 than abruptly; its concrete-rendering sweep so far extends to L128, short of composition's
 L1024. Both tasks are reasoning-recoverable under length stress, with task- and model-dependent
@@ -469,8 +468,7 @@ These are results within the regime tested (k=5 S₅; local models ~3–269M par
 at ~32–540 GFLOP/token — see §5; pretrained models from a few B to ~1T params, MoE and dense).
 They are not scaling laws. FactWorld is a mechanism probe for the component capabilities agents depend on, not
 an agent benchmark: the component→agent connection is a motivating proxy, not a proven mapping,
-and no task here exercises tool use, planning, or multi-turn action. Closing that gap is tracked
-in [#6](https://github.com/ianbarber/factworld/issues/6).
+and no task here exercises tool use, planning, or multi-turn action.
 
 ## 10. Limitations and related work
 
@@ -484,9 +482,9 @@ the mechanism conclusions reproduced.
 **Related work.** The `fprm` architecture is a probe inspired by Movahedi et al. (2026), who
 report strong `s5_v1` length generalization with a looped-transformer architecture (FPRM) that
 uses a causal 1-D convolution / unroll-to-convergence mechanism; our `fprm` is a weight-tied
-variant of that block, and we did not run their model. Its strongest result here — best
-length extrapolation on the binding leg — is on the retired v1 sampler and reads as a diagnostic
-until its v2 re-measure lands ([#11](https://github.com/ianbarber/factworld/issues/11)). The
+variant of that block, and we did not run their model. Its v2 measurement is the breadth sweep
+in [frontier-benchmark.md](frontier-benchmark.md): fprm leads the binding leg through B16 and
+breaks at B24. The
 shortcut-learning and length-extrapolation results engage a substantial literature on
 transformer state-tracking brittleness (Liu et al., 2023) and recurrent extrapolation, which we
 extend rather than survey.
