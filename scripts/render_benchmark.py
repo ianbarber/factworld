@@ -19,7 +19,11 @@ scripts/run_frontier_benchmark.py), keeps the LATEST record per
                 the escalated rerun renders as a marked diagnostic.
   results.csv   flat per-cell export (all metrics + diagnostics incl. contract_rate /
                 covert_cot_rate / rtok_leak_rate / escalated + usage)
-  fig_*.png/.svg  facet figures, one per facet with data (PNG 150 dpi for blog upload,
+  fig_*.png/.svg  facet figures, one per facet with data, plus fig_profiles — a
+                  small-multiples panel per roster model showing its normalized
+                  position on each axis (binding, composed@L16, gap inverted,
+                  chain d128, s5 @L256, s5@128 ctok inverted; missing/⊘ cells are
+                  gaps, not zeros) — (PNG 150 dpi for blog upload,
                   SVG for the HTML page); chain_depth cells past chain_v1's design gate
                   (depth >= k=6, cycle wrap) are excluded from figures and the headline
                   columns and marked INVALID in the tables
@@ -1553,8 +1557,156 @@ def fig_decomposition(records, out_dir):
     return _save(fig, out_dir, "fig_decomposition")
 
 
-FIGURES = [fig_zero_budget, fig_dose_response, fig_composite_length, fig_s5_stress,
-           fig_chain_depth, fig_chain_nowrap, fig_decomposition]
+# --- profile small-multiples (per-model axis positions) -------------------------
+# One panel per CURRENT-ROSTER model showing its normalized position on each
+# benchmark axis (present per-axis ranks and profiles, never a single scalar —
+# AGENTS.md). Inverted axes (the composition gap and the s5@128 ctok efficiency
+# column: smaller is better) are negated before normalization so the right-hand
+# end is always the roster-best. Missing cells and ⊘ budget-censored cells render
+# as gaps (no bar) with their mark, never as zeros.
+
+PROFILE_AXES = [  # (short label, inverted)
+    ("binding @L16", False),
+    ("composed @L16", False),
+    ("gap (inv)", True),
+    (f"chain d{CHAIN_STRESS_DEPTH}", False),
+    (f"s5 @L{S5_STRESS_LENGTH}", False),
+    ("s5@128 ctok (inv)", True),
+]
+PROFILE_AXIS_LABELS = [a for a, _ in PROFILE_AXES]
+
+
+def _profile_cell(value, display, marks="", status="ok"):
+    return {"value": value, "display": display, "marks": marks, "status": status}
+
+
+def _profile_score_cell(rec, minimal=False):
+    """Profile cell from a score-valued record: the canonical relaxed value with
+    the cell's cleanliness marks; 'censored' (⊘, not measurable at this budget)
+    when the cell's calls were majority finish=length; 'missing' when the cell
+    never ran."""
+    if rec is None:
+        return _profile_cell(None, "n/a", status="missing")
+    if majority_finish_length(rec):
+        return _profile_cell(None, CENSORED_CELL, status="censored")
+    v = canonical_relaxed(rec)
+    if v is None:
+        return _profile_cell(None, "—", status="missing")
+    if rec.get("facet") == "zero_budget":
+        marks = zb_marks(rec, minimal)
+    else:
+        marks = "‡" if cap_escape(rec) else ""
+    return _profile_cell(v, f"{v:.2f}", marks)
+
+
+def profile_values(records):
+    """{model: {axis label: cell}} over PROFILE_AXES for the CURRENT roster.
+    Cells carry value / display / marks / status ('ok' | 'censored' | 'missing');
+    profile_normalized adds 'norm'. The instant cells (binding, composed, gap)
+    read the LATEST zero-budget task only, marks propagated as in the headline;
+    the gap needs both input cells and inherits their marks."""
+    zb_task = zb_latest_task(records)
+    out = {}
+    for m in roster_models(records):
+        minimal = model_effort_minimal(records, m)
+        bcell = _profile_score_cell(
+            zero_budget_cell(records, m, 16, "binding_only", task=zb_task), minimal)
+        ccell = _profile_score_cell(
+            zero_budget_cell(records, m, 16, None, task=zb_task), minimal)
+        if bcell["status"] == "ok" and ccell["status"] == "ok":
+            g = bcell["value"] - ccell["value"]
+            marks = "".join(c for c in "*†" if c in bcell["marks"] + ccell["marks"])
+            gcell = _profile_cell(g, f"{g:+.2f}", marks)
+        else:
+            gcell = _profile_cell(None, "n/a", status="missing")
+        eff = headline_efficiency(records, m)
+        ecell = (_profile_cell(eff, f"{eff:.0f}") if eff is not None
+                 else _profile_cell(None, "n/a", status="missing"))
+        out[m] = dict(zip(PROFILE_AXIS_LABELS, [
+            bcell, ccell, gcell,
+            _profile_score_cell(
+                stress_cell(records, "chain_nowrap", m, CHAIN_STRESS_DEPTH)),
+            _profile_score_cell(
+                stress_cell(records, "s5_concrete", m, S5_STRESS_LENGTH)),
+            ecell,
+        ]))
+    return out
+
+
+def profile_normalized(values):
+    """Adds 'norm' to every measurable cell: its min-max position across the
+    roster on that axis (inverted axes negated first, so 1.0 is always the
+    roster-best end); an axis with a single measurable value normalizes to 1.0."""
+    for label, invert in PROFILE_AXES:
+        cells = [d[label] for d in values.values() if d[label]["status"] == "ok"]
+        oriented = [(-c["value"] if invert else c["value"]) for c in cells]
+        if not oriented:
+            continue
+        lo, hi = min(oriented), max(oriented)
+        for c, o in zip(cells, oriented):
+            c["norm"] = (o - lo) / (hi - lo) if hi > lo else 1.0
+    return values
+
+
+def fig_profiles(records, out_dir):
+    """Small-multiples profile grid: one panel per current-roster model, its
+    normalized position on each axis as a horizontal bar (right = roster-best;
+    inverted axes flipped first) with the raw value + cleanliness marks
+    alongside; missing / ⊘ budget-censored cells are gaps, never zeros."""
+    values = profile_normalized(profile_values(records))
+    if not values or all(c["status"] != "ok"
+                         for d in values.values() for c in d.values()):
+        return []
+    zb_task = zb_latest_task(records)
+    models = list(values)
+    ncols = 3
+    nrows = math.ceil(len(models) / ncols)
+    fig, axes = plt.subplots(nrows, ncols, sharex=True,
+                             figsize=(FIGSIZE[0], 1.6 * nrows + 1.0))
+    grid = list(axes.ravel()) if hasattr(axes, "ravel") else [axes]
+    n_ax = len(PROFILE_AXIS_LABELS)
+    ys = list(range(n_ax))[::-1]  # first axis on top
+    for k, (ax, m) in enumerate(zip(grid, models)):
+        for y, label in zip(ys, PROFILE_AXIS_LABELS):
+            c = values[m][label]
+            color = PALETTE[PROFILE_AXIS_LABELS.index(label) % len(PALETTE)]
+            if c["status"] == "ok":
+                ax.barh(y, max(c["norm"], 0.015), height=0.62, color=color)
+                ax.text(min(c["norm"], 1.0) + 0.03, y, c["display"] + c["marks"],
+                        va="center", fontsize=6, color="#333333")
+            else:  # a gap, not a zero: no bar, the mark text only
+                txt = CENSORED_CELL if c["status"] == "censored" else c["display"]
+                ax.text(0.03, y, txt, va="center", fontsize=6, color="#999999")
+        ax.set_yticks(ys)
+        ax.set_yticklabels(PROFILE_AXIS_LABELS if k % ncols == 0 else [""] * n_ax,
+                           fontsize=6)
+        ax.set_ylim(-0.6, n_ax - 0.4)
+        ax.set_xlim(0, 1.45)
+        ax.set_xticks([0.0, 0.5, 1.0])
+        ax.set_xticklabels(["0", "0.5", "1"], fontsize=6)
+        ax.set_title(m.split("/", 1)[-1] + zb_model_marks(records, m, task=zb_task),
+                     fontsize=7.5)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.tick_params(length=2)
+    for ax in grid[len(models):]:  # unused trailing panels
+        ax.set_visible(False)
+    fig.suptitle("Per-model profiles: normalized axis positions "
+                 "(right = roster-best; inverted axes flipped)", fontsize=9)
+    fig.text(0.01, 0.012,
+             "bar = min-max position across the roster on that axis; the raw value "
+             "+ marks is printed beside it (instant marks as in the headline; ‡ "
+             "cap-escape).\n"
+             f"gap and s5@128 ctok are inverted (smaller better); {CENSORED_CELL} "
+             "and n/a cells are gaps, not zeros; instant cells read task "
+             f"{zb_task or 'n/a'}.",
+             fontsize=6.5, color="#555555")
+    fig.tight_layout(rect=(0, 0.055, 1, 0.96))
+    return _save(fig, out_dir, "fig_profiles")
+
+
+FIGURES = [fig_zero_budget, fig_profiles, fig_dose_response, fig_composite_length,
+           fig_s5_stress, fig_chain_depth, fig_chain_nowrap, fig_decomposition]
 
 
 # --- html ---------------------------------------------------------------------

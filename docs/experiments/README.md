@@ -7,7 +7,9 @@ in review; sections 6–15 log the frontier-benchmark arc (2026-07-05 → 07-10)
 budgets, task validity (chain wrap, give-stream recency), answer contracts, thinking-budget
 elicitation, breadth-vs-length composition probes, operating-point calibration, and the local
 breadth mirror; sections 16–23 log the issue-#11 v2 re-measures and the commutative-rung
-calibration (2026-07-10 → 07-11).
+calibration (2026-07-10 → 07-11); sections 24–27 log the close-out cycle (2026-07-11 →
+07-12) — raised completion budgets for ⊘ cells, the qwen contract-phrasing diagnosis, the
+commutative roster adjudication, and the statistical-power checks.
 
 ## 1. Dense-vs-sparse state supervision (the s5 deficit) — `experiment_dense_supervision.py`
 
@@ -623,3 +625,80 @@ the same value-leg localization as the sweep's 2-seed medium cell (0.732±0.013,
 reads within one seed-std and stands as corroboration. This is the cell the consolidated §5
 flagship table carries. Data: `results/curriculum_staged_v2_d768_notrace.jsonl`
 (log `results/remeasure_v2/curriculum_notrace.log`).
+
+## 24. Raised completion budgets for ⊘ cells — `run_frontier_benchmark.py --budget-override`
+
+The three thinking cells that read ⊘ at 16,384 tokens with completion evidence (issue #17;
+opus and sonnet s5_concrete @L256 emitted no visible answer on 25/25 calls; deepseek chain
+d128 truncated at exactly the cap with high conditional accuracy on the calls that finished)
+were rerun once at 32,768 tokens via a new tested `--budget-override facet:length:budget`
+flag (the resume key includes max_new_tokens, so the rerun is a fresh cell; the render dedup
+key does not, so it replaces the old cell in the tables automatically). Results (n=25 each):
+
+| cell | @16,384 | @32,768 | diagnostics @32,768 |
+| --- | --- | --- | --- |
+| opus s5 @L256 | ⊘ (25/25 length) | **1.00** | 25/25 stop, empty 0.00, ctok mean 23,898 / max 28,986 ($15.82) |
+| sonnet s5 @L256 | ⊘ (25/25 length) | **1.00** | 25/25 stop, empty 0.00, ctok mean 24,071 ($6.37) |
+| deepseek chain d128 | ⊘ ‡ | ⊘ (0.08) | 19/25 length, empty 0.76, ctok median = cap ($0.69) |
+
+**Finding:** the 16,384-token zeros on the two Claude s5 cells were pure truncation — both
+models solve L256 outright given the ~24k tokens their traces need — while deepseek's chain
+d128 is still budget-bound at 32,768, so its ⊘ stands with the budget stated. Nemotron's ⊘
+cells were not raised: it trails every measured model at every s5/chain length where it does
+answer, so the ⊘ is documented as a model trait, not a budget artifact (report §2 marks
+note). Data: `results/benchmark/history.jsonl` run `bench_17_budget32k_20260711`.
+
+## 25. Qwen scaffolded-leg ⊘: contract-phrasing interaction — `probe_qwen_scaffold.py`
+
+Qwen3.7-max is ⊘ on the scaffolded (recall-given-holder) leg — empty extraction on 98/100
+calls (§16) — while at ceiling on every other recall cell. A four-arm probe (n=10 per arm,
+composite_copy_v2 @L16, $0.02, no history writes) isolates the mechanism: with the exact
+published contract line ("Reply with only one line: Answer: <value>") compliance is 0/10 but
+the gold value appears in the raw completion 10/10 (qwen answers in the system prompt's
+'g13 v70' shape instead); a 512-token cap changes nothing; removing the contract line changes
+nothing; a REWORDED contract line ("End your reply with exactly one line of the form
+'Answer: <value>' ...") gets 10/10 compliance and 10/10 scored.
+
+**Finding:** not refusal and not a recall failure — a contract-phrasing interaction on this
+one leg: qwen's recall-given-holder is at ceiling like the rest of the roster, and the
+published ⊘ stands because the leg's protocol is the fixed contract (report §2 notes the
+diagnosis next to the scaffolded numbers). Data: `results/qwen_scaffold_probe/`.
+
+## 26. Commutative rung across the roster — adjudication against the pre-registered bar — `run_frontier_benchmark.py` (facet `commutative`)
+
+The §19 calibration scaled to the full roster (thinking @L64, effort=high, 8,192 tokens,
+n=25; glm and deepseek reused from the calibration file, not re-bought) under issue #18's
+pre-registered promotion bar: the row joins the headline only if ≥3 tiers separate at Wilson
+95%. Scores: gpt-5.5 0.96 [0.80, 0.99]; opus / gemini-flash / qwen 0.80 [0.61, 0.91];
+deepseek 0.80 (calibration); kimi 0.66 [0.52, 0.78]‡ (n=50); sonnet 0.64 [0.50, 0.76]
+(n=50); glm 0.52 [0.34, 0.70]; nemotron 0.44 [0.27, 0.63] (empty 0.16). Exactly two tiers
+with an overlapping boundary triggered the pre-registered kimi+sonnet top-up to n=50, which
+did not resolve the kimi-vs-sonnet boundary.
+
+**Finding:** fails the bar — only gpt-5.5 CI-separates (from kimi, sonnet, glm, nemotron;
+not from the 0.80 group), so `commutative_v1` stays an experimental report row, not a
+headline column (report §2 Components carries the roster numbers and the verdict). The row
+still earns its keep as calibration: nothing at ceiling, and a reversal (deepseek 0.80 over
+glm 0.52) that no other axis shows. Roster spend $3.94. Data: `results/benchmark/history.jsonl`
+runs `bench_18_commutative_20260711` + top-up; `results/commutative_frontier/runs.jsonl`.
+
+## 27. Statistical power: gap stability, thinking noise, drift canary — `run_frontier_benchmark.py` (facet `gap_stability`)
+
+Three pre-stated checks (issue #16, $1.89 total; report part-2 appendix carries the summary).
+(a) **Gap stability**: composed + binding legs at a second operating point (L32, instant,
+n=50). The gap ordering holds off its L16 anchor for the three cleanly measurable
+gap-interpretable models — gpt-5.5 +0.34 → +0.36, sonnet +0.15† → +0.14† (canonical; the
+@512 escalation diagnostic reads +0.08), opus +0.06 → −0.04 (compose-for-free at both
+points). Kimi's L32 cells are not interpretable (covert working: empty 0.40 composed / 0.62
+binding, cost-limited). (b) **Thinking noise**: glm s5_concrete @L128 replicated at identical
+settings — 0.84 vs stored 1.00, |Δ| 0.16 (both in history; first thinking-regime test-retest
+datum, vs the 0.06 instant bar). (c) **Drift canary**: glm's full zero-budget battery
+re-bought (5 legs, n=100): deltas composed@L16 −0.01, composed@L64 −0.01, binding −0.02,
+replicate −0.02, scaffolded 0.00 — max |Δ| 0.02 against the ±0.06 bar, no drift.
+
+**Finding:** the headline gap ordering is not an artifact of the L16 anchor; instant cells
+are stable to re-purchase within 0.02; thinking cells carry a wider test-retest bar (~0.16 on
+one pair) and should be read at coarser resolution. The canary rerun is now the rendered glm
+row (latest-timestamp-wins), moving it by ≤0.02. Data: `results/benchmark/history.jsonl`
+runs `bench_16_gap_L32_20260711`, `bench_16_glm_s5_replicate_20260711`,
+`bench_16_canary_20260711`.

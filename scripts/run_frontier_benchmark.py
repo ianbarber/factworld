@@ -349,13 +349,55 @@ def should_skip(model: str, cell: dict, done: set[tuple], force: bool, canary: b
     return cell_key(model, cell) in done
 
 
-def build_plan(models: list[str], facets: list[str] | None, n_scale: float) -> dict[str, list[dict]]:
-    """Per-model cell lists with the scouting multiplier applied (n floor of 5)."""
+def parse_budget_overrides(specs: list[str] | None) -> dict[tuple[str, int], int]:
+    """Parse repeatable ``--budget-override facet:length:budget`` specs.
+
+    Returns {(facet, length): max_new_tokens}. The override REPLACES the planned
+    cell's max_new_tokens, which is part of the settings hash — so an overridden
+    cell gets a FRESH resume key (it re-runs even when the planned-budget cell is
+    in history) and the renderer's latest-ts dedup shows the raised-budget record
+    in place of the old one, with no renderer changes. Fails loudly on malformed
+    specs or unknown facets (a typo must not silently no-op a paid run).
+    """
+    out: dict[tuple[str, int], int] = {}
+    for s in specs or ():
+        parts = s.split(":")
+        if len(parts) != 3:
+            raise SystemExit(f"--budget-override expects facet:length:budget, got {s!r}")
+        facet, length_s, budget_s = parts
+        if facet not in FACETS:
+            raise SystemExit(f"--budget-override: unknown facet {facet!r} "
+                             f"(known: {', '.join(FACETS)})")
+        try:
+            key, budget = (facet, int(length_s)), int(budget_s)
+        except ValueError:
+            raise SystemExit(f"--budget-override expects integer length/budget, got {s!r}")
+        if budget <= 0:
+            raise SystemExit(f"--budget-override: budget must be positive, got {s!r}")
+        out[key] = budget
+    return out
+
+
+def build_plan(models: list[str], facets: list[str] | None, n_scale: float,
+               lengths: list[int] | None = None,
+               budget_overrides: dict[tuple[str, int], int] | None = None) -> dict[str, list[dict]]:
+    """Per-model cell lists with the scouting multiplier applied (n floor of 5).
+
+    ``lengths`` (from --lengths) keeps only cells at those lengths/depths;
+    ``budget_overrides`` (from --budget-override) replaces matching cells'
+    max_new_tokens — see parse_budget_overrides for the resume-key semantics.
+    """
     plan = {}
     for model in models:
         cells = [c for c in arms_for(model) if facets is None or c["facet"] in facets]
+        if lengths is not None:
+            cells = [c for c in cells if c["length"] in lengths]
         for c in cells:
             c["n"] = max(5, round(c["n"] * n_scale))
+            if budget_overrides:
+                override = budget_overrides.get((c["facet"], c["length"]))
+                if override is not None:
+                    c["settings"]["max_new_tokens"] = override
         plan[model] = cells
     return plan
 
@@ -845,6 +887,14 @@ def main():
                          "chain_v1.scaled(k=2*d+1), so breadth grows with depth.")
     ap.add_argument("--n-scale", type=float, default=1.0, dest="n_scale",
                     help="Scouting multiplier applied to each facet's n (floor 5).")
+    ap.add_argument("--lengths", nargs="+", type=int, default=None,
+                    help="Keep only cells at these lengths/depths (default: all).")
+    ap.add_argument("--budget-override", action="append", default=None,
+                    dest="budget_override", metavar="FACET:LENGTH:BUDGET",
+                    help="Replace matching cells' max_new_tokens (repeatable). The "
+                         "budget is part of the settings hash, so overridden cells "
+                         "get fresh resume keys and re-run; the renderer's latest-ts "
+                         "dedup then displays the raised-budget record.")
     ap.add_argument("--run-id", default=None, dest="run_id",
                     help="Run identifier (default: bench_<UTC stamp>).")
     ap.add_argument("--history", default=os.path.join(REPO, "results", "benchmark", "history.jsonl"),
@@ -864,7 +914,8 @@ def main():
     a = ap.parse_args()
 
     run_id = a.run_id or f"bench_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-    plan = build_plan(a.models, a.facets, a.n_scale)
+    plan = build_plan(a.models, a.facets, a.n_scale, lengths=a.lengths,
+                      budget_overrides=parse_budget_overrides(a.budget_override))
     done = history_keys(a.history)
     n_done = sum(1 for m, cells in plan.items() for c in cells
                  if should_skip(m, c, done, a.force, a.canary))

@@ -259,6 +259,27 @@ FACETS = {
     "sanity": {
         "tasks": (("recall_copy_v1", 6), ("conflict_v1", 4)), "n": 30,
         "efforts": "off"},
+    # EXPERIMENTAL (issue #18, owner-approved 2026-07-11): commutative_v1 thinking
+    # @L64 across the roster, n=25 (matches the calibration protocol in
+    # scripts/experiment_commutative_frontier.py — glm 0.52 / deepseek 0.80 live in
+    # results/commutative_frontier/runs.jsonl and are REUSED, not re-bought).
+    # Pre-registered promotion bar: >=3 CI-separated tiers -> headline state-stress
+    # column; otherwise this stays an experimental report row. No renderer section
+    # reads this facet yet (by_facet ignores it), so rendering is unchanged.
+    "commutative": {
+        "task": "commutative_v1", "lengths": (64,), "n": 25,
+        "efforts": "on"},
+    # EXPERIMENTAL (issue #16a, owner-approved 2026-07-11): gap stability — the
+    # composed and binding_only legs at a SECOND operating point (L32, instant,
+    # contract, n=50) for the gap-interpretable models, to test whether the
+    # zero_budget gap ORDERING (binding − composed) holds off the L16 anchor.
+    # Same protocol as zero_budget in every other respect; a separate facet so
+    # the canonical zero_budget rows/renderer are untouched.
+    "gap_stability": {
+        "task": "composite_copy_v2", "n": 50,
+        "cells": ((32, None), (32, "binding_only")),
+        "format_prompt": "composite", "efforts": "off",
+        "contract": True, "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
 }
 
 

@@ -745,6 +745,57 @@ def test_archived_roster():
         RB.object_filter_label("composite_copy_v1")]
 
 
+def test_profile_values_and_figure():
+    """fig_profiles inputs: one profile per CURRENT-ROSTER model over the six
+    axes (binding, composed@L16, gap inverted, chain d128, s5 @L256, s5@128 ctok
+    inverted); marks carried from the input cells; ⊘ budget-censored and
+    never-ran cells are gaps ('censored'/'missing' — never zeros); norms are
+    roster min-max positions with inverted axes flipped so 1.0 = roster-best."""
+    if not HAS_MPL:
+        return
+    recs = _fixture_records()
+    values = RB.profile_normalized(RB.profile_values(recs))
+    # roster only — the archived model gets no panel
+    assert set(values) == set(MODELS)
+    labels = RB.PROFILE_AXIS_LABELS
+    assert labels == ["binding @L16", "composed @L16", "gap (inv)",
+                      "chain d128", "s5 @L256", "s5@128 ctok (inv)"]
+    a, b, c = (values[f"testlab/model-{s}"] for s in "abc")
+    # instant cells carry the headline marks (model-b binding †; model-c *)
+    assert b["binding @L16"]["marks"] == "†"
+    assert c["binding @L16"]["marks"] == "*"
+    assert a["binding @L16"]["marks"] == ""
+    # the gap inherits marks from either input cell and renders signed
+    assert b["gap (inv)"]["marks"] == "†" and b["gap (inv)"]["display"] == "+0.15"
+    # censored cells are gaps, not zeros: model-b s5 @L256 and model-c chain d128
+    # are majority finish=length in the fixture
+    assert b["s5 @L256"]["status"] == "censored"
+    assert "norm" not in b["s5 @L256"]
+    assert c["chain d128"]["status"] == "censored"
+    # ‡ cap-escape carries on stress cells (model-b chain d128, 9000 > 8192)
+    assert b["chain d128"]["marks"] == "‡"
+    # every measurable norm is a [0, 1] roster position...
+    for d in values.values():
+        for cell in d.values():
+            if cell["status"] == "ok":
+                assert 0.0 <= cell["norm"] <= 1.0
+    # ...with inverted axes flipped: model-c's 8-ctok efficiency cell is the
+    # roster-best (norm 1.0), the 900-ctok reasoners the worst (0.0)
+    assert abs(c["s5@128 ctok (inv)"]["norm"] - 1.0) < 1e-9
+    assert abs(a["s5@128 ctok (inv)"]["norm"] - 0.0) < 1e-9
+    # binding stays score-ordered: model-a (0.95+0.05->1.0 capped) >= b >= c
+    assert (a["binding @L16"]["norm"] >= b["binding @L16"]["norm"]
+            >= c["binding @L16"]["norm"])
+    # the figure itself renders both formats
+    with tempfile.TemporaryDirectory() as tmp:
+        paths = RB.fig_profiles(recs, tmp)
+        assert [os.path.basename(p) for p in paths] == \
+            ["fig_profiles.png", "fig_profiles.svg"]
+        with open(paths[0], "rb") as fh:
+            assert fh.read(8) == PNG_MAGIC
+        ET.parse(paths[1])
+
+
 def test_render_end_to_end():
     if not HAS_MPL:
         return
@@ -755,9 +806,9 @@ def test_render_end_to_end():
         written = RB.render(history, out)
 
         expected = ["results.md", "results.csv", "index.html"]
-        for base in ["fig_zero_budget", "fig_dose_response", "fig_composite_length",
-                     "fig_s5_horizon", "fig_chain_depth", "fig_chain_nowrap",
-                     "fig_decomposition"]:
+        for base in ["fig_zero_budget", "fig_profiles", "fig_dose_response",
+                     "fig_composite_length", "fig_s5_horizon", "fig_chain_depth",
+                     "fig_chain_nowrap", "fig_decomposition"]:
             expected += [base + ".png", base + ".svg"]
         for name in expected:
             p = os.path.join(out, name)
@@ -918,6 +969,7 @@ if __name__ == "__main__":
                test_recency_heuristic, test_recency_heuristic_v2_floor_near_chance,
                test_object_filter_floor, test_zero_budget_task_versioning,
                test_breadth_and_k_fixed_arms, test_object_filter_floor_at_per_rung,
-               test_archived_roster, test_render_end_to_end]:
+               test_archived_roster, test_profile_values_and_figure,
+               test_render_end_to_end]:
         fn()
         print(f"{fn.__name__}: ok")
