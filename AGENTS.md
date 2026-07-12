@@ -33,7 +33,7 @@ interesting.
 | **Component: recall** | `recall_copy` | single-query, deferred-readout MQAR variant; pool = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models) |
 | **Component: state tracking** | `binding` | last-write-wins (absorbing updates — NOT abelian group ops) |
-| — commutative variant | `commutative_v1` | order-free per-entity accumulation mod k (every event matters, order does not); experimental — discriminates in the thinking regime only (instant and d256-local at chance) |
+| — commutative variant | `commutative_v1` | order-free per-entity accumulation mod k (every event matters, order does not); experimental — reads in the thinking regime only, and the roster run failed the pre-registered promotion bar (only gpt-5.5 CI-separates); instant and d256-local at chance |
 | — non-abelian variant | `s5` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite` | the two-hop; headline statistic = **gap** (binding − composed) |
 | **Composition: recall ∘ recall** | `chain` | pointer chase; depth axis at fixed breadth |

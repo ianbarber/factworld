@@ -34,7 +34,7 @@ then their compositions:
 | **Component: recall** | `recall_copy_v1` | single-query, deferred-readout MQAR variant; pool breadth = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models); `conflict_v1` scores the in-context override |
 | **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates — not group ops) |
-| — commutative variant | `commutative_v1` | order-free accumulation mod k (dial clicks); every event load-bearing; length = load axis; experimental — discriminates in the thinking regime only (deepseek 0.80 vs glm 0.52 @L64; instant and d256-local at chance) |
+| — commutative variant | `commutative_v1` | order-free accumulation mod k (dial clicks); every event load-bearing; length = load axis; experimental — reads in the thinking regime only (roster @L64 spans 0.44–0.96 but only gpt-5.5 CI-separates, so it stays off the headline; instant and d256-local at chance) |
 | — non-abelian variant | `s5_v1` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite_copy_v2` | the two-hop; headline statistic = **gap** (binding − composed) |
 | **Composition: recall ∘ recall** | `chain_v1` | pointer chase; depth axis at fixed breadth (the no-wrap staircase builds k=2d+1) |
@@ -170,7 +170,7 @@ reasoning (off-arm ran effort=minimal), `†` visible working on the canonical a
 | nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | +0.16 |
 | openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 |
 | qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | +0.27 |
-| z-ai/glm-5.2 | 0.70† | 0.35† | 0.16 | +0.35† |
+| z-ai/glm-5.2 | 0.68† | 0.34 | 0.15† | +0.34† |
 | *recency heuristic (floor)* | 0.04 | 0.04 | 0.06 | — |
 | *object-filter floor* | 0.41 | 0.41 | 0.15 | — |
 
@@ -178,14 +178,15 @@ Recall is not the constraint: the scaffolded leg reads 0.98–1.00 for every mod
 under load is at ceiling — pool-64 `recall_copy_v1` @L64 reads 1.00 for all nine (chance 0.016).
 The gap is the composition deficit.
 
-Thinking regime (effort=high, 16,384 tokens): two state-stress rows. `⊘` = majority
-finish=length, not measurable at this budget; `‡` = provider ignored the token cap.
+Thinking regime (effort=high, 16,384 tokens; `@32,768` marks a single raised-budget rerun of a
+truncated cell, budget stated): two state-stress rows. `⊘` = majority finish=length, not
+measurable at the stated budget; `‡` = provider ignored the token cap.
 
 | Model | chain d128 (k=257) | s5 @L256 |
 |---|---|---|
-| anthropic/claude-opus-4.8 | 0.08 | ⊘ |
-| anthropic/claude-sonnet-5 | 0.04 | ⊘ |
-| deepseek/deepseek-v4-pro | ⊘ ‡ | ⊘ |
+| anthropic/claude-opus-4.8 | 0.08 | 1.00 (@32,768) |
+| anthropic/claude-sonnet-5 | 0.04 | 1.00 (@32,768) |
+| deepseek/deepseek-v4-pro | ⊘ (@32,768) | ⊘ |
 | google/gemini-3.5-flash | 0.88 | 0.52 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ | ⊘ |

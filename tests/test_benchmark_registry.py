@@ -66,8 +66,11 @@ def test_registry_shape():
         assert reg["tier"] in B.TIERS, slug
         assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
         assert isinstance(reg["open_weights"], bool)
+    # commutative / gap_stability: EXPERIMENTAL facets (owner-approved 2026-07-11,
+    # issues #18/#16a) — no renderer section reads them yet.
     assert set(B.FACETS) == {"zero_budget", "recall_load", "s5_concrete",
-                             "chain_nowrap", "chain_instant", "sanity"}
+                             "chain_nowrap", "chain_instant", "sanity",
+                             "commutative", "gap_stability"}
 
 
 def test_arms_for_facets():
@@ -949,7 +952,8 @@ def test_skip_facets_machinery():
         assert not any(c["facet"] == "zero_budget" for c in cells)
         assert {c["facet"] for c in cells} == {"recall_load", "s5_concrete",
                                                "chain_nowrap", "chain_instant",
-                                               "sanity"}
+                                               "sanity", "commutative",
+                                               "gap_stability"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
     assert sum(len(cells) for cells in plan.values()) == 45  # 9 models x 5 zero_budget cells
     assert sum(1 for cells in plan.values() if cells) == 9
@@ -1039,6 +1043,64 @@ def test_build_plan_n_scale():
     assert all(c["n"] == half for c in plan2["anthropic/claude-sonnet-5"])
 
 
+def test_budget_override_and_lengths_filter():
+    """--budget-override rewrites max_new_tokens for matching (facet, length)
+    cells only, which changes the settings hash (fresh resume key); --lengths
+    keeps only matching cells. Malformed/unknown specs fail loudly."""
+    overrides = RFB.parse_budget_overrides(
+        ["s5_concrete:256:32768", "chain_nowrap:128:32768"])
+    assert overrides == {("s5_concrete", 256): 32768, ("chain_nowrap", 128): 32768}
+
+    model = "anthropic/claude-opus-4.8"
+    plan = RFB.build_plan([model], ["s5_concrete"], 1.0, budget_overrides=overrides)
+    cells = plan[model]
+    by_len = {c["length"]: c for c in cells}
+    assert by_len[256]["settings"]["max_new_tokens"] == 32768
+    assert by_len[128]["settings"]["max_new_tokens"] == 16384  # untouched
+    # the override is part of the settings hash -> fresh resume key
+    planned = next(c for c in B.arms_for(model)
+                   if c["facet"] == "s5_concrete" and c["length"] == 256)
+    assert B.settings_hash(by_len[256]) != B.settings_hash(planned)
+    assert RFB.cell_key(model, by_len[256]) != RFB.cell_key(model, planned)
+
+    # --lengths filter keeps only the requested lengths
+    plan = RFB.build_plan([model], ["s5_concrete"], 1.0, lengths=[128])
+    assert [c["length"] for c in plan[model]] == [128]
+
+    # parse failures are loud (a typo must not silently no-op a paid run)
+    for bad in ("s5_concrete:256", "nope:256:32768", "s5_concrete:x:32768",
+                "s5_concrete:256:-1"):
+        try:
+            RFB.parse_budget_overrides([bad])
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError(f"expected SystemExit for {bad!r}")
+    assert RFB.parse_budget_overrides(None) == {}
+
+
+def test_experimental_facets_shape():
+    """commutative (#18) and gap_stability (#16a): protocol knobs match the
+    approved plans (calibration-matched n=25 thinking @L64; zero_budget-identical
+    L32 contract cells at n=50)."""
+    for slug in ("anthropic/claude-opus-4.8", "z-ai/glm-5.2"):
+        cells = B.arms_for(slug)
+        comm = [c for c in cells if c["facet"] == "commutative"]
+        assert [(c["task"], c["length"], c["n"]) for c in comm] == \
+               [("commutative_v1", 64, 25)]
+        assert comm[0]["settings"]["effort"] == "high"
+        assert comm[0]["settings"]["max_new_tokens"] == B.REASONING_MAX_NEW_TOKENS
+        assert comm[0]["settings"]["contract"] is False
+        gap = [c for c in cells if c["facet"] == "gap_stability"]
+        assert [(c["task"], c["length"], c["settings"]["leg"], c["n"]) for c in gap] == \
+               [("composite_copy_v2", 32, None, 50),
+                ("composite_copy_v2", 32, "binding_only", 50)]
+        for c in gap:
+            assert c["settings"]["effort"] == "none"
+            assert c["settings"]["contract"] is True
+            assert c["settings"]["max_new_tokens"] == B.ZERO_BUDGET_MAX_NEW_TOKENS
+
+
 if __name__ == "__main__":
     for fn in [test_registry_shape, test_arms_for_facets, test_arm_settings_protocol,
                test_gemini_off_arm_is_minimal, test_settings_hash_stable,
@@ -1059,6 +1121,7 @@ if __name__ == "__main__":
                test_skip_facets_machinery,
                test_v2_task_cells_get_fresh_resume_keys,
                test_resume_key_uses_spec_stream_version_not_suite_version,
-               test_build_plan_n_scale]:
+               test_build_plan_n_scale, test_budget_override_and_lengths_filter,
+               test_experimental_facets_shape]:
         fn()
         print(f"{fn.__name__}: ok")
