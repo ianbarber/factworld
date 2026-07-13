@@ -35,6 +35,12 @@ scripts/run_frontier_benchmark.py), keeps the LATEST record per
                   columns and marked INVALID in the tables
   index.html    self-contained static page (inline CSS, inline SVG, sortable table)
 
+After rendering, the repo README's marked frontier block (the table between
+``<!-- FRONTIER_TABLE_START -->`` and ``<!-- FRONTIER_TABLE_END -->``) is
+rewritten from the same headline data in compact cell form (escalation
+diagnostics collapse to the canonical value + mark; raised-budget cells carry
+ʳ; '⊘ >budget' renders ⊘) — a README without the markers is untouched.
+
 The canonical evaluator is **match** — strip a trailing period from both sides and compare
 the model's first len(gold) whitespace tokens to the gold answer; binary per item, no partial
 credit (`factworld.tasks.score_relaxed`). Containment renders as the one diagnostic column;
@@ -1139,6 +1145,84 @@ def archived_model_rows(records):
     return [_v1_facet_row(records, m) for m in archived_models(records)]
 
 
+# --- README frontier block (§2 rot-proofing) ------------------------------------
+# The README's "Benchmarking the frontier" table regenerates from the SAME data
+# as the results.md headline: the block between the two marker comments is
+# rewritten on every render, so it can never drift from history. Cells use the
+# README's compact conventions (below); recall sanity, replicate noise and the
+# ctok column stay in results.md / the report.
+
+README_FRONTIER_START = "<!-- FRONTIER_TABLE_START -->"
+README_FRONTIER_END = "<!-- FRONTIER_TABLE_END -->"
+README_FRONTIER_COLUMNS = ["Model", "binding @L16", "composed @L16",
+                           "composed @L64", "gap", "chain d128", "s5 @L256"]
+# headline_rows column indices the README table keeps (model, binding,
+# composed @L16/@L64, gap, chain d128, s5 @L256).
+README_FRONTIER_KEEP = (0, 2, 3, 4, 5, 7, 8)
+_DIAG_SUFFIX = re.compile(r" \(diag \d+\.\d+ @[\d,]+tok\)")
+_RAISED_SUFFIX = re.compile(r" @[\d,]+tok \(raised budget\)")
+RAISED_MARK = "ʳ"  # compact raised-budget mark; the legend spells out 32,768tok
+
+
+def _readme_compact(cell: str) -> str:
+    """README compact form of one headline cell: escalation diagnostics collapse
+    to the canonical value + mark ('0.62 (diag 0.76 @512tok)†' -> '0.62†'),
+    raised-budget reruns render the ʳ mark ('1.00 @32,768tok (raised budget)' ->
+    '1.00ʳ'; a censored raised cell -> '⊘ʳ'), '⊘ >budget' -> '⊘'; ≤x†, —ᶠ, n/a
+    and the *, †, ‡ marks pass through unchanged."""
+    raised = bool(_RAISED_SUFFIX.search(cell))
+    cell = _RAISED_SUFFIX.sub("", cell)
+    cell = _DIAG_SUFFIX.sub("", cell)
+    cell = cell.replace(CENSORED_CELL, "⊘")
+    return cell + (RAISED_MARK if raised else "")
+
+
+def _readme_row_label(label: str) -> str:
+    """Model column of the README table: floor rows drop the task-version tag
+    (the README block is one table; the tag lives in results.md) and italicize."""
+    if label.startswith(HEURISTIC_LABEL):
+        return "*recency heuristic (floor)*"
+    if label.startswith(OBJECT_FILTER_LABEL):
+        return "*object-filter floor*"
+    return label
+
+
+def readme_frontier_rows(records):
+    """README §2 rows: the headline rows (roster models + the two floor rows)
+    reduced to README_FRONTIER_COLUMNS in compact cell form."""
+    rows = []
+    for row in headline_rows(records):
+        rows.append([_readme_row_label(str(row[README_FRONTIER_KEEP[0]]))]
+                    + [_readme_compact(str(row[i])) for i in README_FRONTIER_KEEP[1:]])
+    return rows
+
+
+def update_readme_frontier(records, readme_path=None) -> bool:
+    """Rewrite the README's marked frontier block (README_FRONTIER_START/_END)
+    from the rendered records. No-op — returns False, file untouched — when the
+    file or either marker is absent, so histories rendered outside the repo
+    never grow a table."""
+    if readme_path is None:
+        readme_path = os.path.join(REPO, "README.md")
+    if not os.path.exists(readme_path):
+        return False
+    with open(readme_path, encoding="utf-8") as fh:
+        text = fh.read()
+    start = text.find(README_FRONTIER_START)
+    end = text.find(README_FRONTIER_END)
+    if start < 0 or end < start:
+        return False
+    lines = ["| " + " | ".join(README_FRONTIER_COLUMNS) + " |",
+             "|" + "---|" * len(README_FRONTIER_COLUMNS)]
+    lines += ["| " + " | ".join(r) + " |" for r in readme_frontier_rows(records)]
+    block = README_FRONTIER_START + "\n" + "\n".join(lines) + "\n" + README_FRONTIER_END
+    new = text[:start] + block + text[end + len(README_FRONTIER_END):]
+    if new != text:
+        with open(readme_path, "w", encoding="utf-8") as fh:
+            fh.write(new)
+    return True
+
+
 # --- markdown / csv -----------------------------------------------------------
 
 def _fmt(x, digits=2):
@@ -2113,6 +2197,8 @@ def main(argv=None):
     args = ap.parse_args(argv)
     for path in render(args.history, args.out):
         print(f"wrote {path}")
+    if update_readme_frontier(load_latest(args.history)):
+        print("rewrote the README.md frontier block")
 
 
 if __name__ == "__main__":

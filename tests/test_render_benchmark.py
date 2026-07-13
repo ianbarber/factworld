@@ -865,6 +865,70 @@ def test_pervasive_covert_and_floor_bound_gap():
     assert order == ["testlab/model-a", "testlab/model-c", "testlab/model-b"]
 
 
+def test_readme_frontier_block():
+    """README §2 rot-proofing: the marked frontier block regenerates from the
+    same headline data in compact cell form — escalation diagnostics collapse
+    to the canonical value + mark, raised-budget cells carry ʳ, '⊘ >budget'
+    renders ⊘, and ≤x† / —ᶠ / n/a / marks pass through; a README without the
+    markers (or a missing file) is untouched."""
+    if not HAS_MPL:
+        return
+    # compact cell transforms
+    assert RB._readme_compact("0.38 (diag 0.96 @512tok)†") == "0.38†"
+    assert RB._readme_compact("0.95 @32,768tok (raised budget)") == "0.95ʳ"
+    assert RB._readme_compact("⊘ >budget @32,768tok (raised budget)") == "⊘ʳ"
+    assert RB._readme_compact("⊘ >budget") == "⊘"
+    for keep in ("≤0.63†", "—ᶠ", "n/a", "0.66*", "0.13‡", "—", "+0.15†"):
+        assert RB._readme_compact(keep) == keep
+    recs = _fixture_records()
+    rows = RB.readme_frontier_rows(recs)
+    # one row per roster model + the two floor rows, README column count
+    assert [r[0] for r in rows] == sorted(MODELS) + [
+        "*recency heuristic (floor)*", "*object-filter floor*"]
+    assert all(len(r) == len(RB.README_FRONTIER_COLUMNS) for r in rows)
+    # fixture history values survive the reduction (model-b carries every mark)
+    row_a, row_b, row_c = rows[0], rows[1], rows[2]
+    assert row_a == ["testlab/model-a", "0.95", "0.80", "0.65", "+0.15",
+                     "0.96", "0.25"]
+    assert row_b[1] == "0.78†"    # visible-working dagger kept
+    assert row_b[2] == "≤0.63†"   # pervasive-covert upper bound kept
+    assert row_b[3] == "0.38†"    # escalation diagnostic collapsed to canonical
+    assert row_b[4] == "+0.15†"
+    assert row_b[5] == "0.13‡"    # cap-escape kept
+    assert row_b[6] == "⊘"        # censored s5 cell
+    assert row_c[1:] == ["0.55*", "0.40*", "0.25*", "+0.15*", "⊘", "0.00"]
+    assert rows[3][1:4] == ["0.34", "0.34", "0.21"]   # v1-task recency floor
+    assert rows[4][1:4] == ["0.29", "0.29", "0.07"]   # v1-task object filter
+    assert rows[3][4:] == ["—", "—", "—"]
+    with tempfile.TemporaryDirectory() as tmp:
+        readme = os.path.join(tmp, "README.md")
+        with open(readme, "w", encoding="utf-8") as fh:
+            fh.write("intro\n\n<!-- FRONTIER_TABLE_START -->\n| stale |\n"
+                     "<!-- FRONTIER_TABLE_END -->\n\nafter\n")
+        assert RB.update_readme_frontier(recs, readme)
+        with open(readme, encoding="utf-8") as fh:
+            text = fh.read()
+        # the stale block is replaced in place, surrounding prose untouched
+        assert "| stale |" not in text
+        assert text.startswith("intro\n\n<!-- FRONTIER_TABLE_START -->\n")
+        assert text.endswith("<!-- FRONTIER_TABLE_END -->\n\nafter\n")
+        assert "| " + " | ".join(RB.README_FRONTIER_COLUMNS) + " |" in text
+        assert "| testlab/model-b | 0.78† | ≤0.63† | 0.38† | +0.15† | 0.13‡ | ⊘ |" in text
+        assert "*object-filter floor*" in text
+        # idempotent: a second run rewrites nothing
+        assert RB.update_readme_frontier(recs, readme)
+        with open(readme, encoding="utf-8") as fh:
+            assert fh.read() == text
+        # a README without markers is untouched; a missing file is a no-op
+        plain = os.path.join(tmp, "PLAIN.md")
+        with open(plain, "w", encoding="utf-8") as fh:
+            fh.write("no markers here\n")
+        assert not RB.update_readme_frontier(recs, plain)
+        with open(plain, encoding="utf-8") as fh:
+            assert fh.read() == "no markers here\n"
+        assert not RB.update_readme_frontier(recs, os.path.join(tmp, "missing.md"))
+
+
 def test_render_end_to_end():
     if not HAS_MPL:
         return
@@ -1073,6 +1137,6 @@ if __name__ == "__main__":
                test_breadth_and_k_fixed_arms, test_object_filter_floor_at_per_rung,
                test_archived_roster, test_profile_values_and_figure,
                test_pervasive_covert_and_floor_bound_gap,
-               test_render_end_to_end]:
+               test_readme_frontier_block, test_render_end_to_end]:
         fn()
         print(f"{fn.__name__}: ok")
