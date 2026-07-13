@@ -7,8 +7,7 @@ FactWorld is a composition instrument. Recall and last-write-wins state tracking
 component abilities; the question every model answers is whether they compose — a two-hop query
 (resolve the current holder of an object, then recall that holder's fact) scored against the same
 components measured in isolation. Part 1 describes the instrument: how each component is
-certified independently, how the composed cell decomposes into legs, and the machinery that keeps
-the numbers honest. Part 2 is the recurring frontier benchmark built on it. Part 3 is the
+certified independently, how the composed cell decomposes into legs, and the measurement rules. Part 2 is the recurring frontier benchmark built on it. Part 3 is the
 architecture exploration it enables at small scale.
 
 ## 1. The instrument
@@ -88,7 +87,7 @@ chain d128 showed completion evidence (12/25 clean stops, all wrong), so its rai
 too: at 32,768 tokens it scores 0.00 with 16/25 still truncated — the failure is capability,
 not budget, and the rule has now been applied to every eligible cell.
 
-Two methodological notes carry the instrument's hardest-won mechanisms.
+Two methodological notes:
 
 > **Methodological note: completion budgets.** A reasoning-model cell without an explicit large
 > completion budget and a published empty-prediction rate measures truncation, not capability.
@@ -458,7 +457,7 @@ read pconv, not the mean).
   the only seed-consistent solve in the sweep) — over gdp_hybrid (0.56 @B6, bimodal above B8)
   over transformer (≤0.23 everywhere). The ordering inverts at B24: fprm stops fitting the
   training distribution (final loss 1.02–1.10; binding 0.13–0.30) while gdp_hybrid still fits
-  (loss 0.05–0.14 at every rung; binding 0.67) — product recurrence buys the sharpest binding
+  (loss 0.05–0.14 at every rung; binding 0.67) — product recurrence buys the strongest binding
   but is the first to break under breadth, where the gated hybrid degrades gracefully. The
   transformer decays monotonically to 0.08 @B24 and no longer fits training there (loss
   1.49–1.65). Binding does not extrapolate reliably to L64 for any architecture: fprm keeps the
@@ -491,8 +490,7 @@ pool-16 @L16 (`results/curriculum_staged_v2_d768_notrace.jsonl`):
 gdp_hybrid trains the composed cell on all three seeds — one clears the ≥0.9 convergence bar,
 the other two read 0.758/0.782 — with the holder leg ≥0.998 throughout, and the compute-matched
 scale sweep's medium cell corroborates the number on 2 independent seeds (0.732 ± 0.013). fprm
-is the instrument's sharpest per-leg dissociation: binding 0.998 — perfect state tracking — with
-a dead value leg. The transformer's 0.001 is a real floor, not formatting: contains reads ~0 as
+dissociates the legs: binding 0.998 with a dead value leg. The transformer's 0.001 is a real floor, not formatting: contains reads ~0 as
 well, at every scale up to 202M params / 417 GFLOP-tok.
 
 Scale shape, from the compute-matched sweep — the same staged curriculum at three sizes sharing
