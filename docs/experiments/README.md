@@ -9,7 +9,8 @@ elicitation, breadth-vs-length composition probes, operating-point calibration, 
 breadth mirror; sections 16–23 log the issue-#11 v2 re-measures and the commutative-rung
 calibration (2026-07-10 → 07-11); sections 24–27 log the close-out cycle (2026-07-11 →
 07-12) — raised completion budgets for ⊘ cells, the qwen contract-phrasing diagnosis, the
-commutative roster adjudication, and the statistical-power checks.
+commutative roster adjudication, and the statistical-power checks; section 28 logs issue #11's
+last item, the MOPD binding re-pin (2026-07-12).
 
 ## 1. Dense-vs-sparse state supervision (the s5 deficit) — `experiment_dense_supervision.py`
 
@@ -702,3 +703,49 @@ one pair) and should be read at coarser resolution. The canary rerun is now the 
 row (latest-timestamp-wins), moving it by ≤0.02. Data: `results/benchmark/history.jsonl`
 runs `bench_16_gap_L32_20260711`, `bench_16_glm_s5_replicate_20260711`,
 `bench_16_canary_20260711`.
+
+## 28. MOPD binding re-pin: outcome-RL from the object-filter floor — `experiments/mopd/` (issue #11, last item)
+
+The MOPD testbed's binding domain re-pinned from the retired `binding_v1` (recency-defective
+sampler) to CANONICAL `binding_v2` (uniform resolving-write position; same knobs — train
+L∈{8,16}, eval L∈{16,24,32}), pins updated in `mopd_hf.py`, `mopd.py`, `bench_qwen.py`, and the
+full Qwen3-1.7B GRPO + distillation pipeline re-run (RTX 5090, ~3.8 h wall). Base placement
+first (greedy, no thinking, relaxed match, n=200; floors recomputed on the same deterministic
+test items, n=300; chance 1/k = 0.200):
+
+| L | base | object-filter floor E[1/w] | recency heuristic | teacher (GRPO 300 steps) |
+| --- | --- | --- | --- | --- |
+| 16 | 0.420 | 0.471 | 0.177 | **0.975** |
+| 24 (held-out) | 0.325 | 0.348 | 0.220 | **0.980** |
+| 32 (held-out) | 0.290 | 0.261 | 0.160 | **0.910** |
+
+The base sits at the floor at every eval length and decays with the floor's ~1/L shape — the
+published "partial capability" (0.33) was the v1 sampler's recency artifact; on the clean
+sampler the base has no binding capability above object filtering. Outcome-RL lifts it to
+near-solved including the held-out lengths, where the floor keeps falling and the teacher does
+not — last-write resolution, not a longer-range shallow heuristic. Recall (unchanged domain)
+reproduces within noise (base 0.39/0.25, teacher 0.99/1.00 @L16/L24). MOPD headline across 3
+seeds (fresh 150-step teachers + 200-step students per seed, greedy n=300, normalised score
+mean±std):
+
+| model | binding | recall | avg |
+| --- | --- | --- | --- |
+| teacher_binding | 1.000±0.000 | 0.889±0.086 | 0.944±0.083 |
+| teacher_recall | 0.094±0.021 | 1.000±0.000 | 0.547±0.453 |
+| mopd_pg | 1.051±0.031 | 1.002±0.003 | 1.027±0.033 |
+| mopd_kl | 1.083±0.043 | 1.000±0.004 | 1.042±0.052 |
+
+**Finding:** the MOPD result is re-founded on the clean sampler and strengthens — the binding
+lift is floor-to-solved (0.42→0.98 @L16 against the 0.47 floor; 0.29→0.91 at the held-out L32
+against 0.26), not partial-to-better, and the normalised score's 0-anchor is an honest shallow
+bound for the first time on binding. The single distilled student still matches or exceeds both
+teachers on both domains on every seed, while neither teacher does both (`teacher_recall` stays
+at the binding floor, 0.094; `teacher_binding` transfers to recall only partially, 0.889±0.086
+— the output-format effect). Two calibration notes from the raw stage outputs: the measured
+distillation reverse-KL on binding now starts materially nonzero (pg 6.4, kl 1.6 at the first
+log point — the v2 binding teacher moves far from the base) yet still collapses to ≈0 within
+~40 steps, so distillation stability survives a far-from-base teacher; and the student-exceeds-
+teacher effect on binding (norm 1.01–1.14 every seed) holds against 150-step teachers but
+flattens to parity (0.97/0.99) against 300-step teachers — teacher-strength-dependent. Data:
+`results/mopd_v2/` (stage logs, tables, pipeline log);
+`experiments/mopd/{hf_teachers,hf_mopd,hf_evaluate,hf_seeds,bench_qwen}.md`.

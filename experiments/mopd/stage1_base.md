@@ -1,5 +1,8 @@
 # Stage 1 — shared mixed base (per-domain accuracy)
 
+> v1-sampler-era table (binding rows used the retired `binding_v1`; `mopd.py` now pins
+> `binding_v2`). Kept as the from-scratch control's provenance — its conclusion is qualitative.
+
 `experiments/mopd/stage1_base.py`. transformer d256x4, 15000 steps, mix={'binding': 0.5, 'recall': 0.5}, seed 0. Greedy relaxed match, n=300. Bold = training lengths (must be > 0 for RL to have pass@k signal); the rest are held-out OOD lengths (the headroom RL/MOPD can chase).
 
 

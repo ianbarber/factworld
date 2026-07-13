@@ -1,5 +1,8 @@
 # De-risk probe — RL headroom on the base (pass@k)
 
+> v1-sampler-era table (binding rows used the retired `binding_v1`; `mopd.py` now pins
+> `binding_v2`). Kept as the from-scratch control's provenance — its conclusion is qualitative.
+
 `experiments/mopd/probe_headroom.py`. Base `base.pt`, n=150, k=8, temp=1.0. `greedy` = the norm-score 0-anchor; `pass@k` = P(>=1 of k samples correct) = exploration headroom; `var-frac` = fraction of prompts with a non-degenerate GRPO group (0<succ<k). RL-improvable band = greedy in [0.1, 0.7] and var-frac >= 0.2.
 
 | domain | config | L | greedy | pass@k | var-frac | |
