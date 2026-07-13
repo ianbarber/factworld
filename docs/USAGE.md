@@ -21,12 +21,12 @@ class ModelBackend:
         ...
 ```
 
-The returned strings are scored with **relaxed match**
-(``factworld.tasks.score_relaxed``), the canonical metric: strip trailing
-punctuation and compare whitespace-token sequences up to the length of the gold
-answer.  Extra whitespace or trailing tokens are ignored, so a backend does not
-need to terminate generation exactly at ``.``.  Exact, containment, and
-last-*n* scorers exist as diagnostics.
+The returned strings are scored with **match**, the canonical metric: strip a
+trailing period from both sides and compare the model's first len(gold)
+whitespace tokens to the gold answer — binary per item, no partial credit
+(``factworld.tasks.score_relaxed``).  Extra whitespace or trailing tokens are
+ignored, so a backend does not need to terminate generation exactly at ``.``.
+Containment is the one published diagnostic.
 
 ## Built-in backends
 

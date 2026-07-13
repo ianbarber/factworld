@@ -3,19 +3,22 @@
 **A composition instrument: recall and state tracking, measured independently and composed —
 identically for frontier API models and local from-scratch models.**
 
-Recall is well tested by MQAR; state tracking by the S₅ word-problem literature. FactWorld tests
-both, independently *and* in composition, under one protocol for frontier models over an API and
-for small models trained from scratch. Every task is a frozen, versioned ``TaskSpec`` rendered
-as natural language over a constrained vocabulary, with deterministic examples; gold answers
-come from a symbolic **oracle**, never from parsing rendered text, and a validity gate certifies
-that no shallow baseline clears floor. The canonical metric is **relaxed match** of the answer
-span (exact / containment / last-*n* are diagnostics). The canonical story is anchored in
-[`AGENTS.md`](AGENTS.md).
+Recall is well tested by multi-query associative recall (MQAR); state tracking by the word-problem
+literature on S₅ — the symmetric group on five elements, i.e. order-sensitive permutation
+composition. FactWorld tests both, independently *and* in composition, under one protocol for
+frontier models over an API and for small models trained from scratch. Every task is a frozen,
+versioned ``TaskSpec`` rendered as natural language over a constrained vocabulary, with
+deterministic examples; gold answers come from a symbolic **oracle**, never from parsing rendered
+text, and a validity gate certifies that no shallow baseline clears floor. The canonical metric is
+**match**: strip a trailing period from both sides and compare the model's first len(gold)
+whitespace tokens to the gold answer — binary per item, no partial credit
+(`factworld.tasks.score_relaxed`); containment is the one published diagnostic. The full narrative
+is [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md).
 
 The story has three parts, in this order here and in the [full report](reports/frontier-benchmark.md):
 
 1. **[The instrument](#1-the-instrument)** — recall and state tracking certified independently and in composition (report Part 1).
-2. **[Evalling the frontier](#2-evalling-the-frontier)** — the benchmark built on it: 9 models, two regimes (report Part 2).
+2. **[Benchmarking the frontier](#2-benchmarking-the-frontier)** — the benchmark built on it: 9 models, two regimes (report Part 2).
 3. **[Exploring the architectures](#3-exploring-the-architectures)** — which components buy each capability at small scale (report Part 3).
 
 > **What this is — and isn't.** A **mechanism probe for the component capabilities that agent
@@ -34,10 +37,10 @@ then their compositions:
 | **Component: recall** | `recall_copy_v1` | single-query, deferred-readout MQAR variant; pool breadth = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models); `conflict_v1` scores the in-context override |
 | **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates — not group ops) |
-| — commutative variant | `commutative_v1` | order-free accumulation mod k (dial clicks); every event load-bearing; length = load axis; experimental — reads in the thinking regime only (roster @L64 spans 0.44–0.96 but only gpt-5.5 CI-separates, so it stays off the headline; instant and d256-local at chance) |
+| — commutative variant | `commutative_v1` | each event turns a named entity's dial a few clicks; the query asks where one dial ends up — every event matters, order does not; experimental — reads in the thinking regime only (roster @L64 spans 0.44–0.96 but only gpt-5.5 CI-separates, so it stays off the headline; instant and d256-local at chance) |
 | — non-abelian variant | `s5_v1` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite_copy_v2` | the two-hop; headline statistic = **gap** (binding − composed) |
-| **Composition: recall ∘ recall** | `chain_v1` | pointer chase; depth axis at fixed breadth (the no-wrap staircase builds k=2d+1) |
+| **Composition: recall ∘ recall** | `chain_v1` | follow a chain of "ask X" pointers hop by hop to the fact at the end — recall applied to its own output; depth = number of hops, at fixed breadth (the no-wrap staircase builds k=2d+1) |
 
 Each axis tests a different thing: solve rate; pool/breadth (working-set load); depth/length
 (iteration count); regime (**instant** = reasoning off + answer contract = in-weights, vs
@@ -149,50 +152,63 @@ See [`docs/USAGE.md`](docs/USAGE.md) for the full backend API reference, API
 cost tips, and a custom-backend example. Concrete prompts, gold answers, and real model
 mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
-## 2. Evalling the frontier
+## 2. Benchmarking the frontier
 
 Nine frontier models, two regimes: **instant** (reasoning off, one-line answer contract — what
 the weights compute) and **thinking** (effort=high, generous budgets — what reasoning buys).
 Floors are first-class rows; marks are plain-language, with the full glossary in the
-[report](reports/frontier-benchmark.md).
+[report](reports/frontier-benchmark.md). Notation: `@Ln` = stream length (events, or hops for
+chain depth d); `@Ntok` = a completion-token budget.
 
-Instant: the binding leg against the composed two-hop cell. Relaxed match; `*` cannot disable
-reasoning (off-arm ran effort=minimal), `†` visible working on the canonical attempt,
-`(x.xx @512)` escalated-budget diagnostic.
+Instant: the binding leg against the composed two-hop cell. Match; `*` cannot disable
+reasoning (off-arm ran effort=minimal), `†` visible working or covert reasoning on the canonical
+attempt, `≤x†` covert reasoning on most calls (an explicit upper bound), `(diag x.xx @512tok)`
+escalated-budget diagnostic, `—ᶠ` gap not interpretable (state tracking at the floor).
 
 | Model | binding @L16 | composed @L16 | composed @L64 | gap @L16 |
 |---|---|---|---|---|
 | anthropic/claude-opus-4.8 | 0.78 | 0.72 | 0.43 | +0.06 |
-| anthropic/claude-sonnet-5 | 0.77 | 0.62 (0.76 @512)† | 0.32 (0.66 @512)† | +0.15† |
-| deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | +0.07 |
+| anthropic/claude-sonnet-5 | 0.77 | 0.62 (diag 0.76 @512tok)† | 0.32 (diag 0.66 @512tok)† | +0.15† |
+| deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | —ᶠ |
 | google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* |
-| moonshotai/kimi-k2.6 | 0.94† | 0.77† | 0.93† | +0.17† |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | +0.16 |
+| moonshotai/kimi-k2.6 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | —ᶠ |
 | openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 |
-| qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | +0.27 |
+| qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | —ᶠ |
 | z-ai/glm-5.2 | 0.68† | 0.34 | 0.15† | +0.34† |
 | *recency heuristic (floor)* | 0.04 | 0.04 | 0.06 | — |
 | *object-filter floor* | 0.41 | 0.41 | 0.15 | — |
 
-Recall is not the constraint: the scaffolded leg reads 0.98–1.00 for every model, and recall
+⊘ = not measurable at this budget; ≤x† = upper bound, covert reasoning on most calls; neither
+participates in orderings. —ᶠ: for models whose binding cell sits within its Wilson CI of the
+object-filter floor, the gap is not interpretable (floor − floor ≈ 0 by construction). Kimi's
+composed @L64 exceeding its @L16 is the covert-reasoning artifact, not a length effect. Both
+floor rows are recomputed at render time from the exact deterministic task items, so they are
+independently checkable without any API access.
+
+Recall is not the constraint: the scaffolded leg reads 0.98–1.00 for every measurable model
+(qwen's leg is ⊘ — a contract-phrasing artifact, not a recall failure; report Part 2), and recall
 under load is at ceiling — pool-64 `recall_copy_v1` @L64 reads 1.00 for all nine (chance 0.016).
 The gap is the composition deficit.
 
-Thinking regime (effort=high, 16,384 tokens; `@32,768` marks a single raised-budget rerun of a
-truncated cell, budget stated): two state-stress rows. `⊘` = majority finish=length, not
-measurable at the stated budget; `‡` = provider ignored the token cap.
+Thinking regime (effort=high, 16,384 tokens; `@32,768tok (raised budget)` marks a single
+raised-budget rerun of a truncated cell): two state-stress rows. `⊘` = majority finish=length,
+not measurable at the stated budget; `‡` = provider ignored the token cap.
 
 | Model | chain d128 (k=257) | s5 @L256 |
 |---|---|---|
-| anthropic/claude-opus-4.8 | 0.08 | 1.00 (@32,768) |
-| anthropic/claude-sonnet-5 | 0.04 | 1.00 (@32,768) |
-| deepseek/deepseek-v4-pro | ⊘ (@32,768) | ⊘ |
+| anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) |
+| anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) |
+| deepseek/deepseek-v4-pro | ⊘ @32,768tok (raised budget) | ⊘ |
 | google/gemini-3.5-flash | 0.88 | 0.52 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ | ⊘ |
 | openai/gpt-5.5 | 0.36 | 0.96 |
 | qwen/qwen3.7-max | 0.96 | 0.80 |
 | z-ai/glm-5.2 | 0.36 | 0.88 |
+
+n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one thinking test-retest pair moved 0.16 —
+differences under ~0.2 are not an ordering.
 
 The instant and thinking rankings are near-orthogonal — opus and sonnet, the strongest clean
 instant composers, post the weakest measurable chain scores — so profiles are per-axis, never a
@@ -214,10 +230,11 @@ pricing with long reasoning traces.
 
 ## 3. Exploring the architectures
 
-The same tasks trained from scratch — transformer, recurrent hybrids (gdp/gdn), fprm —
-attribute each capability to an architectural or training component. Comparisons are matched on
-compute, not parameters (fprm is weight-tied at ~5–11× fewer params), at budgets sufficient for
-the capable configuration to converge.
+The same tasks trained from scratch — transformer, recurrent hybrids (gdp = GatedDeltaProduct,
+gdn = GatedDeltaNet), and fprm (Fast Parallel Recurrent Model, a weight-tied looped
+conv+attention block) — attribute each capability to an architectural or training component.
+Comparisons are matched on compute, not parameters (fprm is weight-tied at ~5–11× fewer params),
+at budgets sufficient for the capable configuration to converge.
 
 - **Recall.** Every architecture aces adjacent 1-hop readout; deferred recall needs product
   recurrence — attention-free `gdp_pure` supplies it, `gdn_pure` fails
@@ -290,7 +307,7 @@ docs/
   tasks.md                concrete prompts, gold answers, and real model mistakes for every task
   USAGE.md                backend API reference and custom-backend examples
   related-work.md         related work with verified citations
-  results.md              4-arch reference baselines (relaxed match)
+  results.md              4-arch reference baselines (match metric)
   results-ci.md           3-seed CIs on the dissociating cells + attention-free recall ablation
   benchmark/              rendered frontier-benchmark tables, figures, results.csv
   openrouter/             external LLM API grid results

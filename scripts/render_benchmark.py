@@ -13,10 +13,16 @@ scripts/run_frontier_benchmark.py), keeps the LATEST record per
                 ctok — with cleanliness footnotes, the recency-heuristic and
                 object-filter floor rows, an "Archived models (dropped from the
                 roster)" section for models no longer on the roster, a "v1
-                archived facets (pre-redesign)" legacy headline, diagnostics and
-                full per-cell markdown tables. Escalated zero-budget cells
-                publish the CANONICAL first attempt at the shared base budget;
-                the escalated rerun renders as a marked diagnostic.
+                archived facets (pre-redesign)" legacy headline, then the full
+                per-cell table, diagnostics, and a quarantined provenance
+                section for INVALID chain_depth cells. Escalated zero-budget
+                cells publish the CANONICAL first attempt at the shared base
+                budget; the escalated rerun renders as a marked diagnostic.
+                An instant cell whose canonical attempt shows PERVASIVE covert
+                reasoning (rtok on > 50% of calls) renders as an explicit upper
+                bound '≤x†' and takes no part in orderings; a gap whose
+                state-tracking input sits at the object-filter floor renders
+                '—ᶠ' (floor − floor ≈ 0 by construction, not a measurement).
   results.csv   flat per-cell export (all metrics + diagnostics incl. contract_rate /
                 covert_cot_rate / rtok_leak_rate / escalated + usage)
   fig_*.png/.svg  facet figures, one per facet with data, plus fig_profiles — a
@@ -29,8 +35,11 @@ scripts/run_frontier_benchmark.py), keeps the LATEST record per
                   columns and marked INVALID in the tables
   index.html    self-contained static page (inline CSS, inline SVG, sortable table)
 
-Relaxed match is the canonical metric and is listed first everywhere; exact/contains/last_n
-are diagnostics. Confidence intervals are Wilson 95% (pure python, no scipy).
+The canonical evaluator is **match** — strip a trailing period from both sides and compare
+the model's first len(gold) whitespace tokens to the gold answer; binary per item, no partial
+credit (`factworld.tasks.score_relaxed`). Containment renders as the one diagnostic column;
+stored record keys keep their historical names (metrics.relaxed/exact/contains/last_n — no
+history rewrite). Confidence intervals are Wilson 95% (pure python, no scipy).
 
 Requires matplotlib (``pip install 'factworld[bench]'``); everything else is stdlib.
 
@@ -138,9 +147,20 @@ def canonical_arm(rec) -> bool:
 CTOK_WORKING_LINE = 32.0     # median (per-example) / mean ctok per call above this -> †
 RTOK_LEAK_PER_CALL = 2.0     # mean reasoning tokens per call on the published attempt -> †
 CAP_ESCAPE_RATE = 0.10       # fraction of calls with ctok > max_new_tokens -> ‡
+# Symmetric contamination rule: an instant cell whose CANONICAL attempt emitted
+# reasoning tokens on MORE THAN HALF its calls is pervasively covert — its score
+# renders as the explicit upper bound '≤x†' and, like ⊘ budget-censored cells,
+# it takes no part in figure sorts or cross-model ordering prose.
+PERVASIVE_RTOK_RATE = 0.5
+# Gap cells where the state-tracking (binding) input sits at the object-filter
+# floor render this mark instead of a number: floor − floor ≈ 0 by construction.
+GAP_FLOOR_MARK = "—ᶠ"
 S5_EFF_LENGTH = 128          # matched efficiency cell: s5_concrete @ L128 (F10)
 # Thinking state-stress cells: chain d128 on the chain_nowrap staircase (k=2d+1,
-# so d128 IS the fixed-breadth k=257 cell across the roster) and s5 @L256.
+# so d128 IS the fixed-breadth k=257 cell across the roster) and s5 @L256, at the
+# standard thinking budget; cells rerun at a raised budget (--budget-override)
+# render the budget with the number: '1.00 @32,768tok (raised budget)'.
+THINKING_BUDGET = 16384
 CHAIN_STRESS_DEPTH = 128
 CHAIN_STRESS_K = 2 * CHAIN_STRESS_DEPTH + 1  # staircase k=2d+1 -> 257
 S5_STRESS_LENGTH = 256
@@ -209,12 +229,12 @@ def headline_columns(zb_task) -> list[str]:
         "Model",
         "instant: recall (sanity, recall_copy_v1)",
         f"instant: state tracking (binding_only @L16, {ver})",
-        f"instant: composed @L16 (relaxed, {ver})",
+        f"instant: composed @L16 (match, {ver})",
         f"instant: composed @L64 ({ver})",
         "instant: composition gap (binding_only - composed @L16)",
         "instant: replicate noise (|composed - replicate| @L16)",
-        f"thinking: chain d{CHAIN_STRESS_DEPTH} (chain_nowrap, k={CHAIN_STRESS_K}, relaxed)",
-        f"thinking: s5 @L{S5_STRESS_LENGTH} (s5_concrete, relaxed)",
+        f"thinking: chain d{CHAIN_STRESS_DEPTH} (chain_nowrap, k={CHAIN_STRESS_K}, match)",
+        f"thinking: s5 @L{S5_STRESS_LENGTH} (s5_concrete, match)",
         "thinking: s5@128 ctok",
     ]
 
@@ -233,17 +253,26 @@ def object_filter_label(zb_task) -> str:
     return f"{OBJECT_FILTER_LABEL} ({zb_task})"
 ZB_FOOTNOTES = [
     "(*) off-arm ran effort=minimal (model cannot disable reasoning).",
-    "(†) visible working on the canonical attempt: median (per-example) or mean "
-    f"ctok/call > {CTOK_WORKING_LINE:.0f} (~3x the 8-11 token answers), mean "
-    f"rtok/call > {RTOK_LEAK_PER_CALL:.0f} on the published attempt, or the cell "
-    "needed a budget escalation — measures short visible working, not in-weights.",
+    "(†, trigger 1 — visible working) the canonical attempt's completion carries "
+    "short visible working instead of a bare answer: median (per-example) or mean "
+    f"ctok (completion tokens) per call > {CTOK_WORKING_LINE:.0f} (~3x the 8-11 "
+    "token answers), or the cell needed a budget escalation.",
+    "(†, trigger 2 — covert reasoning) the model reasoned despite effort=none: mean "
+    f"rtok (reasoning tokens) per call > {RTOK_LEAK_PER_CALL:.0f} on the published "
+    f"attempt. Where MORE THAN {PERVASIVE_RTOK_RATE:.0%} of the canonical attempt's "
+    "calls carry reasoning tokens the covert reasoning is pervasive and the cell "
+    "renders as the explicit upper bound ≤x†.",
     "(‡) cap-escape: per-example ctok exceeded settings.max_new_tokens on "
     f">{CAP_ESCAPE_RATE:.0%} of calls (the provider did not enforce the cap); token "
     "counts and budget comparisons for those cells are not cap-comparable.",
-    "(x.xx @512) escalated diagnostic: the cell was rerun once at an escalated token "
-    "budget after majority finish=length; the CANONICAL number is the first attempt "
-    "at the shared base budget — the escalated value is a marked diagnostic, not the "
-    "headline.",
+    "(diag x.xx @512tok) escalated diagnostic: the cell was rerun once at an "
+    "escalated token budget after majority finish=length; the CANONICAL number is "
+    "the first attempt at the shared base budget — the escalated value is a marked "
+    "diagnostic, not the headline.",
+    f"({GAP_FLOOR_MARK}) gap not interpretable where the state-tracking component "
+    "sits at the floor: the binding cell's Wilson CI overlaps the object-filter "
+    "floor's, so the composed cell is floor-shaped too and binding − composed "
+    "reads floor − floor ≈ 0 by construction.",
     f"{HEURISTIC_LABEL}, <task>): one-line floor recomputed at render time on the "
     "exact deterministic items of the task named in the row label (the same task "
     "as the zero-budget columns) — answer the LAST event's recipient plus that "
@@ -270,6 +299,21 @@ CENSOR_NOTE = (
     f"{CENSORED_CELL} = not measurable at this budget: the cell's calls were majority "
     "finish=length (the token budget ran out before an answer), so the cell has no "
     "score at these settings.")
+SYMMETRY_NOTE = (
+    "⊘ = not measurable at this budget; ≤x† = upper bound, covert reasoning on most "
+    "calls; neither participates in orderings.")
+NOTATION_NOTE = (
+    "Notation: `@Ln` = stream length (events, or hops for chain depth d); "
+    "`@Ntok` = a completion-token budget. Instant escalations render "
+    "`(diag x.xx @512tok)`; thinking cells rerun at a raised budget render it "
+    "with the number, e.g. `1.00 @32,768tok (raised budget)`.")
+THINKING_NOISE_NOTE = (
+    "Thinking columns: n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one "
+    "thinking test-retest pair moved 0.16 — differences under ~0.2 are not an "
+    "ordering.")
+NONCOMPARABLE_NOTE = (
+    "Numbers in this table are on retired v1 tasks/facets (pre-redesign samplers "
+    "and settings) and are NOT comparable to the current headline.")
 EFFICIENCY_NOTE = (
     f"s5@128 ctok: completion tokens per call on the matched s5_concrete L{S5_EFF_LENGTH} "
     "cell (run by every current-roster model). This replaces ctok/solve, which averaged "
@@ -281,7 +325,7 @@ EFFICIENCY_NOTE = (
 # 'dose' terminology is purged from all active labels/prose).
 V1_ARCHIVED_FACETS = ("dose_response", "composite_length", "decomposition")
 ARCHIVED_COLUMNS = [
-    "Model", "dose_response (relaxed)", "composite_length (relaxed @ L512, high)",
+    "Model", "dose_response (match)", "composite_length (match @ L512, high)",
     "decomposition (bind / e2e / scaffold)",
 ]
 
@@ -367,6 +411,27 @@ def canonical_rtok_per_call(rec):
         src = fa
     rt = (src.get("usage") or {}).get("reasoning_tokens")
     return rt / n if n and rt is not None else None
+
+
+def rtok_any_rate(rec):
+    """Fraction of the CANONICAL attempt's calls that emitted ANY reasoning
+    tokens (per-example rtok > 0); None when per-example data is unavailable
+    (escalated cells store only aggregates for the canonical first attempt)."""
+    if escalation_first(rec) is not None:
+        return None
+    rs = _ex_vals(rec, "rtok")
+    if not rs:
+        return None
+    return sum(1 for x in rs if x > 0) / len(rs)
+
+
+def pervasive_covert(rec) -> bool:
+    """True when the canonical attempt shows PERVASIVE covert reasoning (rtok on
+    > PERVASIVE_RTOK_RATE of calls): the cell's score is an upper bound on
+    in-weights ability — rendered '≤x†', excluded from figure sorts and from any
+    cross-model ordering (the symmetric twin of ⊘ budget censoring)."""
+    rate = rtok_any_rate(rec)
+    return rate is not None and rate > PERVASIVE_RTOK_RATE
 
 
 def _effective_cap(rec):
@@ -459,9 +524,9 @@ def cell_note(rec) -> str:
         notes.append(CHAIN_INVALID_MARK)
     if is_escalated(rec):
         notes.append(
-            f"escalated @{_effective_cap(rec)} diagnostic "
+            f"escalated @{_effective_cap(rec)}tok diagnostic "
             f"{_fmt((rec.get('metrics') or {}).get('relaxed'))}; canonical = first "
-            f"attempt @{_settings(rec).get('max_new_tokens')}")
+            f"attempt @{_settings(rec).get('max_new_tokens')}tok")
     if cap_escape(rec):
         notes.append("‡ cap-escape")
     return "; ".join(notes) or "—"
@@ -546,19 +611,29 @@ def stress_cell(records, facet, model, length,
     return cells[0] if cells else None
 
 
+def _raised_budget_suffix(rec) -> str:
+    """' @32,768tok (raised budget)' for a thinking cell rerun above the standard
+    budget (--budget-override); '' otherwise."""
+    cap = _settings(rec).get("max_new_tokens")
+    if cap and cap > THINKING_BUDGET:
+        return f" @{cap:,}tok (raised budget)"
+    return ""
+
+
 def stress_value_str(rec) -> str:
-    """One thinking state-stress headline cell: the plain relaxed score at the
+    """One thinking state-stress headline cell: the plain match score at the
     named setting, ‡ when the cell escaped the token cap; CENSORED_CELL when the
     cell's calls were majority finish=length (not measurable at this budget —
-    never a number); 'n/a' when the cell never ran."""
+    never a number); a raised budget publishes with the number ('1.00 @32,768tok
+    (raised budget)'); 'n/a' when the cell never ran."""
     if rec is None:
         return "n/a"
     if majority_finish_length(rec):
-        return CENSORED_CELL
+        return CENSORED_CELL + _raised_budget_suffix(rec)
     val = _fmt(canonical_relaxed(rec))
     if cap_escape(rec):
         val += "‡"
-    return val
+    return val + _raised_budget_suffix(rec)
 
 
 def headline_decomposition(records, model):
@@ -636,6 +711,7 @@ def zb_marks(rec, model_minimal=False) -> str:
         ctok = canonical_ctok_per_call(rec)
         rtok = canonical_rtok_per_call(rec)
         if (is_escalated(rec)
+                or pervasive_covert(rec)
                 or (ctok is not None and ctok > CTOK_WORKING_LINE)
                 or (rtok is not None and rtok > RTOK_LEAK_PER_CALL)):
             marks += "†"
@@ -644,13 +720,16 @@ def zb_marks(rec, model_minimal=False) -> str:
 
 def zb_value_str(rec, model_minimal=False) -> str:
     """One zero-budget headline cell: canonical value + escalated diagnostic suffix
-    + cleanliness marks; 'n/a' when the cell never ran (F9)."""
+    + cleanliness marks; pervasively covert cells render as the explicit upper
+    bound '≤x†'; 'n/a' when the cell never ran (F9)."""
     if rec is None:
         return "n/a"
     val = _fmt(canonical_relaxed(rec))
+    if pervasive_covert(rec):
+        val = "≤" + val
     if is_escalated(rec):
-        val += (f" ({_fmt((rec.get('metrics') or {}).get('relaxed'))} "
-                f"@{_effective_cap(rec)})")
+        val += (f" (diag {_fmt((rec.get('metrics') or {}).get('relaxed'))} "
+                f"@{_effective_cap(rec)}tok)")
     return val + zb_marks(rec, model_minimal)
 
 
@@ -667,12 +746,34 @@ def zb_model_marks(records, model, task=None) -> str:
     return "".join(c for c in "*†" if c in seen)
 
 
+def binding_floor_bound(records, model, zb_task=None) -> bool:
+    """True when the model's state-tracking (binding_only @L16) cell sits at the
+    object-filter floor statistically: its Wilson CI overlaps the floor's Wilson
+    CI at the same n. For these models the composed cell is floor-shaped too, so
+    the gap is not a composition measurement (floor − floor ≈ 0 by construction)
+    and renders GAP_FLOOR_MARK. Derived from the data, never hardcoded."""
+    if zb_task is None:
+        zb_task = zb_latest_task(records)
+    bind = zero_budget_cell(records, model, 16, "binding_only", task=zb_task)
+    if bind is None or zb_task is None:
+        return False
+    n = _zb_floor_n(records, zb_task)
+    vals = object_filter_floor(zb_task, n)
+    if vals is None:
+        return False
+    flo, fhi = wilson_interval(round(vals["binding_16"] * n), n)
+    blo, bhi = _ci(bind)
+    return blo <= fhi and flo <= bhi
+
+
 def composition_gap_str(records, model, zb_task=None) -> str:
     """THE headline statistic: composition gap = state tracking (binding_only
     @L16) - composed @L16, rendered '+0.NN' with the input cells' cleanliness
     marks propagated. recall|holder is ~1.0 across the roster (scaffolded leg),
     so a free composer would score the composed cell at its binding leg; the gap
-    is the composition deficit. 'n/a' when either cell never ran."""
+    is the composition deficit. GAP_FLOOR_MARK where the binding input sits at
+    the object-filter floor (not interpretable); 'n/a' when either cell never
+    ran."""
     if zb_task is None:
         zb_task = zb_latest_task(records)
     bind = zero_budget_cell(records, model, 16, "binding_only", task=zb_task)
@@ -682,6 +783,8 @@ def composition_gap_str(records, model, zb_task=None) -> str:
     vb, vc = canonical_relaxed(bind), canonical_relaxed(comp)
     if vb is None or vc is None:
         return "—"
+    if binding_floor_bound(records, model, zb_task):
+        return GAP_FLOOR_MARK
     minimal = model_effort_minimal(records, model)
     seen = zb_marks(bind, minimal) + zb_marks(comp, minimal)
     marks = "".join(c for c in "*†" if c in seen)
@@ -972,7 +1075,7 @@ def replicate_note(records) -> str:
     noise_s = "n/a" if noise is None else f"{noise:.2f}"
     return (
         "replicate noise: the zero_budget replicate leg (recorded as end_to_end "
-        "before the F6 rename) builds prompts IDENTICAL to the composed @L16 cell "
+        "in earlier runs) builds prompts IDENTICAL to the composed @L16 cell "
         "(same runner path), so |composed - replicate| is a test-retest delta; max "
         f"across models = {noise_s} — read that as the run-to-run noise bar on the "
         "headline numbers (including the gap column). Future runs keep this arm "
@@ -1042,21 +1145,31 @@ def _fmt(x, digits=2):
     return "—" if x is None else f"{x:.{digits}f}"
 
 
+MATCH_DEFINITION = (
+    "Canonical metric: **match** — strip a trailing period from both sides and "
+    "compare the model's first len(gold) whitespace tokens to the gold answer; "
+    "binary per item, no partial credit (`factworld.tasks.score_relaxed`). "
+    "Containment is the one published diagnostic.")
+
+
 def _settings_block(records) -> list[str]:
-    """Distinct (effort, max_new_tokens, stop_at) combos observed, from the records."""
-    combos = sorted({
-        (str(_settings(r).get("effort") or "default"),
-         str(_settings(r).get("max_new_tokens")),
-         str(_settings(r).get("stop_at")))
-        for r in records
-    })
+    """Distinct (effort, max_new_tokens, stop_at) combos observed, from the
+    records, each annotated with the facets that ran under it."""
+    combos = defaultdict(set)
+    for r in records:
+        s = _settings(r)
+        key = (str(s.get("effort") or "default"), str(s.get("max_new_tokens")),
+               str(s.get("stop_at")))
+        combos[key].add(r.get("facet") or "?")
     lines = ["## Settings", "",
-             "Canonical metric: **relaxed** match. exact / contains / last_n are diagnostics.",
-             f"Figures draw a dotted reference line at relaxed {REF_THRESHOLD}.",
+             MATCH_DEFINITION,
+             f"Figures draw a dotted reference line at match {REF_THRESHOLD}.",
              "Error bars / intervals: Wilson 95% CI.", "",
-             "Observed generation settings (effort -> max_new_tokens, stop_at):", ""]
-    for effort, mnt, stop in combos:
-        lines.append(f"- effort={effort}: max_new_tokens={mnt}, stop_at={stop}")
+             "Observed generation settings (effort -> max_new_tokens, stop_at; "
+             "annotated with the facets that ran under each combo):", ""]
+    for (effort, mnt, stop), facets in sorted(combos.items()):
+        lines.append(f"- effort={effort}: max_new_tokens={mnt}, stop_at={stop} — "
+                     f"facets: {', '.join(sorted(facets))}")
     lines.append("")
     return lines
 
@@ -1088,9 +1201,11 @@ def write_results_md(records, out_path, history_path):
               "",
               f"Instant cells: task **{zb_task or 'n/a'}** with reasoning "
               "off (effort=none) under a one-line answer contract "
-              "(settings.contract=true); relaxed match. Escalated cells show the "
+              "(settings.contract=true); match. Escalated cells show the "
               "CANONICAL first attempt at the shared base budget, with the escalated "
               "rerun as a parenthesised diagnostic.",
+              "",
+              NOTATION_NOTE,
               ""]
     note = _zb_mixed_task_note(records, zb_task)
     if note:
@@ -1107,8 +1222,8 @@ def write_results_md(records, out_path, history_path):
         lines += [BREADTH_FLOOR_NOTE, ""]
     for note in ZB_FOOTNOTES:
         lines += [note, ""]
-    lines += [GAP_NOTE, "", replicate_note(records), "", CENSOR_NOTE, "",
-              EFFICIENCY_NOTE, ""]
+    lines += [SYMMETRY_NOTE, "", GAP_NOTE, "", replicate_note(records), "",
+              CENSOR_NOTE, "", THINKING_NOISE_NOTE, "", EFFICIENCY_NOTE, ""]
     lines += [
         "The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the "
         f"d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}). `chain_v1` builds a single "
@@ -1136,8 +1251,8 @@ def write_results_md(records, out_path, history_path):
         lines += ["## Archived models (dropped from the roster)", "",
                   "Models present in history but no longer in "
                   "factworld.benchmark.MODELS, with their v1-facet columns "
-                  "(historical facet names). Their per-cell rows — any facet — "
-                  "remain in the tables below.", "",
+                  f"(historical facet names). {NONCOMPARABLE_NOTE} Their per-cell "
+                  "rows — any facet — remain in the tables below.", "",
                   "| " + " | ".join(ARCHIVED_COLUMNS) + " |",
                   "|" + "---|" * len(ARCHIVED_COLUMNS)]
         for row in dropped:
@@ -1149,21 +1264,46 @@ def write_results_md(records, out_path, history_path):
         lines += ["## v1 archived facets (pre-redesign)", "",
                   "Legacy headline columns for the pre-redesign v1-only facets "
                   f"({', '.join(V1_ARCHIVED_FACETS)}), current-roster models only; "
-                  "superseded by the ladder headline above. Per-cell rows remain "
-                  "in the tables below.", "",
+                  f"superseded by the ladder headline above. {NONCOMPARABLE_NOTE} "
+                  "Per-cell rows remain in the tables below.", "",
                   "| " + " | ".join(ARCHIVED_COLUMNS) + " |",
                   "|" + "---|" * len(ARCHIVED_COLUMNS)]
         for row in archived:
             lines.append("| " + " | ".join(str(c) for c in row) + " |")
         lines.append("")
 
+    valid = [r for r in records if not chain_invalid(r)]
+    invalid = [r for r in records if chain_invalid(r)]
+
+    def _cell_row(r) -> str:
+        mt = r.get("metrics") or {}
+        lo, hi = _ci(r)
+        return (
+            f"| {r['model']} | {r['facet']} | {r['task']} | {r.get('length', '—')} | "
+            f"{arm_label(r)} | {r.get('n', '—')} | {_fmt(canonical_relaxed(r))} "
+            f"[{lo:.2f}, {hi:.2f}] | {_fmt(mt.get('contains'))} | {cell_note(r)} |")
+
+    CELL_HEADER = ("| Model | Facet | Task | Length | Arm | n | match [95% CI] | "
+                   "containment (diagnostic) | note |",
+                   "|---|---|---|---|---|---|---|---|---|")
+    lines += ["## Full per-cell results", "",
+              "match is the CANONICAL value (first attempt for escalated cells; the "
+              "escalated diagnostic is in the note column). ‡ = cap-escape (see headline "
+              "footnotes). INVALID chain_depth cells are quarantined in the provenance "
+              "section at the end.", "",
+              *CELL_HEADER]
+    for r in valid:
+        lines.append(_cell_row(r))
+    lines.append("")
+
     lines += ["## Diagnostics per cell", "",
               "finish_errors counts per-example finish=='error' calls (surfaced even where "
-              "diagnostics.api_errors is 0).", "",
+              "diagnostics.api_errors is 0). ctok = completion tokens; rtok = reasoning "
+              "tokens.", "",
               "| Model | Facet | Task | Length | Arm | empty_rate | api_errors | "
               "finish_errors | reasoning_tokens | finish_reasons | note |",
               "|---|---|---|---|---|---|---|---|---|---|---|"]
-    for r in records:
+    for r in valid:
         d = r.get("diagnostics") or {}
         u = r.get("usage") or {}
         fr = d.get("finish_reasons") or {}
@@ -1175,35 +1315,33 @@ def write_results_md(records, out_path, history_path):
             f"{cell_note(r)} |")
     lines.append("")
 
-    lines += ["## Full per-cell results", "",
-              "relaxed is the CANONICAL value (first attempt for escalated cells; the "
-              "escalated diagnostic is in the note column). ‡ = cap-escape (see headline "
-              "footnotes).", "",
-              "| Model | Facet | Task | Length | Arm | n | relaxed [95% CI] | exact | contains | "
-              "last_n | note |",
-              "|---|---|---|---|---|---|---|---|---|---|---|"]
-    for r in records:
-        mt = r.get("metrics") or {}
-        lo, hi = _ci(r)
-        lines.append(
-            f"| {r['model']} | {r['facet']} | {r['task']} | {r.get('length', '—')} | "
-            f"{arm_label(r)} | {r.get('n', '—')} | {_fmt(canonical_relaxed(r))} "
-            f"[{lo:.2f}, {hi:.2f}] | {_fmt(mt.get('exact'))} | {_fmt(mt.get('contains'))} | "
-            f"{_fmt(mt.get('last_n'))} | {cell_note(r)} |")
-    lines.append("")
+    if invalid:
+        lines += ["## Provenance: INVALID chain_depth cells (wrapped k=6 cycle)", "",
+                  f"These cells ran chain_v1 past its design gate (depth >= k={CHAIN_CYCLE_K}, "
+                  "so the pointer cycle wrapped): they measure the wrapped task, not depth, "
+                  "and are excluded from every figure and headline column above. They are "
+                  "kept here as provenance only; the redesigned facet is chain_nowrap.", "",
+                  *CELL_HEADER]
+        for r in invalid:
+            lines.append(_cell_row(r))
+        lines.append("")
 
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines))
 
 
+# Rendered-surface names: the canonical metric column exports as `match` (the
+# stored record key stays metrics.relaxed — no history rewrite) and `contains`
+# is the one diagnostic; the exact / last_n diagnostics are not exported.
 CSV_FIELDS = [
     "run_id", "ts", "git_commit", "suite_version", "model", "served_models", "providers",
     "facet", "task", "length", "n", "effort", "leg", "rendering", "breadth", "k_fixed",
     "max_new_tokens",
-    "stop_at", "format_prompt", "n_shot", "relaxed", "relaxed_ci_lo", "relaxed_ci_hi",
-    "exact", "contains", "last_n", "empty_rate", "api_errors", "finish_errors",
-    "contract_rate", "covert_cot_rate", "rtok_leak_rate", "rtok_per_call", "escalated",
-    "escalated_relaxed", "cap_escape", "finish_reasons",
+    "stop_at", "format_prompt", "n_shot", "match", "match_ci_lo", "match_ci_hi",
+    "contains", "empty_rate", "api_errors", "finish_errors",
+    "contract_rate", "covert_cot_rate", "rtok_leak_rate", "rtok_per_call",
+    "rtok_any_rate", "escalated",
+    "escalated_match", "cap_escape", "finish_reasons",
     "prompt_tokens", "completion_tokens", "reasoning_tokens", "cost_usd_est", "elapsed_s",
     "note",
 ]
@@ -1231,20 +1369,21 @@ def write_results_csv(records, out_path):
                 "breadth": s.get("breadth"), "k_fixed": s.get("k_fixed"),
                 "max_new_tokens": s.get("max_new_tokens"), "stop_at": s.get("stop_at"),
                 "format_prompt": s.get("format_prompt"), "n_shot": s.get("n_shot"),
-                # relaxed is the CANONICAL value (first attempt for escalated cells);
-                # the escalated rerun exports as escalated_relaxed (a diagnostic).
-                "relaxed": canonical_relaxed(r),
-                "relaxed_ci_lo": round(lo, 4), "relaxed_ci_hi": round(hi, 4),
-                "exact": mt.get("exact"), "contains": mt.get("contains"),
-                "last_n": mt.get("last_n"),
+                # match is the CANONICAL value (metrics.relaxed in the stored
+                # record; first attempt for escalated cells); the escalated
+                # rerun exports as escalated_match (a diagnostic).
+                "match": canonical_relaxed(r),
+                "match_ci_lo": round(lo, 4), "match_ci_hi": round(hi, 4),
+                "contains": mt.get("contains"),
                 "empty_rate": d.get("empty_rate"), "api_errors": d.get("api_errors"),
                 "finish_errors": finish_error_count(r),
                 "contract_rate": d.get("contract_rate"),
                 "covert_cot_rate": d.get("covert_cot_rate"),
                 "rtok_leak_rate": d.get("rtok_leak_rate"),
                 "rtok_per_call": canonical_rtok_per_call(r),
+                "rtok_any_rate": rtok_any_rate(r),
                 "escalated": r.get("escalated"),
-                "escalated_relaxed": mt.get("relaxed") if is_escalated(r) else None,
+                "escalated_match": mt.get("relaxed") if is_escalated(r) else None,
                 "cap_escape": cap_escape(r),
                 "finish_reasons": json.dumps(d.get("finish_reasons") or {}, sort_keys=True),
                 "prompt_tokens": u.get("prompt_tokens"),
@@ -1257,8 +1396,26 @@ def write_results_csv(records, out_path):
 
 # --- figures ------------------------------------------------------------------
 
+def roster_cells(cells):
+    """Roster filter for figures: models no longer in factworld.benchmark.MODELS
+    are dropped from every figure (their rows stay in the archived section and
+    the per-cell tables). No-op when the roster is unavailable (empty)."""
+    if not CURRENT_ROSTER:
+        return list(cells)
+    return [r for r in cells if r.get("model") in CURRENT_ROSTER]
+
+
 def _color_map(models):
     return {m: PALETTE[i % len(PALETTE)] for i, m in enumerate(models)}
+
+
+# Legends sit OUTSIDE the axes (right margin) so they never cover data; the
+# companion tight_layout rect reserves the margin and LEGEND_FIGSIZE widens the
+# canvas so the axes keep their readable width.
+LEGEND_KW = dict(fontsize=7, loc="upper left", bbox_to_anchor=(1.01, 1.0),
+                 frameon=False)
+LEGEND_RECT_RIGHT = 0.76  # tight_layout right edge that leaves legend room
+LEGEND_FIGSIZE = (9.2, 4.4)
 
 
 def _style_axes(ax):
@@ -1273,7 +1430,8 @@ def _caption(fig, cells):
     n_s = f"n={ns[0]}" if len(ns) == 1 else f"n={ns[0]}–{ns[-1]}" if ns else "n=?"
     date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     fig.text(0.01, 0.005,
-             f"{n_s} per cell; relaxed match (canonical); error bars: Wilson 95% CI; {date}",
+             f"{n_s} per cell; match (canonical); error bars: Wilson 95% CI; "
+             f"current roster only; {date}",
              fontsize=7, color="#555555")
 
 
@@ -1299,7 +1457,7 @@ def _line_ci(ax, xs, cells, color, label, linestyle="-", offset=0.0):
 
 
 def fig_dose_response(records, out_dir):
-    cells = by_facet(records, "dose_response")
+    cells = roster_cells(by_facet(records, "dose_response"))
     if not cells:
         return []
     models = models_of(cells)
@@ -1307,7 +1465,7 @@ def fig_dose_response(records, out_dir):
     efforts = [e for e in EFFORT_ORDER
                if any((_settings(r).get("effort") or "default") == e for r in cells)]
     xpos = {e: i for i, e in enumerate(efforts)}
-    fig, ax = plt.subplots(figsize=FIGSIZE)
+    fig, ax = plt.subplots(figsize=LEGEND_FIGSIZE)
     for i, m in enumerate(models):
         mine = sorted((r for r in cells if r["model"] == m),
                       key=lambda r: xpos[_settings(r).get("effort") or "default"])
@@ -1317,22 +1475,23 @@ def fig_dose_response(records, out_dir):
         _line_ci(ax, xs, mine, colors[m], m, offset=(i - len(models) / 2) * 0.02)
     ax.set_xticks(range(len(efforts)), efforts)
     ax.set_xlabel("reasoning effort")
-    ax.set_ylabel("relaxed accuracy")
-    ax.set_title("v1 archived facet (pre-redesign): composite_copy_v1 @L16 vs reasoning effort")
+    ax.set_ylabel("match accuracy")
+    ax.set_title("v1 archived facet (pre-redesign): composite_copy_v1 @L16 vs reasoning effort",
+                 fontsize=10, loc="left")
     _style_axes(ax)
-    ax.legend(fontsize=7, loc="lower right", frameon=False)
+    ax.legend(**LEGEND_KW)
     _caption(fig, cells)
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.tight_layout(rect=(0, 0.03, LEGEND_RECT_RIGHT, 1))
     return _save(fig, out_dir, "fig_dose_response")
 
 
 def fig_composite_length(records, out_dir):
-    cells = by_facet(records, "composite_length")
+    cells = roster_cells(by_facet(records, "composite_length"))
     if not cells:
         return []
     models = models_of(cells)
     colors = _color_map(models)
-    fig, ax = plt.subplots(figsize=FIGSIZE)
+    fig, ax = plt.subplots(figsize=LEGEND_FIGSIZE)
     for m in models:
         # effort=None (non-reasoning default arms) and "minimal" (Gemini's
         # closest off-arm) are grouped with "none" (dashed).
@@ -1350,25 +1509,27 @@ def fig_composite_length(records, out_dir):
     ax.set_xticks(sorted({r["length"] for r in cells}),
                   [str(x) for x in sorted({r["length"] for r in cells})])
     ax.set_xlabel("composite length L (log scale)")
-    ax.set_ylabel("relaxed accuracy")
-    ax.set_title("composite_copy_v1 vs length (solid: effort=high, dashed: reasoning off)")
+    ax.set_ylabel("match accuracy")
+    ax.set_title("composite_copy_v1 vs length (solid: effort=high, dashed: reasoning off)",
+                 fontsize=10, loc="left")
     _style_axes(ax)
-    ax.legend(fontsize=7, loc="lower left", frameon=False)
+    ax.legend(**LEGEND_KW)
     _caption(fig, cells)
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.tight_layout(rect=(0, 0.03, LEGEND_RECT_RIGHT, 1))
     return _save(fig, out_dir, "fig_composite_length")
 
 
 def _stress_fig(records, out_dir, facet, name, xlabel, title):
     """Score-vs-depth/length figure for a thinking state-stress facet."""
-    cells = [r for r in by_facet(records, facet)
-             if _settings(r).get("rendering") != "abstract_stated"
-             and canonical_arm(r)]  # one line per model: canonical rungs only
+    cells = roster_cells(
+        r for r in by_facet(records, facet)
+        if _settings(r).get("rendering") != "abstract_stated"
+        and canonical_arm(r))  # one line per model: canonical rungs only
     if not cells:
         return []
     models = models_of(cells)
     colors = _color_map(models)
-    fig, ax = plt.subplots(figsize=FIGSIZE)
+    fig, ax = plt.subplots(figsize=LEGEND_FIGSIZE)
     for m in models:
         mine = sorted((r for r in cells if r["model"] == m), key=lambda r: r["length"])
         if not mine:
@@ -1391,23 +1552,23 @@ def _stress_fig(records, out_dir, facet, name, xlabel, title):
     xt = sorted({r["length"] for r in cells})
     ax.set_xticks(xt, [str(x) for x in xt])
     ax.set_xlabel(xlabel)
-    ax.set_ylabel("relaxed accuracy")
-    ax.set_title(title, fontsize=10)
+    ax.set_ylabel("match accuracy")
+    ax.set_title(title, fontsize=10, loc="left")
     _style_axes(ax)
-    ax.legend(fontsize=7, loc="lower left", frameon=False)
+    ax.legend(**LEGEND_KW)
     fig.text(0.01, 0.03,
              "hollow: majority finish=length — not measurable at this budget; "
              "‡: >10% of calls escaped the token cap",
              fontsize=7, color="#555555")
     _caption(fig, cells)
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.tight_layout(rect=(0, 0.06, LEGEND_RECT_RIGHT, 1))
     return _save(fig, out_dir, name)
 
 
 def fig_s5_stress(records, out_dir):
     return _stress_fig(records, out_dir, "s5_concrete", "fig_s5_horizon",
                        "permutation sequence length (log scale)",
-                       "s5_concrete (thinking): relaxed score vs length "
+                       "s5_concrete (thinking): match score vs length "
                        f"(dotted: {REF_THRESHOLD} reference)")
 
 
@@ -1417,7 +1578,7 @@ def _fig_chain(records, out_dir, facet, task_label):
     valid = [r for r in records if not chain_invalid(r)]
     return _stress_fig(valid, out_dir, facet, f"fig_{facet}",
                        "chain depth (log scale)",
-                       f"{task_label}: relaxed score vs depth "
+                       f"{task_label}: match score vs depth "
                        f"(dotted: {REF_THRESHOLD} reference)")
 
 
@@ -1442,25 +1603,44 @@ ZB_GROUPS = [  # (bar label, length, leg) — the composition figure's cells: th
 ]
 
 
+def model_pervasive_covert(records, model, zb_task=None) -> bool:
+    """True when ANY of the model's headline zero-budget cells shows pervasive
+    covert reasoning: the model's instant numbers are upper bounds (≤x†), so it
+    is excluded from figure sort orderings (plotted hatched, at the end)."""
+    if zb_task is None:
+        zb_task = zb_latest_task(records)
+    for length, leg in ZB_HEADLINE_CELLS:
+        r = zero_budget_cell(records, model, length, leg, task=zb_task)
+        if r is not None and pervasive_covert(r):
+            return True
+    return False
+
+
 def fig_zero_budget(records, out_dir):
     """The composition figure: component leg (state tracking), composed cells and
     the per-model composition gap annotation, instant regime. Like the headline
     table it shows the LATEST zero-budget task's cells only (canonical rungs —
     breadth-rung cells are separate arms); an archived task's cells stay in the
-    per-cell tables."""
+    per-cell tables. Sorted by composed @L16 among non-pervasive models;
+    pervasive-covert models (≤x† upper bounds) plot hatched at the end and take
+    no part in the ordering (the symmetric twin of ⊘ exclusion)."""
     zb_task = zb_latest_task(records)
-    cells = [r for r in by_facet(records, "zero_budget")
-             if r.get("task") == zb_task and canonical_arm(r)]
+    cells = roster_cells(r for r in by_facet(records, "zero_budget")
+                         if r.get("task") == zb_task and canonical_arm(r))
     if not cells:
         return []
 
-    def composite_l64(m):
-        r = zero_budget_cell(records, m, 64, None, task=zb_task)
+    def composite_l16(m):
+        r = zero_budget_cell(records, m, 16, None, task=zb_task)
         return (canonical_relaxed(r) or 0.0) if r else -1.0
 
-    models = sorted(models_of(cells), key=composite_l64, reverse=True)
+    pervasive = {m: model_pervasive_covert(records, m, zb_task)
+                 for m in models_of(cells)}
+    # clean sort column: composed @L16, non-pervasive models first
+    models = sorted(models_of(cells),
+                    key=lambda m: (pervasive[m], -composite_l16(m)))
     group_colors = {label: PALETTE[j] for j, (label, _, _) in enumerate(ZB_GROUPS)}
-    fig, ax = plt.subplots(figsize=FIGSIZE)
+    fig, ax = plt.subplots(figsize=LEGEND_FIGSIZE)
     width = 0.2
     for j, (label, length, leg) in enumerate(ZB_GROUPS):
         xs, ys, errs, hatched, escapes = [], [], [[], []], [], []
@@ -1474,14 +1654,16 @@ def fig_zero_budget(records, out_dir):
             ys.append(y)
             errs[0].append(max(0.0, y - lo))
             errs[1].append(max(0.0, hi - y))
-            hatched.append("*" in zb_marks(r, model_effort_minimal(records, m)))
+            # hatched: effort=minimal (*) cells and pervasive-covert (≤x†) models
+            hatched.append(pervasive[m] or
+                           "*" in zb_marks(r, model_effort_minimal(records, m)))
             escapes.append(cap_escape(r))
         if not xs:
             continue
         bars = ax.bar(xs, ys, width=width, color=group_colors[label], label=label,
                       yerr=errs, capsize=2.5, error_kw={"elinewidth": 0.9})
         for rect, flag, esc in zip(bars, hatched, escapes):
-            if flag:  # asterisked (effort=minimal) cells get hatched bars
+            if flag:  # * (effort=minimal) or pervasive ≤x† cells: hatched bars
                 rect.set_hatch("///")
                 rect.set_edgecolor("#555555")
             if esc:   # ‡: >10% of the cell's calls escaped the token cap (F5)
@@ -1490,7 +1672,8 @@ def fig_zero_budget(records, out_dir):
                             textcoords="offset points", xytext=(0, 8),
                             ha="center", fontsize=9, color="#333333")
     # gap annotation just above each model's bars: binding_only@L16 -
-    # composed@L16 (the composition deficit, the headline statistic)
+    # composed@L16 (the composition deficit, the headline statistic); —ᶠ where
+    # the binding input sits at the object-filter floor (not interpretable)
     for i, m in enumerate(models):
         bind = zero_budget_cell(records, m, 16, "binding_only", task=zb_task)
         comp = zero_budget_cell(records, m, 16, None, task=zb_task)
@@ -1499,36 +1682,41 @@ def fig_zero_budget(records, out_dir):
         vb, vc = canonical_relaxed(bind), canonical_relaxed(comp)
         if vb is None or vc is None:
             continue
+        gap_s = (GAP_FLOOR_MARK if binding_floor_bound(records, m, zb_task)
+                 else f"{vb - vc:+.2f}")
         tops = [_ci(r)[1] for r in (zero_budget_cell(records, m, L, leg, task=zb_task)
                                     for _, L, leg in ZB_GROUPS) if r is not None]
-        ax.annotate(f"gap {vb - vc:+.2f}", (i, max(tops) + 0.03), ha="center",
+        ax.annotate(f"gap {gap_s}", (i, max(tops) + 0.03), ha="center",
                     fontsize=6.5, color="#333333")
     ax.set_xticks(range(len(models)),
-                  [m + zb_model_marks(records, m, task=zb_task) for m in models],
+                  [("≤ " if pervasive[m] else "") + m
+                   + zb_model_marks(records, m, task=zb_task) for m in models],
                   fontsize=6.5, rotation=20, ha="right")
-    ax.set_ylabel("relaxed accuracy")
+    ax.set_ylabel("match accuracy")
     ax.set_title(f"Composition (instant): {zb_task}, reasoning off, "
-                 "one-line answer contract", fontsize=10)
+                 "one-line answer contract", fontsize=10, loc="left")
     _style_axes(ax)
     ax.set_ylim(-0.03, 1.14)  # _style_axes resets ylim; keep annotation headroom
-    ax.legend(fontsize=7, loc="upper right", frameon=False)
-    fig.text(0.01, 0.05,
-             "gap = state tracking (binding_only) - composed @L16; canonical "
-             "first-attempt values (escalated reruns are table diagnostics);\n"
-             "hatched / *: off-arm ran effort=minimal; †: visible working on the "
-             "canonical attempt; ‡: cap-escape; sorted by composed @L64",
-             fontsize=7, color="#555555")
+    ax.legend(**LEGEND_KW)
+    fig.text(0.01, 0.035,
+             "gap = state tracking (binding_only) - composed @L16 (—ᶠ: binding at the "
+             "object-filter floor, gap not interpretable);\n"
+             "canonical first-attempt values (escalated reruns are table diagnostics); "
+             "sorted by composed @L16 among non-pervasive models;\n"
+             "hatched: effort=minimal (*) or covert reasoning on most calls (≤, upper "
+             "bounds, plotted last, excluded from the ordering); ‡: cap-escape",
+             fontsize=7, color="#555555", va="bottom")
     _caption(fig, cells)
-    fig.tight_layout(rect=(0, 0.10, 1, 1))
+    fig.tight_layout(rect=(0, 0.15, LEGEND_RECT_RIGHT, 1))
     return _save(fig, out_dir, "fig_zero_budget")
 
 
 def fig_decomposition(records, out_dir):
-    cells = by_facet(records, "decomposition")
+    cells = roster_cells(by_facet(records, "decomposition"))
     if not cells:
         return []
     models = models_of(cells)
-    fig, ax = plt.subplots(figsize=FIGSIZE)
+    fig, ax = plt.subplots(figsize=LEGEND_FIGSIZE)
     width = 0.26
     leg_colors = dict(zip(LEG_ORDER, PALETTE[:3]))
     for j, leg in enumerate(LEG_ORDER):
@@ -1548,12 +1736,13 @@ def fig_decomposition(records, out_dir):
             ax.bar(xs, ys, width=width, color=leg_colors[leg], label=leg,
                    yerr=errs, capsize=2.5, error_kw={"elinewidth": 0.9})
     ax.set_xticks(range(len(models)), models, fontsize=7)
-    ax.set_ylabel("relaxed accuracy")
-    ax.set_title("Decomposition: routing legs (binding_only / end_to_end / scaffolded)")
+    ax.set_ylabel("match accuracy")
+    ax.set_title("Decomposition: routing legs (binding_only / end_to_end / scaffolded)",
+                 fontsize=10, loc="left")
     _style_axes(ax)
-    ax.legend(fontsize=7, loc="upper right", frameon=False)
+    ax.legend(**LEGEND_KW)
     _caption(fig, cells)
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.tight_layout(rect=(0, 0.03, LEGEND_RECT_RIGHT, 1))
     return _save(fig, out_dir, "fig_decomposition")
 
 
@@ -1581,10 +1770,11 @@ def _profile_cell(value, display, marks="", status="ok"):
 
 
 def _profile_score_cell(rec, minimal=False):
-    """Profile cell from a score-valued record: the canonical relaxed value with
-    the cell's cleanliness marks; 'censored' (⊘, not measurable at this budget)
-    when the cell's calls were majority finish=length; 'missing' when the cell
-    never ran."""
+    """Profile cell from a score-valued record: the canonical match value with
+    the cell's cleanliness marks (pervasively covert instant cells display as
+    the upper bound ≤x); 'censored' (⊘, not measurable at this budget) when the
+    cell's calls were majority finish=length; 'missing' when the cell never
+    ran."""
     if rec is None:
         return _profile_cell(None, "n/a", status="missing")
     if majority_finish_length(rec):
@@ -1594,9 +1784,11 @@ def _profile_score_cell(rec, minimal=False):
         return _profile_cell(None, "—", status="missing")
     if rec.get("facet") == "zero_budget":
         marks = zb_marks(rec, minimal)
+        prefix = "≤" if pervasive_covert(rec) else ""
     else:
         marks = "‡" if cap_escape(rec) else ""
-    return _profile_cell(v, f"{v:.2f}", marks)
+        prefix = ""
+    return _profile_cell(v, f"{prefix}{v:.2f}", marks)
 
 
 def profile_values(records):
@@ -1613,7 +1805,11 @@ def profile_values(records):
             zero_budget_cell(records, m, 16, "binding_only", task=zb_task), minimal)
         ccell = _profile_score_cell(
             zero_budget_cell(records, m, 16, None, task=zb_task), minimal)
-        if bcell["status"] == "ok" and ccell["status"] == "ok":
+        if (bcell["status"] == "ok" and ccell["status"] == "ok"
+                and binding_floor_bound(records, m, zb_task)):
+            # gap not interpretable: the binding input sits at the floor
+            gcell = _profile_cell(None, GAP_FLOOR_MARK, status="missing")
+        elif bcell["status"] == "ok" and ccell["status"] == "ok":
             g = bcell["value"] - ccell["value"]
             marks = "".join(c for c in "*†" if c in bcell["marks"] + ccell["marks"])
             gcell = _profile_cell(g, f"{g:+.2f}", marks)
@@ -1789,8 +1985,8 @@ def write_index_html(records, out_dir, svg_paths, history_path):
             "<h2>Archived models (dropped from the roster)</h2>\n"
             '<p class="small">Models present in history but no longer in '
             "factworld.benchmark.MODELS, with their v1-facet columns (historical "
-            "facet names). Their per-cell rows — any facet — remain in the tables "
-            "below.</p>\n"
+            f"facet names). {html.escape(NONCOMPARABLE_NOTE)} Their per-cell rows "
+            "— any facet — remain in the tables below.</p>\n"
             + _html_table(ARCHIVED_COLUMNS, dropped))
     archived = archived_headline_rows(records)
     archived_html = ""
@@ -1800,7 +1996,7 @@ def write_index_html(records, out_dir, svg_paths, history_path):
             f'<p class="small">Legacy headline columns for the pre-redesign '
             f"v1-only facets ({html.escape(', '.join(V1_ARCHIVED_FACETS))}), "
             "current-roster models only; superseded by the ladder headline "
-            "above.</p>\n"
+            f"above. {html.escape(NONCOMPARABLE_NOTE)}</p>\n"
             + _html_table(ARCHIVED_COLUMNS, archived))
 
     cell_rows = []
@@ -1812,7 +2008,7 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         cell_rows.append([
             r["model"], r["facet"], r["task"], r.get("length", "—"), arm_label(r),
             r.get("n", "—"), _fmt(canonical_relaxed(r)), f"[{lo:.2f}, {hi:.2f}]",
-            _fmt(mt.get("exact")), _fmt(mt.get("contains")), _fmt(mt.get("last_n")),
+            _fmt(mt.get("contains")),
             _fmt(d.get("empty_rate"), 3), d.get("api_errors", "—"),
             finish_error_count(r), u.get("reasoning_tokens", "—"), cell_note(r),
         ])
@@ -1832,8 +2028,11 @@ def write_index_html(records, out_dir, svg_paths, history_path):
 <body>
 <h1>FactWorld frontier benchmark</h1>
 <p class="small">Generated {now} from <code>{html.escape(os.path.basename(history_path))}</code>
-({len(records)} latest cells). Canonical metric: <strong>relaxed</strong> match;
-exact / contains / last_n are diagnostics. Intervals: Wilson 95% CI.
+({len(records)} latest cells). Canonical metric: <strong>match</strong> — strip a trailing
+period from both sides and compare the model's first len(gold) whitespace tokens to the gold
+answer; binary per item, no partial credit (<code>factworld.tasks.score_relaxed</code>).
+Containment is the one published diagnostic. Intervals: Wilson 95% CI.
+{html.escape(NOTATION_NOTE.replace("`", ""))}
 The chain column reads the <code>chain_nowrap</code> facet only (staircase k=2d+1, so the
 d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}): <code>chain_v1</code> builds a
 single k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths &lt; k
@@ -1845,26 +2044,28 @@ single k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths &lt; k
 roster render in the archived-models section below. {html.escape(COMPOSITION_NOTE)}</p>
 <p class="small">Instant cells: task <strong>{html.escape(zb_task or "n/a")}</strong>
 with reasoning off (effort=none) under a one-line answer contract (settings.contract=true);
-relaxed match. Escalated cells show the CANONICAL first attempt at the shared base budget,
+match. Escalated cells show the CANONICAL first attempt at the shared base budget,
 with the escalated rerun as a parenthesised diagnostic.
 {(" " + html.escape(mixed_note)) if mixed_note else ""}</p>
 {_html_table(headline_cols, head_rows, groups=HEADLINE_GROUPS)}
 <p class="small">{html.escape(FLOOR_NOTE)}</p>
 <p class="small">{"<br>".join(html.escape(n) for n in ZB_FOOTNOTES)}<br>
+{html.escape(SYMMETRY_NOTE)}<br>
 {html.escape(GAP_NOTE)}<br>
 {html.escape(replicate_note(records))}<br>
 {html.escape(CENSOR_NOTE)}<br>
+{html.escape(THINKING_NOISE_NOTE)}<br>
 {html.escape(EFFICIENCY_NOTE)}</p>
 {dropped_html}
 {archived_html}
 <h2>Figures</h2>
 {figures_html}
 <h2>All cells</h2>
-<p class="small">Click a column header to sort. relaxed is the canonical value
+<p class="small">Click a column header to sort. match is the canonical value
 (first attempt for escalated cells); finish_errors counts per-example finish=='error'
 calls even where api_errors is 0.</p>
-{_html_table(["Model", "Facet", "Task", "Length", "Arm", "n", "relaxed", "95% CI",
-              "exact", "contains", "last_n", "empty_rate", "api_errors",
+{_html_table(["Model", "Facet", "Task", "Length", "Arm", "n", "match", "95% CI",
+              "containment (diagnostic)", "empty_rate", "api_errors",
               "finish_errors", "reasoning_tokens", "note"], cell_rows, sortable=True)}
 <script>{_SORT_JS}</script>
 </body>

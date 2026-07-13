@@ -14,7 +14,7 @@ order:
 
 1. **The instrument** (the core): certifying recall and state tracking independently and in
    composition — tasks, floors, marks, regimes, validity machinery.
-2. **Evalling the frontier**: the benchmark built on the instrument — a clear view of current
+2. **Benchmarking the frontier**: the benchmark built on the instrument — a clear view of current
    models (9 models, two regimes), with a cheap add-a-model path. The instant and thinking
    rankings are near-orthogonal; present per-axis ranks and profiles, never a single scalar.
 3. **Exploring the architectures**: which components elicit each capability at small scale —
@@ -53,9 +53,18 @@ extrapolate); depth extrapolation ← **open**; local composition (value leg) �
 
 ## Rules that keep the instrument honest
 
-- Relaxed match is the canonical metric; exact/contains/last_n are diagnostics.
+- One metric, one name: the canonical evaluator is **match** — strip a trailing period from both
+  sides and compare the model's first len(gold) whitespace tokens to the gold answer; binary per
+  item, no partial credit (`factworld.tasks.score_relaxed`). Containment is the one published
+  diagnostic. Stored record keys keep their historical names (metrics.relaxed/exact/contains/
+  last_n) — a presentation convention, never a history rewrite.
+- Symmetric contamination policy: ⊘ = not measurable at this budget; ≤x† = upper bound, covert
+  reasoning on most calls (rtok on > 50% of the canonical attempt's calls); neither participates
+  in orderings — not in figure sorts, not in cross-model ordering prose.
 - Floors are first-class rows (recency heuristic; object-filter E[1/w]); scores are read against
-  them. Marks are plain-language (†, *, ‡, ⊘ "not measurable at this budget").
+  them, and both are recomputed at render time from the exact deterministic items, so they are
+  independently checkable. Marks are plain-language (†, *, ‡, ⊘ "not measurable at this budget",
+  —ᶠ "gap not interpretable: binding at the floor").
 - No "walls/horizons/knees/cliffs" in headlines; no capability-frontier mapping — the question is
   always "does this improve the composition measurement in either regime?"
 - Reasoning-on cells need explicit large budgets and published empty rates; instant cells need the
