@@ -1,5 +1,8 @@
 # Stage 2 — per-domain RL teachers (GRPO)
 
+> v1-sampler-era table (binding rows used the retired `binding_v1`; `mopd.py` now pins
+> `binding_v2`). Kept as the from-scratch control's provenance — its conclusion is qualitative.
+
 `experiments/mopd/stage2_teachers.py`. GRPO from `base.pt`: 1500 steps, 16 prompts/step x group 8, lr 0.0003, outcome 0/1 reward. Greedy relaxed match, n=500. `delta` = teacher - base (the norm-score headroom).
 
 
