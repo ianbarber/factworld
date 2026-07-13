@@ -154,81 +154,55 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 ## 2. Benchmarking the frontier
 
-Eleven frontier models, two regimes: **instant** (reasoning off, one-line answer contract — what
-the weights compute) and **thinking** (effort=high, generous budgets — what reasoning buys).
-One model (grok-4.5) is thinking-only: its endpoint cannot disable reasoning, so it carries no
-instant numbers by design (see the registry).
-Floors are first-class rows; marks are plain-language, with the full glossary in the
-[report](reports/frontier-benchmark.md). Notation: `@Ln` = stream length (events, or hops for
-chain depth d); `@Ntok` = a completion-token budget.
+Eleven frontier models through the instrument, two regimes: **instant** (reasoning off, one-line
+answer contract — what the weights compute) and **thinking** (effort=high, generous budgets —
+what reasoning buys); one model (x-ai/grok-4.5) is thinking-only — its endpoint cannot disable
+reasoning — and carries no instant numbers by design. The two rankings are near-orthogonal, so
+profiles are per-axis, never a single scalar. Full narrative, marks glossary, and the
+add-a-model path: [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md); rendered
+tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchmark/results.md).
 
-Instant: the binding leg against the composed two-hop cell. Match; `*` cannot disable
-reasoning (off-arm ran effort=minimal), `†` visible working or covert reasoning on the canonical
-attempt, `≤x†` covert reasoning on most calls (an explicit upper bound), `(diag x.xx @512tok)`
-escalated-budget diagnostic, `—ᶠ` gap not interpretable (state tracking at the floor).
+<!-- FRONTIER_TABLE_START -->
+| Model | binding @L16 | composed @L16 | composed @L64 | gap | chain d128 | s5 @L256 |
+|---|---|---|---|---|---|---|
+| anthropic/claude-opus-4.8 | 0.78 | 0.72 | 0.43 | +0.06 | 0.08 | 1.00ʳ |
+| anthropic/claude-sonnet-5 | 0.77 | 0.62† | 0.32† | +0.15† | 0.04 | 1.00ʳ |
+| deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | —ᶠ | ⊘ʳ | ⊘ |
+| google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* | 0.88 | 0.52 |
+| moonshotai/kimi-k2.6 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | 0.64‡ | 0.88 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | —ᶠ | ⊘ʳ | ⊘ |
+| openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 | 0.36 | 0.96 |
+| openai/gpt-5.6-sol | 0.82 | 0.65 | 0.33 | +0.17 | 1.00 | n/a |
+| qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | —ᶠ | 0.96 | 0.80 |
+| x-ai/grok-4.5 | n/a | n/a | n/a | n/a | n/a | 1.00‡ |
+| z-ai/glm-5.2 | 0.71 | 0.38† | 0.13 | +0.33† | 0.36 | 0.88 |
+| *recency heuristic (floor)* | 0.04 | 0.04 | 0.06 | — | — | — |
+| *object-filter floor* | 0.41 | 0.41 | 0.15 | — | — | — |
+<!-- FRONTIER_TABLE_END -->
 
-| Model | binding @L16 | composed @L16 | composed @L64 | gap @L16 |
-|---|---|---|---|---|
-| anthropic/claude-opus-4.8 | 0.78 | 0.72 | 0.43 | +0.06 |
-| anthropic/claude-sonnet-5 | 0.77 | 0.62 (diag 0.76 @512tok)† | 0.32 (diag 0.66 @512tok)† | +0.15† |
-| deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | —ᶠ |
-| google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* |
-| moonshotai/kimi-k2.6 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | —ᶠ |
-| openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 |
-| qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | —ᶠ |
-| z-ai/glm-5.2 | 0.68† | 0.34 | 0.15† | +0.34† |
-| *recency heuristic (floor)* | 0.04 | 0.04 | 0.06 | — |
-| *object-filter floor* | 0.41 | 0.41 | 0.15 | — |
+The instant columns are `composite_copy_v2` cells (match, n=100): the binding leg (state
+tracking), the composed two-hop, and **gap** = binding − composed @L16, the composition
+deficit; the thinking columns are the state-stress cells — chain d128 (`chain_nowrap`, k=257: a
+128-hop pointer chase) and s5 @L256 (`s5_concrete`: 256 permutation events) — at effort=high,
+16,384 tokens, n=25. Marks: `†` visible working or covert reasoning on the canonical attempt,
+`≤x†` an explicit upper bound (covert reasoning on most calls), `*` off-arm ran effort=minimal
+(cannot disable reasoning), `ʳ` single rerun at a raised 32,768-token budget, `‡` provider
+ignored the token cap, `⊘` not measurable at this budget (majority finish=length) — neither ⊘
+nor ≤x† participates in orderings — `—ᶠ` gap not interpretable (binding at the object-filter
+floor), `n/a` cell not run, `—` not applicable to a floor row. Escalated instant cells show the
+canonical first attempt (their @512tok diagnostics are in the report); the two floor rows are
+the shallow baselines every instant cell is read against — the recency heuristic and the
+object-filter floor E[1/w].
 
-⊘ = not measurable at this budget; ≤x† = upper bound, covert reasoning on most calls; neither
-participates in orderings. —ᶠ: for models whose binding cell sits within its Wilson CI of the
-object-filter floor, the gap is not interpretable (floor − floor ≈ 0 by construction). Kimi's
-composed @L64 exceeding its @L16 is the covert-reasoning artifact, not a length effect. Both
-floor rows are recomputed at render time from the exact deterministic task items, so they are
-independently checkable without any API access.
+Recall is not the constraint: the recall sanity cells read 0.97–1.00 for every model that runs
+them, recall under load (`recall_copy_v1` pool-64 @L64, chance 0.016) reads 1.00 for all ten
+instant-measured models, and the scaffolded leg reads 0.98–1.00 (qwen's ⊘ there is a
+contract-phrasing artifact, not a recall failure; report Part 2). The gap is a composition
+deficit, not a recall one.
 
-Recall is not the constraint: the scaffolded leg reads 0.98–1.00 for every measurable model
-(qwen's leg is ⊘ — a contract-phrasing artifact, not a recall failure; report Part 2), and recall
-under load is at ceiling — pool-64 `recall_copy_v1` @L64 reads 1.00 for all nine (chance 0.016).
-The gap is the composition deficit.
-
-Thinking regime (effort=high, 16,384 tokens; `@32,768tok (raised budget)` marks a single
-raised-budget rerun of a truncated cell): two state-stress rows. `⊘` = majority finish=length,
-not measurable at the stated budget; `‡` = provider ignored the token cap.
-
-| Model | chain d128 (k=257) | s5 @L256 |
-|---|---|---|
-| anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) |
-| anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) |
-| deepseek/deepseek-v4-pro | ⊘ @32,768tok (raised budget) | ⊘ |
-| google/gemini-3.5-flash | 0.88 | 0.52 |
-| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 |
-| nvidia/nemotron-3-ultra-550b-a55b | ⊘ | ⊘ |
-| openai/gpt-5.5 | 0.36 | 0.96 |
-| qwen/qwen3.7-max | 0.96 | 0.80 |
-| z-ai/glm-5.2 | 0.36 | 0.88 |
-
-n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one thinking test-retest pair moved 0.16 —
-differences under ~0.2 are not an ordering.
-
-The instant and thinking rankings are near-orthogonal — opus and sonnet, the strongest clean
-instant composers, post the weakest measurable chain scores — so profiles are per-axis, never a
-single scalar. Depth also dissociates by regime within a single cell: chain d16 (k=33) floors
-instant for every model that answers cleanly (≤0.08 vs chance 0.03) and reads 0.44–1.00 with
-thinking on the same items. Full narrative: [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md);
-rendered tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchmark/results.md).
-
-**Add a model.** Register the slug in `factworld.benchmark.MODELS` (tier, pricing, flags), then:
-
-```bash
-python scripts/run_frontier_benchmark.py --models <slug> --dry-run   # plan + cost preview
-python scripts/run_frontier_benchmark.py --models <slug>             # run; resume-skips existing cells
-python scripts/render_benchmark.py                                   # re-render docs/benchmark/
-```
-
-Adding one model runs from a few dollars for cheap models to a few tens of dollars for frontier
-pricing with long reasoning traces.
+Noise bars: the instant test-retest bar is ±0.06 (the replicate leg — prompts identical to the
+composed @L16 cell). Thinking cells are n=25 — Wilson intervals ≈ ±0.15–0.19, and the one
+thinking test-retest pair moved 0.16 — so thinking differences under ~0.2 are not an ordering.
 
 ## 3. Exploring the architectures
 
