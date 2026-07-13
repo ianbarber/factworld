@@ -15,7 +15,7 @@ span (exact / containment / last-*n* are diagnostics). The canonical story is an
 The story has three parts, in this order here and in the [full report](reports/frontier-benchmark.md):
 
 1. **[The instrument](#1-the-instrument)** — recall and state tracking certified independently and in composition (report Part 1).
-2. **[Evalling the frontier](#2-evalling-the-frontier)** — the benchmark built on it: 9 models, two regimes (report Part 2).
+2. **[Evalling the frontier](#2-evalling-the-frontier)** — the benchmark built on it: 11 models, two regimes (report Part 2).
 3. **[Exploring the architectures](#3-exploring-the-architectures)** — which components buy each capability at small scale (report Part 3).
 
 > **What this is — and isn't.** A **mechanism probe for the component capabilities that agent
@@ -151,8 +151,10 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 ## 2. Evalling the frontier
 
-Nine frontier models, two regimes: **instant** (reasoning off, one-line answer contract — what
+Eleven frontier models, two regimes: **instant** (reasoning off, one-line answer contract — what
 the weights compute) and **thinking** (effort=high, generous budgets — what reasoning buys).
+One model (grok-4.5) is thinking-only: its endpoint cannot disable reasoning, so it carries no
+instant numbers by design (see the registry).
 Floors are first-class rows; marks are plain-language, with the full glossary in the
 [report](reports/frontier-benchmark.md).
 

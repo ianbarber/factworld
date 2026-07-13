@@ -67,7 +67,9 @@ DISPLAY_NAMES = {
     "moonshotai/kimi-k2.6": "Kimi K2.6",
     "nvidia/nemotron-3-ultra-550b-a55b": "Nemotron 3 Ultra",
     "openai/gpt-5.5": "GPT-5.5",
+    "openai/gpt-5.6-sol": "GPT-5.6 Sol",
     "qwen/qwen3.7-max": "Qwen3.7 Max",
+    "x-ai/grok-4.5": "Grok 4.5",
     "z-ai/glm-5.2": "GLM-5.2",
 }
 
