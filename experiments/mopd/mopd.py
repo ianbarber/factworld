@@ -77,8 +77,8 @@ def _shared(spec: TK.TaskSpec) -> TK.TaskSpec:
 def binding_spec(train_lengths=(4, 8, 16), eval_lengths=(16, 32, 64),
                  n_objects_active=4) -> TK.TaskSpec:
     """The last-write-wins state leg. `length` = give-stream length (the horizon axis)."""
-    # binding_v1 pin unchanged (RETIRED handle — the v2 re-pin is a separate PR, issue #11)
-    return _shared(TK.RETIRED["binding_v1"]).scaled(
+    # binding_v2 (CANONICAL): uniform resolving-write sampler; the recency heuristic sits at ~chance.
+    return _shared(TK.CANONICAL["binding_v2"]).scaled(
         n_objects_active=n_objects_active, train_lengths=train_lengths, eval_lengths=eval_lengths)
 
 

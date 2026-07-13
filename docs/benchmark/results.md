@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-13 00:45 UTC from `results/benchmark/history.jsonl` (544 latest cells).
+Generated 2026-07-13 13:07 UTC from `results/benchmark/history.jsonl` (567 latest cells).
 
 ## Settings
 
@@ -40,10 +40,12 @@ History also contains zero-budget cells on composite_copy_v1; the zero-budget co
 | deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ | ±0.00 | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 10043 |
 | google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 | 0.88 | 0.52 | 11022 |
 | moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | ±0.06 | 0.64‡ | 0.88 | 17418 |
-| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 | ⊘ >budget | ⊘ >budget | 12250 |
+| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 12250 |
 | openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 | ±0.00 | 0.36 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 | ±0.05 | 1.00 | n/a | 2657 |
 | qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ | ±0.01 | 0.96 | 0.80 | 7904 |
-| z-ai/glm-5.2 | 1.00 | 0.68† | 0.34 | 0.15† | +0.34† | ±0.00 | 0.36 | 0.88 | 6282 |
+| x-ai/grok-4.5 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | 1.00‡ | 8069 |
+| z-ai/glm-5.2 | 1.00 | 0.71 | 0.38† | 0.13 | +0.33† | ±0.01 | 0.36 | 0.88 | 6282 |
 | recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | — | — | — | — | — |
 | object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | — | — | — | — | — |
 
@@ -94,7 +96,9 @@ Two instant cells beyond the composite headline, same protocol (reasoning off, o
 | moonshotai/kimi-k2.6 | 1.00 | 0.32 (diag 0.96 @512tok)† |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.00 |
 | openai/gpt-5.5 | 1.00 | 0.08 |
+| openai/gpt-5.6-sol | 1.00 | 0.00 |
 | qwen/qwen3.7-max | 1.00 | 0.00 |
+| x-ai/grok-4.5 | n/a | n/a |
 | z-ai/glm-5.2 | 1.00 | 0.00† |
 | uniform-guess floor (chance) | 0.016 (1/64) | 0.030 (1/33) |
 
@@ -474,6 +478,23 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.46 [0.37, 0.56] | 0.46 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.33 | — |
+| openai/gpt-5.6-sol | chain_instant | chain_v1 | 16 | contract, effort=none | 25 | 0.00 [0.00, 0.13] | 0.00 | — |
+| openai/gpt-5.6-sol | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| openai/gpt-5.6-sol | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| openai/gpt-5.6-sol | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.76 [0.57, 0.89] | 0.76 | — |
+| openai/gpt-5.6-sol | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| openai/gpt-5.6-sol | commutative | commutative_v1 | 64 | effort=high | 25 | 0.76 [0.57, 0.89] | 0.76 | — |
+| openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | leg=binding_only, contract, effort=none | 50 | 0.58 [0.44, 0.71] | — | — |
+| openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 50 | 0.26 [0.16, 0.40] | 0.26 | — |
+| openai/gpt-5.6-sol | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
+| openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
+| openai/gpt-5.6-sol | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.82 [0.73, 0.88] | — | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.60 [0.50, 0.69] | 0.60 | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.65 [0.55, 0.74] | 0.65 | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.33 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | qwen/qwen3.7-max | chain_instant | chain_v1 | 16 | contract, effort=none | 25 | 0.00 [0.00, 0.13] | 0.00 | — |
 | qwen/qwen3.7-max | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -538,6 +559,12 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | x-ai/grok-4.3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.68 [0.48, 0.83] | 0.68 | — |
 | x-ai/grok-4.3 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | x-ai/grok-4.3 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
+| x-ai/grok-4.5 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| x-ai/grok-4.5 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| x-ai/grok-4.5 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | ‡ cap-escape |
+| x-ai/grok-4.5 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.72 | — |
+| x-ai/grok-4.5 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| x-ai/grok-4.5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | ‡ cap-escape |
 | x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.72 | ‡ cap-escape |
 | x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.60 [0.41, 0.77] | 0.60 | ‡ cap-escape |
@@ -580,11 +607,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.35 [0.26, 0.45] | 0.36 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.31 [0.23, 0.41] | 0.31 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.15 [0.09, 0.23] | 0.17 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.68 [0.58, 0.76] | — | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.34 [0.25, 0.44] | 0.35 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.71 [0.61, 0.79] | — | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.37 [0.28, 0.47] | 0.39 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.34 [0.25, 0.44] | 0.35 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.15 [0.09, 0.23] | 0.16 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.38 [0.29, 0.48] | 0.42 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.13 [0.08, 0.21] | 0.14 | — |
 
 ## Diagnostics per cell
 
@@ -837,7 +864,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 0.160 | 0 | 0 | 83841 | length:3, stop:22 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 32 | effort=high | 0.120 | 0 | 0 | 162217 | length:3, stop:22 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 64 | effort=high | 0.840 | 0 | 0 | 327413 | length:20, stop:5 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 128 | effort=high | 0.520 | 0 | 0 | 252514 | length:13, stop:12 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 128 | effort=high | 0.720 | 0 | 2 | 504794 | error:2, length:16, stop:7 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | commutative | commutative_v1 | 64 | effort=high | 0.160 | 0 | 0 | 99780 | length:4, stop:21 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=high | 0.300 | 0 | 0 | 5645 | stop:21 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
@@ -934,6 +961,23 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | openai/gpt-5.5 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.6-sol | chain_instant | chain_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:25 | — |
+| openai/gpt-5.6-sol | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 2744 | stop:25 | — |
+| openai/gpt-5.6-sol | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 5621 | stop:25 | — |
+| openai/gpt-5.6-sol | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 25501 | stop:25 | — |
+| openai/gpt-5.6-sol | chain_nowrap | chain_v1 | 128 | effort=high | 0.000 | 0 | 0 | 42235 | stop:25 | — |
+| openai/gpt-5.6-sol | commutative | commutative_v1 | 64 | effort=high | 0.000 | 0 | 0 | 5038 | stop:25 | — |
+| openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.6-sol | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 66218 | stop:25 | — |
+| openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.6-sol | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | qwen/qwen3.7-max | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 11331 | stop:30 | — |
 | qwen/qwen3.7-max | chain_instant | chain_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:25 | — |
 | qwen/qwen3.7-max | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 31051 | stop:25 | — |
@@ -998,6 +1042,12 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | x-ai/grok-4.3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 368483 | stop:25 | — |
 | x-ai/grok-4.3 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | x-ai/grok-4.3 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| x-ai/grok-4.5 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 28854 | stop:25 | — |
+| x-ai/grok-4.5 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 56099 | stop:25 | — |
+| x-ai/grok-4.5 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 290597 | stop:25 | ‡ cap-escape |
+| x-ai/grok-4.5 | commutative | commutative_v1 | 64 | effort=high | 0.000 | 0 | 0 | 41534 | stop:25 | — |
+| x-ai/grok-4.5 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 201685 | stop:25 | — |
+| x-ai/grok-4.5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 376142 | stop:25 | ‡ cap-escape |
 | x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 45652 | stop:25 | — |
 | x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 32 | effort=high | 0.080 | 0 | 1 | 369760 | error:1, length:1, stop:23 | ‡ cap-escape |
 | x-ai/grok-build-0.1 | chain_nowrap | chain_v1 | 64 | effort=high | 0.160 | 0 | 3 | 535933 | error:3, length:1, stop:21 | ‡ cap-escape |
@@ -1040,11 +1090,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.030 | 0 | 0 | 288 | length:3, stop:97 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.040 | 0 | 0 | 384 | length:4, stop:96 | — |
 | z-ai/glm-5.2 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 510 | stop:100 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.040 | 0 | 0 | 1389 | length:4, stop:96 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.030 | 0 | 0 | 598 | length:3, stop:97 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 193 | stop:100 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.020 | 0 | 0 | 192 | length:2, stop:98 | — |
-| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.040 | 0 | 0 | 384 | length:4, stop:96 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 85 | stop:100 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.030 | 0 | 0 | 288 | length:3, stop:97 | — |
+| z-ai/glm-5.2 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.020 | 0 | 0 | 192 | length:2, stop:98 | — |
 
 ## Provenance: INVALID chain_depth cells (wrapped k=6 cycle)
 

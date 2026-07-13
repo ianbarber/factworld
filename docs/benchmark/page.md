@@ -17,10 +17,12 @@ How to read the columns: the first three are *instant* cells (reasoning off) —
 | DeepSeek V4 Pro | 0.51 | 0.44 | —ᶠ | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget |
 | Gemini 3.5 Flash | 0.66* | 0.64* | +0.02* | 0.88 | 0.52 |
 | Kimi K2.6 | ≤0.94† | ≤0.77† | +0.17† | 0.64‡ | 0.88 |
-| Nemotron 3 Ultra | 0.49 | 0.33 | —ᶠ | ⊘ >budget | ⊘ >budget |
+| Nemotron 3 Ultra | 0.49 | 0.33 | —ᶠ | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget |
 | GPT-5.5 | 0.80 | 0.46 | +0.34 | 0.36 | 0.96 |
+| GPT-5.6 Sol | 0.82 | 0.65 | +0.17 | 1.00 | n/a |
 | Qwen3.7 Max | 0.51 | 0.24 | —ᶠ | 0.96 | 0.80 |
-| GLM-5.2 | 0.68† | 0.34 | +0.34† | 0.36 | 0.88 |
+| Grok 4.5 | n/a | n/a | n/a | n/a | 1.00‡ |
+| GLM-5.2 | 0.71 | 0.38† | +0.33† | 0.36 | 0.88 |
 | *recency heuristic (floor)* | 0.04 | 0.04 | — | — | — |
 | *object-filter floor* | 0.41 | 0.41 | — | — | — |
 
@@ -49,4 +51,4 @@ Four figures carry the shape of the results:
 
 ---
 
-Last updated: 2026-07-13 · 9 models · data, methodology, and the add-a-model path: [github.com/ianbarber/factworld](https://github.com/ianbarber/factworld).
+Last updated: 2026-07-13 · 11 models · data, methodology, and the add-a-model path: [github.com/ianbarber/factworld](https://github.com/ianbarber/factworld).

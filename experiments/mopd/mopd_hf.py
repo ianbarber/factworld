@@ -43,10 +43,12 @@ _norm = Renderer.normalize
 ADV_CLIP = 5.0
 MAX_NEW = 8              # no thinking: answers are 1-2 content tokens (+ '.')
 
-# The two RL-teacher domains (both partial on the base; see bench_qwen.py / config sweep).
+# The two RL-teacher domains (binding: base at the object-filter floor E[1/w]; recall: partial
+# on the base; see bench_qwen.py / config sweep).
 DOMAINS: dict[str, Any] = {
-    # binding_v1 pin unchanged (RETIRED handle — the v2 re-pin is a separate PR, issue #11)
-    "binding": lambda: TK.RETIRED["binding_v1"].scaled(
+    # binding_v2 (CANONICAL): uniform resolving-write sampler — the recency heuristic sits at
+    # ~chance, so read the base against the object-filter floor E[1/w], not v1's recency level.
+    "binding": lambda: TK.CANONICAL["binding_v2"].scaled(
         train_lengths=(8, 16), eval_lengths=(16, 24, 32)),
     "recall": lambda: TK.CANONICAL["recall_copy_v1"].scaled(
         k=64, value_vocab_size=128, train_lengths=(12, 16), eval_lengths=(16, 24)),

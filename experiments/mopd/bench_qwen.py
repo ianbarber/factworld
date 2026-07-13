@@ -34,8 +34,8 @@ INSTRUCTION = ("Read the statements and answer the question. "
 
 # (task, eval length). Span the ladder: easy recall/conflict -> binding -> composite/chain/s5.
 BENCH = [
-    ("recall_copy_v1", 6), ("conflict_v1", 4), ("binding_v1", 16),
-    ("composite_copy_v1", 16), ("chain_v1", 4), ("s5_v1", 32),
+    ("recall_copy_v1", 6), ("conflict_v1", 4), ("binding_v2", 16),
+    ("composite_copy_v2", 16), ("chain_v1", 4), ("s5_v1", 32),
 ]
 
 
@@ -75,7 +75,7 @@ def main() -> None:
 
     rows = []
     for name, L in BENCH:
-        spec = TK.spec_for(name)  # binding/composite v1 pins unchanged (RETIRED handles, issue #11)
+        spec = TK.spec_for(name)  # CANONICAL names only (v2 uniform-last-write sampler)
         exs = TK.generate(spec, "test", n=a.n, length=L)
         chats = [build_chat(tok, e.prompt, bool(a.think)) for e in exs]
         preds = []

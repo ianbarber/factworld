@@ -83,9 +83,10 @@ cross-model ordering prose.
 
 `⊘` is budget-conditional, not a verdict: a cell showing completion evidence under it is
 eligible for a single raised-budget rerun with the budget stated (two s5 cells cleared to 1.00
-at 32,768 tokens this way; deepseek's chain d128 stayed ⊘ at the same raise — §2). Nemotron's ⊘
-cells are a documented trait of the model — it trails every measured model wherever it does
-answer — so no raise is bought for it.
+at 32,768 tokens this way; deepseek's chain d128 stayed ⊘ at the same raise — §2). Nemotron's
+chain d128 showed completion evidence (12/25 clean stops, all wrong), so its raise was bought
+too: at 32,768 tokens it scores 0.00 with 16/25 still truncated — the failure is capability,
+not budget, and the rule has now been applied to every eligible cell.
 
 Two methodological notes carry the instrument's hardest-won mechanisms.
 
@@ -281,9 +282,9 @@ visible answer on any of their 25 s5 L256 calls; at 32,768 both solve all 25 wit
 (opus ctok mean 23,898, max 28,986; sonnet mean 24,071 — the cells simply need ~24k tokens).
 Deepseek's chain d128 is the contrast case: rerun at the same 32,768 budget it still hits
 length on 19/25 calls (median ctok = the cap) and scores 0.08 — still budget-bound, so its ⊘
-stands with the budget stated. Nemotron's ⊘ cells are a documented trait of the model rather
-than a budget artifact: it stays below every measured model at every s5/chain length where it
-does answer, so no budget raise was bought for it. `‡` cap-escape: kimi (chain d64/d128)
+stands with the budget stated. Nemotron's chain d128 raise (bought on its completion evidence:
+12/25 clean-but-wrong stops) reads 0.00 at 32,768 with 16/25 still truncated — a capability
+failure confirmed at double budget, not a budget artifact. `‡` cap-escape: kimi (chain d64/d128)
 exceeded the token cap on >10% of calls, so those token spends are not cap-comparable.
 (Deepseek's superseded 16,384-token chain d128 attempt also escaped the cap; the published
 32,768 rerun did not — max ctok is exactly the cap.)
@@ -341,7 +342,7 @@ cells run.
 **Cost.** The 529-cell history at the time of this estimate carried $237.90 of API spend; the
 rendered artifact now counts 544 latest cells — the same 529 plus the appendix's 8 gap-stability
 (L32) and 7 commutative-roster cells, bought after the estimate. The 45-cell zero-budget v2
-battery (9 models x 5 legs, 4,500 calls) cost an estimated $5.92. Adding one model runs from a
+battery (5 legs, n=100 per model) costs roughly $0.65 per model — a 9-model pass ran an estimated $5.92. Adding one model runs from a
 few dollars for cheap models to a few tens of dollars for frontier pricing with long reasoning
 traces.
 

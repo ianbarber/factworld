@@ -9,6 +9,9 @@ This module is the single source of truth for WHAT the recurring benchmark runs:
     answer-contract battery, s5_concrete mid-band, chain_nowrap staircase, sanity;
     2026-07-10: recall_load pool-64 instant cell, chain_instant d16 off arm).
   - ``arms_for(model_slug)``: the exact list of cell dicts the runner executes.
+  - ``endpoint_for(model_slug)``: the (base_url, api_key_env) a model's backend
+    is built against — per-model direct endpoints (the muse-spark slot),
+    defaulting to OpenRouter + OPENROUTER_API_KEY.
   - ``settings_hash(cell)``: stable resume key for a cell's settings.
   - ``cost_estimate(model_slug, cells)``: price a cell plan before running it.
   - ``spec_for_cell(task, length, breadth, k_fixed)``: the TaskSpec a cell runs —
@@ -83,6 +86,16 @@ SYSTEM_PROMPT_EST_TOKENS = 90
 
 # slug -> tier, OpenRouter pricing (USD per million tokens), open_weights (the
 # fp8/bf16/fp16 quantization filter is only meaningful for open-weight models).
+#
+# Endpoint keys (OPTIONAL, muse-spark readiness 2026-07-12): an entry may carry
+#   {"base_url": str, "api_key_env": str}
+# for a model served OFF OpenRouter (a direct vendor endpoint). ``endpoint_for``
+# resolves them, defaulting to OpenRouter + OPENROUTER_API_KEY; the runner
+# builds each model's APIBackend against the resolved endpoint and skips the
+# OpenRouter-specific provider/quantization request options for direct
+# endpoints. muse-spark slots in with base_url=<vendor endpoint> +
+# api_key_env="MUSE_API_KEY" when the owner's key arrives (not on OpenRouter
+# as of 2026-07-12).
 MODELS = {
     "anthropic/claude-opus-4.8": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
@@ -91,6 +104,14 @@ MODELS = {
         "tier": "frontier_pair", "prompt_price_per_M": 2.0,
         "completion_price_per_M": 10.0, "open_weights": False},
     "openai/gpt-5.5": {
+        "tier": "frontier_pair", "prompt_price_per_M": 5.0,
+        "completion_price_per_M": 30.0, "open_weights": False},
+    # ADDED 2026-07-12 (issue #15). Pricing verified against
+    # https://openrouter.ai/api/v1/models 2026-07-12 ($5/$30 per M; the -pro
+    # variant is the same price and NOT what we run). effort=none probe clean:
+    # finish=stop, rtok=0, 10 visible ctok, well-formed contract answer
+    # (results/probes/new_models_20260712.jsonl).
+    "openai/gpt-5.6-sol": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
         "completion_price_per_M": 30.0, "open_weights": False},
     # openai/gpt-5.4 and google/gemini-3.1-pro-preview DROPPED 2026-07-08 (owner
@@ -102,17 +123,33 @@ MODELS = {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.5,
         "completion_price_per_M": 9.0, "open_weights": False,
         "no_reasoning_effort": "minimal"},
-    # x-ai is UNREPRESENTED (owner decision 2026-07-09): no current xAI endpoint
-    # is cleanly measurable on this suite. Mainline grok (4.20 AND 4.3, verified
-    # on both): the endpoint bio-safety filter deterministically blocks ~56% of
-    # the g/v-token composite prompts (finish_reason=content_filter,
-    # SAFETY_CHECK_TYPE_BIO — the token soup reads as gene/variant nomenclature;
-    # see results/v2_pilots/pilot2_contract.jsonl). grok-build-0.1 (dropped after
-    # one cycle; its chain/s5 records remain in history as an archived model):
-    # cannot disable reasoning, its "minimal" emits 4-15k reasoning tokens, and
-    # its provider pins reasoning at ~256k tokens ignoring the requested cap
-    # (chain d128: 17 truncations + 7 errors + 1 empty stop = zero scoreable
-    # completions for ~$11). Re-probe when xAI ships new endpoints.
+    # x-ai REJOINS via grok-4.5, THINKING FACETS ONLY (probes 2026-07-12,
+    # results/probes/new_models_20260712.jsonl; issue #15). History: x-ai was
+    # unrepresented 2026-07-09..12 — mainline grok (4.20 AND 4.3) had a
+    # bio-safety filter deterministically blocking ~56% of the g/v-token
+    # composite prompts (finish_reason=content_filter, SAFETY_CHECK_TYPE_BIO —
+    # the token soup reads as gene/variant nomenclature; see
+    # results/v2_pilots/pilot2_contract.jsonl), and grok-build-0.1 (dropped
+    # after one cycle; archived records remain in history) pinned reasoning at
+    # ~256k tokens ignoring caps. grok-4.5 probe outcomes:
+    #   - filter CLEAN: 3 composite_copy_v2 contract prompts + 1 chain d16
+    #     prompt all finish=stop with well-formed answers (no content_filter).
+    #   - NO instant regime: effort=none is rejected 400 ("Reasoning is
+    #     mandatory for this endpoint and cannot be disabled") and
+    #     effort=minimal is NOT a clean off-arm (547 rtok on an L16 composite —
+    #     past the 350-ctok covert-CoT bar; the Gemini-flash "minimal"
+    #     substitution does not transfer). Hence skip_facets on every
+    #     "off"-policy facet: the answer-contract battery and the sanity rows
+    #     are structurally unplanned, and grok-4.5 carries no instant numbers.
+    #   - max_tokens does NOT bound reasoning (256-cap call billed 759 ctok,
+    #     1024-cap billed 1328; finish=stop both) — but traces self-terminate
+    #     (~0.5-1.3k on L16 probes), NOT the grok-build ~256k pinning; the
+    #     per-cell CostGuard is the effective spend bound.
+    "x-ai/grok-4.5": {
+        "tier": "cheap_reasoner", "prompt_price_per_M": 2.0,
+        "completion_price_per_M": 6.0, "open_weights": False,
+        "skip_facets": ("zero_budget", "recall_load", "chain_instant",
+                        "sanity", "gap_stability")},
     "qwen/qwen3.7-max": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.25,
         "completion_price_per_M": 3.75, "open_weights": False},
@@ -138,12 +175,35 @@ MODELS = {
     # meta-llama/llama-4-maverick DROPPED 2026-07-07 (owner decision); the
     # non_reasoning tier is currently empty but kept for future roster additions.
     # Candidate additions (noted, NOT added pending a pricing/behavior sanity pass;
-    # OpenRouter list prices 2026-07-08): anthropic/claude-fable-5 ($10/$50 per M,
-    # newest Anthropic tier), moonshotai/kimi-k2.7-code ($0.74/$3.50 per M).
-    # muse spark: not on OpenRouter (watch item).
+    # OpenRouter list prices re-checked 2026-07-12):
+    #   - fablet: NOT YET SHIPPED — only anthropic/claude-fable-5 is listed
+    #     ($10/$50 per M, newest Anthropic tier); watch for the smaller variant.
+    #   - moonshotai/kimi-k2.7-code ($0.74/$3.50 per M).
+    #   - muse spark: not on OpenRouter; when the owner's key arrives it slots
+    #     in as a DIRECT-endpoint entry — {"base_url": <vendor endpoint>,
+    #     "api_key_env": "MUSE_API_KEY"} (see the endpoint-keys note above and
+    #     ``endpoint_for``).
 }
 
 CANARY_MODEL = "z-ai/glm-5.2"
+
+# Default API endpoint (every current roster model is served via OpenRouter).
+DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
+DEFAULT_API_KEY_ENV = "OPENROUTER_API_KEY"
+
+
+def endpoint_for(model_slug: str, default_base_url: str = DEFAULT_BASE_URL) -> tuple[str, str]:
+    """``(base_url, api_key_env)`` for a model's API endpoint.
+
+    Registry entries may carry ``{"base_url": str, "api_key_env": str}`` for a
+    model served OFF OpenRouter (a direct vendor endpoint — the muse-spark
+    slot: base_url=<vendor endpoint> + api_key_env="MUSE_API_KEY"). Models
+    without the keys resolve to ``default_base_url`` (the runner passes its
+    --base-url, defaulting to OpenRouter) + OPENROUTER_API_KEY.
+    """
+    reg = MODELS.get(model_slug) or {}
+    return (reg.get("base_url") or default_base_url,
+            reg.get("api_key_env") or DEFAULT_API_KEY_ENV)
 
 # tier -> reasoning capability + the effort sweep a "dose"-policy facet would get
 # (no current facet uses "dose"; the policy machinery is kept for future sweeps).

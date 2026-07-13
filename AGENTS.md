@@ -15,7 +15,7 @@ order:
 1. **The instrument** (the core): certifying recall and state tracking independently and in
    composition — tasks, floors, marks, regimes, validity machinery.
 2. **Benchmarking the frontier**: the benchmark built on the instrument — a clear view of current
-   models (9 models, two regimes), with a cheap add-a-model path. The instant and thinking
+   models (11 models, two regimes), with a cheap add-a-model path. The instant and thinking
    rankings are near-orthogonal; present per-axis ranks and profiles, never a single scalar.
 3. **Exploring the architectures**: which components elicit each capability at small scale —
    transformers, recurrent hybrids (gdp/gdn), fprm; supervision density and curricula — at
