@@ -336,9 +336,9 @@ def test_escalated_canonical():
     lo, hi = RB._ci(esc)
     wlo, whi = RB.wilson_interval(38, 100)            # CI from the same n
     assert abs(lo - wlo) < 1e-9 and abs(hi - whi) < 1e-9
-    assert RB.zb_value_str(esc) == "0.38 (0.96 @512)†"
-    assert "escalated @512 diagnostic 0.96" in RB.cell_note(esc)
-    assert "canonical = first attempt @96" in RB.cell_note(esc)
+    assert RB.zb_value_str(esc) == "0.38 (diag 0.96 @512tok)†"
+    assert "escalated @512tok diagnostic 0.96" in RB.cell_note(esc)
+    assert "canonical = first attempt @96tok" in RB.cell_note(esc)
     # Non-escalated cells are untouched.
     plain = RB.zero_budget_cell(recs, "testlab/model-a", 64, None)
     assert not RB.is_escalated(plain)
@@ -579,7 +579,7 @@ def test_zero_budget_task_versioning():
 
         assert RB.zb_latest_task(recs) == "composite_copy_v2"
         assert RB.headline_columns("composite_copy_v2")[3] == \
-            "instant: composed @L16 (relaxed, v2)"
+            "instant: composed @L16 (match, v2)"
         # v1 and v2 cells coexist in the latest records (task is in the dedup key)
         zb_tasks = {r.get("task") for r in RB.by_facet(recs, "zero_budget")}
         assert zb_tasks == {"composite_copy_v1", "composite_copy_v2"}
@@ -625,7 +625,7 @@ def test_zero_budget_task_versioning():
         with open(os.path.join(out, "results.md"), encoding="utf-8") as fh:
             md = fh.read()
         assert "task **composite_copy_v2**" in md
-        assert "instant: composed @L16 (relaxed, v2)" in md
+        assert "instant: composed @L16 (match, v2)" in md
         assert "use the latest task's records (composite_copy_v2)" in md
         full = md[md.index("## Full per-cell results"):]
         assert "| zero_budget | composite_copy_v1 |" in full   # archived cells kept
@@ -686,7 +686,7 @@ def test_breadth_and_k_fixed_arms():
             md = fh.read()
         assert "B=64" in md and "k_fixed=257" in md
         assert RB.BREADTH_FLOOR_NOTE in md         # per-(m, L) floor note rendered
-        head = md[md.index("## Headline"):md.index("## Diagnostics per cell")]
+        head = md[md.index("## Headline"):md.index("## Full per-cell results")]
         assert "B=64" not in head                  # rungs never enter the headline
         with open(os.path.join(out, "results.csv"), encoding="utf-8") as fh:
             rows = list(csv.DictReader(fh))
@@ -796,6 +796,75 @@ def test_profile_values_and_figure():
         ET.parse(paths[1])
 
 
+def test_pervasive_covert_and_floor_bound_gap():
+    """Symmetric contamination policy + gap clarity:
+    - rtok on > 50% of the canonical attempt's calls -> pervasive covert
+      reasoning: the cell renders '≤x†' and the model sorts LAST (hatched) in
+      fig_zero_budget, whose clean sort column is composed @L16;
+    - a binding cell whose Wilson CI overlaps the object-filter floor's CI
+      renders its gap as GAP_FLOOR_MARK (floor − floor ≈ 0 by construction);
+    - a thinking cell rerun above the standard budget renders the raised
+      budget with the number."""
+    if not HAS_MPL:
+        return
+    recs = _fixture_records()
+    # model-b's L16 plain cell carries per-example rtok=4 on every call.
+    perv = RB.zero_budget_cell(recs, "testlab/model-b", 16, None)
+    assert RB.rtok_any_rate(perv) == 1.0
+    assert RB.pervasive_covert(perv)
+    assert RB.zb_value_str(perv) == "≤0.63†"
+    assert RB.model_pervasive_covert(recs, "testlab/model-b")
+    # clean cells are untouched (rtok=0 throughout).
+    clean = RB.zero_budget_cell(recs, "testlab/model-a", 16, None)
+    assert RB.rtok_any_rate(clean) == 0.0 and not RB.pervasive_covert(clean)
+    assert not RB.model_pervasive_covert(recs, "testlab/model-a")
+    # escalated cells have no canonical per-example data -> never pervasive.
+    esc = RB.zero_budget_cell(recs, "testlab/model-b", 64, None)
+    assert RB.rtok_any_rate(esc) is None and not RB.pervasive_covert(esc)
+    # fixture binding legs sit far above the v1 floor (0.29): gap stays numeric.
+    for m in MODELS:
+        assert not RB.binding_floor_bound(recs, m)
+    # a binding cell statistically AT the floor -> gap renders GAP_FLOOR_MARK,
+    # and a raised-budget thinking cell publishes the budget with the number.
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "history.jsonl")
+        zb_kw = dict(effort="none", max_new_tokens=96, stop_at=None,
+                     contract=True, contract_rate=1.0, reasoning_tokens=0,
+                     escalated=False)
+        floor_recs = [
+            _record("testlab/model-a", "zero_budget", "composite_copy_v1", 16,
+                    100, 0.30, leg="binding_only", **zb_kw),   # CI ∋ 0.29 floor
+            _record("testlab/model-a", "zero_budget", "composite_copy_v1", 16,
+                    100, 0.25, leg=None, **zb_kw),
+            _record("testlab/model-a", "chain_nowrap", "chain_v1", 128, 25,
+                    0.95, effort="high"),
+        ]
+        floor_recs[2]["settings"]["max_new_tokens"] = 32768   # raised budget
+        with open(path, "w", encoding="utf-8") as fh:
+            for r in floor_recs:
+                fh.write(json.dumps(r) + "\n")
+        frecs = RB.load_latest(path)
+        assert RB.binding_floor_bound(frecs, "testlab/model-a")
+        assert RB.composition_gap_str(frecs, "testlab/model-a") == RB.GAP_FLOOR_MARK
+        raised = RB.stress_cell(frecs, "chain_nowrap", "testlab/model-a", 128)
+        assert RB.stress_value_str(raised) == "0.95 @32,768tok (raised budget)"
+    # fig_zero_budget sort: composed @L16 desc among non-pervasive models,
+    # pervasive models last (model-b composes 0.63, ahead of model-c's 0.40 on
+    # score — but it is pervasive, so it plots at the end).
+    zb_task = RB.zb_latest_task(recs)
+    cells = [r for r in RB.by_facet(recs, "zero_budget") if r.get("task") == zb_task]
+    pervasive = {m: RB.model_pervasive_covert(recs, m, zb_task)
+                 for m in RB.models_of(cells)}
+
+    def composed16(m):
+        r = RB.zero_budget_cell(recs, m, 16, None, task=zb_task)
+        return (RB.canonical_relaxed(r) or 0.0) if r else -1.0
+
+    order = sorted(RB.models_of(cells),
+                   key=lambda m: (pervasive[m], -composed16(m)))
+    assert order == ["testlab/model-a", "testlab/model-c", "testlab/model-b"]
+
+
 def test_render_end_to_end():
     if not HAS_MPL:
         return
@@ -842,15 +911,32 @@ def test_render_end_to_end():
         assert "Read small-L zero-budget cells against the object-filter floor" in page
         assert "horizon" not in page.lower()  # banned vocabulary
 
-        # Markdown has the five sections and relaxed listed before diagnostics metrics.
+        # Markdown has the six sections, ordered per-cell-before-diagnostics,
+        # with the match definition in the Settings block and no exact/last_n
+        # column on any rendered surface.
         with open(os.path.join(out, "results.md"), encoding="utf-8") as fh:
             md = fh.read()
         for section in ["## Headline (current roster)",
                         "## Archived models (dropped from the roster)",
                         "## v1 archived facets (pre-redesign)",
-                        "## Diagnostics per cell", "## Full per-cell results"]:
+                        "## Full per-cell results", "## Diagnostics per cell",
+                        "## Provenance: INVALID chain_depth cells (wrapped k=6 cycle)"]:
             assert section in md
-        assert md.index("relaxed") < md.index("exact")
+        # structure: full per-cell results directly after the headline/stress/
+        # archived tables, diagnostics below, INVALID rows quarantined last
+        assert (md.index("## v1 archived facets (pre-redesign)")
+                < md.index("## Full per-cell results")
+                < md.index("## Diagnostics per cell")
+                < md.index("## Provenance: INVALID chain_depth cells"))
+        assert RB.MATCH_DEFINITION in md           # the one-sentence metric
+        assert "**match**" in md and "score_relaxed" in md
+        assert "| exact |" not in md and "last_n" not in md
+        assert "match [95% CI]" in md
+        assert "containment (diagnostic)" in md
+        assert RB.SYMMETRY_NOTE in md              # symmetric ⊘ / ≤x† principle
+        assert RB.NOTATION_NOTE in md              # @Ln vs @Ntok legend
+        assert RB.THINKING_NOISE_NOTE in md
+        assert RB.NONCOMPARABLE_NOTE in md         # archived tables intro
 
         # Composition headline: regime-prefixed columns — recall (sanity), state
         # tracking, composed @L16/@L64, the composition gap, replicate noise,
@@ -862,12 +948,12 @@ def test_render_end_to_end():
             "Model",
             "instant: recall (sanity, recall_copy_v1)",
             "instant: state tracking (binding_only @L16, v1)",
-            "instant: composed @L16 (relaxed, v1)",
+            "instant: composed @L16 (match, v1)",
             "instant: composed @L64 (v1)",
             "instant: composition gap (binding_only - composed @L16)",
             "instant: replicate noise (|composed - replicate| @L16)",
-            "thinking: chain d128 (chain_nowrap, k=257, relaxed)",
-            "thinking: s5 @L256 (s5_concrete, relaxed)",
+            "thinking: chain d128 (chain_nowrap, k=257, match)",
+            "thinking: s5 @L256 (s5_concrete, match)",
             "thinking: s5@128 ctok",
         ]
         for col in cols:
@@ -877,7 +963,9 @@ def test_render_end_to_end():
         assert "composition deficit" in md         # the gap footnote
         assert "end_to_end @L16" not in md.split("## Diagnostics per cell")[0]
         assert "off-arm ran effort=minimal" in md
-        assert "visible working on the canonical attempt" in md
+        assert "(†, trigger 1 — visible working)" in md   # split † footnote
+        assert "(†, trigger 2 — covert reasoning)" in md
+        assert "completion tokens" in md and "reasoning tokens" in md  # ctok/rtok
         assert "cap-escape" in md
         assert "⊘ >budget" in md                   # censored state-stress cells
         assert "not measurable at this budget" in md
@@ -896,7 +984,10 @@ def test_render_end_to_end():
         assert row_a.split("|")[2].strip() == "1.00"   # ladder rung 1: sanity recall
         row_b = next(l for l in head.splitlines() if l.startswith("| testlab/model-b |"))
         assert "†" in row_b                        # recalibrated dagger
-        assert "0.38 (0.96 @512)†" in row_b        # escalated cell: canonical + diagnostic
+        assert "0.38 (diag 0.96 @512tok)†" in row_b  # escalated: canonical + diagnostic
+        # pervasive covert reasoning (rtok on every call of the L16 plain cell)
+        # renders as an explicit upper bound
+        assert "≤0.63†" in row_b
         row_c = next(l for l in head.splitlines() if l.startswith("| testlab/model-c |"))
         assert "*" in row_c                        # effort=minimal quarantine mark
         row_a_clean = row_a.replace("| testlab/model-a |", "|")
@@ -911,7 +1002,7 @@ def test_render_end_to_end():
         assert "0.50 @ high" in row_d
         # ...and the pre-redesign facet table holds roster models only.
         prered = md[md.index("## v1 archived facets (pre-redesign)"):
-                    md.index("## Diagnostics per cell")]
+                    md.index("## Full per-cell results")]
         assert ARCHIVED_MODEL not in prered
         # Floor rows computed at render time on the exact items of the task the
         # records used (labelled with the task version): the recency heuristic and
@@ -924,30 +1015,41 @@ def test_render_end_to_end():
         assert "0.29" in objf and "0.07" in objf
         assert "Read small-L zero-budget cells against the object-filter floor" in head
         # Diagnostics table surfaces finish_errors and the ‡ per-cell note.
-        diag = md[md.index("## Diagnostics per cell"):md.index("## Full per-cell results")]
+        diag = md[md.index("## Diagnostics per cell"):
+                  md.index("## Provenance: INVALID chain_depth cells")]
         assert "finish_errors" in diag
         assert "‡ cap-escape" in md
-        # Full per-cell table shows the CANONICAL relaxed for the escalated cell.
+        # Full per-cell table shows the CANONICAL match for the escalated cell.
         full = md[md.index("## Full per-cell results"):]
         esc_row = next(l for l in full.splitlines()
                        if l.startswith("| testlab/model-b | zero_budget") and "| 64 |" in l)
-        assert "0.38 [" in esc_row and "escalated @512 diagnostic 0.96" in esc_row
+        assert "0.38 [" in esc_row and "escalated @512tok diagnostic 0.96" in esc_row
+        # INVALID chain_depth rows are quarantined: none in the full/diagnostics
+        # tables, all in the provenance section
+        before_prov = md[:md.index("## Provenance: INVALID chain_depth cells")]
+        prov = md[md.index("## Provenance: INVALID chain_depth cells"):]
+        assert "INVALID (k=6 cycle wrap" not in before_prov.split("## Full per-cell results")[1]
+        assert "INVALID (k=6 cycle wrap" in prov
 
-        # CSV: header + one row per latest cell, canonical relaxed always populated,
-        # plus the v2 diagnostics columns on zero_budget rows.
+        # CSV: header + one row per latest cell, canonical match always populated,
+        # plus the v2 diagnostics columns on zero_budget rows; no exact/last_n.
         with open(os.path.join(out, "results.csv"), encoding="utf-8") as fh:
             rows = list(csv.DictReader(fh))
         assert len(rows) == len(RB.load_latest(history))
-        assert all(r["relaxed"] != "" for r in rows)
+        assert all(r["match"] != "" for r in rows)
         assert all(r["model"] in ALL_MODELS for r in rows)
         for col in ["contract_rate", "covert_cot_rate", "rtok_leak_rate", "rtok_per_call",
-                    "escalated", "escalated_relaxed", "cap_escape", "finish_errors"]:
+                    "rtok_any_rate", "escalated", "escalated_match", "cap_escape",
+                    "finish_errors"]:
             assert col in rows[0], f"missing csv column {col!r}"
+        for gone in ["exact", "last_n", "relaxed", "escalated_relaxed"]:
+            assert gone not in rows[0], f"retired csv column {gone!r} still present"
+        assert "contains" in rows[0]               # the one diagnostic stays
         zb_rows = [r for r in rows if r["facet"] == "zero_budget"]
         assert zb_rows and all(r["contract_rate"] != "" for r in zb_rows)
         esc_rows = [r for r in zb_rows if r["escalated"] == "True"]
-        assert esc_rows and esc_rows[0]["relaxed"] == "0.38"       # canonical
-        assert esc_rows[0]["escalated_relaxed"] == "0.96"          # diagnostic
+        assert esc_rows and esc_rows[0]["match"] == "0.38"         # canonical
+        assert esc_rows[0]["escalated_match"] == "0.96"            # diagnostic
         err_rows = [r for r in rows if r["facet"] == "chain_nowrap"
                     and r["model"] == "testlab/model-b" and r["length"] == "32"]
         assert err_rows[0]["finish_errors"] == "1"
@@ -970,6 +1072,7 @@ if __name__ == "__main__":
                test_object_filter_floor, test_zero_budget_task_versioning,
                test_breadth_and_k_fixed_arms, test_object_filter_floor_at_per_rung,
                test_archived_roster, test_profile_values_and_figure,
+               test_pervasive_covert_and_floor_bound_gap,
                test_render_end_to_end]:
         fn()
         print(f"{fn.__name__}: ok")
