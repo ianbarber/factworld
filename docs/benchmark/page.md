@@ -16,8 +16,10 @@
 | Kimi K2.6 | 0.94† | 0.77† | +0.17† | 0.64‡ | 0.88 |
 | Nemotron 3 Ultra | 0.49 | 0.33 | +0.16 | ⊘ >budget | ⊘ >budget |
 | GPT-5.5 | 0.80 | 0.46 | +0.34 | 0.36 | 0.96 |
+| GPT-5.6 Sol | 0.82 | 0.65 | +0.17 | 1.00 | n/a |
 | Qwen3.7 Max | 0.51 | 0.24 | +0.27 | 0.96 | 0.80 |
-| GLM-5.2 | 0.68† | 0.34 | +0.34† | 0.36 | 0.88 |
+| Grok 4.5 | n/a | n/a | n/a | n/a | 1.00‡ |
+| GLM-5.2 | 0.71 | 0.38† | +0.33† | 0.36 | 0.88 |
 | *recency heuristic (floor)* | 0.04 | 0.04 | — | — | — |
 | *object-filter floor* | 0.41 | 0.41 | — | — | — |
 
@@ -42,4 +44,4 @@ Upload from `docs/benchmark/` (an SVG sits alongside each PNG):
 
 ---
 
-Last updated: 2026-07-12 · 9 models · benchmark data and methodology: [github.com/ianbarber/factworld](https://github.com/ianbarber/factworld) · refresh: three commands (register the model's slug, run `scripts/run_frontier_benchmark.py`, re-render with `scripts/render_benchmark.py`).
+Last updated: 2026-07-13 · 11 models · benchmark data and methodology: [github.com/ianbarber/factworld](https://github.com/ianbarber/factworld) · refresh: three commands (register the model's slug, run `scripts/run_frontier_benchmark.py`, re-render with `scripts/render_benchmark.py`).

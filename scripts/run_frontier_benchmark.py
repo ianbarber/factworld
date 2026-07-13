@@ -1,8 +1,11 @@
 """Run the recurring frontier-model benchmark and append C3 records to history.
 
 Executes the cell plan from ``factworld.benchmark.arms_for`` (contract C4) against
-OpenRouter, one model at a time, one cell at a time (examples fan out concurrently
-inside ``APIBackend``). Each completed cell appends ONE crash-safe JSONL record to
+each model's API endpoint — OpenRouter by default; a registry entry carrying
+``{"base_url", "api_key_env"}`` runs against its direct vendor endpoint with its
+own key env (``factworld.benchmark.endpoint_for`` — the muse-spark slot) — one
+model at a time, one cell at a time (examples fan out concurrently inside
+``APIBackend``). Each completed cell appends ONE crash-safe JSONL record to
 the history file (contract C3) — metrics, diagnostics (empty-pred rate, api errors,
 finish reasons), token usage and an estimated cost. Every example record carries the
 per-call ``{ctok, rtok, finish}`` (completion tokens, reasoning tokens, finish
@@ -98,12 +101,14 @@ from factworld.benchmark import (
     CANARY_MODEL,
     CELL_BUDGET_FACTOR,
     COVERT_COT_CTOK_THRESHOLD,
+    DEFAULT_API_KEY_ENV,
     FACETS,
     MODELS,
     REASONING_EFFORTS,
     arms_for,
     cell_dollar_cap,
     cost_estimate,
+    endpoint_for,
     settings_hash,
     spec_for_cell,
 )
@@ -419,13 +424,27 @@ def system_prompt_for(cell: dict) -> str:
 
 def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_workers: int) -> APIBackend:
     settings = cell["settings"]
+    reg = MODELS[model]
+    # Per-model direct endpoint (muse-spark readiness): a registry entry may
+    # carry {"base_url", "api_key_env"}; endpoint_for resolves them against the
+    # CLI --base-url + OPENROUTER_API_KEY defaults. A direct-endpoint model
+    # reads its key from its own env var — a missing key fails loudly HERE
+    # (once, before any call) instead of 401-ing n times inside the backend.
+    base_url, key_env = endpoint_for(model, default_base_url=base_url)
+    if key_env != DEFAULT_API_KEY_ENV:
+        api_key = os.environ.get(key_env)
+        if not api_key:
+            raise SystemExit(f"{key_env} not set (required for {model})")
     extra_body: dict = {}
     if settings["effort"] is not None:  # None = default arm: omit the param entirely
         extra_body["reasoning"] = {"effort": settings["effort"]}
-    if MODELS[model]["open_weights"] and MODELS[model].get("quantization_filter", True):
+    if (reg["open_weights"] and reg.get("quantization_filter", True)
+            and not reg.get("base_url")):
         # Quantization filter is only meaningful for open-weight models (C4);
         # models whose endpoints don't declare a quantization opt out via the
         # registry's quantization_filter flag (the filter 404s them otherwise).
+        # The provider block is an OPENROUTER routing option — never sent to a
+        # direct vendor endpoint (which would reject the unknown field).
         extra_body["provider"] = {"require_parameters": False,
                                   "quantizations": ["fp8", "bf16", "fp16"]}
     return APIBackend(
@@ -926,9 +945,11 @@ def main():
         print_plan(plan, done, a.assumed_output_tokens, a.force, a.canary)
         return
 
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
-        raise SystemExit("OPENROUTER_API_KEY not set")
+    api_key = os.environ.get(DEFAULT_API_KEY_ENV)
+    if not api_key and any(endpoint_for(m)[1] == DEFAULT_API_KEY_ENV for m in plan):
+        # only required when some selected model actually runs via OpenRouter;
+        # direct-endpoint models resolve their own key env in build_backend.
+        raise SystemExit(f"{DEFAULT_API_KEY_ENV} not set")
     git_commit = _git_commit()
 
     total_cost = 0.0
