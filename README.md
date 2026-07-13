@@ -23,7 +23,7 @@ Three parts, in this order here and in the [full report](reports/frontier-benchm
 
 > **What this is — and isn't.** A **mechanism probe for the component capabilities that agent
 > workloads depend on** — working-memory recall, state tracking, and multi-step composition. It
-> is **not** an end-to-end agent benchmark: every task is single-turn, single-answer-span, with
+> is not an end-to-end agent benchmark: every task is single-turn, single-answer-span, with
 > no tool use, planning, or multi-turn action; the component→agent mapping is a motivating
 > analogy, not a proven one.
 

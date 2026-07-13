@@ -15,7 +15,7 @@ multi-turn action. The component→agent mapping is a motivating analogy, not a 
 
 The suite is built around versioned `TaskSpec` objects in `factworld.tasks.CANONICAL`. Each task
 renders to natural language, carries deterministic examples from a fixed seed, and is scored by a
-single canonical metric: **match** of the answer span (strip trailing punctuation and score the first `len(gold)` tokens). Gold answers come
+single canonical metric: **match** of the answer span (strip a trailing period and score the first `len(gold)` tokens). Gold answers come
 from a symbolic oracle applied to the underlying world state, never from parsing the rendered
 text, so labels cannot leak. A validity gate (`scripts/validate_suite.py`) certifies that no
 shallow shortcut clears floor on any task.
@@ -44,8 +44,9 @@ comparisons below use match for both API and local models.
 
 ## 2. The tasks
 
-**Which task version each number is on.** The worked example below and the §4 grid are on the
-retired v1 give-stream family — historical snapshots, kept as diagnostics (the recency
+**Which task version each number is on.** The worked example below and the §4 grid's give-stream
+columns (`binding_v1`, `composite_copy_v1`) are on the retired v1 give-stream family —
+historical snapshots, kept as diagnostics (the recency
 methodological note in [frontier-benchmark.md](frontier-benchmark.md) covers why the v1 sampler
 was defective). The §5 local tables are on v2
 (the trace-free 3-seed staged-curriculum measurement, corroborated by the compute-matched scale
@@ -204,7 +205,7 @@ depth score (wrap analysis after the table).
 | kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | 0.867 | 0.200 |
 | llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | 0.767 | 0.200 |
 | gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.167 |
-| deepseek-chat | 1.000 | 1.000 | 0.367 | 0.033 | 0.167 | 0.133 |
+| deepseek-chat | 1.000 | 1.000 | 0.367 | 0.033 | 0.200 | 0.133 |
 | gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.200 |
 
 Single-hop recall and conflict are solved across the board. Binding and composition separate the
@@ -261,7 +262,8 @@ structurally 0 for any trace-emitting model while `contains` stays high (gdp p5 
 from containment leniency over the longer emission. This reproduces the known v1 trace-mode
 control (`results/curriculum_staged_d768_b64_80k_trace.md`: composite 0.00) rather than
 measuring the flagship; composite capability is unmeasurable under that protocol, so those runs
-are excluded (see `results/remeasure_v2/PENDING.md`). The table above is the identical command
+are excluded (adjudication logged in [experiments §21](../docs/experiments/README.md)). The
+table above is the identical command
 re-run without `--use_trace` — the trace-free v2 measurement.
 
 All three share `(d_model=768, depth=8)`; the match is on compute, not parameters. `fprm` is a
@@ -334,7 +336,7 @@ large ~18–269M / ~417–540. Raw runs + the holder/value decomposition are in
   pure value-leg failure. Seed 0's 0.42 comes with the holder leg degraded to 0.68 (the batch-64
   large recipe trains unstably), so it is not partial convergence at scale. With 2 seeds this is
   a flag, not a measurement: characterizing the large regime (more seeds, an LR study at 269M)
-  is the open follow-up. It is *not* the transformer catching up — the transformer remains at
+  remains open. It is *not* the transformer catching up — the transformer remains at
   floor (0.00).
 - **The routing deficit is scale-invariant where binding trains.** Wherever binding is solved
   and the composed cell fails (`gdp_hybrid` at small and at large seed 1; `fprm` at small,
@@ -448,7 +450,8 @@ with dense-only.
 ## 9. Discussion
 
 FactWorld is one instrument with two uses. The same composition probe that separates GLM,
-Kimi, and llama-3.3-70b via API (the `composite_copy_v1` snapshot, §4) also separates
+Kimi, and llama-3.3-70b from the cheaper tier via API (the `composite_copy_v1` snapshot, §4)
+also separates
 `gdp_hybrid`, `fprm`, and `transformer` trained locally (`composite_copy_v2`, §5). The per-leg
 decomposition links the two regimes: a finding about "routing the resolved holder into recall"
 can be checked in both settings.
@@ -517,7 +520,7 @@ deferred readout needs product recurrence) — are reproduced on the natural-lan
 above, which supersedes the phase numbers. Its §4 resolve-then-recall pipeline finding is the
 mechanism ancestor of this report's per-leg decomposition. Its §5 scale numbers are on a retired
 task and metric and are superseded outright (the compute-matched comparison is §5 above:
-10/76/101M params, matched on FLOPs, not the "~45M matched" framing of earlier drafts).
+10/76/101M params, matched on FLOPs, not on parameters).
 
 **Phase 2** ([`phases/02-non-abelian-state/report.md`](../phases/02-non-abelian-state/report.md))
 is the provenance of the s5 supervision-density row. Its §4 density sweep (a state checkpoint
@@ -609,12 +612,13 @@ python scripts/experiment_dense_supervision.py
 - Local compute-matched scale sweep: `results/composite_scale_*.md`
 - Local long-context stress: `results/longctx_gdp_20260627_223033.md`,
   `results/longctx_fprm_20260628_000834.md`
-- V1-task runs (retired sampler; source of the §5 v1 comparison numbers):
+- V1-task API reasoning runs (retired sampler):
   `results/reasoning_sweep_20260627_092034.jsonl`,
   `results/reasoning_glm_20260627_114244.jsonl`,
   `results/reasoning_longctx_L128_20260628_163121.jsonl`,
   `results/reasoning_longctx_L256_20260628_171119.jsonl`,
-  `results/reasoning_longctx_L512_20260628_181508.jsonl`,
+  `results/reasoning_longctx_L512_20260628_181508.jsonl`
+- V1 local flagship runs (retired sampler; source of the §5 v1 comparison numbers):
   `results/benchmark_gdp_d768_b128_80k_500eval.json`,
   `results/benchmark_fprm_d768_b128_80k_500eval.json`,
   `results/benchmark_transformer_d768_b128_80k_500eval.json`,
@@ -652,7 +656,7 @@ example (GLM-5.2, L16; the queried agent g2's correct role changes 7 times):
 init r2 · s1 r1 · s3 r3 · s7 r4 · s8 r0 · s9 r4 · s12 r1 · s14 r2 (final)
 ```
 
-GLM answered **r0** — exactly g2's role at **s8** — missing the three later updates. Three failures,
+GLM answered `r0` — exactly g2's role at `s8` — missing the three later updates. Three failures,
 same shape (GLM's answer = a recently-held role, not the final):
 
 | queried | GLM said | that role was the agent's state at… | gold |

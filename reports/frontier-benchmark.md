@@ -76,9 +76,9 @@ v2 battery (the zero-budget battery of §2): 3 escalations (all sonnet-5), 0 API
 Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 completion-token budget.
 
-The contamination marks are symmetric: ⊘ = not measurable at this budget; ≤x† = upper bound,
-covert reasoning on most calls; neither participates in orderings — not in figure sorts, not in
-cross-model ordering prose.
+⊘ and ≤x† are the two contamination marks — one per regime (⊘ = not measurable at this budget;
+≤x† = upper bound, covert reasoning on most calls) — and are treated alike: neither participates
+in orderings — not in figure sorts, not in cross-model ordering prose.
 
 `⊘` is budget-conditional, not a verdict: a cell showing completion evidence under it is
 eligible for a single raised-budget rerun with the budget stated (two s5 cells cleared to 1.00
@@ -224,7 +224,8 @@ the binding leg; the gap is the composition deficit.
 | *object-filter floor* | — | 0.41 | 0.41 | 0.15 | — |
 
 The run-to-run noise bar on every instant number is 0.06: the battery carries a `replicate` leg
-(prompts identical to the plain @L16 cell; recorded as end_to_end in earlier runs), and the
+(prompts identical to the composed @L16 cell; the leg appears as `end_to_end` in some
+history.jsonl records), and the
 maximum observed |plain − replicate| across models is 0.06.
 
 **Reading the gap.** It is interpretable only where the binding component is established. For
@@ -254,8 +255,8 @@ reasoning; its off-arm ran effort=minimal throughout.
 
 ### Composition under reasoning
 
-With reasoning on, the composed cell reads at or near ceiling at canonical settings across this
-roster — 0.98–1.00 on the effort=high arm of the v2 dose-response cell (kimi 1.00, glm 0.98
+With reasoning on, the composed cell reads at or near ceiling at canonical settings where
+measured — 0.98–1.00 on the effort=high arm of the v2 dose-response cell (kimi 1.00, glm 0.98
 @L16, n=50; `results/reasoning_sweep_20260710_125924.jsonl`), and the calibration
 probes hold glm at 0.92–1.00 on v2 out to L1024 at k=32 (`results/v3_probes/`,
 `results/composite_frontier_20260709.jsonl`). That is a calibration fact about the settings, so
@@ -270,10 +271,10 @@ settings, plus a practical efficiency column:
   reasoning-off floor arm on the abstract rendering scores 0.00–0.30. Cells whose diagnostics
   showed truncation with completion evidence were rerun once at 32,768 tokens (the raised
   budget is stated wherever it applies).
-- **s5@128 ctok** — completion tokens per call on the matched s5 L128 cell, which every roster
+- **s5 @L128 ctok** — completion tokens per call on the matched s5 L128 cell, which every roster
   model ran (a per-solve average would reward early failure; the matched-cell total does not).
 
-| Model | chain d128 (k=257) | s5 @L256 | s5@128 ctok |
+| Model | chain d128 (k=257) | s5 @L256 | s5 @L128 ctok |
 |---|---|---|---|
 | anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
 | anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
@@ -334,13 +335,13 @@ read against.
 The two regimes never merge into one number; the per-model view is the profile grid
 ([`docs/benchmark/fig_profiles.png`](../docs/benchmark/fig_profiles.png), regenerated every
 render cycle): one panel per roster model, its normalized position on each axis — binding
-@L16, composed @L16, the gap (inverted: smaller better), chain d128, s5 @L256, and s5@128
+@L16, composed @L16, the gap (inverted: smaller better), chain d128, s5 @L256, and s5 @L128
 ctok (inverted) — with raw values and marks alongside, and ⊘/never-run cells drawn as gaps
 rather than zeros. Read against a pinned intuitive ranking of the roster
 ([`docs/benchmark/profiles-analysis.md`](../docs/benchmark/profiles-analysis.md) — a data note
 pinned to the nine-model roster; gpt-5.6-sol and grok-4.5 postdate it), the axes split three
 ways. In-weights state tracking is what intuition tracks: binding @L16 is the best single-axis
-match (Spearman +0.97 across the eight models with clean cells — kimi's ≤x† cell sits outside
+correlate (Spearman +0.97 across the eight models with clean cells — kimi's ≤x† cell sits outside
 orderings, and including it as a sensitivity check gives +0.81), and binding plus inverted ctok
 reaches +0.93 over the same eight (+0.95 including kimi). The chain d128 axis *inverts* it
 (-0.72): qwen 0.96 and gemini-flash 0.88 lead where opus 0.08 and sonnet 0.04 trail — the
@@ -463,8 +464,8 @@ read pconv, not the mean).
   transformer decays monotonically to 0.08 @B24 and no longer fits training there (loss
   1.49–1.65). Binding does not extrapolate reliably to L64 for any architecture: fprm keeps the
   most (0.24–0.41 at B6–B16 against the 0.15 object-filter floor; 0.07 @B24), gdp_hybrid
-  0.09–0.20, transformer 0.03–0.18. (The earlier recency-skewed sampler read fprm's binding at
-  0.94 @L64 — the methodological note in §1 covers why that magnitude was recency credit.)
+  0.09–0.20, transformer 0.03–0.18 (the §1 recency methodological note covers the inflated
+  magnitude a recency-skewed sampler reads at this cell).
 - **The local composition deficit sits on the recall leg — for all three architectures.** The
   value leg is ≤0.17 in all 45 runs and at or below the 1/pool guess wherever binding is solved
   (fprm @B6: binding 1.00, value 0.14–0.17 ≈ 1/6; fprm @B16: binding 0.97–0.98, value ≤0.01;
@@ -494,8 +495,8 @@ scale sweep's medium cell corroborates the number on 2 independent seeds (0.732 
 dissociates the legs: binding 0.998 with a dead value leg. The transformer's 0.001 is a real floor, not formatting: contains reads ~0 as
 well, at every scale up to 202M params / 417 GFLOP/token.
 
-Scale shape, from the compute-matched sweep — the same staged curriculum at three sizes sharing
-`(d_model, depth)`, 2 seeds each (`results/composite_scale_*.md`):
+Scale shape, from the compute-matched sweep — the same staged curriculum at three sizes, the
+architectures sharing `(d_model, depth)` at each size, 2 seeds each (`results/composite_scale_*.md`):
 
 | arch | small (384×6) | medium (768×8) | large (1024×12) |
 |---|---|---|---|
@@ -582,8 +583,8 @@ operating point (`gap_stability` facet: composed and binding legs at L32, instan
 n=50) checks that the ordering is not an artifact of the anchor. For the three cleanly
 measurable gap-interpretable models it holds: gpt-5.5 +0.34 → +0.36 (binding 0.68, composed
 0.32), sonnet +0.15† → +0.14† (canonical first attempts, binding 0.64 / composed 0.50; the
-escalated @512tok diagnostic reads +0.08), opus +0.06 → −0.04 — at or below zero at both
-operating points, the compose-for-free profile. Gpt-5.6-sol's L32 cells, bought after the
+escalated @512tok diagnostic reads +0.08), opus +0.06 → −0.04 — within the ±0.06 noise bar of
+zero at both operating points, the compose-for-free profile. Gpt-5.6-sol's L32 cells, bought after the
 check, read binding 0.58 / composed 0.26 — +0.17 → +0.32, holding its slot between gpt-5.5
 and sonnet at both operating points. Kimi's L32 cells are not interpretable
 (covert working with an unenforced cap: empty 0.40 on the canonical composed attempt, 0.62 on
