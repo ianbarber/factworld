@@ -110,9 +110,21 @@ MODELS = {
     # variant is the same price and NOT what we run). effort=none probe clean:
     # finish=stop, rtok=0, 10 visible ctok, well-formed contract answer
     # (results/probes/new_models_20260712.jsonl).
+    # Routed directly to OpenAI; the OpenRouter slug is kept as the registry key
+    # for roster consistency, but the literal model name sent to the API is
+    # "gpt-5.6-sol" without the provider prefix. It is a reasoning model that
+    # rejects max_tokens in favor of max_completion_tokens, does not accept
+    # temperature/top_p overrides, and does not accept the OpenRouter-style
+    # reasoning-effort extra body.
     "openai/gpt-5.6-sol": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
-        "completion_price_per_M": 30.0, "open_weights": False},
+        "completion_price_per_M": 30.0, "open_weights": False,
+        "base_url": "https://api.openai.com/v1",
+        "api_key_env": "OPENAI_API_KEY",
+        "model_name": "gpt-5.6-sol",
+        "max_completion_tokens": True,
+        "reasoning_model": True,
+        "supports_reasoning_effort": False},
     # openai/gpt-5.4 and google/gemini-3.1-pro-preview DROPPED 2026-07-08 (owner
     # decision: one flagship per vendor; Google is pushing flash).
     # no_reasoning_effort: Gemini 3 endpoints reject effort=none outright
@@ -173,9 +185,16 @@ MODELS = {
     "z-ai/glm-5.2": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.93,
         "completion_price_per_M": 3.0, "open_weights": True},
+    # INSTANT FACETS EXCLUDED: kimi-k2.6 emits reasoning tokens on 65-89% of
+    # effort=none calls despite the answer contract, and its provider does not
+    # enforce the requested token cap, so its instant numbers are explicit upper
+    # bounds rather than in-weights measurements. It runs in the thinking regime
+    # only, like grok-4.5 and muse-spark-1.1.
     "moonshotai/kimi-k2.6": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.66,
-        "completion_price_per_M": 3.41, "open_weights": True},
+        "completion_price_per_M": 3.41, "open_weights": True,
+        "skip_facets": ("zero_budget", "recall_load", "chain_instant",
+                        "sanity", "gap_stability")},
     "deepseek/deepseek-v4-pro": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.435,
         "completion_price_per_M": 0.87, "open_weights": True},

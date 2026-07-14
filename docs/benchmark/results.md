@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-14 11:46 UTC from `results/benchmark/history.jsonl` (574 latest cells).
+Generated 2026-07-14 23:22 UTC from `results/benchmark/history.jsonl` (575 latest cells).
 
 ## Settings
 
@@ -35,7 +35,6 @@ History also contains zero-budget cells on composite_copy_v1; the zero-budget co
 
 | Model | instant: recall (sanity, recall_copy_v1) | instant: state tracking (binding_only @L16, v2) | instant: composed @L16 (match, v2) | instant: composed @L64 (v2) | instant: composition gap (binding_only - composed @L16) | instant: replicate noise (|composed - replicate| @L16) |
 |---|---|---|---|---|---|---|
-| moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | ±0.06 |
 | anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 | ±0.05 |
 | openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 | ±0.05 |
 | google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 |
@@ -45,8 +44,6 @@ History also contains zero-budget cells on composite_copy_v1; the zero-budget co
 | z-ai/glm-5.2 | 1.00 | 0.71 | 0.38† | 0.13 | +0.33† | ±0.01 |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 |
 | qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ | ±0.01 |
-| muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a | n/a |
-| x-ai/grok-4.5 | n/a | n/a | n/a | n/a | n/a | n/a |
 | recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | — | — |
 | object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | — | — |
 
@@ -92,8 +89,8 @@ Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 | z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
+| openai/gpt-5.6-sol | 1.00 | 0.72 | 2657 |
 | google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
-| openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
 | deepseek/deepseek-v4-pro | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 12250 |
 
@@ -115,8 +112,8 @@ S5 efficiency ranking: models sorted by s5 @L256 score, then by s5@128 completio
 | z-ai/glm-5.2 | 0.88 | 6282 |
 | moonshotai/kimi-k2.6 | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.80 | 7904 |
+| openai/gpt-5.6-sol | 0.72 | 2657 |
 | google/gemini-3.5-flash | 0.52 | 11022 |
-| openai/gpt-5.6-sol | n/a | 2657 |
 | deepseek/deepseek-v4-pro | ⊘ >budget | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget | 12250 |
 
@@ -535,6 +532,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 50 | 0.26 [0.16, 0.40] | 0.26 | — |
 | openai/gpt-5.6-sol | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.72 [0.52, 0.86] | 0.72 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.82 [0.73, 0.88] | — | — |
@@ -1025,6 +1023,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
 | openai/gpt-5.6-sol | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 66218 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 85395 | stop:25 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | openai/gpt-5.6-sol | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |

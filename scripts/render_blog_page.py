@@ -159,13 +159,19 @@ FIGURES = [
      "score; models whose instant numbers are upper bounds from covert "
      "reasoning are hatched and placed last, outside the ordering. The legend "
      "sits outside the plot area."),
-    ("fig_profiles.png",
-     "One profile per model: its normalized position on every axis, instant "
-     "and thinking side by side — the reason this page has no single ranking.",
+    ("fig_profiles_instant.png",
+     "Instant-regime profile grid: one panel per instant-measured model, with "
+     "binding, composed score, and composition gap side by side.",
+     "Small-multiples panel, one chart per instant-measured model. Horizontal "
+     "bars give each model's normalized position on binding at length 16, "
+     "composed at length 16, and composition gap (inverted), with raw values "
+     "printed beside the bars; unmeasurable cells are gaps, not zeros."),
+    ("fig_profiles_thinking.png",
+     "Thinking-regime profile grid: one panel per roster model, with "
+     "pointer-chase depth, S5 at length 256, and token efficiency side by side.",
      "Small-multiples panel, one chart per current-roster model. Horizontal "
-     "bars give each model's normalized position on six axes — state tracking, "
-     "composed score, composition gap (inverted), pointer-chase depth 128, S5 "
-     "at length 256, and completion tokens on the matched S5 cell (inverted) — "
+     "bars give each model's normalized position on chain depth 128, S5 at "
+     "length 256, and completion tokens on the matched S5 cell (inverted), "
      "with raw values printed beside the bars; unmeasurable cells are gaps, "
      "not zeros."),
     ("fig_chain_nowrap.png",

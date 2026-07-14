@@ -571,6 +571,25 @@ def roster_models(records) -> list[str]:
     return [m for m in models_of(records) if not archived_roster(records, m)]
 
 
+INSTANT_FACETS = {"zero_budget", "sanity", "recall_load", "chain_instant", "gap_stability"}
+
+
+def instant_excluded(model: str) -> bool:
+    """True when the registry structurally skips all instant-regime facets for
+    this model (e.g. grok-4.5, muse-spark-1.1, kimi-k2.6). Such models render
+    only in the thinking headline, not the instant one."""
+    if model not in CURRENT_ROSTER:
+        return False
+    try:
+        from factworld.benchmark import MODELS
+    except Exception:  # pragma: no cover - environment guard
+        return False
+    if model not in MODELS:
+        return False
+    skipped = set(MODELS[model].get("skip_facets", ()))
+    return INSTANT_FACETS.issubset(skipped)
+
+
 def archived_models(records) -> list[str]:
     """Models in history that were dropped from the roster (archived section)."""
     return [m for m in models_of(records) if archived_roster(records, m)]
@@ -1305,9 +1324,10 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     if start < 0 or end < start:
         return False
     rows = list(headline_rows(records))
+    instant_rows = [r for r in sort_instant_rows(rows) if not instant_excluded(r[0])]
     instant_lines = ["**Instant composition (reasoning off, answer contract)**", ""]
     instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP,
-                                          sort_instant_rows(rows))
+                                          instant_rows)
     thinking_lines = ["", "**Thinking state-stress (reasoning on)**", ""]
     thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP,
                                            sort_thinking_rows(rows))
@@ -1395,6 +1415,8 @@ def write_results_md(records, out_path, history_path):
     lines += ["| " + " | ".join(inst_cols) + " |",
               "|" + "---|" * len(inst_cols)]
     for row in sort_instant_rows(list(headline_rows(records))):
+        if instant_excluded(row[0]):
+            continue
         lines.append("| " + " | ".join(str(c) for c in row[:len(inst_cols)]) + " |")
     lines += ["", FLOOR_NOTE, ""]
     if any(not canonical_arm(r) for r in records):
@@ -1973,6 +1995,10 @@ PROFILE_AXES = [  # (short label, inverted)
     ("s5@128 ctok (inv)", True),
 ]
 PROFILE_AXIS_LABELS = [a for a, _ in PROFILE_AXES]
+PROFILE_AXES_INSTANT = PROFILE_AXES[:3]
+PROFILE_AXES_THINKING = PROFILE_AXES[3:]
+PROFILE_AXIS_LABELS_INSTANT = [a for a, _ in PROFILE_AXES_INSTANT]
+PROFILE_AXIS_LABELS_THINKING = [a for a, _ in PROFILE_AXES_THINKING]
 
 
 def _profile_cell(value, display, marks="", status="ok"):
@@ -2054,26 +2080,28 @@ def profile_normalized(values):
     return values
 
 
-def fig_profiles(records, out_dir):
-    """Small-multiples profile grid: one panel per current-roster model, its
-    normalized position on each axis as a horizontal bar (right = roster-best;
-    inverted axes flipped first) with the raw value + cleanliness marks
-    alongside; missing / ⊘ budget-censored cells are gaps, never zeros."""
-    values = profile_normalized(profile_values(records))
-    if not values or all(c["status"] != "ok"
-                         for d in values.values() for c in d.values()):
+def _fig_profile_grid(records, out_dir, name, models, axis_labels, title, footnote):
+    """Render a small-multiples profile grid for a subset of models and axes."""
+    values_all = profile_normalized(profile_values(records))
+    if not values_all or all(c["status"] != "ok"
+                             for d in values_all.values() for c in d.values()):
+        return []
+    values = {m: values_all[m] for m in models if m in values_all}
+    if not values:
         return []
     zb_task = zb_latest_task(records)
-    models = list(values)
     ncols = 3
     nrows = math.ceil(len(models) / ncols)
     fig, axes = plt.subplots(nrows, ncols, sharex=True,
                              figsize=(FIGSIZE[0], 1.6 * nrows + 1.0))
     grid = list(axes.ravel()) if hasattr(axes, "ravel") else [axes]
-    n_ax = len(PROFILE_AXIS_LABELS)
+    n_ax = len(axis_labels)
     ys = list(range(n_ax))[::-1]  # first axis on top
     for k, (ax, m) in enumerate(zip(grid, models)):
-        for y, label in zip(ys, PROFILE_AXIS_LABELS):
+        if m not in values:
+            ax.set_visible(False)
+            continue
+        for y, label in zip(ys, axis_labels):
             c = values[m][label]
             color = PALETTE[PROFILE_AXIS_LABELS.index(label) % len(PALETTE)]
             if c["status"] == "ok":
@@ -2084,7 +2112,7 @@ def fig_profiles(records, out_dir):
                 txt = CENSORED_CELL if c["status"] == "censored" else c["display"]
                 ax.text(0.03, y, txt, va="center", fontsize=6, color="#999999")
         ax.set_yticks(ys)
-        ax.set_yticklabels(PROFILE_AXIS_LABELS if k % ncols == 0 else [""] * n_ax,
+        ax.set_yticklabels(axis_labels if k % ncols == 0 else [""] * n_ax,
                            fontsize=6)
         ax.set_ylim(-0.6, n_ax - 0.4)
         ax.set_xlim(0, 1.45)
@@ -2097,22 +2125,53 @@ def fig_profiles(records, out_dir):
         ax.tick_params(length=2)
     for ax in grid[len(models):]:  # unused trailing panels
         ax.set_visible(False)
-    fig.suptitle("Per-model profiles: normalized axis positions "
-                 "(right = roster-best; inverted axes flipped)", fontsize=9)
-    fig.text(0.01, 0.012,
-             "bar = min-max position across the roster on that axis; the raw value "
-             "+ marks is printed beside it (instant marks as in the headline; ‡ "
-             "cap-escape).\n"
-             f"gap and s5@128 ctok are inverted (smaller better); {CENSORED_CELL} "
-             "and n/a cells are gaps, not zeros; instant cells read task "
-             f"{zb_task or 'n/a'}.",
-             fontsize=6.5, color="#555555")
+    fig.suptitle(title, fontsize=9)
+    fig.text(0.01, 0.012, footnote, fontsize=6.5, color="#555555")
     fig.tight_layout(rect=(0, 0.055, 1, 0.96))
-    return _save(fig, out_dir, "fig_profiles")
+    return _save(fig, out_dir, name)
 
 
-FIGURES = [fig_zero_budget, fig_profiles, fig_dose_response, fig_composite_length,
-           fig_s5_stress, fig_chain_depth, fig_chain_nowrap, fig_decomposition]
+def fig_profiles_instant(records, out_dir):
+    """Instant-regime profile grid: only models with clean instant measurements."""
+    models = [m for m in roster_models(records) if not instant_excluded(m)]
+    footnote = (
+        "bar = min-max position across the roster on that axis; raw value + marks "
+        "printed beside it. gap is inverted (smaller better); "
+        f"{CENSORED_CELL} and n/a cells are gaps, not zeros; "
+        f"instant cells read task {zb_latest_task(records) or 'n/a'}."
+    )
+    return _fig_profile_grid(
+        records, out_dir, "fig_profiles_instant", models,
+        PROFILE_AXIS_LABELS_INSTANT,
+        "Instant profiles: normalized axis positions (right = roster-best)",
+        footnote,
+    )
+
+
+def fig_profiles_thinking(records, out_dir):
+    """Thinking-regime profile grid: all current-roster models."""
+    models = list(roster_models(records))
+    footnote = (
+        "bar = min-max position across the roster on that axis; raw value + marks "
+        "printed beside it. s5@128 ctok is inverted (smaller better); "
+        f"{CENSORED_CELL} and n/a cells are gaps, not zeros."
+    )
+    return _fig_profile_grid(
+        records, out_dir, "fig_profiles_thinking", models,
+        PROFILE_AXIS_LABELS_THINKING,
+        "Thinking profiles: normalized axis positions (right = roster-best)",
+        footnote,
+    )
+
+
+# Backward-compatible alias: returns both split figures.
+def fig_profiles(records, out_dir):
+    return fig_profiles_instant(records, out_dir) + fig_profiles_thinking(records, out_dir)
+
+
+FIGURES = [fig_zero_budget, fig_profiles_instant, fig_profiles_thinking,
+           fig_dose_response, fig_composite_length, fig_s5_stress,
+           fig_chain_depth, fig_chain_nowrap, fig_decomposition]
 
 
 # --- html ---------------------------------------------------------------------
@@ -2228,7 +2287,8 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         f"<figure>{_inline_svg(p)}</figure>" for p in svg_paths if p.endswith(".svg")
     )
 
-    instant_rows = [row[:len(inst_cols)] for row in sort_instant_rows(head_rows)]
+    instant_rows = [row[:len(inst_cols)] for row in sort_instant_rows(head_rows)
+                    if not instant_excluded(row[0])]
     thinking_rows = [
         [row[0]] + row[len(inst_cols):]
         for row in sort_thinking_rows(head_rows)

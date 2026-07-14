@@ -1039,14 +1039,16 @@ def test_skip_facets_machinery():
     motivating case; grok-4.5 is the LIVE case since 2026-07-12 — no clean
     off-arm, so every "off"-policy facet is unplanned and its cell plan is
     thinking facets only). The full-roster zero_budget plan covers the other
-    11 models (all except grok-4.5)."""
+    9 instant-measured models (all except grok-4.5, muse-spark-1.1, and
+    kimi-k2.6)."""
     from unittest import mock
-    # grok-4.5 and muse-spark-1.1 are thinking-only and skip instant facets
-    THINKING_ONLY = {"x-ai/grok-4.5", "muse-spark-1.1"}
+    # grok-4.5 and muse-spark-1.1 are thinking-only by endpoint design;
+    # kimi-k2.6 is instant-excluded because its effort=none arm is contaminated.
+    INSTANT_EXCLUDED = {"x-ai/grok-4.5", "muse-spark-1.1", "moonshotai/kimi-k2.6"}
     for slug in B.MODELS:
-        if slug not in THINKING_ONLY:
+        if slug not in INSTANT_EXCLUDED:
             assert not B.MODELS[slug].get("skip_facets")
-    for slug in THINKING_ONLY:
+    for slug in INSTANT_EXCLUDED:
         cells = B.arms_for(slug)
         assert {c["facet"] for c in cells} == {"s5_concrete", "chain_nowrap",
                                                   "commutative"}
@@ -1062,8 +1064,8 @@ def test_skip_facets_machinery():
                                                "sanity", "commutative",
                                                "gap_stability"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
-    assert sum(len(cells) for cells in plan.values()) == 50  # 10 models x 5 zero_budget cells
-    assert sum(1 for cells in plan.values() if cells) == 10  # grok-4.5 and muse-spark-1.1 plan none
+    assert sum(len(cells) for cells in plan.values()) == 45  # 9 models x 5 zero_budget cells
+    assert sum(1 for cells in plan.values() if cells) == 9  # grok-4.5, muse-spark-1.1, kimi-k2.6 plan none
 
 
 def test_v2_task_cells_get_fresh_resume_keys():

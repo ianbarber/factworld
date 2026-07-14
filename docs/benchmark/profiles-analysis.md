@@ -1,6 +1,7 @@
 # Profiles vs the pinned intuitive ranking — data note
 
-A cross-check of the benchmark's per-model profiles (`fig_profiles.png`, rendered every cycle
+A cross-check of the benchmark's per-model profiles
+(`fig_profiles_instant.png` and `fig_profiles_thinking.png`, rendered every cycle
 by `scripts/render_benchmark.py`) against a prior: the owner's pinned intuitive ranking of the
 roster, best first — gpt-5.5 > opus > glm > sonnet > kimi > gemini-flash > qwen > deepseek >
 nemotron (grok is unrepresented on the roster and skipped). The ranking is a prior, not a

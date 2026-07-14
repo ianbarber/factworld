@@ -156,18 +156,19 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 Twelve frontier models through the instrument, two regimes: **instant** (reasoning off, one-line
 answer contract — what the weights compute) and **thinking** (effort=high, generous budgets —
-what reasoning buys); two models are thinking-only — x-ai/grok-4.5 and muse-spark-1.1 — because
-their endpoints cannot disable reasoning, so they carry no instant numbers by design. The two
-rankings are near-orthogonal, so profiles are per-axis, never a single scalar. Full narrative,
-marks glossary, and the add-a-model path: [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md);
-rendered tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchmark/results.md).
+what reasoning buys). Two models are thinking-only by endpoint design — x-ai/grok-4.5 and
+muse-spark-1.1 — and a third, moonshotai/kimi-k2.6, is instant-excluded because its effort=none
+arm leaks reasoning on most calls and its provider does not enforce the cap, so its instant
+cells are explicit upper bounds rather than in-weights measurements. The two rankings are
+near-orthogonal, so profiles are per-axis, never a single scalar. Full narrative, marks glossary,
+and the add-a-model path: [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md); rendered
+tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchmark/results.md).
 
 <!-- FRONTIER_TABLE_START -->
 **Instant composition (reasoning off, answer contract)**
 
 | Model | binding @L16 | composed @L16 | composed @L64 | gap |
 |---|---|---|---|---|
-| moonshotai/kimi-k2.6 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† |
 | anthropic/claude-opus-4.8 | 0.78 | 0.72 | 0.43 | +0.06 |
 | openai/gpt-5.6-sol | 0.82 | 0.65 | 0.33 | +0.17 |
 | google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* |
@@ -177,8 +178,6 @@ rendered tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](doc
 | z-ai/glm-5.2 | 0.71 | 0.38† | 0.13 | +0.33† |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | —ᶠ |
 | qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | —ᶠ |
-| muse-spark-1.1 | n/a | n/a | n/a | n/a |
-| x-ai/grok-4.5 | n/a | n/a | n/a | n/a |
 | *recency heuristic (floor)* | 0.04 | 0.04 | 0.06 | — |
 | *object-filter floor* | 0.41 | 0.41 | 0.15 | — |
 
@@ -194,8 +193,8 @@ rendered tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](doc
 | z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
+| openai/gpt-5.6-sol | 1.00 | 0.72 | 2657 |
 | google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
-| openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
 | deepseek/deepseek-v4-pro | ⊘ʳ | ⊘ | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ʳ | ⊘ | 12250 |
 <!-- FRONTIER_TABLE_END -->
@@ -221,7 +220,7 @@ report); the two floor rows are the shallow baselines every instant cell is read
 recency heuristic and the object-filter floor E[1/w].
 
 Recall is not the constraint: the recall sanity cells read 0.97–1.00 for every model that runs
-them, recall under load (`recall_copy_v1` pool-64 @L64, chance 0.016) reads 1.00 for all ten
+them, recall under load (`recall_copy_v1` pool-64 @L64, chance 0.016) reads 1.00 for all nine
 instant-measured models, and the scaffolded leg reads 0.98–1.00 (qwen's ⊘ there is a
 contract-phrasing artifact, not a recall failure; report Part 2). The gap is a composition
 deficit, not a recall one.
