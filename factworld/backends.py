@@ -3,10 +3,11 @@
 This module provides a small, unified interface for generating text continuations
 from different kinds of models:
 
-  - LocalBackend    : a FactWorld ``HybridLM`` checkpoint (torch + local tokenizer)
-  - HFBackend       : any Hugging Face ``transformers`` causal LM
-  - APIBackend      : any OpenAI-compatible chat-completion endpoint
-  - FunctionBackend : a plain Python callable
+  - LocalBackend      : a FactWorld ``HybridLM`` checkpoint (torch + local tokenizer)
+  - HFBackend         : any Hugging Face ``transformers`` causal LM
+  - APIBackend        : any OpenAI-compatible chat-completion endpoint
+  - ResponsesBackend  : an OpenAI-compatible ``/v1/responses`` endpoint (e.g. Meta Model API)
+  - FunctionBackend   : a plain Python callable
 
 All backends share the same ``generate`` contract so ``factworld.runner`` can treat
 them interchangeably. Imports for heavy dependencies (torch, transformers, openai)
@@ -335,6 +336,76 @@ class APIBackend(ModelBackend):
             "finish_reason": record["finish_reason"],
         }
 
+    @staticmethod
+    def _normalize_answer(
+        text: str,
+        answer_mode: str,
+        stop_at: str | None,
+        finish_reason: str | None = None,
+    ) -> str:
+        """Reduce raw assistant text to the scored answer span.
+
+        Shared by ``APIBackend`` (chat completions) and ``ResponsesBackend``
+        (Responses API) so both endpoints apply identical answer-mode semantics.
+        """
+        # Reasoning models (e.g. Kimi, GLM) emit a <think>...</think> block before the
+        # answer; keep only the content after the final </think> so scoring sees the
+        # answer, not the scratchpad. (If the model ran out of tokens mid-think, the
+        # block is unclosed and we treat the output as no committed answer.)
+        if "</think>" in text:
+            text = text.rsplit("</think>", 1)[1]
+        elif "<think>" in text:
+            text = ""
+        if answer_mode == "raw":
+            # Visible output as-is: the caller owns extraction (e.g. the
+            # answer-contract regex over the last "Answer:" line).
+            return text
+        if answer_mode == "words":
+            # Natural-word answers (e.g. "Driver ." or "Driver."): keep only the
+            # pre-period answer span and strip whitespace. The FactWorld-token
+            # munging below (prefix regexes, colon split, comma rsplit, glued-period
+            # normalization) corrupts natural-language answers, so skip it.
+            text = text.strip()
+            if "." in text:
+                text = text.split(".", 1)[0]
+            return text.strip()
+        # OpenAI excludes the stop token from the returned text; re-attach it
+        # so downstream exact-match scoring sees the same span as local backends.
+        if stop_at is not None and finish_reason == "stop" and not text.endswith(stop_at):
+            text += stop_at
+        # Chat models often prefix answers with "The answer is..." etc. Strip a few
+        # common prefixes so the downstream scorer sees the answer span, not the prose.
+        for prefix in (
+            r"^the answer is[\s:]+",
+            r"^answer[\s:]+",
+            r"^final answer[\s:]+",
+            r"^therefore[\s,]+",
+            r"^so[\s,]+",
+            r"^let me[\s,]+",
+            r"^let's[\s,]+",
+            r"^to determine[\s,]+.*?,\s*",
+            r"^breaking this down[\s,]+",
+            r"^the final holders? is[\s:]+",
+            r"^the holder is[\s:]+",
+            r"^the role is[\s:]+",
+        ):
+            text = re.sub(prefix, "", text, flags=re.IGNORECASE)
+        # Natural-language models often emit a preamble such as
+        # "Let's track the swaps: r2". FactWorld's atomic tokenizer has no colon,
+        # so any colon is prose punctuation; discard everything up to it.
+        if ":" in text:
+            text = text.split(":", 1)[1]
+        # Some models list all holders/values (e.g. "g0, g2, g4"). For tasks that
+        # ask for the final single item, keep only the last element.
+        if "," in text:
+            text = text.rsplit(",", 1)[1]
+        text = text.strip()
+        # Chat-model tokenizers often emit "v56." while FactWorld's atomic
+        # tokenizer expects "v56 .". Normalize a trailing period that is glued
+        # to the preceding token so exact-match scoring is meaningful.
+        text = re.sub(r"(?<=\S)\.$", " .", text)
+        return text
+
     def pop_example_meta(self) -> list[dict[str, Any]]:
         """Return and clear per-example metadata, order-aligned with prompts.
 
@@ -440,69 +511,15 @@ class APIBackend(ModelBackend):
         return self._postprocess(response, stop_at), self._example_meta_from(rec)
 
     def _postprocess(self, response: Any, stop_at: str | None) -> str:
-        """Reduce one raw API response to the scored answer text (see ``answer_mode``)."""
+        """Reduce one raw chat-completion response to the scored answer text."""
         choices = getattr(response, "choices", None)
         if not choices:
             return ""
         choice = choices[0]
         text = choice.message.content or ""
-        # Reasoning models (e.g. Kimi, GLM) emit a <think>...</think> block before the
-        # answer; keep only the content after the final </think> so scoring sees the
-        # answer, not the scratchpad. (If the model ran out of tokens mid-think, the
-        # block is unclosed and we treat the output as no committed answer.)
-        if "</think>" in text:
-            text = text.rsplit("</think>", 1)[1]
-        elif "<think>" in text:
-            text = ""
-        if self.answer_mode == "raw":
-            # Visible output as-is: the caller owns extraction (e.g. the
-            # answer-contract regex over the last "Answer:" line).
-            return text
-        if self.answer_mode == "words":
-            # Natural-word answers (e.g. "Driver ." or "Driver."): keep only the
-            # pre-period answer span and strip whitespace. The FactWorld-token
-            # munging below (prefix regexes, colon split, comma rsplit, glued-period
-            # normalization) corrupts natural-language answers, so skip it.
-            text = text.strip()
-            if "." in text:
-                text = text.split(".", 1)[0]
-            return text.strip()
-        # OpenAI excludes the stop token from the returned text; re-attach it
-        # so downstream exact-match scoring sees the same span as local backends.
-        if stop_at is not None and getattr(choice, "finish_reason", None) == "stop" and not text.endswith(stop_at):
-            text += stop_at
-        # Chat models often prefix answers with "The answer is..." etc. Strip a few
-        # common prefixes so the downstream scorer sees the answer span, not the prose.
-        for prefix in (
-            r"^the answer is[\s:]+",
-            r"^answer[\s:]+",
-            r"^final answer[\s:]+",
-            r"^therefore[\s,]+",
-            r"^so[\s,]+",
-            r"^let me[\s,]+",
-            r"^let's[\s,]+",
-            r"^to determine[\s,]+.*?,\s*",
-            r"^breaking this down[\s,]+",
-            r"^the final holders? is[\s:]+",
-            r"^the holder is[\s:]+",
-            r"^the role is[\s:]+",
-        ):
-            text = re.sub(prefix, "", text, flags=re.IGNORECASE)
-        # Natural-language models often emit a preamble such as
-        # "Let's track the swaps: r2". FactWorld's atomic tokenizer has no colon,
-        # so any colon is prose punctuation; discard everything up to it.
-        if ":" in text:
-            text = text.split(":", 1)[1]
-        # Some models list all holders/values (e.g. "g0, g2, g4"). For tasks that
-        # ask for the final single item, keep only the last element.
-        if "," in text:
-            text = text.rsplit(",", 1)[1]
-        text = text.strip()
-        # Chat-model tokenizers often emit "v56." while FactWorld's atomic
-        # tokenizer expects "v56 .". Normalize a trailing period that is glued
-        # to the preceding token so exact-match scoring is meaningful.
-        text = re.sub(r"(?<=\S)\.$", " .", text)
-        return text
+        return self._normalize_answer(
+            text, self.answer_mode, stop_at, getattr(choice, "finish_reason", None)
+        )
 
     def generate(self, prompts: list[str], max_new_tokens: int, stop_at: str | None = None) -> list[str]:
         stop = [stop_at] if stop_at is not None else None
@@ -528,6 +545,134 @@ class APIBackend(ModelBackend):
     @property
     def name(self) -> str:
         return f"api-{self.model}"
+
+
+class ResponsesBackend(APIBackend):
+    """Backend for an OpenAI-compatible ``/v1/responses`` endpoint (e.g. Meta Model API).
+
+    Reuses ``APIBackend``'s concurrency, retry, metadata, and answer-mode plumbing
+    but speaks the Responses API request/response shape:
+
+      - request: ``input`` (string or message list) + ``max_output_tokens``
+      - response: ``output[]`` messages containing ``output_text`` parts
+      - no ``stop`` sequence parameter (the protocol does not use ``stop_at`` for
+        Responses-backed cells)
+    """
+
+    def _extract_text(self, response: Any) -> str:
+        """Pull the assistant text out of a Response object."""
+        # SDK convenience property (OpenAI client >= 2.40)
+        output_text = getattr(response, "output_text", None)
+        if output_text:
+            return output_text
+        for item in getattr(response, "output", []) or []:
+            if getattr(item, "type", None) != "message":
+                continue
+            for part in getattr(item, "content", []) or []:
+                if getattr(part, "type", None) == "output_text":
+                    return getattr(part, "text", "") or ""
+        return ""
+
+    def _record_call(self, response: Any | None, error: str | None = None) -> dict[str, Any]:
+        """Append and return one per-call metadata record for a Response object."""
+        if response is None:
+            record = {
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "reasoning_tokens": 0},
+                "served_model": None,
+                "provider": None,
+                "finish_reason": None,
+                "error": error,
+            }
+            with self._meta_lock:
+                self._call_meta.append(record)
+            return record
+
+        usage = getattr(response, "usage", None)
+        details = getattr(usage, "output_tokens_details", None) or getattr(
+            usage, "completion_tokens_details", None
+        )
+        reasoning_tokens = getattr(details, "reasoning_tokens", None) if details else None
+        if reasoning_tokens is None:
+            reasoning_tokens = getattr(usage, "reasoning_tokens", None)
+
+        status = getattr(response, "status", None)
+        finish_reason = "stop" if status == "completed" else status
+
+        record = {
+            "usage": {
+                "prompt_tokens": getattr(usage, "input_tokens", 0) or 0,
+                "completion_tokens": getattr(usage, "output_tokens", 0) or 0,
+                "reasoning_tokens": reasoning_tokens or 0,
+            },
+            "served_model": getattr(response, "model", None),
+            "provider": getattr(response, "provider", None),
+            "finish_reason": finish_reason,
+            "error": error,
+        }
+        with self._meta_lock:
+            self._call_meta.append(record)
+        return record
+
+    def _call_one(
+        self, prompt: str, max_new_tokens: int, stop: list[str] | None, stop_at: str | None
+    ) -> tuple[str, dict[str, Any]]:
+        """One Responses-API call (with retries) -> ``(post-processed text, per-example meta)``."""
+        input_param: str | list[dict[str, str]]
+        if self.system_prompt is not None:
+            input_param = [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": prompt},
+            ]
+        else:
+            input_param = prompt
+
+        body: dict[str, Any] = {
+            "model": self.model,
+            "input": input_param,
+            "temperature": 0,
+            "top_p": 1,
+            "max_output_tokens": max_new_tokens,
+        }
+        if self.extra_body:
+            body.update(self.extra_body)
+
+        max_retries = 5
+        response = None
+        for attempt in range(max_retries):
+            try:
+                response = self.client.responses.create(**body)
+                break
+            except openai.RateLimitError as exc:
+                if attempt == max_retries - 1:
+                    self._record_call(None, error=f"{type(exc).__name__}: {exc}")
+                    raise
+                headers = getattr(exc.response, "headers", {}) or {}
+                hdr = {k.lower(): v for k, v in (headers.items() if hasattr(headers, "items") else [])}
+                if "retry-after" in hdr:
+                    wait = float(hdr["retry-after"])
+                elif "x-ratelimit-reset" in hdr:
+                    reset_ms = int(hdr["x-ratelimit-reset"])
+                    wait = max(0.5, (reset_ms / 1000.0) - time.time())
+                else:
+                    wait = 2 ** attempt
+                time.sleep(wait)
+            except (openai.APIError, openai.APIConnectionError, openai.InternalServerError,
+                    ValueError) as exc:
+                if attempt == max_retries - 1:
+                    rec = self._record_call(None, error=f"{type(exc).__name__}: {exc}")
+                    return "", self._example_meta_from(rec)
+                time.sleep(2 ** attempt)
+
+        rec = self._record_call(response)
+        text = self._extract_text(response)
+        return (
+            self._normalize_answer(text, self.answer_mode, stop_at, rec["finish_reason"]),
+            self._example_meta_from(rec),
+        )
+
+    @property
+    def name(self) -> str:
+        return f"responses-{self.model}"
 
 
 class FunctionBackend(ModelBackend):

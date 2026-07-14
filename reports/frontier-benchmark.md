@@ -114,18 +114,18 @@ give-stream cells); pinned streams make cells resume byte-identically.
 
 ## 2. Benchmarking the frontier
 
-The recurring benchmark reads eleven frontier models through the instrument: the component legs
-first, then the composed cell in both regimes. One model (x-ai/grok-4.5) is thinking-only — its
-endpoint cannot disable reasoning, so it carries no instant numbers by design (the roster
-mechanics are under *Adding a model* below).
+The recurring benchmark reads twelve frontier models through the instrument: the component legs
+first, then the composed cell in both regimes. Two models are thinking-only — x-ai/grok-4.5 and
+muse-spark-1.1 — because their endpoints cannot disable reasoning, so they carry no instant
+numbers by design (the roster mechanics are under *Adding a model* below).
 
 ### Components
 
 **Recall.** The load axis for recall is pool breadth — how many facts the in-context map holds.
 Two cells are positive controls near ceiling: copy one fact out of a pool-6 map
 (`recall_copy_v1` @L6) and override a memorizable map with an in-context value (`conflict_v1`
-@L4); reasoning off, n=30 each — every model that runs the instant battery (ten of the eleven;
-grok-4.5 is thinking-only) scores 0.97–1.00 (sonnet-5's 0.97 recall is the only cell off 1.00).
+@L4); reasoning off, n=30 each — every model that runs the instant battery (ten of the twelve;
+grok-4.5 and muse-spark-1.1 are thinking-only) scores 0.97–1.00 (sonnet-5's 0.97 recall is the only cell off 1.00).
 Any model below ~1.0 there would flag a harness problem, not a capability difference.
 
 **Recall under load.** The measured load row scales the pool with the length:
@@ -148,6 +148,7 @@ n=100): state tracking isolated from recall, read against the floors of §1.
 | deepseek/deepseek-v4-pro | 0.51 |
 | google/gemini-3.5-flash | 0.66* |
 | moonshotai/kimi-k2.6 | ≤0.94† |
+| muse-spark-1.1 | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.49 |
 | openai/gpt-5.5 | 0.80 |
 | openai/gpt-5.6-sol | 0.82 |
@@ -213,6 +214,7 @@ the binding leg; the gap is the composition deficit.
 | deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ |
 | google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* |
 | moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† |
+| muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ |
 | openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 |
 | openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 |
@@ -279,6 +281,7 @@ settings, plus a practical efficiency column:
 | deepseek/deepseek-v4-pro | ⊘ @32,768tok (raised budget) | ⊘ | 10043 |
 | google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
+| muse-spark-1.1 | 0.88ʳ | 1.00ʳ | 9704 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ @32,768tok (raised budget) | ⊘ | 12250 |
 | openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
 | openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
@@ -290,10 +293,10 @@ n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one thinking test-ret
 differences under ~0.2 are not an ordering.
 
 `⊘` cells are not measurable at the stated budget: majority finish=length, so the score
-reflects the token budget rather than the ability. The two s5 cells marked @32,768tok (raised budget) are the
-demonstration that the mark means what it says: at 16,384 tokens opus and sonnet emitted no
-visible answer on any of their 25 s5 L256 calls; at 32,768 both solve all 25 with clean stops
-(opus ctok mean 23,898, max 28,986; sonnet mean 24,071 — the cells simply need ~24k tokens).
+reflects the token budget rather than the ability. The s5 cells marked @32,768tok (raised budget) are the
+demonstration that the mark means what it says: at 16,384 tokens opus, sonnet, and muse-spark-1.1 emitted no
+visible answer on most or all of their 25 s5 L256 calls; at 32,768 all three solve all 25 with clean stops
+(opus ctok mean 23,898, max 28,986; sonnet mean 24,071; muse-spark mean 24,434 — the cells simply need ~24k tokens).
 Deepseek's chain d128 is the contrast case: rerun at the same 32,768 budget it still hits
 length on 19/25 calls (median ctok = the cap) and scores 0.08 — still budget-bound, so its ⊘
 stands with the budget stated. Nemotron's chain d128 raise (bought on its completion evidence:
@@ -304,22 +307,29 @@ requested cap) exceeded the token cap on >10% of calls, so those token spends ar
 cap-comparable.
 (Deepseek's superseded 16,384-token chain d128 attempt also escaped the cap; the published
 32,768 rerun did not — max ctok is exactly the cap.) `n/a` cells never ran: gpt-5.6-sol's s5
-@L256, and grok-4.5's chain d128 and every instant cell.
+@L256, grok-4.5's chain d128 and every instant cell, and muse-spark-1.1's every instant cell.
 
 The scores discriminate where the composed cell cannot: qwen (0.96 chain, 0.80 s5), gpt-5.6-sol
-(1.00 chain), and gemini-flash (0.88, 0.52) hold deep state under reasoning that they cannot
+(1.00 chain), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold deep state under reasoning that they cannot
 hold in weights, while
 opus and sonnet — the strongest clean instant composers — post the weakest measurable chain
 scores (0.08, 0.04) even as they solve s5 L256 outright once the budget covers their ~24k-token
 traces. The efficiency column is the practical note: token-hungry state tracking is
 rented, not owned. Gpt-5.5 holds 0.96 at s5 L256 while spending 6,989 ctok on the matched L128
 cell — 2.5x less than kimi's 17,418 for a similar score; gpt-5.6-sol is the cheapest on the
-roster at 2,657, with glm next at 6,282.
+roster at 2,657, followed by glm at 6,282 and muse-spark-1.1 at 9,704.
+
+Muse-spark-1.1 is served directly by the Meta Model API (`https://api.meta.ai/v1`) using the
+OpenAI Responses API, not OpenRouter. Like grok-4.5, its endpoint cannot disable reasoning:
+even `effort=minimal` emits thousands of reasoning tokens per call, so the instant contract
+cells (96-token cap) produce no visible answer and are unplanned. In the thinking regime it
+matches the strongest state-stress scores on the roster once the budget is raised to 32,768
+tokens, but its reasoning traces are expensive.
 
 **Depth dissociates by regime within one cell.** The chain d16 cell (k=33, deterministic items
 shared between regimes, n=25, chance ≈ 0.03) runs in both regimes. Thinking (effort=high, 16,384
-tokens): eight of eleven models score 1.00; gpt-5.6-sol and glm 0.96; nemotron 0.44. Instant
-(effort=none, contract, 96-token cap; grok-4.5 runs no instant cell): every model that answers
+tokens): nine of twelve models score 1.00; gpt-5.6-sol and glm 0.96; nemotron 0.44. Instant
+(effort=none, contract, 96-token cap; grok-4.5 and muse-spark-1.1 run no instant cell): every model that answers
 cleanly floors — gpt-5.5 0.08; gpt-5.6-sol, qwen, deepseek, and nemotron 0.00, glm 0.00† — and
 the other four spend the budget trying to emit working instead of an answer: opus and gemini-flash* hit the cap on 25/25 calls (canonical 0.00,
 escalated diagnostics 0.96 and 1.00 @512tok), sonnet on 18/25 (0.28, 0.96 @512tok), kimi on 16/25
@@ -348,12 +358,15 @@ well ahead). The thinking axes measure something intuition does not already cont
 
 ### Adding a model
 
-**Roster and pinning.** Eleven models via OpenRouter, registered in `factworld.benchmark.MODELS`
-(slug, tier, per-million pricing, capability flags); models removed from the roster render in the
-archived section of results.md, and their cells stay in history. x-ai is represented by
-grok-4.5, thinking facets only: its endpoint rejects effort=none outright and its
-effort=minimal arm still reasons covertly (547 rtok on an L16 probe), so the registry skips
-every instant facet structurally (`skip_facets`) and grok-4.5 carries no instant numbers.
+**Roster and pinning.** Twelve models in `factworld.benchmark.MODELS`
+(slug, tier, per-million pricing, capability flags): eleven via OpenRouter and muse-spark-1.1 via
+the direct Meta Model API (`https://api.meta.ai/v1`) using the OpenAI Responses API. Models
+removed from the roster render in the archived section of results.md, and their cells stay in
+history. x-ai is represented by grok-4.5, thinking facets only: its endpoint rejects effort=none
+outright and its effort=minimal arm still reasons covertly (547 rtok on an L16 probe), so the
+registry skips every instant facet structurally (`skip_facets`) and grok-4.5 carries no instant
+numbers. muse-spark-1.1 is the same shape: even effort=minimal emits ~5k rtok on a sanity probe
+and no visible answer within the 96-token instant cap, so it also skips every instant facet.
 Earlier xAI endpoints were not cleanly measurable — mainline grok's safety filter blocked a
 majority of the composite prompts as apparent gene/variant nomenclature, and grok-build was
 served with reasoning pinned at ~256k tokens regardless of the requested cap (its one measured
@@ -362,10 +375,9 @@ carries a pinned stream version, so existing cells resume byte-identically and o
 cells run.
 
 **Cost.** The 529-cell history at the time of this estimate carried $237.90 of API spend; the
-rendered artifact now counts 567 latest cells — the same 529 plus the appendix's 8 gap-stability
-(L32) and 7 commutative-roster cells, and the 23 gpt-5.6-sol / grok-4.5 cells, all bought after
-the estimate. The 45-cell zero-budget v2
-battery (5 legs, n=100 per model) costs roughly $0.65 per model — a 9-model pass ran an estimated $5.92. Adding one model runs from a
+rendered artifact now counts 576 latest cells — the same 567 plus the 9 muse-spark-1.1 cells
+(7 thinking cells plus 2 raised-budget reruns) bought after the estimate. The 50-cell zero-budget v2
+battery (5 legs, n=100 per model) costs roughly $0.65 per model — a 10-model pass runs an estimated $6.50. Adding one model runs from a
 few dollars for cheap models to a few tens of dollars for frontier pricing with long reasoning
 traces.
 

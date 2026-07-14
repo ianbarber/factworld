@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-13 13:07 UTC from `results/benchmark/history.jsonl` (567 latest cells).
+Generated 2026-07-14 00:08 UTC from `results/benchmark/history.jsonl` (574 latest cells).
 
 ## Settings
 
@@ -40,6 +40,7 @@ History also contains zero-budget cells on composite_copy_v1; the zero-budget co
 | deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ | ±0.00 | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 10043 |
 | google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 | 0.88 | 0.52 | 11022 |
 | moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | ±0.06 | 0.64‡ | 0.88 | 17418 |
+| muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a | n/a | 0.88 @32,768tok (raised budget) | 1.00 @32,768tok (raised budget) | 9704 |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 12250 |
 | openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 | ±0.00 | 0.36 | 0.96 | 6989 |
 | openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 | ±0.05 | 1.00 | n/a | 2657 |
@@ -94,6 +95,7 @@ Two instant cells beyond the composite headline, same protocol (reasoning off, o
 | deepseek/deepseek-v4-pro | 1.00 | 0.00 |
 | google/gemini-3.5-flash | 1.00* | 0.00 (diag 1.00 @512tok)*† |
 | moonshotai/kimi-k2.6 | 1.00 | 0.32 (diag 0.96 @512tok)† |
+| muse-spark-1.1 | n/a | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.00 |
 | openai/gpt-5.5 | 1.00 | 0.08 |
 | openai/gpt-5.6-sol | 1.00 | 0.00 |
@@ -376,6 +378,13 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 0.98 [0.93, 0.99] | — | — |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.84 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.93 [0.86, 0.97] | 0.95 | ‡ cap-escape |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
+| muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.40 | — |
+| muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_instant | chain_v1 | 16 | contract, effort=none | 25 | 0.00 [0.00, 0.13] | 0.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.44 [0.27, 0.63] | 0.44 | — |
@@ -859,6 +868,13 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.020 | 0 | 0 | 40 | stop:100 | — |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.080 | 0 | 0 | 65 | length:1, stop:92 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.030 | 0 | 0 | 81 | stop:98 | ‡ cap-escape |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 36177 | stop:25 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 74957 | stop:25 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 191568 | stop:25 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 128 | effort=high | 0.080 | 0 | 0 | 449036 | incomplete:2, stop:23 | — |
+| muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 0.000 | 0 | 0 | 114743 | stop:25 | — |
+| muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 242298 | stop:25 | — |
+| muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 467720 | stop:25 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 5435 | stop:30 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_instant | chain_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:25 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 0.160 | 0 | 0 | 83841 | length:3, stop:22 | — |

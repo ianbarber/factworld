@@ -154,13 +154,13 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 ## 2. Benchmarking the frontier
 
-Eleven frontier models through the instrument, two regimes: **instant** (reasoning off, one-line
+Twelve frontier models through the instrument, two regimes: **instant** (reasoning off, one-line
 answer contract — what the weights compute) and **thinking** (effort=high, generous budgets —
-what reasoning buys); one model (x-ai/grok-4.5) is thinking-only — its endpoint cannot disable
-reasoning — and carries no instant numbers by design. The two rankings are near-orthogonal, so
-profiles are per-axis, never a single scalar. Full narrative, marks glossary, and the
-add-a-model path: [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md); rendered
-tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchmark/results.md).
+what reasoning buys); two models are thinking-only — x-ai/grok-4.5 and muse-spark-1.1 — because
+their endpoints cannot disable reasoning, so they carry no instant numbers by design. The two
+rankings are near-orthogonal, so profiles are per-axis, never a single scalar. Full narrative,
+marks glossary, and the add-a-model path: [`reports/frontier-benchmark.md`](reports/frontier-benchmark.md);
+rendered tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchmark/results.md).
 
 <!-- FRONTIER_TABLE_START -->
 | Model | binding @L16 | composed @L16 | composed @L64 | gap | chain d128 | s5 @L256 |
@@ -170,6 +170,7 @@ tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchma
 | deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | —ᶠ | ⊘ʳ | ⊘ |
 | google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* | 0.88 | 0.52 |
 | moonshotai/kimi-k2.6 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | 0.64‡ | 0.88 |
+| muse-spark-1.1 | n/a | n/a | n/a | n/a | 0.88ʳ | 1.00ʳ |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | —ᶠ | ⊘ʳ | ⊘ |
 | openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 | 0.36 | 0.96 |
 | openai/gpt-5.6-sol | 0.82 | 0.65 | 0.33 | +0.17 | 1.00 | n/a |
