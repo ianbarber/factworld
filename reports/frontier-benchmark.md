@@ -41,8 +41,8 @@ partial credit (`factworld.tasks.score_relaxed`); containment is the one publish
 Wilson 95% intervals per cell are in the rendered tables. The rendered `README.md` and
 `docs/benchmark/results.md` headline blocks separate the instant-composition cells from the
 thinking state-stress cells, and `docs/benchmark/results.md` includes an S5 efficiency ranking
-that sorts ceiling-solvers by cost per call. Task items are deterministic from fixed seeds, so
-any cell can be reproduced independently.
+that sorts ceiling-solvers by completion-token efficiency. Task items are deterministic from fixed
+seeds, so any cell can be reproduced independently.
 
 ### Floors
 
@@ -318,27 +318,35 @@ The scores discriminate where the composed cell cannot: qwen (0.96 chain, 0.80 s
 hold in weights, while
 opus and sonnet — the strongest clean instant composers — post the weakest measurable chain
 scores (0.08, 0.04) even as they solve s5 L256 outright once the budget covers their ~24k-token
-traces.
+traces. gpt-5.6-sol's s5 @L256 is `n/a` because that cell was never bought for this roster pass;
+there is no measured failure — it simply wasn't run.
 
-**S5 efficiency at ceiling.** Several models solve s5 @L256, but the matched L128 cell cost per
-call (prompt + completion, every model runs the same cell) spans an order of magnitude — so once
-a model reaches ceiling, efficiency becomes the practical discriminator:
+**S5 efficiency at ceiling.** Several models solve s5 @L256, but the matched L128 cell completion-token
+spend (every model runs the same cell) spans a wide range — so once a model reaches ceiling, token
+efficiency becomes the practical discriminator:
 
-| Model | s5 @L256 | s5@128 $/call |
+| Model | s5 @L256 | s5@128 ctok/call |
 |---|---|---|
-| muse-spark-1.1 | 1.00ʳ @32,768tok | $0.0437 |
-| x-ai/grok-4.5 | 1.00‡ | $0.0527 |
-| anthropic/claude-sonnet-5 | 1.00ʳ @32,768tok | $0.1259 |
-| openai/gpt-5.5 | 0.96 | $0.2194 |
-| anthropic/claude-opus-4.8 | 1.00ʳ @32,768tok | $0.3351 |
+| x-ai/grok-4.5 | 1.00‡ | 8069 |
+| muse-spark-1.1 | 1.00ʳ @32,768tok | 9704 |
+| anthropic/claude-sonnet-5 | 1.00ʳ @32,768tok | 11866 |
+| anthropic/claude-opus-4.8 | 1.00ʳ @32,768tok | 12683 |
+| openai/gpt-5.5 | 0.96 | 6989 |
 
 The full roster ranking (including non-ceiling models) is rendered live in
 `docs/benchmark/results.md#s5-efficiency-ranking`.
 
 The efficiency column is the practical note: token-hungry state tracking is
-rented, not owned. Gpt-5.6-sol is the cheapest per call on the roster at 2,657 ctok, but it did
-not run s5 @L256; among the ceiling solvers muse-spark-1.1 is the cheapest at $0.044/call and
-opus the most expensive at $0.335/call — almost an 8x spread for the same perfect s5 score.
+rented, not owned. gpt-5.6-sol is the cheapest per call on the roster at 2,657 ctok, but it did
+not run s5 @L256; among the models that score ≥0.95 at s5 @L256, grok-4.5 uses the fewest tokens
+(8,069 ctok) and opus the most (12,683 ctok) for the same perfect score. grok-4.5's `‡` means its
+provider did not enforce the requested cap, so that token spend is not strictly cap-comparable.
+
+Kimi's instant composed scores look high (≤0.94† / ≤0.77† / ≤0.93†) because its cells carry the
+same `†` leak: the model emits reasoning tokens on 65–89% of zero-budget calls despite
+effort=none, and its provider does not enforce the token cap. Those numbers are explicit upper
+bounds, not in-weights ability; the composed @L64 score exceeding @L16 is a covert-reasoning
+artifact, not a length effect.
 
 Muse-spark-1.1 is served directly by the Meta Model API (`https://api.meta.ai/v1`) using the
 OpenAI Responses API, not OpenRouter. Like grok-4.5, its endpoint cannot disable reasoning:
@@ -394,15 +402,6 @@ served with reasoning pinned at ~256k tokens regardless of the requested cap (it
 cycle sits in the archived section). Task items are deterministic from fixed seeds; each spec
 carries a pinned stream version, so existing cells resume byte-identically and only genuinely new
 cells run.
-
-**Cost.** The 529-cell history at the time of the original estimate carried $237.90 of API spend; the
-rendered artifact then counted 567 latest cells — the same 529 plus the appendix's 8 gap-stability
-(L32) and 7 commutative-roster cells, and the 23 gpt-5.6-sol / grok-4.5 cells, all bought after
-the estimate. Adding muse-spark-1.1 cost an estimated $10.59 for its thinking-only cells, bringing
-the rendered count to 576 latest cells. The 50-cell zero-budget v2
-battery (5 legs, n=100 per model) costs roughly $0.65 per model — a 10-model instant pass now runs an estimated $6.50. Adding one model runs from a
-few dollars for cheap models to a few tens of dollars for frontier pricing with long reasoning
-traces.
 
 Register the slug in `factworld.benchmark.MODELS` (tier, pricing, flags), then:
 

@@ -339,9 +339,10 @@ EFFICIENCY_NOTE = (
     "(selection bias: the published 2.7x opus-vs-kimi ctok/solve gap is ~1.4x on the "
     "matched cell).")
 S5_EFFICIENCY_NOTE = (
-    "S5 efficiency ranking: models sorted by estimated cost per call on the matched "
-    f"s5_concrete L{S5_EFF_LENGTH} cell (the cell every current-roster model runs). "
-    "At s5 @L256 several models hit 1.00, so per-call cost is the practical discriminator.")
+    "S5 efficiency ranking: models sorted by s5 @L256 score, then by s5@128 "
+    "completion tokens per call (lower is better) on the matched s5_concrete "
+    f"L{S5_EFF_LENGTH} cell (the cell every current-roster model runs). "
+    "At s5 @L256 several models hit 1.00, so token efficiency is the practical discriminator.")
 # v1-only facets whose headline scalars are kept in separate archived tables
 # (the historical facet name dose_response stays in the archived headers only —
 # 'dose' terminology is purged from all active labels/prose).
@@ -906,11 +907,10 @@ def headline_efficiency(records, model):
 
 def s5_efficiency_rows(records):
     """S5 efficiency ranking: models that solve (or attempt) s5 @L256 and the
-    matched cost of the L128 cell. Ceiling-solvers (score >= 0.95 at s5 @L256)
-    are ranked first by estimated cost per call on the matched s5_concrete L128
-    cell; non-ceiling / censored models follow, also sorted by cost. The matched
-    L128 cell is the fairest per-model efficiency comparison because every
-    current-roster model runs it."""
+    matched completion-token efficiency of the L128 cell. Sorted by s5 @L256 score
+    descending, then by s5@128 ctok per call ascending. The matched L128 cell is
+    the fairest per-model efficiency comparison because every current-roster model
+    runs it."""
     rows = []
     for m in roster_models(records):
         score_rec = stress_cell(records, "s5_concrete", m, S5_STRESS_LENGTH)
@@ -918,31 +918,22 @@ def s5_efficiency_rows(records):
         if eff_rec is None:
             continue
         n = eff_rec.get("n") or 0
-        cost = (eff_rec.get("usage") or {}).get("cost_usd_est")
         ctok = (eff_rec.get("usage") or {}).get("completion_tokens")
         score = stress_value_str(score_rec)
         ctok_per = ctok / n if n > 0 and ctok is not None else None
-        cost_per = cost / n if n > 0 and cost is not None else None
-        # parse a numeric score when present (strip marks/escalation suffix)
-        score_num = None
-        m_num = re.search(r"(\d+\.\d+|\.\d+|\d+)", score.replace("n/a", ""))
-        if m_num:
-            try:
-                score_num = float(m_num.group(1))
-            except ValueError:
-                pass
-        ceiling = score_num is not None and score_num >= 0.95 and not score.startswith(CENSORED_CELL)
+        score_num = _numeric_value(score)
         censored = score.startswith(CENSORED_CELL)
         rows.append((
-            0 if ceiling else (2 if censored else 1),  # sort ceiling first
-            float("inf") if cost_per is None else cost_per,
-            m,
-            score,
-            "n/a" if ctok_per is None else f"{ctok_per:.0f}",
-            "n/a" if cost_per is None else f"${cost_per:.4f}",
+            (1 if censored else 0,
+             -(score_num if score_num is not None else 0),
+             ctok_per if ctok_per is not None else float("inf"),
+             m),
+            [m,
+             score,
+             "n/a" if ctok_per is None else f"{ctok_per:.0f}"],
         ))
-    rows.sort(key=lambda r: (r[0], r[1], r[2]))
-    return [[r[2], r[3], r[4], r[5]] for r in rows]
+    rows.sort(key=lambda r: r[0])
+    return [r[1] for r in rows]
 
 
 def headline_recall(records, model):
@@ -1177,6 +1168,43 @@ def headline_rows(records):
     return rows
 
 
+def _numeric_value(cell):
+    """First numeric value in a rendered cell, or None. Strips marks and status text."""
+    s = str(cell).replace("n/a", "").replace("—", "")
+    m = re.search(r"(\d+\.\d+|\.\d+|\d+)", s)
+    try:
+        return float(m.group(1)) if m else None
+    except ValueError:
+        return None
+
+
+def _is_floor_row(label):
+    return str(label).startswith(HEURISTIC_LABEL) or str(label).startswith(OBJECT_FILTER_LABEL)
+
+
+def sort_instant_rows(rows):
+    """Sort model rows by composed @L16 descending; floor rows stay at the bottom."""
+    models = [r for r in rows if not _is_floor_row(r[0])]
+    floors = [r for r in rows if _is_floor_row(r[0])]
+    # composed @L16 is index 3 in headline rows
+    models.sort(key=lambda r: (_numeric_value(r[3]) is None, -(_numeric_value(r[3]) or 0)))
+    return models + floors
+
+
+def sort_thinking_rows(rows):
+    """Sort model rows by s5 @L256 descending, then s5@128 ctok ascending;
+    floor rows stay at the bottom."""
+    models = [r for r in rows if not _is_floor_row(r[0])]
+    floors = [r for r in rows if _is_floor_row(r[0])]
+    # s5 @L256 is index 8, ctok is index 9
+    def key(r):
+        s5 = _numeric_value(r[8])
+        ctok = _numeric_value(r[9])
+        return (s5 is None, -(s5 or 0), ctok if ctok is not None else float("inf"))
+    models.sort(key=key)
+    return models + floors
+
+
 def _v1_facet_row(records, m):
     """One ARCHIVED_COLUMNS row of v1-facet headline scalars for one model."""
     dr, dr_eff = headline_dose_response(records, m)
@@ -1278,9 +1306,11 @@ def update_readme_frontier(records, readme_path=None) -> bool:
         return False
     rows = list(headline_rows(records))
     instant_lines = ["**Instant composition (reasoning off, answer contract)**", ""]
-    instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP, rows)
+    instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP,
+                                          sort_instant_rows(rows))
     thinking_lines = ["", "**Thinking state-stress (reasoning on)**", ""]
-    thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP, rows)
+    thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP,
+                                           sort_thinking_rows(rows))
     lines = instant_lines + thinking_lines
     block = README_FRONTIER_START + "\n" + "\n".join(lines) + "\n" + README_FRONTIER_END
     new = text[:start] + block + text[end + len(README_FRONTIER_END):]
@@ -1364,7 +1394,7 @@ def write_results_md(records, out_path, history_path):
         lines += [note, ""]
     lines += ["| " + " | ".join(inst_cols) + " |",
               "|" + "---|" * len(inst_cols)]
-    for row in headline_rows(records):
+    for row in sort_instant_rows(list(headline_rows(records))):
         lines.append("| " + " | ".join(str(c) for c in row[:len(inst_cols)]) + " |")
     lines += ["", FLOOR_NOTE, ""]
     if any(not canonical_arm(r) for r in records):
@@ -1386,7 +1416,7 @@ def write_results_md(records, out_path, history_path):
               ""]
     lines += ["| " + " | ".join(think_cols) + " |",
               "|" + "---|" * len(think_cols)]
-    for row in headline_rows(records):
+    for row in sort_thinking_rows(list(headline_rows(records))):
         # floor rows belong to the instant table only
         label = str(row[0])
         if label.startswith(HEURISTIC_LABEL) or label.startswith(OBJECT_FILTER_LABEL):
@@ -1398,8 +1428,8 @@ def write_results_md(records, out_path, history_path):
     if s5_eff:
         lines += ["## S5 efficiency ranking", "",
                   S5_EFFICIENCY_NOTE, "",
-                  "| Model | s5 @L256 | s5@128 ctok/call | s5@128 $/call |",
-                  "|---|---|---|---|"]
+                  "| Model | s5 @L256 | s5@128 ctok/call |",
+                  "|---|---|---|"]
         for r in s5_eff:
             lines.append("| " + " | ".join(r) + " |")
         lines.append("")
@@ -1522,7 +1552,7 @@ CSV_FIELDS = [
     "contract_rate", "covert_cot_rate", "rtok_leak_rate", "rtok_per_call",
     "rtok_any_rate", "escalated",
     "escalated_match", "cap_escape", "finish_reasons",
-    "prompt_tokens", "completion_tokens", "reasoning_tokens", "cost_usd_est", "elapsed_s",
+    "prompt_tokens", "completion_tokens", "reasoning_tokens", "elapsed_s",
     "note",
 ]
 
@@ -1569,7 +1599,7 @@ def write_results_csv(records, out_path):
                 "prompt_tokens": u.get("prompt_tokens"),
                 "completion_tokens": u.get("completion_tokens"),
                 "reasoning_tokens": u.get("reasoning_tokens"),
-                "cost_usd_est": u.get("cost_usd_est"), "elapsed_s": r.get("elapsed_s"),
+                "elapsed_s": r.get("elapsed_s"),
                 "note": (lambda note: "" if note == "—" else note)(cell_note(r)),
             })
 
@@ -2198,10 +2228,10 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         f"<figure>{_inline_svg(p)}</figure>" for p in svg_paths if p.endswith(".svg")
     )
 
-    instant_rows = [row[:len(inst_cols)] for row in head_rows]
+    instant_rows = [row[:len(inst_cols)] for row in sort_instant_rows(head_rows)]
     thinking_rows = [
         [row[0]] + row[len(inst_cols):]
-        for row in head_rows
+        for row in sort_thinking_rows(head_rows)
         if not str(row[0]).startswith(HEURISTIC_LABEL)
         and not str(row[0]).startswith(OBJECT_FILTER_LABEL)
     ]
@@ -2211,7 +2241,7 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         s5_eff_html = (
             "<h3>S5 efficiency ranking</h3>\n"
             f'<p class="small">{html.escape(S5_EFFICIENCY_NOTE)}</p>\n'
-            + _html_table(["Model", "s5 @L256", "s5@128 ctok/call", "s5@128 $/call"],
+            + _html_table(["Model", "s5 @L256", "s5@128 ctok/call"],
                           s5_eff_rows)
         )
 

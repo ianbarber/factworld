@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-14 11:33 UTC from `results/benchmark/history.jsonl` (574 latest cells).
+Generated 2026-07-14 11:46 UTC from `results/benchmark/history.jsonl` (574 latest cells).
 
 ## Settings
 
@@ -35,18 +35,18 @@ History also contains zero-budget cells on composite_copy_v1; the zero-budget co
 
 | Model | instant: recall (sanity, recall_copy_v1) | instant: state tracking (binding_only @L16, v2) | instant: composed @L16 (match, v2) | instant: composed @L64 (v2) | instant: composition gap (binding_only - composed @L16) | instant: replicate noise (|composed - replicate| @L16) |
 |---|---|---|---|---|---|---|
-| anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 | ±0.05 |
-| anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (diag 0.76 @512tok)† | 0.32 (diag 0.66 @512tok)† | +0.15† | ±0.03 |
-| deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ | ±0.00 |
-| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 |
 | moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | ±0.06 |
-| muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a | n/a |
-| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 |
-| openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 | ±0.00 |
+| anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 | ±0.05 |
 | openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 | ±0.05 |
-| qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ | ±0.01 |
-| x-ai/grok-4.5 | n/a | n/a | n/a | n/a | n/a | n/a |
+| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 |
+| anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (diag 0.76 @512tok)† | 0.32 (diag 0.66 @512tok)† | +0.15† | ±0.03 |
+| openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 | ±0.00 |
+| deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ | ±0.00 |
 | z-ai/glm-5.2 | 1.00 | 0.71 | 0.38† | 0.13 | +0.33† | ±0.01 |
+| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 |
+| qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ | ±0.01 |
+| muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a | n/a |
+| x-ai/grok-4.5 | n/a | n/a | n/a | n/a | n/a | n/a |
 | recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | — | — |
 | object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | — | — |
 
@@ -84,18 +84,18 @@ Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 
 | Model | thinking: chain d128 (chain_nowrap, k=257, match) | thinking: s5 @L256 (s5_concrete, match) | thinking: s5@128 ctok |
 |---|---|---|---|
-| anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
-| anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
-| deepseek/deepseek-v4-pro | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 10043 |
-| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
-| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
-| muse-spark-1.1 | 0.88 @32,768tok (raised budget) | 1.00 @32,768tok (raised budget) | 9704 |
-| nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 12250 |
-| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
-| openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
-| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
 | x-ai/grok-4.5 | n/a | 1.00‡ | 8069 |
+| muse-spark-1.1 | 0.88 @32,768tok (raised budget) | 1.00 @32,768tok (raised budget) | 9704 |
+| anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
+| anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
+| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
 | z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
+| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
+| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
+| openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
+| deepseek/deepseek-v4-pro | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 12250 |
 
 Thinking columns: n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one thinking test-retest pair moved 0.16 — differences under ~0.2 are not an ordering.
 
@@ -103,22 +103,22 @@ s5@128 ctok: completion tokens per call on the matched s5_concrete L128 cell (ru
 
 ## S5 efficiency ranking
 
-S5 efficiency ranking: models sorted by estimated cost per call on the matched s5_concrete L128 cell (the cell every current-roster model runs). At s5 @L256 several models hit 1.00, so per-call cost is the practical discriminator.
+S5 efficiency ranking: models sorted by s5 @L256 score, then by s5@128 completion tokens per call (lower is better) on the matched s5_concrete L128 cell (the cell every current-roster model runs). At s5 @L256 several models hit 1.00, so token efficiency is the practical discriminator.
 
-| Model | s5 @L256 | s5@128 ctok/call | s5@128 $/call |
-|---|---|---|---|
-| muse-spark-1.1 | 1.00 @32,768tok (raised budget) | 9704 | $0.0437 |
-| x-ai/grok-4.5 | 1.00‡ | 8069 | $0.0527 |
-| anthropic/claude-sonnet-5 | 1.00 @32,768tok (raised budget) | 11866 | $0.1259 |
-| openai/gpt-5.5 | 0.96 | 6989 | $0.2194 |
-| anthropic/claude-opus-4.8 | 1.00 @32,768tok (raised budget) | 12683 | $0.3351 |
-| z-ai/glm-5.2 | 0.88 | 6282 | $0.0207 |
-| qwen/qwen3.7-max | 0.80 | 7904 | $0.0323 |
-| moonshotai/kimi-k2.6 | 0.88 | 17418 | $0.0607 |
-| openai/gpt-5.6-sol | n/a | 2657 | $0.0894 |
-| google/gemini-3.5-flash | 0.52 | 11022 | $0.1025 |
-| deepseek/deepseek-v4-pro | ⊘ >budget | 10043 | $0.0096 |
-| nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget | 12250 | $0.0279 |
+| Model | s5 @L256 | s5@128 ctok/call |
+|---|---|---|
+| x-ai/grok-4.5 | 1.00‡ | 8069 |
+| muse-spark-1.1 | 1.00 @32,768tok (raised budget) | 9704 |
+| anthropic/claude-sonnet-5 | 1.00 @32,768tok (raised budget) | 11866 |
+| anthropic/claude-opus-4.8 | 1.00 @32,768tok (raised budget) | 12683 |
+| openai/gpt-5.5 | 0.96 | 6989 |
+| z-ai/glm-5.2 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 0.88 | 17418 |
+| qwen/qwen3.7-max | 0.80 | 7904 |
+| google/gemini-3.5-flash | 0.52 | 11022 |
+| openai/gpt-5.6-sol | n/a | 2657 |
+| deepseek/deepseek-v4-pro | ⊘ >budget | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget | 12250 |
 
 The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the d128 cell is k=257). `chain_v1` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 

@@ -167,18 +167,18 @@ rendered tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](doc
 
 | Model | binding @L16 | composed @L16 | composed @L64 | gap |
 |---|---|---|---|---|
-| anthropic/claude-opus-4.8 | 0.78 | 0.72 | 0.43 | +0.06 |
-| anthropic/claude-sonnet-5 | 0.77 | 0.62† | 0.32† | +0.15† |
-| deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | —ᶠ |
-| google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* |
 | moonshotai/kimi-k2.6 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† |
-| muse-spark-1.1 | n/a | n/a | n/a | n/a |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | —ᶠ |
-| openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 |
+| anthropic/claude-opus-4.8 | 0.78 | 0.72 | 0.43 | +0.06 |
 | openai/gpt-5.6-sol | 0.82 | 0.65 | 0.33 | +0.17 |
-| qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | —ᶠ |
-| x-ai/grok-4.5 | n/a | n/a | n/a | n/a |
+| google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* |
+| anthropic/claude-sonnet-5 | 0.77 | 0.62† | 0.32† | +0.15† |
+| openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 |
+| deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | —ᶠ |
 | z-ai/glm-5.2 | 0.71 | 0.38† | 0.13 | +0.33† |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | —ᶠ |
+| qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | —ᶠ |
+| muse-spark-1.1 | n/a | n/a | n/a | n/a |
+| x-ai/grok-4.5 | n/a | n/a | n/a | n/a |
 | *recency heuristic (floor)* | 0.04 | 0.04 | 0.06 | — |
 | *object-filter floor* | 0.41 | 0.41 | 0.15 | — |
 
@@ -186,33 +186,39 @@ rendered tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](doc
 
 | Model | chain d128 | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
-| anthropic/claude-opus-4.8 | 0.08 | 1.00ʳ | 12683 |
-| anthropic/claude-sonnet-5 | 0.04 | 1.00ʳ | 11866 |
-| deepseek/deepseek-v4-pro | ⊘ʳ | ⊘ | 10043 |
-| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
-| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
-| muse-spark-1.1 | 0.88ʳ | 1.00ʳ | 9704 |
-| nvidia/nemotron-3-ultra-550b-a55b | ⊘ʳ | ⊘ | 12250 |
-| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
-| openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
-| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
 | x-ai/grok-4.5 | n/a | 1.00‡ | 8069 |
+| muse-spark-1.1 | 0.88ʳ | 1.00ʳ | 9704 |
+| anthropic/claude-sonnet-5 | 0.04 | 1.00ʳ | 11866 |
+| anthropic/claude-opus-4.8 | 0.08 | 1.00ʳ | 12683 |
+| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
 | z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
+| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
+| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
+| openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
+| deepseek/deepseek-v4-pro | ⊘ʳ | ⊘ | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | ⊘ʳ | ⊘ | 12250 |
 <!-- FRONTIER_TABLE_END -->
 
 The instant columns are `composite_copy_v2` cells (match, n=100): the binding leg (state
 tracking), the composed two-hop, and **gap** = binding − composed @L16, the composition
 deficit; the thinking columns are the state-stress cells — chain d128 (`chain_nowrap`, k=257: a
 128-hop pointer chase) and s5 @L256 (`s5_concrete`: 256 permutation events) — at effort=high,
-16,384 tokens, n=25. Marks: `†` visible working or covert reasoning on the canonical attempt,
-`≤x†` an explicit upper bound (covert reasoning on most calls), `*` off-arm ran effort=minimal
-(cannot disable reasoning), `ʳ` single rerun at a raised 32,768-token budget, `‡` provider
-ignored the token cap, `⊘` not measurable at this budget (majority finish=length) — neither ⊘
-nor ≤x† participates in orderings — `—ᶠ` gap not interpretable (binding at the object-filter
-floor), `n/a` cell not run, `—` not applicable to a floor row. Escalated instant cells show the
-canonical first attempt (their @512tok diagnostics are in the report); the two floor rows are
-the shallow baselines every instant cell is read against — the recency heuristic and the
-object-filter floor E[1/w].
+16,384 tokens, n=25.
+
+Marks:
+- `†` visible working or covert reasoning on the canonical attempt.
+- `≤x†` an explicit upper bound (covert reasoning on most calls); neither `⊘` nor `≤x†` participates in orderings.
+- `*` off-arm ran effort=minimal (cannot disable reasoning).
+- `ʳ` single rerun at a raised 32,768-token budget.
+- `‡` provider ignored the token cap.
+- `⊘` not measurable at this budget (majority finish=length).
+- `—ᶠ` gap not interpretable (binding at the object-filter floor).
+- `n/a` cell not run; `—` not applicable to a floor row.
+
+Escalated instant cells show the canonical first attempt (their @512tok diagnostics are in the
+report); the two floor rows are the shallow baselines every instant cell is read against — the
+recency heuristic and the object-filter floor E[1/w].
 
 Recall is not the constraint: the recall sanity cells read 0.97–1.00 for every model that runs
 them, recall under load (`recall_copy_v1` pool-64 @L64, chance 0.016) reads 1.00 for all ten
