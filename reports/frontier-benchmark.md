@@ -343,7 +343,10 @@ The full roster ranking (including budget-censored models) is rendered live in
 
 The efficiency column is the practical note: token-hungry state tracking is
 rented, not owned. gpt-5.6-sol is by far the cheapest per call on the roster at 2,657 ctok, and it
-reaches 0.72 on s5 @L256 without a raised budget — a cheap pointer-chase/state-stress partial.
+reaches 0.72 on s5 @L256 without a raised budget — but that cheapness comes with a length
+extrapolation cliff: it is perfect on the same task at L128 (1.00) and then drops to 0.72 when the
+stream doubles to 256 events. Its wrong answers are not concentrated on a single event type; the
+model simply does not spend enough tokens to track the full 256-step permutation history reliably.
 Among the models that score ≥0.95 at s5 @L256, grok-4.5 uses the fewest tokens (8,069 ctok) and
 opus the most (12,683 ctok) for the same perfect score. grok-4.5's `‡` means its provider did not
 enforce the requested cap, so that token spend is not strictly cap-comparable.
