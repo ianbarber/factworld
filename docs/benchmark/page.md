@@ -42,8 +42,8 @@ Four figures carry the shape of the results:
 
 1. `fig_zero_budget.png` — Components vs. composition with reasoning off: state tracking beside the composed two-hop cell — the annotated gap is what composing costs each model.
    *Alt text:* Grouped bar chart of the current model roster with reasoning off. For each model, bars show state tracking at length 16, the composed two-hop task at lengths 16 and 64, and a test-retest replicate, with Wilson 95% error bars and the composition gap annotated (a floor marker where the gap is not interpretable). Models are ordered by the composed length-16 score; models whose instant numbers are upper bounds from covert reasoning are hatched and placed last, outside the ordering. The legend sits outside the plot area.
-2. `fig_profiles.png` — One profile per model: its normalized position on every axis, instant and thinking side by side — the reason this page has no single ranking.
-   *Alt text:* Small-multiples panel, one chart per current-roster model. Horizontal bars give each model's normalized position on six axes — state tracking, composed score, composition gap (inverted), pointer-chase depth 128, S5 at length 256, and completion tokens on the matched S5 cell (inverted) — with raw values printed beside the bars; unmeasurable cells are gaps, not zeros.
+2. `fig_profiles_instant.png` / `fig_profiles_thinking.png` — Split profile grids: one panel per model, with the instant grid showing binding, composed, and gap, and the thinking grid showing pointer-chase depth, S5 at length 256, and completion-token efficiency — the reason this page has no single ranking.
+   *Alt text:* Two small-multiples panels. The instant panel shows one chart per instant-measured model, with horizontal bars for binding, composed, and gap (inverted). The thinking panel shows one chart per current-roster model, with horizontal bars for chain depth 128, S5 at length 256, and completion tokens on the matched S5 cell (inverted). Raw values are printed beside the bars; unmeasurable cells are gaps, not zeros.
 3. `fig_chain_nowrap.png` — Pointer chases with reasoning on: score vs. chain depth — the instant-regime leaders are not the leaders here.
    *Alt text:* Line chart of match accuracy versus pointer-chase depth, 16 to 128 on a log scale, with reasoning enabled; one line per current-roster model (legend outside the plot area), hollow markers where the token budget ran out before an answer.
 4. `fig_s5_horizon.png` — Permutation state with reasoning on: tracking five people across five jobs through up to 256 swap/cycle events.
@@ -51,4 +51,4 @@ Four figures carry the shape of the results:
 
 ---
 
-Last updated: 2026-07-13 · 11 models · data, methodology, and the add-a-model path: [github.com/ianbarber/factworld](https://github.com/ianbarber/factworld).
+Last updated: 2026-07-13 · 12 models · data, methodology, and the add-a-model path: [github.com/ianbarber/factworld](https://github.com/ianbarber/factworld).

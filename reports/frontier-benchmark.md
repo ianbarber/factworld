@@ -371,12 +371,14 @@ read against.
 
 ### Profiles
 
-The two regimes never merge into one number; the per-model view is the profile grid
-([`docs/benchmark/fig_profiles.png`](../docs/benchmark/fig_profiles.png), regenerated every
-render cycle): one panel per roster model, its normalized position on each axis — binding
-@L16, composed @L16, the gap (inverted: smaller better), chain d128, s5 @L256, and s5@128
-ctok (inverted) — with raw values and marks alongside, and ⊘/never-run cells drawn as gaps
-rather than zeros. Read against a pinned intuitive ranking of the roster
+The two regimes never merge into one number; the per-model view is split into two profile
+grids ([`fig_profiles_instant.png`](../docs/benchmark/fig_profiles_instant.png) and
+[`fig_profiles_thinking.png`](../docs/benchmark/fig_profiles_thinking.png), regenerated every
+render cycle): one panel per model, its normalized position on each axis — binding @L16,
+composed @L16, and gap (inverted: smaller better) for the instant grid; chain d128, s5 @L256,
+and s5@128 ctok (inverted) for the thinking grid — with raw values and marks alongside, and
+⊘/never-run cells drawn as gaps rather than zeros. Read against a pinned intuitive ranking of
+the roster
 ([`docs/benchmark/profiles-analysis.md`](../docs/benchmark/profiles-analysis.md) — a data note
 pinned to the nine-model roster; gpt-5.6-sol, grok-4.5, and muse-spark-1.1 postdate it), the axes
 split three ways: in-weights state tracking is what intuition tracks (binding @L16 Spearman

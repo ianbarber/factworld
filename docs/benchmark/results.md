@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-14 12:35 UTC from `results/benchmark/history.jsonl` (574 latest cells).
+Generated 2026-07-14 23:05 UTC from `results/benchmark/history.jsonl` (574 latest cells).
 
 ## Settings
 

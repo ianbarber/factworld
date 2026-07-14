@@ -786,14 +786,18 @@ def test_profile_values_and_figure():
     # binding stays score-ordered: model-a (0.95+0.05->1.0 capped) >= b >= c
     assert (a["binding @L16"]["norm"] >= b["binding @L16"]["norm"]
             >= c["binding @L16"]["norm"])
-    # the figure itself renders both formats
+    # the split figures render both formats
     with tempfile.TemporaryDirectory() as tmp:
         paths = RB.fig_profiles(recs, tmp)
-        assert [os.path.basename(p) for p in paths] == \
-            ["fig_profiles.png", "fig_profiles.svg"]
-        with open(paths[0], "rb") as fh:
-            assert fh.read(8) == PNG_MAGIC
-        ET.parse(paths[1])
+        assert sorted(os.path.basename(p) for p in paths) == \
+            ["fig_profiles_instant.png", "fig_profiles_instant.svg",
+             "fig_profiles_thinking.png", "fig_profiles_thinking.svg"]
+        for p in paths:
+            if p.endswith(".png"):
+                with open(p, "rb") as fh:
+                    assert fh.read(8) == PNG_MAGIC
+            else:
+                ET.parse(p)
 
 
 def test_pervasive_covert_and_floor_bound_gap():
@@ -928,7 +932,8 @@ def test_render_end_to_end():
         written = RB.render(history, out)
 
         expected = ["results.md", "results.csv", "index.html"]
-        for base in ["fig_zero_budget", "fig_profiles", "fig_dose_response",
+        for base in ["fig_zero_budget", "fig_profiles_instant",
+                     "fig_profiles_thinking", "fig_dose_response",
                      "fig_composite_length", "fig_s5_horizon", "fig_chain_depth",
                      "fig_chain_nowrap", "fig_decomposition"]:
             expected += [base + ".png", base + ".svg"]
