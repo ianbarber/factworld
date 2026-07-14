@@ -87,15 +87,14 @@ SYSTEM_PROMPT_EST_TOKENS = 90
 # slug -> tier, OpenRouter pricing (USD per million tokens), open_weights (the
 # fp8/bf16/fp16 quantization filter is only meaningful for open-weight models).
 #
-# Endpoint keys (OPTIONAL, muse-spark readiness 2026-07-12): an entry may carry
-#   {"base_url": str, "api_key_env": str}
-# for a model served OFF OpenRouter (a direct vendor endpoint). ``endpoint_for``
-# resolves them, defaulting to OpenRouter + OPENROUTER_API_KEY; the runner
-# builds each model's APIBackend against the resolved endpoint and skips the
-# OpenRouter-specific provider/quantization request options for direct
-# endpoints. muse-spark slots in with base_url=<vendor endpoint> +
-# api_key_env="MUSE_API_KEY" when the owner's key arrives (not on OpenRouter
-# as of 2026-07-12).
+# Endpoint keys (OPTIONAL): an entry may carry {"base_url": str,
+# "api_key_env": str, "responses_endpoint": bool} for a model served OFF
+# OpenRouter (a direct vendor endpoint). ``endpoint_for`` resolves them,
+# defaulting to OpenRouter + OPENROUTER_API_KEY; the runner builds each model's
+# backend against the resolved endpoint and skips the OpenRouter-specific
+# provider/quantization request options. ``responses_endpoint`` selects
+# ``ResponsesBackend`` instead of ``APIBackend`` for endpoints that speak the
+# OpenAI Responses API (e.g. Meta Model API /v1/responses).
 MODELS = {
     "anthropic/claude-opus-4.8": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
@@ -123,6 +122,21 @@ MODELS = {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.5,
         "completion_price_per_M": 9.0, "open_weights": False,
         "no_reasoning_effort": "minimal"},
+    # ADDED 2026-07-13. Muse Spark 1.1 is served directly by the Meta Model API
+    # (not OpenRouter) and speaks the OpenAI Responses API. The endpoint cannot
+    # disable reasoning; even effort=minimal emits ~5-9k reasoning tokens per
+    # call, so the 96-token instant contract cells are structurally unmeasurable
+    # (the model produces no visible answer within the cap). It therefore runs
+    # only the thinking facets, like x-ai/grok-4.5. Pricing from Meta's
+    # public-preview announcement: $1.25/$4.25 per M (verified 2026-07-13).
+    "muse-spark-1.1": {
+        "tier": "cheap_reasoner", "prompt_price_per_M": 1.25,
+        "completion_price_per_M": 4.25, "open_weights": False,
+        "base_url": "https://api.meta.ai/v1",
+        "api_key_env": "META_API_KEY",
+        "responses_endpoint": True,
+        "skip_facets": ("zero_budget", "recall_load", "chain_instant",
+                        "sanity", "gap_stability")},
     # x-ai REJOINS via grok-4.5, THINKING FACETS ONLY (probes 2026-07-12,
     # results/probes/new_models_20260712.jsonl; issue #15). History: x-ai was
     # unrepresented 2026-07-09..12 — mainline grok (4.20 AND 4.3) had a
@@ -179,10 +193,8 @@ MODELS = {
     #   - fablet: NOT YET SHIPPED — only anthropic/claude-fable-5 is listed
     #     ($10/$50 per M, newest Anthropic tier); watch for the smaller variant.
     #   - moonshotai/kimi-k2.7-code ($0.74/$3.50 per M).
-    #   - muse spark: not on OpenRouter; when the owner's key arrives it slots
-    #     in as a DIRECT-endpoint entry — {"base_url": <vendor endpoint>,
-    #     "api_key_env": "MUSE_API_KEY"} (see the endpoint-keys note above and
-    #     ``endpoint_for``).
+    #   - (muse-spark-1.1 was added 2026-07-13 via the Meta Model API; kept
+    #     here as provenance that this slot is now live.)
 }
 
 CANARY_MODEL = "z-ai/glm-5.2"

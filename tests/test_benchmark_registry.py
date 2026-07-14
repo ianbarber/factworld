@@ -53,12 +53,13 @@ def _efforts(cells, facet):
 # --- registry -------------------------------------------------------------------
 
 def test_registry_shape():
-    assert len(B.MODELS) == 11
+    assert len(B.MODELS) == 12
     # roster decisions 2026-07-07/08/09: maverick, gpt-5.4, gemini-3.1-pro
     # dropped; the UNMEASURABLE x-ai endpoints stay off the roster (mainline
     # grok bio-filtered on composite prompts; grok-build dropped for provider
     # pathology — pinned ~256k reasoning ignoring caps, cannot disable
     # reasoning). 2026-07-12 (issue #15): grok-4.5 and gpt-5.6-sol added.
+    # 2026-07-13: muse-spark-1.1 added via direct Meta Model API endpoint.
     for dropped in ("meta-llama/llama-4-maverick", "openai/gpt-5.4",
                     "google/gemini-3.1-pro-preview", "x-ai/grok-4.3",
                     "x-ai/grok-4.20", "x-ai/grok-build-0.1"):
@@ -78,6 +79,14 @@ def test_registry_shape():
                                         "chain_instant", "sanity",
                                         "gap_stability"}
     assert "no_reasoning_effort" not in grok  # a substituted off-arm would be dirty
+    muse = B.MODELS["muse-spark-1.1"]
+    assert muse["tier"] == "cheap_reasoner"
+    assert (muse["prompt_price_per_M"], muse["completion_price_per_M"]) == (1.25, 4.25)
+    assert muse["base_url"] == "https://api.meta.ai/v1"
+    assert muse["api_key_env"] == "META_API_KEY"
+    assert muse.get("responses_endpoint") is True
+    assert set(muse["skip_facets"]) == {"zero_budget", "recall_load",
+                                         "chain_instant", "sanity", "gap_stability"}
     for slug, reg in B.MODELS.items():
         assert reg["tier"] in B.TIERS, slug
         assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
@@ -322,18 +331,23 @@ def test_cell_dollar_cap():
 
 
 def test_endpoint_for_defaults_and_direct_entry():
-    """Per-model direct-endpoint support (muse-spark readiness): registry
-    entries MAY carry {"base_url", "api_key_env"}; everything else resolves to
-    the caller's default base URL + OPENROUTER_API_KEY. Every current roster
-    model is served via OpenRouter (no direct entries yet)."""
+    """Per-model direct-endpoint support: registry entries MAY carry
+    {"base_url", "api_key_env"}; everything else resolves to the caller's
+    default base URL + OPENROUTER_API_KEY. OpenRouter is the default; the live
+    muse-spark entry is the one direct-endpoint exception."""
     from unittest import mock
     for slug in B.MODELS:
+        if B.MODELS[slug].get("base_url"):
+            continue
         assert "base_url" not in B.MODELS[slug] and "api_key_env" not in B.MODELS[slug]
         assert B.endpoint_for(slug) == (B.DEFAULT_BASE_URL, B.DEFAULT_API_KEY_ENV)
     # the runner's --base-url passes through for OpenRouter models
     assert B.endpoint_for("z-ai/glm-5.2", default_base_url="http://mirror:8080/v1") == \
         ("http://mirror:8080/v1", "OPENROUTER_API_KEY")
-    # a direct entry (the muse-spark shape) overrides BOTH, beating the CLI default
+    # the live muse-spark direct entry overrides both, beating the CLI default
+    assert B.endpoint_for("muse-spark-1.1", default_base_url="http://mirror:8080/v1") == \
+        ("https://api.meta.ai/v1", "META_API_KEY")
+    # a synthetic direct entry (the historical test shape) also overrides both
     fake = {"tier": "cheap_reasoner", "prompt_price_per_M": 1.0,
             "completion_price_per_M": 2.0, "open_weights": False,
             "base_url": "https://api.muse.example/v1", "api_key_env": "MUSE_API_KEY"}
@@ -343,20 +357,23 @@ def test_endpoint_for_defaults_and_direct_entry():
 
 
 def test_build_backend_direct_endpoint():
-    """The runner builds each model's APIBackend against endpoint_for's
+    """The runner builds each model's backend against endpoint_for's
     resolution: a fake direct entry gets its own base_url + key env (and never
     the OpenRouter-specific provider/quantization request options); a missing
     key env fails loudly; default models keep the CLI endpoint + OpenRouter key
-    (with the open-weights quantization filter intact)."""
+    (with the open-weights quantization filter intact). Direct entries flagged
+    ``responses_endpoint`` use ``ResponsesBackend``."""
     from unittest import mock
     cell = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "sanity")
     fake = {"tier": "cheap_reasoner", "prompt_price_per_M": 1.0,
             "completion_price_per_M": 2.0, "open_weights": True,  # would filter on OpenRouter
-            "base_url": "https://api.muse.example/v1", "api_key_env": "MUSE_API_KEY"}
+            "base_url": "https://api.muse.example/v1", "api_key_env": "MUSE_API_KEY",
+            "responses_endpoint": True}
     with mock.patch.dict(B.MODELS, {"muse/spark-1.1": fake}), \
          mock.patch.dict(os.environ, {"MUSE_API_KEY": "muse-key"}):
         be = RFB.build_backend("muse/spark-1.1", cell, api_key="or-key",
                                base_url=B.DEFAULT_BASE_URL, max_workers=2)
+        assert isinstance(be, RFB.ResponsesBackend)
         assert str(be.client.base_url).rstrip("/") == "https://api.muse.example/v1"
         assert be.client.api_key == "muse-key"
         # provider/quantization is an OpenRouter routing option: never sent to
@@ -376,6 +393,7 @@ def test_build_backend_direct_endpoint():
     # default (OpenRouter) model: CLI endpoint + passed key + quantization filter
     be2 = RFB.build_backend("z-ai/glm-5.2", cell, api_key="or-key",
                             base_url=B.DEFAULT_BASE_URL, max_workers=2)
+    assert isinstance(be2, RFB.APIBackend)
     assert str(be2.client.base_url).rstrip("/") == B.DEFAULT_BASE_URL
     assert be2.client.api_key == "or-key"
     assert be2.extra_body["provider"]["quantizations"] == ["fp8", "bf16", "fp16"]
@@ -1021,17 +1039,19 @@ def test_skip_facets_machinery():
     motivating case; grok-4.5 is the LIVE case since 2026-07-12 — no clean
     off-arm, so every "off"-policy facet is unplanned and its cell plan is
     thinking facets only). The full-roster zero_budget plan covers the other
-    10 models."""
+    11 models (all except grok-4.5)."""
     from unittest import mock
-    # grok-4.5 is the only roster model that skips facets
+    # grok-4.5 and muse-spark-1.1 are thinking-only and skip instant facets
+    THINKING_ONLY = {"x-ai/grok-4.5", "muse-spark-1.1"}
     for slug in B.MODELS:
-        if slug != "x-ai/grok-4.5":
+        if slug not in THINKING_ONLY:
             assert not B.MODELS[slug].get("skip_facets")
-    grok_cells = B.arms_for("x-ai/grok-4.5")
-    assert {c["facet"] for c in grok_cells} == {"s5_concrete", "chain_nowrap",
-                                                "commutative"}
-    # every planned grok cell is a reasoning-ON arm (there is no off arm at all)
-    assert {c["settings"]["effort"] for c in grok_cells} == {"high"}
+    for slug in THINKING_ONLY:
+        cells = B.arms_for(slug)
+        assert {c["facet"] for c in cells} == {"s5_concrete", "chain_nowrap",
+                                                  "commutative"}
+        # every planned cell is a reasoning-ON arm (there is no off arm at all)
+        assert {c["settings"]["effort"] for c in cells} == {"high"}
     # simulate a partial-skip model without mutating the real registry
     fake = {**B.MODELS["z-ai/glm-5.2"], "skip_facets": ("zero_budget",)}
     with mock.patch.dict(B.MODELS, {"z-ai/glm-5.2": fake}):
@@ -1043,7 +1063,7 @@ def test_skip_facets_machinery():
                                                "gap_stability"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
     assert sum(len(cells) for cells in plan.values()) == 50  # 10 models x 5 zero_budget cells
-    assert sum(1 for cells in plan.values() if cells) == 10  # grok-4.5 plans none
+    assert sum(1 for cells in plan.values() if cells) == 10  # grok-4.5 and muse-spark-1.1 plan none
 
 
 def test_v2_task_cells_get_fresh_resume_keys():

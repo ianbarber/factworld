@@ -96,7 +96,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from factworld import s5_concrete as S5
 from factworld import tasks as TK
-from factworld.backends import APIBackend
+from factworld.backends import APIBackend, ResponsesBackend
 from factworld.benchmark import (
     CANARY_MODEL,
     CELL_BUDGET_FACTOR,
@@ -447,7 +447,8 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
         # direct vendor endpoint (which would reject the unknown field).
         extra_body["provider"] = {"require_parameters": False,
                                   "quantizations": ["fp8", "bf16", "fp16"]}
-    return APIBackend(
+    backend_cls = ResponsesBackend if reg.get("responses_endpoint") else APIBackend
+    return backend_cls(
         model=model,
         api_key=api_key,
         base_url=base_url,

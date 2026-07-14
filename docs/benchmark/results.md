@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-13 13:07 UTC from `results/benchmark/history.jsonl` (567 latest cells).
+Generated 2026-07-14 11:46 UTC from `results/benchmark/history.jsonl` (574 latest cells).
 
 ## Settings
 
@@ -21,7 +21,7 @@ Observed generation settings (effort -> max_new_tokens, stop_at; annotated with 
 - effort=none: max_new_tokens=2048, stop_at=None — facets: composite_length, decomposition, dose_response, floor, sanity
 - effort=none: max_new_tokens=96, stop_at=None — facets: chain_instant, gap_stability, recall_load, zero_budget
 
-## Headline (current roster)
+## Instant headline (current roster)
 
 Current roster only (factworld.benchmark.MODELS); models dropped from the roster render in the archived-models section below.
 
@@ -33,21 +33,22 @@ Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 
 History also contains zero-budget cells on composite_copy_v1; the zero-budget columns below use the latest task's records (composite_copy_v2) only — the archived task's cells remain in the per-cell tables.
 
-| Model | instant: recall (sanity, recall_copy_v1) | instant: state tracking (binding_only @L16, v2) | instant: composed @L16 (match, v2) | instant: composed @L64 (v2) | instant: composition gap (binding_only - composed @L16) | instant: replicate noise (|composed - replicate| @L16) | thinking: chain d128 (chain_nowrap, k=257, match) | thinking: s5 @L256 (s5_concrete, match) | thinking: s5@128 ctok |
-|---|---|---|---|---|---|---|---|---|---|
-| anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 | ±0.05 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
-| anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (diag 0.76 @512tok)† | 0.32 (diag 0.66 @512tok)† | +0.15† | ±0.03 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
-| deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ | ±0.00 | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 10043 |
-| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 | 0.88 | 0.52 | 11022 |
-| moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | ±0.06 | 0.64‡ | 0.88 | 17418 |
-| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 12250 |
-| openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 | ±0.00 | 0.36 | 0.96 | 6989 |
-| openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 | ±0.05 | 1.00 | n/a | 2657 |
-| qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ | ±0.01 | 0.96 | 0.80 | 7904 |
-| x-ai/grok-4.5 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | 1.00‡ | 8069 |
-| z-ai/glm-5.2 | 1.00 | 0.71 | 0.38† | 0.13 | +0.33† | ±0.01 | 0.36 | 0.88 | 6282 |
-| recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | — | — | — | — | — |
-| object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | — | — | — | — | — |
+| Model | instant: recall (sanity, recall_copy_v1) | instant: state tracking (binding_only @L16, v2) | instant: composed @L16 (match, v2) | instant: composed @L64 (v2) | instant: composition gap (binding_only - composed @L16) | instant: replicate noise (|composed - replicate| @L16) |
+|---|---|---|---|---|---|---|
+| moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | ±0.06 |
+| anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 | ±0.05 |
+| openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 | ±0.05 |
+| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 |
+| anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (diag 0.76 @512tok)† | 0.32 (diag 0.66 @512tok)† | +0.15† | ±0.03 |
+| openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 | ±0.00 |
+| deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ | ±0.00 |
+| z-ai/glm-5.2 | 1.00 | 0.71 | 0.38† | 0.13 | +0.33† | ±0.01 |
+| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 |
+| qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ | ±0.01 |
+| muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a | n/a |
+| x-ai/grok-4.5 | n/a | n/a | n/a | n/a | n/a | n/a |
+| recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | — | — |
+| object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | — | — |
 
 Read small-L zero-budget cells against the object-filter floor, not chance: the floor is inherent to last-write-wins (filter the stream to the queried object, guess among its w writes) and decays only ~1/L, so it sits well above chance at L16 — a score near the floor row shows object filtering, not state tracking; genuine last-write resolution has to clear it.
 
@@ -75,11 +76,49 @@ composition gap = state tracking (binding_only @L16) - composed @L16, marks from
 
 replicate noise: the zero_budget replicate leg (recorded as end_to_end in earlier runs) builds prompts IDENTICAL to the composed @L16 cell (same runner path), so |composed - replicate| is a test-retest delta; max across models = 0.06 — read that as the run-to-run noise bar on the headline numbers (including the gap column). Future runs keep this arm intentionally as leg='replicate'.
 
-⊘ >budget = not measurable at this budget: the cell's calls were majority finish=length (the token budget ran out before an answer), so the cell has no score at these settings.
+## Thinking headline (current roster)
+
+Thinking-regime state-stress cells (effort=high): chain d128 is a pointer chase 128 hops deep at fixed breadth k=257; s5 @L256 is non-abelian state tracking over 256 events. The s5@128 ctok column measures efficiency on the matched L128 cell that every current-roster model runs.
+
+Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a completion-token budget. Instant escalations render `(diag x.xx @512tok)`; thinking cells rerun at a raised budget render it with the number, e.g. `1.00 @32,768tok (raised budget)`.
+
+| Model | thinking: chain d128 (chain_nowrap, k=257, match) | thinking: s5 @L256 (s5_concrete, match) | thinking: s5@128 ctok |
+|---|---|---|---|
+| x-ai/grok-4.5 | n/a | 1.00‡ | 8069 |
+| muse-spark-1.1 | 0.88 @32,768tok (raised budget) | 1.00 @32,768tok (raised budget) | 9704 |
+| anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
+| anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
+| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
+| z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
+| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
+| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
+| openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
+| deepseek/deepseek-v4-pro | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 12250 |
 
 Thinking columns: n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one thinking test-retest pair moved 0.16 — differences under ~0.2 are not an ordering.
 
 s5@128 ctok: completion tokens per call on the matched s5_concrete L128 cell (run by every current-roster model). This replaces ctok/solve, which averaged only over cells a model SOLVED and therefore rewarded models that failed early (selection bias: the published 2.7x opus-vs-kimi ctok/solve gap is ~1.4x on the matched cell).
+
+## S5 efficiency ranking
+
+S5 efficiency ranking: models sorted by s5 @L256 score, then by s5@128 completion tokens per call (lower is better) on the matched s5_concrete L128 cell (the cell every current-roster model runs). At s5 @L256 several models hit 1.00, so token efficiency is the practical discriminator.
+
+| Model | s5 @L256 | s5@128 ctok/call |
+|---|---|---|
+| x-ai/grok-4.5 | 1.00‡ | 8069 |
+| muse-spark-1.1 | 1.00 @32,768tok (raised budget) | 9704 |
+| anthropic/claude-sonnet-5 | 1.00 @32,768tok (raised budget) | 11866 |
+| anthropic/claude-opus-4.8 | 1.00 @32,768tok (raised budget) | 12683 |
+| openai/gpt-5.5 | 0.96 | 6989 |
+| z-ai/glm-5.2 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 0.88 | 17418 |
+| qwen/qwen3.7-max | 0.80 | 7904 |
+| google/gemini-3.5-flash | 0.52 | 11022 |
+| openai/gpt-5.6-sol | n/a | 2657 |
+| deepseek/deepseek-v4-pro | ⊘ >budget | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget | 12250 |
 
 The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the d128 cell is k=257). `chain_v1` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
@@ -94,6 +133,7 @@ Two instant cells beyond the composite headline, same protocol (reasoning off, o
 | deepseek/deepseek-v4-pro | 1.00 | 0.00 |
 | google/gemini-3.5-flash | 1.00* | 0.00 (diag 1.00 @512tok)*† |
 | moonshotai/kimi-k2.6 | 1.00 | 0.32 (diag 0.96 @512tok)† |
+| muse-spark-1.1 | n/a | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.00 |
 | openai/gpt-5.5 | 1.00 | 0.08 |
 | openai/gpt-5.6-sol | 1.00 | 0.00 |
@@ -376,6 +416,13 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 0.98 [0.93, 0.99] | — | — |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.84 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.93 [0.86, 0.97] | 0.95 | ‡ cap-escape |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
+| muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.40 | — |
+| muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_instant | chain_v1 | 16 | contract, effort=none | 25 | 0.00 [0.00, 0.13] | 0.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 0.44 [0.27, 0.63] | 0.44 | — |
@@ -859,6 +906,13 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.020 | 0 | 0 | 40 | stop:100 | — |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.080 | 0 | 0 | 65 | length:1, stop:92 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.030 | 0 | 0 | 81 | stop:98 | ‡ cap-escape |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 36177 | stop:25 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 74957 | stop:25 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 191568 | stop:25 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v1 | 128 | effort=high | 0.080 | 0 | 0 | 449036 | incomplete:2, stop:23 | — |
+| muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 0.000 | 0 | 0 | 114743 | stop:25 | — |
+| muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 242298 | stop:25 | — |
+| muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 467720 | stop:25 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 5435 | stop:30 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_instant | chain_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:25 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_nowrap | chain_v1 | 16 | effort=high | 0.160 | 0 | 0 | 83841 | length:3, stop:22 | — |

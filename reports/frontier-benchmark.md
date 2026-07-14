@@ -38,13 +38,16 @@ shortcut — majority class, recency, first-position, entity-blind aggregates �
 task. Every score is **match**, the canonical metric: strip a trailing period from both sides and
 compare the model's first len(gold) whitespace tokens to the gold answer — binary per item, no
 partial credit (`factworld.tasks.score_relaxed`); containment is the one published diagnostic.
-Wilson 95% intervals per cell are in the rendered tables. Task items are deterministic from fixed
+Wilson 95% intervals per cell are in the rendered tables. The rendered `README.md` and
+`docs/benchmark/results.md` headline blocks separate the instant-composition cells from the
+thinking state-stress cells, and `docs/benchmark/results.md` includes an S5 efficiency ranking
+that sorts ceiling-solvers by completion-token efficiency. Task items are deterministic from fixed
 seeds, so any cell can be reproduced independently.
 
 ### Floors
 
 Two first-class rows. The *recency heuristic* (answer the last event's recipient)
-scores 0.04 @L16 and 0.06 @L64 — chance, because the v2 sampler places the queried object's last write uniformly
+scores 0.04 — chance, because the v2 sampler places the queried object's last write uniformly
 over the stream. The *object-filter floor* is E[1/w]: a reader that filters events to the queried
 object but picks a random write scores 0.41 @L16, decaying ~1/L to 0.15 @L64, with no last-write
 resolution at all. Instant cells are read against the object-filter floor, not chance: a score
@@ -58,13 +61,13 @@ Per-cell diagnostics gate publication: contract adherence, covert-CoT rate, reas
 rates, finish errors, and API errors. A zero-budget cell whose first attempt is majority
 finish=length is rerun once at a 512-token budget; the canonical value is always the first
 attempt, and the escalated value publishes only as the `(diag x.xx @512tok)` diagnostic. In the current
-v2 battery (the zero-budget battery of §2): 3 escalations (all sonnet-5), 0 API errors,
-0 finish errors, contract adherence 0.86–1.00.
+v2 battery: 3 escalations (all sonnet-5), 0 API errors, 0 finish errors, contract adherence
+0.86–1.00.
 
 | mark | meaning |
 |---|---|
 | `*` | the off-arm ran effort=minimal (the model cannot disable reasoning) |
-| `†` | visible working (ctok — completion tokens — median or mean per call above the 32-ctok working line, ~3× the 8–11-token answers, or a budget escalation) or covert reasoning (rtok — reasoning tokens — mean per call over the 2-rtok line despite effort=none) on the canonical instant attempt: not purely in-weights |
+| `†` | visible working (ctok — completion tokens — above the working line, or a budget escalation) or covert reasoning (rtok — reasoning tokens — despite effort=none) on the canonical instant attempt: not purely in-weights |
 | `≤x†` | pervasive covert reasoning — rtok on more than half the canonical attempt's calls: the score is an explicit upper bound |
 | `‡` | cap-escape — the provider ignored the token cap |
 | `⊘` | majority finish=length — not measurable at this budget |
@@ -76,16 +79,16 @@ v2 battery (the zero-budget battery of §2): 3 escalations (all sonnet-5), 0 API
 Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 completion-token budget.
 
-⊘ and ≤x† are the two contamination marks — one per regime (⊘ = not measurable at this budget;
-≤x† = upper bound, covert reasoning on most calls) — and are treated alike: neither participates
-in orderings — not in figure sorts, not in cross-model ordering prose.
+The contamination marks are symmetric: ⊘ = not measurable at this budget; ≤x† = upper bound,
+covert reasoning on most calls; neither participates in orderings — not in figure sorts, not in
+cross-model ordering prose.
 
 `⊘` is budget-conditional, not a verdict: a cell showing completion evidence under it is
 eligible for a single raised-budget rerun with the budget stated (two s5 cells cleared to 1.00
 at 32,768 tokens this way; deepseek's chain d128 stayed ⊘ at the same raise — §2). Nemotron's
 chain d128 showed completion evidence (12/25 clean stops, all wrong), so its raise was bought
 too: at 32,768 tokens it scores 0.00 with 16/25 still truncated — the failure is capability,
-not budget; every eligible cell has a raised-budget rerun on record.
+not budget, and the rule has now been applied to every eligible cell.
 
 Two methodological notes:
 
@@ -101,7 +104,7 @@ Two methodological notes:
 > draws events uniformly leaves the queried object's resolving write ~Geometric(1/4) from the end
 > of the stream, so a one-line recency heuristic (answer the last event's recipient) scores
 > 0.33 — indistinguishable from mid-roster state tracking. The current sampler places the queried
-> object's last write uniformly over the stream, which drives that heuristic to chance (0.04 @L16, 0.06 @L64) and
+> object's last write uniformly over the stream, which drives that heuristic to chance (0.06) and
 > exposes the object-filter floor as the real bar: cheap-tier models sit at or below the 0.41
 > floor where they previously looked mid-pack, and a local gdp_hybrid's binding leg drops
 > 0.99→0.82 @L16 and 0.70→0.23 @L64. Under the earlier recency-skewed sampler fprm's binding leg
@@ -114,24 +117,24 @@ give-stream cells); pinned streams make cells resume byte-identically.
 
 ## 2. Benchmarking the frontier
 
-The recurring benchmark reads eleven frontier models through the instrument: the component legs
-first, then the composed cell in both regimes. One model (x-ai/grok-4.5) is thinking-only — its
-endpoint cannot disable reasoning, so it carries no instant numbers by design (the roster
-mechanics are under *Adding a model* below).
+The recurring benchmark reads twelve frontier models through the instrument: the component legs
+first, then the composed cell in both regimes. Two models are thinking-only — x-ai/grok-4.5 and
+muse-spark-1.1 — because their endpoints cannot disable reasoning, so they carry no instant
+numbers by design (the roster mechanics are under *Adding a model* below).
 
 ### Components
 
 **Recall.** The load axis for recall is pool breadth — how many facts the in-context map holds.
 Two cells are positive controls near ceiling: copy one fact out of a pool-6 map
 (`recall_copy_v1` @L6) and override a memorizable map with an in-context value (`conflict_v1`
-@L4); reasoning off, n=30 each — every model that runs the instant battery (ten of the eleven;
-grok-4.5 is thinking-only) scores 0.97–1.00 (sonnet-5's 0.97 recall is the only cell off 1.00).
+@L4); reasoning off, n=30 each — every model that runs the instant battery (ten of the twelve;
+grok-4.5 and muse-spark-1.1 are thinking-only) scores 0.97–1.00 (sonnet-5's 0.97 recall is the only cell off 1.00).
 Any model below ~1.0 there would flag a harness problem, not a capability difference.
 
 **Recall under load.** The measured load row scales the pool with the length:
 `recall_copy_v1` @L64 with 64 distinct agents and facts (chance 1/64 ≈ 0.016), instant protocol
-(effort=none, answer contract, 96-token cap), n=50. All ten instant-measured models score
-1.00, with clean diagnostics throughout (contract 1.00, covert working 0.00). Single-query
+(effort=none, answer contract, 96-token cap), n=50. **All ten instant-measured models score
+1.00**, with clean diagnostics throughout (contract 1.00, covert working 0.00). Single-query
 deferred recall is at
 ceiling for this roster out to pool-64: whatever composition costs a frontier model, it is not
 the recall component.
@@ -148,6 +151,7 @@ n=100): state tracking isolated from recall, read against the floors of §1.
 | deepseek/deepseek-v4-pro | 0.51 |
 | google/gemini-3.5-flash | 0.66* |
 | moonshotai/kimi-k2.6 | ≤0.94† |
+| muse-spark-1.1 | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.49 |
 | openai/gpt-5.5 | 0.80 |
 | openai/gpt-5.6-sol | 0.82 |
@@ -170,21 +174,21 @@ chance 1/k = 0.20; the strongest of its four shallow adversaries (initial-only, 
 entity-blind-sum, count-mod-k) reads 0.22 on the validity gate (n=500, all four gated ≤ 0.4;
 `scripts/validate_suite.py`). Instant sits at the floors — glm
 0.24 @L16 / 0.12 @L64, deepseek 0.20 / 0.12 (effort=none, contract, n=25) — so the cell reads
-only in the thinking regime (effort=high, 8,192 tokens, @L64). Nine of the eleven ran the facet
-there; deepseek and glm reuse their calibration cells. The row is adjudicated under a
-pre-registered promotion bar (issue #18): it joins the headline only if it produces at least
-three tiers whose Wilson 95% intervals separate. Result (n=25, with a pre-registered
+only in the thinking regime (effort=high, 8,192 tokens, @L64). The full roster ran there under
+a pre-registered promotion bar (issue #18), except muse-spark-1.1, which was not added to this
+experimental row: the row joins the headline only if it produces at
+least three tiers whose Wilson 95% intervals separate. Result (n=25, with a pre-registered
 top-up to n=50 at the one tier boundary): gpt-5.5 0.96 [0.80, 0.99]; opus, gemini-flash, qwen
 0.80 [0.61, 0.91]; deepseek 0.80 (calibration cell, reused); kimi 0.66 (n=50) [0.52, 0.78]‡;
-sonnet 0.64 (n=50) [0.50, 0.76]; glm 0.52 [0.34, 0.70] (calibration cell, reused); nemotron
-0.44 [0.27, 0.63]. Only gpt-5.5 separates from the bottom four, and the 0.80 group overlaps
-both ends — two fuzzy tiers, not three separated ones — so the row stays experimental. The two
-cells bought after the adjudication (gpt-5.6-sol 0.76 [0.57, 0.89]; grok-4.5 0.72 [0.52, 0.86])
-land inside the overlapping middle and do not change the verdict (per-cell values in
+sonnet 0.64 (n=50) [0.50, 0.76]; glm 0.52 [0.34, 0.70]; nemotron 0.44 [0.27, 0.63]. Only
+gpt-5.5 separates from the bottom four, and the 0.80 group overlaps both ends — two fuzzy
+tiers, not three separated ones, so the row **stays experimental**; the two cells bought after
+the adjudication (gpt-5.6-sol 0.76 [0.57, 0.89], grok-4.5 0.72 [0.52, 0.86]) land inside the
+overlapping middle and do not change it (per-cell values in
 `docs/benchmark/results.md`; calibration cells in `results/commutative_frontier/runs.jsonl`).
-Two findings from the row: no model is at ceiling (the composed cell is, at these lengths), and
-it carries a reversal — deepseek 0.80 over glm 0.52 — that no other axis shows. Locally the
-rung does not form at the binding operating point (§3.6).
+Two things it already earns its keep on: no model is at ceiling (the composed cell is,
+at these lengths), and it carries a reversal — deepseek 0.80 over glm 0.52 — that no other
+axis shows. Locally the rung does not form at the binding operating point (§3.6).
 
 ### Composition
 
@@ -196,12 +200,12 @@ binding_only@L16 − composed@L16.
 The gap isolates composition because the recall half is free: on the scaffolded leg (E1b) — the
 same `composite_copy_v2` items with the resolved holder provided (n=100, instant protocol) —
 recall reads 0.98–1.00 for every measurable roster model: 1.00 for seven of the ten that run
-it, nemotron 0.99, kimi 0.98. qwen3.7-max is ⊘ on this leg, and a four-arm probe localizes
-why. It answers
+it, nemotron 0.99, kimi 0.98; qwen3.7-max is ⊘ on this leg, and a four-arm probe localizes
+why: it answers
 the scaffolded question correctly on every probed call (the gold value appears in the raw text
 10/10 in all four arms) but never obeys the exact contract line "Reply with only one line:
-Answer: <value>" (0/10 compliance, unchanged at a 512-token cap and with no contract at all).
-A reworded contract line gets 10/10 compliance and 10/10 scored — a contract-phrasing
+Answer: <value>" (0/10 compliance, unchanged at a 512-token cap and with no contract at all),
+while a reworded contract line gets 10/10 compliance and 10/10 scored — a contract-phrasing
 interaction on this leg, not a recall failure (`results/qwen_scaffold_probe/`). Its
 recall-given-holder is at ceiling like the rest of the roster; the ⊘ stands because the leg's
 published protocol is the fixed contract. If composing were free, the composed cell would match
@@ -214,6 +218,7 @@ the binding leg; the gap is the composition deficit.
 | deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ |
 | google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* |
 | moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† |
+| muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ |
 | openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 |
 | openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 |
@@ -224,8 +229,7 @@ the binding leg; the gap is the composition deficit.
 | *object-filter floor* | — | 0.41 | 0.41 | 0.15 | — |
 
 The run-to-run noise bar on every instant number is 0.06: the battery carries a `replicate` leg
-(prompts identical to the composed @L16 cell; the leg appears as `end_to_end` in some
-history.jsonl records), and the
+(prompts identical to the plain @L16 cell; recorded as end_to_end in earlier runs), and the
 maximum observed |plain − replicate| across models is 0.06.
 
 **Reading the gap.** It is interpretable only where the binding component is established. For
@@ -245,18 +249,18 @@ take no part in these orderings.
 **Marks on this table, in plain language.** Sonnet's cells were the battery's only budget
 escalations (majority finish=length at 96 tokens); the canonical numbers are the first attempts,
 the `@512tok` values single-rerun diagnostics. Kimi emitted reasoning tokens on 65–89% of
-zero-budget calls despite effort=none — past the >50% pervasive line — so its instant cells
-render as explicit upper bounds (≤x†) and are excluded from orderings. Its provider also does
-not enforce the token cap, so its numbers overstate in-weights ability by an unknown margin.
-Its composed @L64 exceeding @L16 is that covert-reasoning artifact, not a length effect. Glm's
+zero-budget calls despite effort=none — past the >50% pervasive line, so its instant cells render
+as explicit upper bounds (≤x†) and are excluded from orderings — and its provider does not
+enforce the token cap, so its numbers overstate in-weights ability by an unknown margin; its
+composed @L64 exceeding @L16 is that covert-reasoning artifact, not a length effect. Glm's
 marked composed cell carries a small covert-reasoning leak (rtok on ~3% of calls, mean 2.9 per
 call — over the 2-rtok line, nowhere near the pervasive bar). Gemini-flash cannot disable
 reasoning; its off-arm ran effort=minimal throughout.
 
 ### Composition under reasoning
 
-With reasoning on, the composed cell reads at or near ceiling at canonical settings where
-measured — 0.98–1.00 on the effort=high arm of the v2 dose-response cell (kimi 1.00, glm 0.98
+With reasoning on, the composed cell reads at or near ceiling at canonical settings across this
+roster — 0.98–1.00 on the effort=high arm of the v2 dose-response cell (kimi 1.00, glm 0.98
 @L16, n=50; `results/reasoning_sweep_20260710_125924.jsonl`), and the calibration
 probes hold glm at 0.92–1.00 on v2 out to L1024 at k=32 (`results/v3_probes/`,
 `results/composite_frontier_20260709.jsonl`). That is a calibration fact about the settings, so
@@ -271,16 +275,17 @@ settings, plus a practical efficiency column:
   reasoning-off floor arm on the abstract rendering scores 0.00–0.30. Cells whose diagnostics
   showed truncation with completion evidence were rerun once at 32,768 tokens (the raised
   budget is stated wherever it applies).
-- **s5 @L128 ctok** — completion tokens per call on the matched s5 L128 cell, which every roster
+- **s5@128 ctok** — completion tokens per call on the matched s5 L128 cell, which every roster
   model ran (a per-solve average would reward early failure; the matched-cell total does not).
 
-| Model | chain d128 (k=257) | s5 @L256 | s5 @L128 ctok |
+| Model | chain d128 (k=257) | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
 | anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
 | anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
 | deepseek/deepseek-v4-pro | ⊘ @32,768tok (raised budget) | ⊘ | 10043 |
 | google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
+| muse-spark-1.1 | 0.88ʳ | 1.00ʳ | 9704 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ @32,768tok (raised budget) | ⊘ | 12250 |
 | openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
 | openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
@@ -292,10 +297,10 @@ n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one thinking test-ret
 differences under ~0.2 are not an ordering.
 
 `⊘` cells are not measurable at the stated budget: majority finish=length, so the score
-reflects the token budget rather than the ability. The two s5 cells marked @32,768tok (raised
-budget) demonstrate this: at 16,384 tokens opus and sonnet emitted no
-visible answer on any of their 25 s5 L256 calls; at 32,768 both solve all 25 with clean stops
-(opus ctok mean 23,898, max 28,986; sonnet mean 24,071 — the cells need ~24k tokens).
+reflects the token budget rather than the ability. The s5 cells marked @32,768tok (raised budget) are the
+demonstration that the mark means what it says: at 16,384 tokens opus, sonnet, and muse-spark-1.1 emitted no
+visible answer on most or all of their 25 s5 L256 calls; at 32,768 all three solve all 25 with clean stops
+(opus ctok mean 23,898, max 28,986; sonnet mean 24,071; muse-spark mean 24,434 — the cells simply need ~24k tokens).
 Deepseek's chain d128 is the contrast case: rerun at the same 32,768 budget it still hits
 length on 19/25 calls (median ctok = the cap) and scores 0.08 — still budget-bound, so its ⊘
 stands with the budget stated. Nemotron's chain d128 raise (bought on its completion evidence:
@@ -306,24 +311,56 @@ requested cap) exceeded the token cap on >10% of calls, so those token spends ar
 cap-comparable.
 (Deepseek's superseded 16,384-token chain d128 attempt also escaped the cap; the published
 32,768 rerun did not — max ctok is exactly the cap.) `n/a` cells never ran: gpt-5.6-sol's s5
-@L256, and grok-4.5's chain d128 and every instant cell.
+@L256, grok-4.5's chain d128 and every instant cell, and muse-spark-1.1's every instant cell.
 
 The scores discriminate where the composed cell cannot: qwen (0.96 chain, 0.80 s5), gpt-5.6-sol
-(1.00 chain), and gemini-flash (0.88, 0.52) hold deep state under reasoning that they cannot
+(1.00 chain), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold deep state under reasoning that they cannot
 hold in weights, while
 opus and sonnet — the strongest clean instant composers — post the weakest measurable chain
 scores (0.08, 0.04) even as they solve s5 L256 outright once the budget covers their ~24k-token
-traces. The efficiency column reports the token cost: state tracking held only under reasoning
-is paid for in completion tokens on every call. Gpt-5.5 holds 0.96 at s5 L256 while spending
-6,989 ctok on the matched L128 cell — 40% of kimi's 17,418 for a similar score; gpt-5.6-sol is
-the cheapest on the roster at 2,657, with glm next at 6,282.
+traces. gpt-5.6-sol's s5 @L256 is `n/a` because that cell was never bought for this roster pass;
+there is no measured failure — it simply wasn't run.
+
+**S5 efficiency at ceiling.** Several models solve s5 @L256, but the matched L128 cell completion-token
+spend (every model runs the same cell) spans a wide range — so once a model reaches ceiling, token
+efficiency becomes the practical discriminator:
+
+| Model | s5 @L256 | s5@128 ctok/call |
+|---|---|---|
+| x-ai/grok-4.5 | 1.00‡ | 8069 |
+| muse-spark-1.1 | 1.00ʳ @32,768tok | 9704 |
+| anthropic/claude-sonnet-5 | 1.00ʳ @32,768tok | 11866 |
+| anthropic/claude-opus-4.8 | 1.00ʳ @32,768tok | 12683 |
+| openai/gpt-5.5 | 0.96 | 6989 |
+
+The full roster ranking (including non-ceiling models) is rendered live in
+`docs/benchmark/results.md#s5-efficiency-ranking`.
+
+The efficiency column is the practical note: token-hungry state tracking is
+rented, not owned. gpt-5.6-sol is the cheapest per call on the roster at 2,657 ctok, but it did
+not run s5 @L256; among the models that score ≥0.95 at s5 @L256, grok-4.5 uses the fewest tokens
+(8,069 ctok) and opus the most (12,683 ctok) for the same perfect score. grok-4.5's `‡` means its
+provider did not enforce the requested cap, so that token spend is not strictly cap-comparable.
+
+Kimi's instant composed scores look high (≤0.94† / ≤0.77† / ≤0.93†) because its cells carry the
+same `†` leak: the model emits reasoning tokens on 65–89% of zero-budget calls despite
+effort=none, and its provider does not enforce the token cap. Those numbers are explicit upper
+bounds, not in-weights ability; the composed @L64 score exceeding @L16 is a covert-reasoning
+artifact, not a length effect.
+
+Muse-spark-1.1 is served directly by the Meta Model API (`https://api.meta.ai/v1`) using the
+OpenAI Responses API, not OpenRouter. Like grok-4.5, its endpoint cannot disable reasoning:
+even `effort=minimal` emits thousands of reasoning tokens per call, so the instant contract
+cells (96-token cap) produce no visible answer and are unplanned. In the thinking regime it
+matches the strongest state-stress scores on the roster once the budget is raised to 32,768
+tokens, but its reasoning traces are expensive.
 
 **Depth dissociates by regime within one cell.** The chain d16 cell (k=33, deterministic items
 shared between regimes, n=25, chance ≈ 0.03) runs in both regimes. Thinking (effort=high, 16,384
-tokens): eight of eleven models score 1.00; gpt-5.6-sol and glm 0.96; nemotron 0.44. Instant
-(effort=none, contract, 96-token cap; grok-4.5 runs no instant cell): every model that answers
-cleanly floors (gpt-5.5 0.08; gpt-5.6-sol, qwen, deepseek, and nemotron 0.00; glm 0.00†). The
-other four spend the budget trying to emit working instead of an answer: opus and gemini-flash* hit the cap on 25/25 calls (canonical 0.00,
+tokens): nine of twelve models score 1.00; gpt-5.6-sol and glm 0.96; nemotron 0.44. Instant
+(effort=none, contract, 96-token cap; grok-4.5 and muse-spark-1.1 run no instant cell): every model that answers
+cleanly floors — gpt-5.5 0.08; gpt-5.6-sol, qwen, deepseek, and nemotron 0.00, glm 0.00† — and
+the other four spend the budget trying to emit working instead of an answer: opus and gemini-flash* hit the cap on 25/25 calls (canonical 0.00,
 escalated diagnostics 0.96 and 1.00 @512tok), sonnet on 18/25 (0.28, 0.96 @512tok), kimi on 16/25
 (0.32, 0.96 @512tok). The @512tok diagnostics are short visible working, not in-weights answers. A
 16-hop pointer chase is serial work: no roster model holds it in weights, and every strong model
@@ -335,41 +372,36 @@ read against.
 The two regimes never merge into one number; the per-model view is the profile grid
 ([`docs/benchmark/fig_profiles.png`](../docs/benchmark/fig_profiles.png), regenerated every
 render cycle): one panel per roster model, its normalized position on each axis — binding
-@L16, composed @L16, the gap (inverted: smaller better), chain d128, s5 @L256, and s5 @L128
+@L16, composed @L16, the gap (inverted: smaller better), chain d128, s5 @L256, and s5@128
 ctok (inverted) — with raw values and marks alongside, and ⊘/never-run cells drawn as gaps
 rather than zeros. Read against a pinned intuitive ranking of the roster
 ([`docs/benchmark/profiles-analysis.md`](../docs/benchmark/profiles-analysis.md) — a data note
-pinned to the nine-model roster; gpt-5.6-sol and grok-4.5 postdate it), the axes split three
-ways. In-weights state tracking is what intuition tracks: binding @L16 is the best single-axis
-correlate (Spearman +0.97 across the eight models with clean cells — kimi's ≤x† cell sits outside
-orderings, and including it as a sensitivity check gives +0.81), and binding plus inverted ctok
-reaches +0.93 over the same eight (+0.95 including kimi). The chain d128 axis *inverts* it
-(-0.72): qwen 0.96 and gemini-flash 0.88 lead where opus 0.08 and sonnet 0.04 trail — the
-instant/thinking near-orthogonality showing up against the prior. The commutative row carries
-the same reversal (thinking @L64: deepseek 0.80 over glm 0.52), against any prior that puts glm
-well ahead. The thinking axes measure something intuition does not already contain.
+pinned to the nine-model roster; gpt-5.6-sol, grok-4.5, and muse-spark-1.1 postdate it), the axes
+split three ways: in-weights state tracking is what intuition tracks (binding @L16 Spearman
++0.81, +0.97 without kimi's daggered cell — the best single-axis match, and binding plus
+inverted ctok reaches +0.95 over all nine); chain d128 *inverts* it (-0.72: qwen 0.96 and
+gemini-flash 0.88 lead where opus 0.08 and sonnet 0.04 trail), the instant/thinking
+near-orthogonality showing up against the prior; and the commutative row carries the
+same reversal (thinking @L64: deepseek 0.80 over glm 0.52, against any prior that puts glm
+well ahead). The thinking axes measure something intuition does not already contain.
 
 ### Adding a model
 
-**Roster and pinning.** Eleven models via OpenRouter, registered in `factworld.benchmark.MODELS`
+**Roster and pinning.** Twelve models via OpenRouter, registered in `factworld.benchmark.MODELS`
 (slug, tier, per-million pricing, capability flags); models removed from the roster render in the
 archived section of results.md, and their cells stay in history. x-ai is represented by
 grok-4.5, thinking facets only: its endpoint rejects effort=none outright and its
 effort=minimal arm still reasons covertly (547 rtok on an L16 probe), so the registry skips
 every instant facet structurally (`skip_facets`) and grok-4.5 carries no instant numbers.
+muse-spark-1.1 is served directly by the Meta Model API (`https://api.meta.ai/v1`) through a
+Responses-backend path, not OpenRouter; like grok-4.5, it cannot disable reasoning, so the
+registry also skips every instant facet and it carries no instant numbers.
 Earlier xAI endpoints were not cleanly measurable — mainline grok's safety filter blocked a
 majority of the composite prompts as apparent gene/variant nomenclature, and grok-build was
 served with reasoning pinned at ~256k tokens regardless of the requested cap (its one measured
 cycle sits in the archived section). Task items are deterministic from fixed seeds; each spec
 carries a pinned stream version, so existing cells resume byte-identically and only genuinely new
 cells run.
-
-**Cost.** The full cell history — including superseded reruns — carries roughly $282 of
-estimated API spend; the rendered artifact counts 567 latest cells. The 45-cell zero-budget v2
-battery (5 legs, n=100 per model) costs roughly $0.65 per model — an estimated $5.92 for a
-9-model pass. Adding one model runs from a
-few dollars for cheap models to a few tens of dollars for frontier pricing with long reasoning
-traces.
 
 Register the slug in `factworld.benchmark.MODELS` (tier, pricing, flags), then:
 
@@ -456,16 +488,16 @@ read pconv, not the mean).
   operating point was set on.
 - **The architecture comparison reads on the binding leg, and fprm leads it through B16.** fprm
   solves binding @L16 on 9/15 seeds — all three at B6 (1.00) and all three at B16 (0.97–0.98,
-  the only seed-consistent solve above B6) — over gdp_hybrid (0.56 @B6, bimodal above B8)
+  the only seed-consistent solve in the sweep) — over gdp_hybrid (0.56 @B6, bimodal above B8)
   over transformer (≤0.23 everywhere). The ordering inverts at B24: fprm stops fitting the
   training distribution (final loss 1.02–1.10; binding 0.13–0.30) while gdp_hybrid still fits
-  (loss 0.05–0.14 at every rung; binding 0.67) — the weight-tied looped block buys the strongest binding
+  (loss 0.05–0.14 at every rung; binding 0.67) — product recurrence buys the strongest binding
   but is the first to break under breadth, where the gated hybrid degrades gracefully. The
   transformer decays monotonically to 0.08 @B24 and no longer fits training there (loss
   1.49–1.65). Binding does not extrapolate reliably to L64 for any architecture: fprm keeps the
   most (0.24–0.41 at B6–B16 against the 0.15 object-filter floor; 0.07 @B24), gdp_hybrid
-  0.09–0.20, transformer 0.03–0.18 (the §1 recency methodological note covers the inflated
-  magnitude a recency-skewed sampler reads at this cell).
+  0.09–0.20, transformer 0.03–0.18. (The earlier recency-skewed sampler read fprm's binding at
+  0.94 @L64 — the methodological note in §1 covers why that magnitude was recency credit.)
 - **The local composition deficit sits on the recall leg — for all three architectures.** The
   value leg is ≤0.17 in all 45 runs and at or below the 1/pool guess wherever binding is solved
   (fprm @B6: binding 1.00, value 0.14–0.17 ≈ 1/6; fprm @B16: binding 0.97–0.98, value ≤0.01;
@@ -483,7 +515,7 @@ means, is the readable number), and `composite_copy_v2.scaled(k=16, recall_pool=
 calibration cell. The flagship measurement — 3 seeds, eval_n=500, match metric, `composite_copy_v2`
 pool-16 @L16 (`results/curriculum_staged_v2_d768_notrace.jsonl`):
 
-| arch | composed @L16 | per seed | holder / value leg | p(converge) |
+| arch | composite @L16 | per seed | holder / value leg | p(converge) |
 |---|---|---|---|---|
 | **gdp_hybrid** | **0.833 ± 0.089** | 0.758 / 0.782 / 0.958 | 0.999 / 0.833 | 1/3 |
 | fprm | 0.109 ± 0.089 | 0.056 / 0.036 / 0.234 | 0.998 / 0.109 | 0/3 |
@@ -493,10 +525,10 @@ gdp_hybrid trains the composed cell on all three seeds — one clears the ≥0.9
 the other two read 0.758/0.782 — with the holder leg ≥0.998 throughout, and the compute-matched
 scale sweep's medium cell corroborates the number on 2 independent seeds (0.732 ± 0.013). fprm
 dissociates the legs: binding 0.998 with a dead value leg. The transformer's 0.001 is a real floor, not formatting: contains reads ~0 as
-well, at every scale up to 202M params / 417 GFLOP/token.
+well, at every scale up to 202M params / 417 GFLOP-tok.
 
-Scale shape, from the compute-matched sweep — the same staged curriculum at three sizes, the
-architectures sharing `(d_model, depth)` at each size, 2 seeds each (`results/composite_scale_*.md`):
+Scale shape, from the compute-matched sweep — the same staged curriculum at three sizes sharing
+`(d_model, depth)`, 2 seeds each (`results/composite_scale_*.md`):
 
 | arch | small (384×6) | medium (768×8) | large (1024×12) |
 |---|---|---|---|
@@ -518,7 +550,7 @@ Chain (recall ∘ recall) at the canonical baseline recipe (d320×4, 8k steps, r
 train depths 2–3, eval depths 4–5, n=200, 3 seeds per architecture;
 `results/local_chain_arch_20260710.jsonl`), against a 1/6 agent-guess ≈ 0.17:
 
-| arch | composed d4 (pconv) | d5 | final loss |
+| arch | composed @d4 (pconv) | @d5 | final loss |
 |---|---|---|---|
 | fprm | 0.20±0.01 (0%) | 0.21±0.02 | 0.38–0.40 |
 | transformer | 0.22±0.01 (0%) | 0.06±0.02 | 0.40–0.41 |
@@ -529,7 +561,7 @@ stays there at d5, the transformer falls below it — and gdp_hybrid fits the tr
 distribution best (lowest final loss) yet scores 0.00–0.03 at both held-out depths: a
 depth-specific circuit that is systematically wrong one hop out, not a guesser. The
 depth-extrapolation row of the price table is open, with all three architectures measured at 3
-seeds each. The same composition solves at d16 over
+seeds each. The contrast with the frontier is the point: the same composition solves at d16 over
 the API, but only in the thinking regime (§2).
 
 ### 3.5 s5: the lever is supervision density
@@ -555,23 +587,24 @@ accumulation task untouched. Over the API the rung reads only in the thinking re
 
 ### 3.7 What buys each element — the price table
 
-No element of the composition is free — each is paid for by an architectural or training
-choice. Two rows remain open.
+The local runs give the frontier profiles their thesis: **no element of the composition is
+free — each is paid for by an architectural or training choice.** Two rows remain open.
 
 | element | price | evidence |
 |---|---|---|
 | adjacent (1-hop) recall | attention — every architecture aces adjacent readout (1.00) | §3.1; [consolidated §3](factworld-consolidated.md); archived provenance phases/01 §3.2 |
 | deferred recall | product recurrence — the transformer aces adjacent, fails deferred (0.19 vs gdp_hybrid 0.73) | §3.1; consolidated §3; phases/01 §3.2 (atomic format: gdp_pure 1.00 attention-free vs transformer 0.48) |
-| last-write state | recurrence, ordered by form — fprm (weight-tied looped block) 1.00 @B6 / 0.97–0.98 seed-consistent @B16 on the binding leg, over gdp_hybrid (0.56 @B6) over transformer (0.23 @B6); at B24 fprm stops fitting (0.20, loss ≥1.0) and only the gated hybrid holds (0.67) | §3.2, breadth sweep |
+| last-write state | recurrence, ordered by form — fprm (product recurrence) 1.00 @B6 / 0.97–0.98 seed-consistent @B16 on the binding leg, over gdp_hybrid (0.56 @B6) over transformer (0.23 @B6); at B24 fprm stops fitting (0.20, loss ≥1.0) and only the gated hybrid holds (0.67) | §3.2, breadth sweep |
 | non-abelian state (formation) | dense per-step supervision — a state checkpoint every ≤2 events, architecture-independent | §3.5; consolidated §8; [experiments §1](../docs/experiments/README.md); archived provenance phases/02 §4 |
 | non-abelian state (length extrapolation) | recurrent hybrid — gdp_hybrid 0.75 @L64; fprm (0.19) and transformer (0.22) solve in-distribution but collapse past train length | §3.5; experiments §1 |
-| depth extrapolation | **open** — no measured choice buys it: trained at chain depths 2–3, no architecture clears the 1/6 guess at depths 4–5 (fprm 0.20/0.21 and transformer 0.22 at d4 sit at the guess floor; transformer 0.06 at d5 and gdp_hybrid 0.02/0.00 sit below it) | §3.4, local chain table |
+| depth extrapolation | **open** — no measured choice buys it: trained at chain depths 2–3, all three architectures read at or below the 1/6 guess at depths 4–5 (fprm 0.20/0.21, transformer 0.22/0.06, gdp_hybrid 0.02/0.00) | §3.4, local chain table |
 | local composition (value leg) | **open** — value ≤0.17 in all 45 breadth-sweep runs (at/below the 1/pool guess), even on binding-solved seeds of all three architectures | §3.2, breadth sweep |
 
-The two open rows: no measured choice buys depth extrapolation, and no local training choice
-converges the value leg of the composed cell outside the staged-curriculum recipe — and that
-recipe converges it only for gdp_hybrid at d768×8 (0.833; the small and large cells of the
-compute-matched sweep fail the value leg too).
+The two open rows are the instrument's active edge: nothing measured so far buys depth
+extrapolation, and no local training choice yet converges the value leg of the composed cell
+outside the staged-curriculum recipe — and that recipe converges it only for gdp_hybrid
+at d768×8 (0.833; the small and large cells of the compute-matched sweep fail the value leg
+too).
 
 ## Appendix: protocol stability
 
@@ -583,8 +616,8 @@ operating point (`gap_stability` facet: composed and binding legs at L32, instan
 n=50) checks that the ordering is not an artifact of the anchor. For the three cleanly
 measurable gap-interpretable models it holds: gpt-5.5 +0.34 → +0.36 (binding 0.68, composed
 0.32), sonnet +0.15† → +0.14† (canonical first attempts, binding 0.64 / composed 0.50; the
-escalated @512tok diagnostic reads +0.08), opus +0.06 → −0.04 — within the ±0.06 noise bar of
-zero at both operating points, the compose-for-free profile. Gpt-5.6-sol's L32 cells, bought after the
+escalated @512tok diagnostic reads +0.08), opus +0.06 → −0.04 — at or below zero at both
+operating points, the compose-for-free profile. Gpt-5.6-sol's L32 cells, bought after the
 check, read binding 0.58 / composed 0.26 — +0.17 → +0.32, holding its slot between gpt-5.5
 and sonnet at both operating points. Kimi's L32 cells are not interpretable
 (covert working with an unenforced cap: empty 0.40 on the canonical composed attempt, 0.62 on
