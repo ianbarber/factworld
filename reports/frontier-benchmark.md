@@ -282,18 +282,18 @@ settings, plus a practical efficiency column:
 
 | Model | chain d128 (k=257) | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
-| anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
-| anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
-| deepseek/deepseek-v4-pro | ⊘ @32,768tok (raised budget) | ⊘ | 10043 |
-| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
-| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
-| muse-spark-1.1 | 0.88ʳ | 1.00ʳ | 9704 |
-| nvidia/nemotron-3-ultra-550b-a55b | ⊘ @32,768tok (raised budget) | ⊘ | 12250 |
-| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
-| openai/gpt-5.6-sol | 1.00 | n/a | 2657 |
-| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
 | x-ai/grok-4.5 | n/a | 1.00‡ | 8069 |
+| muse-spark-1.1 | 0.88ʳ | 1.00ʳ | 9704 |
+| anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
+| anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
+| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
 | z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
+| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
+| openai/gpt-5.6-sol | 1.00 | 0.72 | 2657 |
+| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
+| deepseek/deepseek-v4-pro | ⊘ @32,768tok (raised budget) | ⊘ | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | ⊘ @32,768tok (raised budget) | ⊘ | 12250 |
 
 n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one thinking test-retest pair moved 0.16 —
 differences under ~0.2 are not an ordering.
@@ -312,20 +312,18 @@ d64/d128) and grok-4.5 (chain d64, s5 L256 — its endpoint does not bound reaso
 requested cap) exceeded the token cap on >10% of calls, so those token spends are not
 cap-comparable.
 (Deepseek's superseded 16,384-token chain d128 attempt also escaped the cap; the published
-32,768 rerun did not — max ctok is exactly the cap.) `n/a` cells never ran: gpt-5.6-sol's s5
-@L256, grok-4.5's chain d128 and every instant cell, and muse-spark-1.1's every instant cell.
+32,768 rerun did not — max ctok is exactly the cap.) `n/a` cells never ran: grok-4.5's chain
+d128 and every instant cell, and muse-spark-1.1's every instant cell.
 
 The scores discriminate where the composed cell cannot: qwen (0.96 chain, 0.80 s5), gpt-5.6-sol
-(1.00 chain), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold deep state under reasoning that they cannot
-hold in weights, while
-opus and sonnet — the strongest clean instant composers — post the weakest measurable chain
-scores (0.08, 0.04) even as they solve s5 L256 outright once the budget covers their ~24k-token
-traces. gpt-5.6-sol's s5 @L256 is `n/a` because that cell was never bought for this roster pass;
-there is no measured failure — it simply wasn't run.
+(1.00 chain, 0.72 s5), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold
+deep state under reasoning that they cannot hold in weights, while opus and sonnet — the
+strongest clean instant composers — post the weakest measurable chain scores (0.08, 0.04) even
+as they solve s5 L256 outright once the budget covers their ~24k-token traces.
 
-**S5 efficiency at ceiling.** Several models solve s5 @L256, but the matched L128 cell completion-token
-spend (every model runs the same cell) spans a wide range — so once a model reaches ceiling, token
-efficiency becomes the practical discriminator:
+**S5 efficiency.** The matched L128 cell completion-token spend (every model runs the same cell)
+spans a wide range, and the score on the harder L256 cell separates ceiling from non-ceiling — so
+token efficiency becomes the practical discriminator:
 
 | Model | s5 @L256 | s5@128 ctok/call |
 |---|---|---|
@@ -334,15 +332,21 @@ efficiency becomes the practical discriminator:
 | anthropic/claude-sonnet-5 | 1.00ʳ @32,768tok | 11866 |
 | anthropic/claude-opus-4.8 | 1.00ʳ @32,768tok | 12683 |
 | openai/gpt-5.5 | 0.96 | 6989 |
+| z-ai/glm-5.2 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 0.88 | 17418 |
+| qwen/qwen3.7-max | 0.80 | 7904 |
+| openai/gpt-5.6-sol | 0.72 | 2657 |
+| google/gemini-3.5-flash | 0.52 | 11022 |
 
-The full roster ranking (including non-ceiling models) is rendered live in
+The full roster ranking (including budget-censored models) is rendered live in
 `docs/benchmark/results.md#s5-efficiency-ranking`.
 
 The efficiency column is the practical note: token-hungry state tracking is
-rented, not owned. gpt-5.6-sol is the cheapest per call on the roster at 2,657 ctok, but it did
-not run s5 @L256; among the models that score ≥0.95 at s5 @L256, grok-4.5 uses the fewest tokens
-(8,069 ctok) and opus the most (12,683 ctok) for the same perfect score. grok-4.5's `‡` means its
-provider did not enforce the requested cap, so that token spend is not strictly cap-comparable.
+rented, not owned. gpt-5.6-sol is by far the cheapest per call on the roster at 2,657 ctok, and it
+reaches 0.72 on s5 @L256 without a raised budget — a cheap pointer-chase/state-stress partial.
+Among the models that score ≥0.95 at s5 @L256, grok-4.5 uses the fewest tokens (8,069 ctok) and
+opus the most (12,683 ctok) for the same perfect score. grok-4.5's `‡` means its provider did not
+enforce the requested cap, so that token spend is not strictly cap-comparable.
 
 Kimi's instant composed scores look high (≤0.94† / ≤0.77† / ≤0.93†) because its cells carry the
 same `†` leak: the model emits reasoning tokens on 65–89% of zero-budget calls despite
@@ -404,6 +408,10 @@ moonshotai/kimi-k2.6 is instant-excluded for a different reason: its effort=none
 reasoning tokens on 65–89% of calls and its provider does not enforce the requested cap, so its
 instant cells render as explicit upper bounds (`≤x†`) rather than in-weights measurements; the
 registry skips every instant facet for it too.
+openai/gpt-5.6-sol is routed directly to the OpenAI API (`https://api.openai.com/v1`) instead
+of OpenRouter; its registry entry sets `model_name` to the vendor model id, `max_completion_tokens`
+to true, and `supports_reasoning_effort` to false because the direct endpoint uses different
+parameter names.
 Earlier xAI endpoints were not cleanly measurable — mainline grok's safety filter blocked a
 majority of the composite prompts as apparent gene/variant nomenclature, and grok-build was
 served with reasoning pinned at ~256k tokens regardless of the requested cap (its one measured

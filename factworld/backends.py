@@ -258,6 +258,9 @@ class APIBackend(ModelBackend):
         extra_body: dict[str, Any] | None = None,
         answer_mode: str = "tokens",
         timeout: float | None = None,
+        model_name: str | None = None,
+        max_completion_tokens: bool = False,
+        reasoning_model: bool = False,
     ):
         try:
             from openai import OpenAI
@@ -271,6 +274,17 @@ class APIBackend(ModelBackend):
             raise ValueError(f"answer_mode must be 'tokens', 'words' or 'raw', got {answer_mode!r}")
 
         self.model = model
+        # model_name is the literal string sent to the API (e.g. direct OpenAI
+        # endpoints need "gpt-5.6-sol", not the OpenRouter slug
+        # "openai/gpt-5.6-sol").
+        self.model_name = model_name or model
+        # Some OpenAI reasoning models reject max_tokens and require
+        # max_completion_tokens instead.
+        self.max_completion_tokens = max_completion_tokens
+        # Reasoning models (e.g. gpt-5.6-sol via direct OpenAI endpoint) do not
+        # accept temperature/top_p overrides; only the default sampling is
+        # supported.
+        self.reasoning_model = reasoning_model
         # ``timeout`` (seconds) overrides the openai client's default 600s request
         # timeout. Long-reasoning cells (16k+ token budgets) can legitimately
         # generate for >10 minutes; at the default, such calls time out and the
@@ -470,15 +484,20 @@ class APIBackend(ModelBackend):
         response = None
         for attempt in range(max_retries):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
+                create_kwargs: dict[str, Any] = dict(
+                    model=self.model_name,
                     messages=messages,
-                    temperature=0,
-                    top_p=1,
-                    max_tokens=max_new_tokens,
                     stop=stop,
                     extra_body=self.extra_body,
                 )
+                if self.max_completion_tokens:
+                    create_kwargs["max_completion_tokens"] = max_new_tokens
+                else:
+                    create_kwargs["max_tokens"] = max_new_tokens
+                if not self.reasoning_model:
+                    create_kwargs["temperature"] = 0
+                    create_kwargs["top_p"] = 1
+                response = self.client.chat.completions.create(**create_kwargs)
                 break
             except openai.RateLimitError as exc:
                 if attempt == max_retries - 1:
@@ -627,7 +646,7 @@ class ResponsesBackend(APIBackend):
             input_param = prompt
 
         body: dict[str, Any] = {
-            "model": self.model,
+            "model": self.model_name,
             "input": input_param,
             "temperature": 0,
             "top_p": 1,
