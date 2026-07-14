@@ -571,6 +571,25 @@ def roster_models(records) -> list[str]:
     return [m for m in models_of(records) if not archived_roster(records, m)]
 
 
+INSTANT_FACETS = {"zero_budget", "sanity", "recall_load", "chain_instant", "gap_stability"}
+
+
+def instant_excluded(model: str) -> bool:
+    """True when the registry structurally skips all instant-regime facets for
+    this model (e.g. grok-4.5, muse-spark-1.1, kimi-k2.6). Such models render
+    only in the thinking headline, not the instant one."""
+    if model not in CURRENT_ROSTER:
+        return False
+    try:
+        from factworld.benchmark import MODELS
+    except Exception:  # pragma: no cover - environment guard
+        return False
+    if model not in MODELS:
+        return False
+    skipped = set(MODELS[model].get("skip_facets", ()))
+    return INSTANT_FACETS.issubset(skipped)
+
+
 def archived_models(records) -> list[str]:
     """Models in history that were dropped from the roster (archived section)."""
     return [m for m in models_of(records) if archived_roster(records, m)]
@@ -1305,9 +1324,10 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     if start < 0 or end < start:
         return False
     rows = list(headline_rows(records))
+    instant_rows = [r for r in sort_instant_rows(rows) if not instant_excluded(r[0])]
     instant_lines = ["**Instant composition (reasoning off, answer contract)**", ""]
     instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP,
-                                          sort_instant_rows(rows))
+                                          instant_rows)
     thinking_lines = ["", "**Thinking state-stress (reasoning on)**", ""]
     thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP,
                                            sort_thinking_rows(rows))
@@ -1395,6 +1415,8 @@ def write_results_md(records, out_path, history_path):
     lines += ["| " + " | ".join(inst_cols) + " |",
               "|" + "---|" * len(inst_cols)]
     for row in sort_instant_rows(list(headline_rows(records))):
+        if instant_excluded(row[0]):
+            continue
         lines.append("| " + " | ".join(str(c) for c in row[:len(inst_cols)]) + " |")
     lines += ["", FLOOR_NOTE, ""]
     if any(not canonical_arm(r) for r in records):
@@ -2228,7 +2250,8 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         f"<figure>{_inline_svg(p)}</figure>" for p in svg_paths if p.endswith(".svg")
     )
 
-    instant_rows = [row[:len(inst_cols)] for row in sort_instant_rows(head_rows)]
+    instant_rows = [row[:len(inst_cols)] for row in sort_instant_rows(head_rows)
+                    if not instant_excluded(row[0])]
     thinking_rows = [
         [row[0]] + row[len(inst_cols):]
         for row in sort_thinking_rows(head_rows)

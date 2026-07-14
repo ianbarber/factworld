@@ -118,22 +118,26 @@ give-stream cells); pinned streams make cells resume byte-identically.
 ## 2. Benchmarking the frontier
 
 The recurring benchmark reads twelve frontier models through the instrument: the component legs
-first, then the composed cell in both regimes. Two models are thinking-only — x-ai/grok-4.5 and
-muse-spark-1.1 — because their endpoints cannot disable reasoning, so they carry no instant
-numbers by design (the roster mechanics are under *Adding a model* below).
+first, then the composed cell in both regimes. Two models are thinking-only by endpoint design —
+x-ai/grok-4.5 and muse-spark-1.1 — because their endpoints cannot disable reasoning. A third,
+moonshotai/kimi-k2.6, is instant-excluded: its effort=none arm leaks reasoning on most calls and
+its provider does not enforce the token cap, so its instant cells are explicit upper bounds rather
+than in-weights measurements. All three carry no instant numbers (the roster mechanics are under
+*Adding a model* below).
 
 ### Components
 
 **Recall.** The load axis for recall is pool breadth — how many facts the in-context map holds.
 Two cells are positive controls near ceiling: copy one fact out of a pool-6 map
 (`recall_copy_v1` @L6) and override a memorizable map with an in-context value (`conflict_v1`
-@L4); reasoning off, n=30 each — every model that runs the instant battery (ten of the twelve;
-grok-4.5 and muse-spark-1.1 are thinking-only) scores 0.97–1.00 (sonnet-5's 0.97 recall is the only cell off 1.00).
+@L4); reasoning off, n=30 each — every model that runs the instant battery (nine of the twelve;
+grok-4.5 and muse-spark-1.1 are thinking-only, and moonshotai/kimi-k2.6 is instant-excluded
+because its effort=none arm leaks reasoning on most calls) scores 0.97–1.00 (sonnet-5's 0.97 recall is the only cell off 1.00).
 Any model below ~1.0 there would flag a harness problem, not a capability difference.
 
 **Recall under load.** The measured load row scales the pool with the length:
 `recall_copy_v1` @L64 with 64 distinct agents and facts (chance 1/64 ≈ 0.016), instant protocol
-(effort=none, answer contract, 96-token cap), n=50. **All ten instant-measured models score
+(effort=none, answer contract, 96-token cap), n=50. **All nine instant-measured models score
 1.00**, with clean diagnostics throughout (contract 1.00, covert working 0.00). Single-query
 deferred recall is at
 ceiling for this roster out to pool-64: whatever composition costs a frontier model, it is not
@@ -150,7 +154,6 @@ n=100): state tracking isolated from recall, read against the floors of §1.
 | anthropic/claude-sonnet-5 | 0.77 |
 | deepseek/deepseek-v4-pro | 0.51 |
 | google/gemini-3.5-flash | 0.66* |
-| moonshotai/kimi-k2.6 | ≤0.94† |
 | muse-spark-1.1 | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.49 |
 | openai/gpt-5.5 | 0.80 |
@@ -161,10 +164,12 @@ n=100): state tracking isolated from recall, read against the floors of §1.
 | *recency heuristic (floor)* | 0.04 |
 | *object-filter floor* | 0.41 |
 
-Opus (0.78), sonnet (0.77), gpt-5.5 (0.80), gpt-5.6-sol (0.82), kimi (≤0.94†, an upper bound),
-and glm (0.71) clear the floor decisively; deepseek and qwen (0.51) and nemotron (0.49) sit
-within noise of it —
-object filtering, not established state tracking.
+Opus (0.78), sonnet (0.77), gpt-5.5 (0.80), gpt-5.6-sol (0.82), and glm (0.71) clear the
+floor decisively; deepseek and qwen (0.51) and nemotron (0.49) sit within noise of it —
+object filtering, not established state tracking. moonshotai/kimi-k2.6 is omitted from the
+instant table: its effort=none arm leaks reasoning on most calls and its provider does not
+enforce the token cap, so its instant numbers are explicit upper bounds, not in-weights
+measurements.
 
 **Commutative state (experimental).** `commutative_v1` is the rung between last-write and
 non-abelian state: per-entity accumulation mod k — each event turns a named entity's dial some
@@ -199,8 +204,8 @@ binding_only@L16 − composed@L16.
 
 The gap isolates composition because the recall half is free: on the scaffolded leg (E1b) — the
 same `composite_copy_v2` items with the resolved holder provided (n=100, instant protocol) —
-recall reads 0.98–1.00 for every measurable roster model: 1.00 for seven of the ten that run
-it, nemotron 0.99, kimi 0.98; qwen3.7-max is ⊘ on this leg, and a four-arm probe localizes
+recall reads 0.98–1.00 for every measurable roster model: 1.00 for six of the eight that run
+it, nemotron 0.99; qwen3.7-max is ⊘ on this leg, and a four-arm probe localizes
 why: it answers
 the scaffolded question correctly on every probed call (the gold value appears in the raw text
 10/10 in all four arms) but never obeys the exact contract line "Reply with only one line:
@@ -217,7 +222,6 @@ the binding leg; the gap is the composition deficit.
 | anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (diag 0.76 @512tok)† | 0.32 (diag 0.66 @512tok)† | +0.15† |
 | deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ |
 | google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* |
-| moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† |
 | muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ |
 | openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 |
@@ -243,19 +247,17 @@ L32 stability check) — read it as a truncation-inflected upper bound on its co
 Gpt-5.5 pays the largest clean deficit on the roster — binding 0.80, composed 0.46, gap 0.34 —
 with glm just under it at +0.33† and gpt-5.6-sol at a clean +0.17. At L64 the floor decays to
 0.15 and the same ordering holds among the clean cells: opus 0.43, gpt-5.5 and gpt-5.6-sol
-0.33, sonnet 0.32 clear it. Kimi's cells are pervasive-covert upper bounds (≤x†, below) and
-take no part in these orderings.
+0.33, sonnet 0.32 clear it.
 
-**Marks on this table, in plain language.** Sonnet's cells were the battery's only budget
+**Marks on this table, in plain language.** moonshotai/kimi-k2.6 is omitted from the instant
+table: its effort=none arm emits reasoning tokens on 65–89% of calls despite the contract, and
+its provider does not enforce the token cap, so its instant cells are explicit upper bounds
+rather than in-weights measurements. Sonnet's cells were the battery's only budget
 escalations (majority finish=length at 96 tokens); the canonical numbers are the first attempts,
-the `@512tok` values single-rerun diagnostics. Kimi emitted reasoning tokens on 65–89% of
-zero-budget calls despite effort=none — past the >50% pervasive line, so its instant cells render
-as explicit upper bounds (≤x†) and are excluded from orderings — and its provider does not
-enforce the token cap, so its numbers overstate in-weights ability by an unknown margin; its
-composed @L64 exceeding @L16 is that covert-reasoning artifact, not a length effect. Glm's
-marked composed cell carries a small covert-reasoning leak (rtok on ~3% of calls, mean 2.9 per
-call — over the 2-rtok line, nowhere near the pervasive bar). Gemini-flash cannot disable
-reasoning; its off-arm ran effort=minimal throughout.
+the `@512tok` values single-rerun diagnostics. Glm's marked composed cell carries a small
+covert-reasoning leak (rtok on ~3% of calls, mean 2.9 per call — over the 2-rtok line, nowhere
+near the pervasive bar). Gemini-flash cannot disable reasoning; its off-arm ran effort=minimal
+throughout.
 
 ### Composition under reasoning
 
@@ -396,6 +398,10 @@ every instant facet structurally (`skip_facets`) and grok-4.5 carries no instant
 muse-spark-1.1 is served directly by the Meta Model API (`https://api.meta.ai/v1`) through a
 Responses-backend path, not OpenRouter; like grok-4.5, it cannot disable reasoning, so the
 registry also skips every instant facet and it carries no instant numbers.
+moonshotai/kimi-k2.6 is instant-excluded for a different reason: its effort=none arm leaks
+reasoning tokens on 65–89% of calls and its provider does not enforce the requested cap, so its
+instant cells render as explicit upper bounds (`≤x†`) rather than in-weights measurements; the
+registry skips every instant facet for it too.
 Earlier xAI endpoints were not cleanly measurable — mainline grok's safety filter blocked a
 majority of the composite prompts as apparent gene/variant nomenclature, and grok-build was
 served with reasoning pinned at ~256k tokens regardless of the requested cap (its one measured

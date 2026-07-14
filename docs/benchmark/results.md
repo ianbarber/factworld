@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-14 11:46 UTC from `results/benchmark/history.jsonl` (574 latest cells).
+Generated 2026-07-14 12:35 UTC from `results/benchmark/history.jsonl` (574 latest cells).
 
 ## Settings
 
@@ -35,7 +35,6 @@ History also contains zero-budget cells on composite_copy_v1; the zero-budget co
 
 | Model | instant: recall (sanity, recall_copy_v1) | instant: state tracking (binding_only @L16, v2) | instant: composed @L16 (match, v2) | instant: composed @L64 (v2) | instant: composition gap (binding_only - composed @L16) | instant: replicate noise (|composed - replicate| @L16) |
 |---|---|---|---|---|---|---|
-| moonshotai/kimi-k2.6 | 1.00 | ≤0.94† | ≤0.77† | ≤0.93† | +0.17† | ±0.06 |
 | anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 | ±0.05 |
 | openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 | ±0.05 |
 | google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 |
@@ -45,8 +44,6 @@ History also contains zero-budget cells on composite_copy_v1; the zero-budget co
 | z-ai/glm-5.2 | 1.00 | 0.71 | 0.38† | 0.13 | +0.33† | ±0.01 |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 |
 | qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ | ±0.01 |
-| muse-spark-1.1 | n/a | n/a | n/a | n/a | n/a | n/a |
-| x-ai/grok-4.5 | n/a | n/a | n/a | n/a | n/a | n/a |
 | recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | — | — |
 | object-filter floor (composite_copy_v2) | — | 0.41 | 0.41 | 0.15 | — | — |
 

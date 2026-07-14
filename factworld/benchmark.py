@@ -173,9 +173,16 @@ MODELS = {
     "z-ai/glm-5.2": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.93,
         "completion_price_per_M": 3.0, "open_weights": True},
+    # INSTANT FACETS EXCLUDED: kimi-k2.6 emits reasoning tokens on 65-89% of
+    # effort=none calls despite the answer contract, and its provider does not
+    # enforce the requested token cap, so its instant numbers are explicit upper
+    # bounds rather than in-weights measurements. It runs in the thinking regime
+    # only, like grok-4.5 and muse-spark-1.1.
     "moonshotai/kimi-k2.6": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.66,
-        "completion_price_per_M": 3.41, "open_weights": True},
+        "completion_price_per_M": 3.41, "open_weights": True,
+        "skip_facets": ("zero_budget", "recall_load", "chain_instant",
+                        "sanity", "gap_stability")},
     "deepseek/deepseek-v4-pro": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.435,
         "completion_price_per_M": 0.87, "open_weights": True},
