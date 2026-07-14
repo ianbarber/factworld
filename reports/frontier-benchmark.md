@@ -309,15 +309,30 @@ cap-comparable.
 32,768 rerun did not — max ctok is exactly the cap.) `n/a` cells never ran: gpt-5.6-sol's s5
 @L256, grok-4.5's chain d128 and every instant cell, and muse-spark-1.1's every instant cell.
 
+**S5 efficiency at ceiling.** Several models solve s5 @L256, but the matched L128 cell cost per
+call (prompt + completion, every model runs the same cell) spans an order of magnitude — so once
+a model reaches ceiling, efficiency becomes the practical discriminator:
+
+| Model | s5 @L256 | s5@128 $/call |
+|---|---|---|
+| muse-spark-1.1 | 1.00ʳ @32,768tok | $0.0437 |
+| x-ai/grok-4.5 | 1.00‡ | $0.0527 |
+| anthropic/claude-sonnet-5 | 1.00ʳ @32,768tok | $0.1259 |
+| openai/gpt-5.5 | 0.96 | $0.2194 |
+| anthropic/claude-opus-4.8 | 1.00ʳ @32,768tok | $0.3351 |
+
+The full roster ranking (including non-ceiling models) is rendered live in
+`docs/benchmark/results.md#s5-efficiency-ranking`.
+
 The scores discriminate where the composed cell cannot: qwen (0.96 chain, 0.80 s5), gpt-5.6-sol
 (1.00 chain), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold deep state under reasoning that they cannot
 hold in weights, while
 opus and sonnet — the strongest clean instant composers — post the weakest measurable chain
 scores (0.08, 0.04) even as they solve s5 L256 outright once the budget covers their ~24k-token
 traces. The efficiency column is the practical note: token-hungry state tracking is
-rented, not owned. Gpt-5.5 holds 0.96 at s5 L256 while spending 6,989 ctok on the matched L128
-cell — 2.5x less than kimi's 17,418 for a similar score; gpt-5.6-sol is the cheapest on the
-roster at 2,657, followed by glm at 6,282 and muse-spark-1.1 at 9,704.
+rented, not owned. Gpt-5.6-sol is the cheapest per call on the roster at 2,657 ctok, but it did
+not run s5 @L256; among the ceiling solvers muse-spark-1.1 is the cheapest at $0.044/call and
+opus the most expensive at $0.335/call — almost an 8x spread for the same perfect s5 score.
 
 Muse-spark-1.1 is served directly by the Meta Model API (`https://api.meta.ai/v1`) using the
 OpenAI Responses API, not OpenRouter. Like grok-4.5, its endpoint cannot disable reasoning:

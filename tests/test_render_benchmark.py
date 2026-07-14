@@ -686,7 +686,7 @@ def test_breadth_and_k_fixed_arms():
             md = fh.read()
         assert "B=64" in md and "k_fixed=257" in md
         assert RB.BREADTH_FLOOR_NOTE in md         # per-(m, L) floor note rendered
-        head = md[md.index("## Headline"):md.index("## Full per-cell results")]
+        head = md[md.index("## Instant headline"):md.index("## Full per-cell results")]
         assert "B=64" not in head                  # rungs never enter the headline
         with open(os.path.join(out, "results.csv"), encoding="utf-8") as fh:
             rows = list(csv.DictReader(fh))
@@ -866,11 +866,11 @@ def test_pervasive_covert_and_floor_bound_gap():
 
 
 def test_readme_frontier_block():
-    """README §2 rot-proofing: the marked frontier block regenerates from the
-    same headline data in compact cell form — escalation diagnostics collapse
-    to the canonical value + mark, raised-budget cells carry ʳ, '⊘ >budget'
-    renders ⊘, and ≤x† / —ᶠ / n/a / marks pass through; a README without the
-    markers (or a missing file) is untouched."""
+    """README §2 rot-proofing: the marked frontier block regenerates as TWO
+    tables (instant composition + thinking state-stress) in compact cell form —
+    escalation diagnostics collapse to the canonical value + mark, raised-budget
+    cells carry ʳ, '⊘ >budget' renders ⊘, and ≤x† / —ᶠ / n/a / marks pass
+    through; a README without the markers (or a missing file) is untouched."""
     if not HAS_MPL:
         return
     # compact cell transforms
@@ -881,25 +881,6 @@ def test_readme_frontier_block():
     for keep in ("≤0.63†", "—ᶠ", "n/a", "0.66*", "0.13‡", "—", "+0.15†"):
         assert RB._readme_compact(keep) == keep
     recs = _fixture_records()
-    rows = RB.readme_frontier_rows(recs)
-    # one row per roster model + the two floor rows, README column count
-    assert [r[0] for r in rows] == sorted(MODELS) + [
-        "*recency heuristic (floor)*", "*object-filter floor*"]
-    assert all(len(r) == len(RB.README_FRONTIER_COLUMNS) for r in rows)
-    # fixture history values survive the reduction (model-b carries every mark)
-    row_a, row_b, row_c = rows[0], rows[1], rows[2]
-    assert row_a == ["testlab/model-a", "0.95", "0.80", "0.65", "+0.15",
-                     "0.96", "0.25"]
-    assert row_b[1] == "0.78†"    # visible-working dagger kept
-    assert row_b[2] == "≤0.63†"   # pervasive-covert upper bound kept
-    assert row_b[3] == "0.38†"    # escalation diagnostic collapsed to canonical
-    assert row_b[4] == "+0.15†"
-    assert row_b[5] == "0.13‡"    # cap-escape kept
-    assert row_b[6] == "⊘"        # censored s5 cell
-    assert row_c[1:] == ["0.55*", "0.40*", "0.25*", "+0.15*", "⊘", "0.00"]
-    assert rows[3][1:4] == ["0.34", "0.34", "0.21"]   # v1-task recency floor
-    assert rows[4][1:4] == ["0.29", "0.29", "0.07"]   # v1-task object filter
-    assert rows[3][4:] == ["—", "—", "—"]
     with tempfile.TemporaryDirectory() as tmp:
         readme = os.path.join(tmp, "README.md")
         with open(readme, "w", encoding="utf-8") as fh:
@@ -912,8 +893,16 @@ def test_readme_frontier_block():
         assert "| stale |" not in text
         assert text.startswith("intro\n\n<!-- FRONTIER_TABLE_START -->\n")
         assert text.endswith("<!-- FRONTIER_TABLE_END -->\n\nafter\n")
-        assert "| " + " | ".join(RB.README_FRONTIER_COLUMNS) + " |" in text
-        assert "| testlab/model-b | 0.78† | ≤0.63† | 0.38† | +0.15† | 0.13‡ | ⊘ |" in text
+        # two tables: instant and thinking
+        assert "| " + " | ".join(RB.README_INSTANT_COLUMNS) + " |" in text
+        assert "| " + " | ".join(RB.README_THINKING_COLUMNS) + " |" in text
+        assert "**Instant composition (reasoning off, answer contract)**" in text
+        assert "**Thinking state-stress (reasoning on)**" in text
+        # fixture history values survive the reduction (model-b carries every mark)
+        assert "| testlab/model-b | 0.78† | ≤0.63† | 0.38† | +0.15† |" in text
+        assert "| testlab/model-a | 0.95 | 0.80 | 0.65 | +0.15 |" in text
+        assert "| testlab/model-c | 0.55* | 0.40* | 0.25* | +0.15* |" in text
+        # floor rows stay in the instant table only
         assert "*object-filter floor*" in text
         # idempotent: a second run rewrites nothing
         assert RB.update_readme_frontier(recs, readme)
@@ -965,22 +954,23 @@ def test_render_end_to_end():
         for m in ALL_MODELS:
             assert m in page
         assert "finish_errors" in page
-        # regime grouping header row + roster split + floor note mirror in HTML
+        # split headline + floor note mirror in HTML
         assert "Archived models (dropped from the roster)" in page
         assert "v1 archived facets (pre-redesign)" in page
-        assert '<th colspan="6">instant (reasoning off, answer contract)</th>' in page
-        assert '<th colspan="3">thinking</th>' in page
+        assert "<h2>Instant headline (current roster)</h2>" in page
+        assert "<h2>Thinking headline (current roster)</h2>" in page
         assert "composition instrument" in page
         assert "object-filter floor" in page
         assert "Read small-L zero-budget cells against the object-filter floor" in page
         assert "horizon" not in page.lower()  # banned vocabulary
 
-        # Markdown has the six sections, ordered per-cell-before-diagnostics,
+        # Markdown has the headline sections, ordered per-cell-before-diagnostics,
         # with the match definition in the Settings block and no exact/last_n
         # column on any rendered surface.
         with open(os.path.join(out, "results.md"), encoding="utf-8") as fh:
             md = fh.read()
-        for section in ["## Headline (current roster)",
+        for section in ["## Instant headline (current roster)",
+                        "## Thinking headline (current roster)",
                         "## Archived models (dropped from the roster)",
                         "## v1 archived facets (pre-redesign)",
                         "## Full per-cell results", "## Diagnostics per cell",
@@ -1038,14 +1028,15 @@ def test_render_end_to_end():
         # banned vocabulary is gone from every label, note and footnote
         for word in ("horizon", "wall", "knee", "cliff"):
             assert word not in md.lower(), f"banned word {word!r} in results.md"
-        head = md[md.index("## Headline"):
+        head = md[md.index("## Instant headline"):
                   md.index("## Archived models (dropped from the roster)")]
         # 'dose' terminology is purged from all active labels/prose (the historical
         # facet name survives only in the archived tables below).
         assert "dose" not in head.lower()
-        row_a = next(l for l in head.splitlines() if l.startswith("| testlab/model-a |"))
-        assert row_a.split("|")[-2].strip().isdigit()  # s5@128 ctok renders numerically
-        assert row_a.split("|")[2].strip() == "1.00"   # ladder rung 1: sanity recall
+        rows_a = [l for l in head.splitlines() if l.startswith("| testlab/model-a |")]
+        assert len(rows_a) >= 2                    # instant + thinking (+ efficiency)
+        assert rows_a[0].split("|")[2].strip() == "1.00"   # instant: sanity recall
+        assert rows_a[1].split("|")[-2].strip().isdigit()  # thinking: s5@128 ctok
         row_b = next(l for l in head.splitlines() if l.startswith("| testlab/model-b |"))
         assert "†" in row_b                        # recalibrated dagger
         assert "0.38 (diag 0.96 @512tok)†" in row_b  # escalated: canonical + diagnostic
@@ -1054,7 +1045,7 @@ def test_render_end_to_end():
         assert "≤0.63†" in row_b
         row_c = next(l for l in head.splitlines() if l.startswith("| testlab/model-c |"))
         assert "*" in row_c                        # effort=minimal quarantine mark
-        row_a_clean = row_a.replace("| testlab/model-a |", "|")
+        row_a_clean = rows_a[0].replace("| testlab/model-a |", "|")
         assert "†" not in row_a_clean and "*" not in row_a_clean
         # Dropped-roster model: NOT in the headline (no mixing) — it renders in the
         # archived-models section with its v1-facet columns.

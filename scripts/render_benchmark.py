@@ -225,11 +225,15 @@ COMPOSITION_NOTE = (
 
 
 def headline_columns(zb_task) -> list[str]:
-    """Headline column headers, regime-prefixed, composition-statistic order:
-    recall (sanity) -> state tracking -> composed @L16/@L64 -> composition gap ->
-    replicate noise -> thinking state-stress scores -> efficiency. The instant
-    columns carry the task version of the records they were built from (the
-    LATEST zero-budget task in history)."""
+    """Full headline column headers (instant + thinking), kept for backwards
+    compatibility with callers that need one combined list."""
+    return instant_headline_columns(zb_task) + thinking_headline_columns()[1:]
+
+
+def instant_headline_columns(zb_task) -> list[str]:
+    """Instant-regime headline columns. The state-tracking and composed columns
+    carry the task version of the records they were built from (the LATEST
+    zero-budget task in history)."""
     ver = _task_ver(zb_task)
     return [
         "Model",
@@ -239,6 +243,14 @@ def headline_columns(zb_task) -> list[str]:
         f"instant: composed @L64 ({ver})",
         "instant: composition gap (binding_only - composed @L16)",
         "instant: replicate noise (|composed - replicate| @L16)",
+    ]
+
+
+def thinking_headline_columns() -> list[str]:
+    """Thinking-regime headline columns: the state-stress cells plus an
+    efficiency column measured on the matched s5_concrete L128 cell."""
+    return [
+        "Model",
         f"thinking: chain d{CHAIN_STRESS_DEPTH} (chain_nowrap, k={CHAIN_STRESS_K}, match)",
         f"thinking: s5 @L{S5_STRESS_LENGTH} (s5_concrete, match)",
         "thinking: s5@128 ctok",
@@ -326,6 +338,10 @@ EFFICIENCY_NOTE = (
     "only over cells a model SOLVED and therefore rewarded models that failed early "
     "(selection bias: the published 2.7x opus-vs-kimi ctok/solve gap is ~1.4x on the "
     "matched cell).")
+S5_EFFICIENCY_NOTE = (
+    "S5 efficiency ranking: models sorted by estimated cost per call on the matched "
+    f"s5_concrete L{S5_EFF_LENGTH} cell (the cell every current-roster model runs). "
+    "At s5 @L256 several models hit 1.00, so per-call cost is the practical discriminator.")
 # v1-only facets whose headline scalars are kept in separate archived tables
 # (the historical facet name dose_response stays in the archived headers only —
 # 'dose' terminology is purged from all active labels/prose).
@@ -888,6 +904,47 @@ def headline_efficiency(records, model):
     return ctok / n if n > 0 and ctok is not None else None
 
 
+def s5_efficiency_rows(records):
+    """S5 efficiency ranking: models that solve (or attempt) s5 @L256 and the
+    matched cost of the L128 cell. Ceiling-solvers (score >= 0.95 at s5 @L256)
+    are ranked first by estimated cost per call on the matched s5_concrete L128
+    cell; non-ceiling / censored models follow, also sorted by cost. The matched
+    L128 cell is the fairest per-model efficiency comparison because every
+    current-roster model runs it."""
+    rows = []
+    for m in roster_models(records):
+        score_rec = stress_cell(records, "s5_concrete", m, S5_STRESS_LENGTH)
+        eff_rec = stress_cell(records, "s5_concrete", m, S5_EFF_LENGTH)
+        if eff_rec is None:
+            continue
+        n = eff_rec.get("n") or 0
+        cost = (eff_rec.get("usage") or {}).get("cost_usd_est")
+        ctok = (eff_rec.get("usage") or {}).get("completion_tokens")
+        score = stress_value_str(score_rec)
+        ctok_per = ctok / n if n > 0 and ctok is not None else None
+        cost_per = cost / n if n > 0 and cost is not None else None
+        # parse a numeric score when present (strip marks/escalation suffix)
+        score_num = None
+        m_num = re.search(r"(\d+\.\d+|\.\d+|\d+)", score.replace("n/a", ""))
+        if m_num:
+            try:
+                score_num = float(m_num.group(1))
+            except ValueError:
+                pass
+        ceiling = score_num is not None and score_num >= 0.95 and not score.startswith(CENSORED_CELL)
+        censored = score.startswith(CENSORED_CELL)
+        rows.append((
+            0 if ceiling else (2 if censored else 1),  # sort ceiling first
+            float("inf") if cost_per is None else cost_per,
+            m,
+            score,
+            "n/a" if ctok_per is None else f"{ctok_per:.0f}",
+            "n/a" if cost_per is None else f"${cost_per:.4f}",
+        ))
+    rows.sort(key=lambda r: (r[0], r[1], r[2]))
+    return [[r[2], r[3], r[4], r[5]] for r in rows]
+
+
 def headline_recall(records, model):
     """The ladder's first rung: the sanity recall_copy_v1 cell's canonical relaxed
     (instant regime — reasoning off). None when the cell never ran."""
@@ -1154,11 +1211,12 @@ def archived_model_rows(records):
 
 README_FRONTIER_START = "<!-- FRONTIER_TABLE_START -->"
 README_FRONTIER_END = "<!-- FRONTIER_TABLE_END -->"
-README_FRONTIER_COLUMNS = ["Model", "binding @L16", "composed @L16",
-                           "composed @L64", "gap", "chain d128", "s5 @L256"]
-# headline_rows column indices the README table keeps (model, binding,
-# composed @L16/@L64, gap, chain d128, s5 @L256).
-README_FRONTIER_KEEP = (0, 2, 3, 4, 5, 7, 8)
+README_INSTANT_COLUMNS = ["Model", "binding @L16", "composed @L16",
+                          "composed @L64", "gap"]
+README_THINKING_COLUMNS = ["Model", "chain d128", "s5 @L256", "s5@128 ctok"]
+# headline_rows column indices the README tables keep (model is 0).
+README_INSTANT_KEEP = (0, 2, 3, 4, 5)   # model, binding, composed@L16/@L64, gap
+README_THINKING_KEEP = (0, 7, 8, 9)     # model, chain d128, s5 @L256, s5@128 ctok
 _DIAG_SUFFIX = re.compile(r" \(diag \d+\.\d+ @[\d,]+tok\)")
 _RAISED_SUFFIX = re.compile(r" @[\d,]+tok \(raised budget\)")
 RAISED_MARK = "ʳ"  # compact raised-budget mark; the legend spells out 32,768tok
@@ -1187,21 +1245,27 @@ def _readme_row_label(label: str) -> str:
     return label
 
 
-def readme_frontier_rows(records):
-    """README §2 rows: the headline rows (roster models + the two floor rows)
-    reduced to README_FRONTIER_COLUMNS in compact cell form."""
-    rows = []
-    for row in headline_rows(records):
-        rows.append([_readme_row_label(str(row[README_FRONTIER_KEEP[0]]))]
-                    + [_readme_compact(str(row[i])) for i in README_FRONTIER_KEEP[1:]])
-    return rows
+def _readme_table_lines(columns, keep, rows):
+    """Build one markdown table from headline rows sliced by ``keep``."""
+    lines = ["| " + " | ".join(columns) + " |",
+             "|" + "---|" * len(columns)]
+    for row in rows:
+        label = str(row[keep[0]])
+        # floor rows belong to the instant table only
+        if label.startswith(HEURISTIC_LABEL) or label.startswith(OBJECT_FILTER_LABEL):
+            if keep[0] != 0 or columns[1] != "binding @L16":
+                continue
+        lines.append("| " + " | ".join(
+            [_readme_row_label(label)] + [_readme_compact(str(row[i])) for i in keep[1:]]
+        ) + " |")
+    return lines
 
 
 def update_readme_frontier(records, readme_path=None) -> bool:
     """Rewrite the README's marked frontier block (README_FRONTIER_START/_END)
-    from the rendered records. No-op — returns False, file untouched — when the
-    file or either marker is absent, so histories rendered outside the repo
-    never grow a table."""
+    from the rendered records. The block now contains two tables: instant and
+    thinking. No-op — returns False, file untouched — when the file or either
+    marker is absent, so histories rendered outside the repo never grow tables."""
     if readme_path is None:
         readme_path = os.path.join(REPO, "README.md")
     if not os.path.exists(readme_path):
@@ -1212,9 +1276,12 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     end = text.find(README_FRONTIER_END)
     if start < 0 or end < start:
         return False
-    lines = ["| " + " | ".join(README_FRONTIER_COLUMNS) + " |",
-             "|" + "---|" * len(README_FRONTIER_COLUMNS)]
-    lines += ["| " + " | ".join(r) + " |" for r in readme_frontier_rows(records)]
+    rows = list(headline_rows(records))
+    instant_lines = ["**Instant composition (reasoning off, answer contract)**", ""]
+    instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP, rows)
+    thinking_lines = ["", "**Thinking state-stress (reasoning on)**", ""]
+    thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP, rows)
+    lines = instant_lines + thinking_lines
     block = README_FRONTIER_START + "\n" + "\n".join(lines) + "\n" + README_FRONTIER_END
     new = text[:start] + block + text[end + len(README_FRONTIER_END):]
     if new != text:
@@ -1276,8 +1343,9 @@ def write_results_md(records, out_path, history_path):
     lines += _settings_block(records)
 
     zb_task = zb_latest_task(records)
-    headline_cols = headline_columns(zb_task)
-    lines += ["## Headline (current roster)", "",
+    inst_cols = instant_headline_columns(zb_task)
+    think_cols = thinking_headline_columns()
+    lines += ["## Instant headline (current roster)", "",
               "Current roster only (factworld.benchmark.MODELS); models dropped from "
               "the roster render in the archived-models section below.",
               "",
@@ -1294,10 +1362,10 @@ def write_results_md(records, out_path, history_path):
     note = _zb_mixed_task_note(records, zb_task)
     if note:
         lines += [note, ""]
-    lines += ["| " + " | ".join(headline_cols) + " |",
-              "|" + "---|" * len(headline_cols)]
+    lines += ["| " + " | ".join(inst_cols) + " |",
+              "|" + "---|" * len(inst_cols)]
     for row in headline_rows(records):
-        lines.append("| " + " | ".join(str(c) for c in row) + " |")
+        lines.append("| " + " | ".join(str(c) for c in row[:len(inst_cols)]) + " |")
     lines += ["", FLOOR_NOTE, ""]
     if any(not canonical_arm(r) for r in records):
         # breadth/fixed-k rung cells exist: they are separate arms (labelled
@@ -1306,8 +1374,36 @@ def write_results_md(records, out_path, history_path):
         lines += [BREADTH_FLOOR_NOTE, ""]
     for note in ZB_FOOTNOTES:
         lines += [note, ""]
-    lines += [SYMMETRY_NOTE, "", GAP_NOTE, "", replicate_note(records), "",
-              CENSOR_NOTE, "", THINKING_NOISE_NOTE, "", EFFICIENCY_NOTE, ""]
+    lines += [SYMMETRY_NOTE, "", GAP_NOTE, "", replicate_note(records), ""]
+
+    lines += ["## Thinking headline (current roster)", "",
+              "Thinking-regime state-stress cells (effort=high): chain d128 is a pointer "
+              f"chase 128 hops deep at fixed breadth k={CHAIN_STRESS_K}; s5 @L256 is non-abelian "
+              "state tracking over 256 events. The s5@128 ctok column measures efficiency on the "
+              "matched L128 cell that every current-roster model runs.",
+              "",
+              NOTATION_NOTE,
+              ""]
+    lines += ["| " + " | ".join(think_cols) + " |",
+              "|" + "---|" * len(think_cols)]
+    for row in headline_rows(records):
+        # floor rows belong to the instant table only
+        label = str(row[0])
+        if label.startswith(HEURISTIC_LABEL) or label.startswith(OBJECT_FILTER_LABEL):
+            continue
+        lines.append("| " + " | ".join(str(c) for c in [row[0]] + row[len(inst_cols):]) + " |")
+    lines += ["", THINKING_NOISE_NOTE, "", EFFICIENCY_NOTE, ""]
+
+    s5_eff = s5_efficiency_rows(records)
+    if s5_eff:
+        lines += ["## S5 efficiency ranking", "",
+                  S5_EFFICIENCY_NOTE, "",
+                  "| Model | s5 @L256 | s5@128 ctok/call | s5@128 $/call |",
+                  "|---|---|---|---|"]
+        for r in s5_eff:
+            lines.append("| " + " | ".join(r) + " |")
+        lines.append("")
+
     lines += [
         "The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the "
         f"d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}). `chain_v1` builds a single "
@@ -2059,9 +2155,10 @@ def write_index_html(records, out_dir, svg_paths, history_path):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     zb_task = zb_latest_task(records)
-    headline_cols = headline_columns(zb_task)
+    inst_cols = instant_headline_columns(zb_task)
+    think_cols = thinking_headline_columns()
     mixed_note = _zb_mixed_task_note(records, zb_task)
-    head_rows = headline_rows(records)
+    head_rows = list(headline_rows(records))
     dropped = archived_model_rows(records)
     dropped_html = ""
     if dropped:
@@ -2101,6 +2198,23 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         f"<figure>{_inline_svg(p)}</figure>" for p in svg_paths if p.endswith(".svg")
     )
 
+    instant_rows = [row[:len(inst_cols)] for row in head_rows]
+    thinking_rows = [
+        [row[0]] + row[len(inst_cols):]
+        for row in head_rows
+        if not str(row[0]).startswith(HEURISTIC_LABEL)
+        and not str(row[0]).startswith(OBJECT_FILTER_LABEL)
+    ]
+    s5_eff_rows = s5_efficiency_rows(records)
+    s5_eff_html = ""
+    if s5_eff_rows:
+        s5_eff_html = (
+            "<h3>S5 efficiency ranking</h3>\n"
+            f'<p class="small">{html.escape(S5_EFFICIENCY_NOTE)}</p>\n'
+            + _html_table(["Model", "s5 @L256", "s5@128 ctok/call", "s5@128 $/call"],
+                          s5_eff_rows)
+        )
+
     page = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2123,7 +2237,7 @@ single k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths &lt; k
 (<code>factworld/tasks.py</code> design gate), so <code>chain_depth</code> cells at depth &ge;
 {CHAIN_CYCLE_K} wrapped the cycle, measure the wrapped task rather than depth, and are marked
 {html.escape(CHAIN_INVALID_MARK)} below and excluded from the chain figure.</p>
-<h2>Headline (current roster)</h2>
+<h2>Instant headline (current roster)</h2>
 <p class="small">Current roster only (factworld.benchmark.MODELS); models dropped from the
 roster render in the archived-models section below. {html.escape(COMPOSITION_NOTE)}</p>
 <p class="small">Instant cells: task <strong>{html.escape(zb_task or "n/a")}</strong>
@@ -2131,15 +2245,21 @@ with reasoning off (effort=none) under a one-line answer contract (settings.cont
 match. Escalated cells show the CANONICAL first attempt at the shared base budget,
 with the escalated rerun as a parenthesised diagnostic.
 {(" " + html.escape(mixed_note)) if mixed_note else ""}</p>
-{_html_table(headline_cols, head_rows, groups=HEADLINE_GROUPS)}
+{_html_table(inst_cols, instant_rows)}
 <p class="small">{html.escape(FLOOR_NOTE)}</p>
 <p class="small">{"<br>".join(html.escape(n) for n in ZB_FOOTNOTES)}<br>
 {html.escape(SYMMETRY_NOTE)}<br>
 {html.escape(GAP_NOTE)}<br>
-{html.escape(replicate_note(records))}<br>
-{html.escape(CENSOR_NOTE)}<br>
-{html.escape(THINKING_NOISE_NOTE)}<br>
+{html.escape(replicate_note(records))}</p>
+<h2>Thinking headline (current roster)</h2>
+<p class="small">Thinking-regime state-stress cells (effort=high): chain d128 is a pointer
+chase 128 hops deep at fixed breadth k={CHAIN_STRESS_K}; s5 @L256 is non-abelian state tracking
+over 256 events. The s5@128 ctok column measures efficiency on the matched L128 cell that every
+current-roster model runs.</p>
+{_html_table(think_cols, thinking_rows)}
+<p class="small">{html.escape(THINKING_NOISE_NOTE)}<br>
 {html.escape(EFFICIENCY_NOTE)}</p>
+{s5_eff_html}
 {dropped_html}
 {archived_html}
 <h2>Figures</h2>
