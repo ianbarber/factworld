@@ -38,8 +38,11 @@ shortcut — majority class, recency, first-position, entity-blind aggregates �
 task. Every score is **match**, the canonical metric: strip a trailing period from both sides and
 compare the model's first len(gold) whitespace tokens to the gold answer — binary per item, no
 partial credit (`factworld.tasks.score_relaxed`); containment is the one published diagnostic.
-Wilson 95% intervals per cell are in the rendered tables. Task items are deterministic from fixed
-seeds, so any cell can be reproduced independently.
+Wilson 95% intervals per cell are in the rendered tables. The rendered `README.md` and
+`docs/benchmark/results.md` headline blocks separate the instant-composition cells from the
+thinking state-stress cells, and `docs/benchmark/results.md` includes an S5 efficiency ranking
+that sorts ceiling-solvers by cost per call. Task items are deterministic from fixed seeds, so
+any cell can be reproduced independently.
 
 ### Floors
 
