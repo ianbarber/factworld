@@ -437,9 +437,15 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
             raise SystemExit(f"{key_env} not set (required for {model})")
     extra_body: dict = {}
     # OpenRouter-style endpoints accept a reasoning-effort block; direct vendor
-    # endpoints (e.g. OpenAI chat completions for gpt-5.6-sol) reject it.
-    if settings["effort"] is not None and reg.get("supports_reasoning_effort", True):
-        extra_body["reasoning"] = {"effort": settings["effort"]}
+    # endpoints (e.g. OpenAI chat completions for gpt-5.6-sol) reject it and
+    # use a top-level reasoning_effort parameter instead.
+    reasoning_effort: str | None = None
+    if settings["effort"] is not None:
+        if reg.get("supports_reasoning_effort", True):
+            extra_body["reasoning"] = {"effort": settings["effort"]}
+        rev = reg.get("reasoning_effort_values")
+        if rev:
+            reasoning_effort = rev.get(settings["effort"])
     if (reg["open_weights"] and reg.get("quantization_filter", True)
             and not reg.get("base_url")):
         # Quantization filter is only meaningful for open-weight models (C4);
@@ -465,6 +471,7 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
         model_name=reg.get("model_name"),
         max_completion_tokens=reg.get("max_completion_tokens", False),
         reasoning_model=reg.get("reasoning_model", False),
+        reasoning_effort=reasoning_effort,
         # 30-minute request timeout: 16k-token reasoning cells (kimi at depth 32,
         # sonnet with a 16k thinking budget) legitimately exceed the openai
         # client's default 600s, which otherwise times out and re-bills the

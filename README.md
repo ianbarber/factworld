@@ -190,10 +190,10 @@ tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchma
 | anthropic/claude-sonnet-5 | 0.04 | 1.00ʳ | 11866 |
 | anthropic/claude-opus-4.8 | 0.08 | 1.00ʳ | 12683 |
 | openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 1.00 | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| openai/gpt-5.6-sol | 1.00 | 0.72 | 2657 |
 | google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
 | deepseek/deepseek-v4-pro | ⊘ʳ | ⊘ | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ʳ | ⊘ | 12250 |

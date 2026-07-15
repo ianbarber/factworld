@@ -124,7 +124,8 @@ MODELS = {
         "model_name": "gpt-5.6-sol",
         "max_completion_tokens": True,
         "reasoning_model": True,
-        "supports_reasoning_effort": False},
+        "supports_reasoning_effort": False,
+        "reasoning_effort_values": {"low": "low", "medium": "medium", "high": "high"}},
     # openai/gpt-5.4 and google/gemini-3.1-pro-preview DROPPED 2026-07-08 (owner
     # decision: one flagship per vendor; Google is pushing flash).
     # no_reasoning_effort: Gemini 3 endpoints reject effort=none outright

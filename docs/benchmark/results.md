@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-14 23:22 UTC from `results/benchmark/history.jsonl` (575 latest cells).
+Generated 2026-07-15 06:36 UTC from `results/benchmark/history.jsonl` (575 latest cells).
 
 ## Settings
 
@@ -86,10 +86,10 @@ Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 | anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
 | anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
 | openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 1.00 | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| openai/gpt-5.6-sol | 1.00 | 0.72 | 2657 |
 | google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
 | deepseek/deepseek-v4-pro | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget @32,768tok (raised budget) | ⊘ >budget | 12250 |
@@ -109,10 +109,10 @@ S5 efficiency ranking: models sorted by s5 @L256 score, then by s5@128 completio
 | anthropic/claude-sonnet-5 | 1.00 @32,768tok (raised budget) | 11866 |
 | anthropic/claude-opus-4.8 | 1.00 @32,768tok (raised budget) | 12683 |
 | openai/gpt-5.5 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.88 | 6282 |
 | moonshotai/kimi-k2.6 | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.80 | 7904 |
-| openai/gpt-5.6-sol | 0.72 | 2657 |
 | google/gemini-3.5-flash | 0.52 | 11022 |
 | deepseek/deepseek-v4-pro | ⊘ >budget | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget | 12250 |
@@ -532,7 +532,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 50 | 0.26 [0.16, 0.40] | 0.26 | — |
 | openai/gpt-5.6-sol | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.72 [0.52, 0.86] | 0.72 | — |
+| openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.82 [0.73, 0.88] | — | — |
@@ -1023,7 +1023,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
 | openai/gpt-5.6-sol | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 66218 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 85395 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 141584 | stop:25 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | openai/gpt-5.6-sol | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | openai/gpt-5.6-sol | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |

@@ -261,6 +261,7 @@ class APIBackend(ModelBackend):
         model_name: str | None = None,
         max_completion_tokens: bool = False,
         reasoning_model: bool = False,
+        reasoning_effort: str | None = None,
     ):
         try:
             from openai import OpenAI
@@ -285,6 +286,9 @@ class APIBackend(ModelBackend):
         # accept temperature/top_p overrides; only the default sampling is
         # supported.
         self.reasoning_model = reasoning_model
+        # Direct OpenAI-style reasoning-effort parameter (low/medium/high),
+        # distinct from the OpenRouter extra_body["reasoning"]["effort"] block.
+        self.reasoning_effort = reasoning_effort
         # ``timeout`` (seconds) overrides the openai client's default 600s request
         # timeout. Long-reasoning cells (16k+ token budgets) can legitimately
         # generate for >10 minutes; at the default, such calls time out and the
@@ -497,6 +501,8 @@ class APIBackend(ModelBackend):
                 if not self.reasoning_model:
                     create_kwargs["temperature"] = 0
                     create_kwargs["top_p"] = 1
+                if self.reasoning_effort is not None:
+                    create_kwargs["reasoning_effort"] = self.reasoning_effort
                 response = self.client.chat.completions.create(**create_kwargs)
                 break
             except openai.RateLimitError as exc:

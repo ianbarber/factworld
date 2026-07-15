@@ -287,10 +287,10 @@ settings, plus a practical efficiency column:
 | anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
 | anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
 | openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 1.00 | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
 | moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| openai/gpt-5.6-sol | 1.00 | 0.72 | 2657 |
 | google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
 | deepseek/deepseek-v4-pro | ⊘ @32,768tok (raised budget) | ⊘ | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ @32,768tok (raised budget) | ⊘ | 12250 |
@@ -316,10 +316,15 @@ cap-comparable.
 d128 and every instant cell, and muse-spark-1.1's every instant cell.
 
 The scores discriminate where the composed cell cannot: qwen (0.96 chain, 0.80 s5), gpt-5.6-sol
-(1.00 chain, 0.72 s5), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold
+(1.00 chain, 0.92 s5), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold
 deep state under reasoning that they cannot hold in weights, while opus and sonnet — the
 strongest clean instant composers — post the weakest measurable chain scores (0.08, 0.04) even
 as they solve s5 L256 outright once the budget covers their ~24k-token traces.
+
+All thinking-regime cells are run at the maximum reasoning effort the endpoint supports
+(`effort=high` on OpenRouter, `reasoning_effort=high` for the direct OpenAI path used by
+gpt-5.6-sol). A lower default produced a deceptively weak 0.72 for gpt-5.6-sol at s5 @L256; with
+`reasoning_effort=high` it reaches 0.92, near gpt-5.5's 0.96.
 
 **S5 efficiency.** The matched L128 cell completion-token spend (every model runs the same cell)
 spans a wide range, and the score on the harder L256 cell separates ceiling from non-ceiling — so
@@ -332,10 +337,10 @@ token efficiency becomes the practical discriminator:
 | anthropic/claude-sonnet-5 | 1.00ʳ @32,768tok | 11866 |
 | anthropic/claude-opus-4.8 | 1.00ʳ @32,768tok | 12683 |
 | openai/gpt-5.5 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.88 | 6282 |
 | moonshotai/kimi-k2.6 | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.80 | 7904 |
-| openai/gpt-5.6-sol | 0.72 | 2657 |
 | google/gemini-3.5-flash | 0.52 | 11022 |
 
 The full roster ranking (including budget-censored models) is rendered live in
@@ -343,13 +348,11 @@ The full roster ranking (including budget-censored models) is rendered live in
 
 The efficiency column is the practical note: token-hungry state tracking is
 rented, not owned. gpt-5.6-sol is by far the cheapest per call on the roster at 2,657 ctok, and it
-reaches 0.72 on s5 @L256 without a raised budget — but that cheapness comes with a length
-extrapolation cliff: it is perfect on the same task at L128 (1.00) and then drops to 0.72 when the
-stream doubles to 256 events. Its wrong answers are not concentrated on a single event type; the
-model simply does not spend enough tokens to track the full 256-step permutation history reliably.
-Among the models that score ≥0.95 at s5 @L256, grok-4.5 uses the fewest tokens (8,069 ctok) and
-opus the most (12,683 ctok) for the same perfect score. grok-4.5's `‡` means its provider did not
-enforce the requested cap, so that token spend is not strictly cap-comparable.
+reaches 0.92 on s5 @L256 at `reasoning_effort=high` — much cheaper per call than gpt-5.5
+(6,989 ctok) for a nearly identical score. Among the models that score ≥0.95 at s5 @L256,
+grok-4.5 uses the fewest tokens (8,069 ctok) and opus the most (12,683 ctok) for the same perfect
+score. grok-4.5's `‡` means its provider did not enforce the requested cap, so that token spend is
+not strictly cap-comparable.
 
 Kimi's instant composed scores look high (≤0.94† / ≤0.77† / ≤0.93†) because its cells carry the
 same `†` leak: the model emits reasoning tokens on 65–89% of zero-budget calls despite
@@ -413,8 +416,9 @@ instant cells render as explicit upper bounds (`≤x†`) rather than in-weights
 registry skips every instant facet for it too.
 openai/gpt-5.6-sol is routed directly to the OpenAI API (`https://api.openai.com/v1`) instead
 of OpenRouter; its registry entry sets `model_name` to the vendor model id, `max_completion_tokens`
-to true, and `supports_reasoning_effort` to false because the direct endpoint uses different
-parameter names.
+to true, `supports_reasoning_effort` to false (the direct endpoint rejects the OpenRouter extra
+body), and `reasoning_effort_values` to map the benchmark's effort levels to the vendor's
+`reasoning_effort` parameter.
 Earlier xAI endpoints were not cleanly measurable — mainline grok's safety filter blocked a
 majority of the composite prompts as apparent gene/variant nomenclature, and grok-build was
 served with reasoning pinned at ~256k tokens regardless of the requested cap (its one measured
