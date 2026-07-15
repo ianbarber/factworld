@@ -385,12 +385,15 @@ read against.
 
 At the full **chain d128** stress length the same length cliff appears for opus and sonnet: opus
 scores 0.08 and sonnet 0.04 despite using ~10.5k and ~8k ctok per call respectively. They are not
-budget-censored there — only 1/25 opus calls and 7/25 sonnet calls hit the cap — they simply fail
-to keep a correct 128-hop serial trace. The same models' @512tok diagnostic runs on the same
-items score 0.96 (sonnet) and 1.00 (opus), so the capability is present; the failure mode is losing
-the thread inside a long chain-of-thought, not lacking the algorithm. This is the opposite profile
-from s5, where opus and sonnet need a raised budget but then solve cleanly; chain is the task
-where their long reasoning becomes self-incoherent.
+budget-censored there — only 1/25 opus calls and 7/25 sonnet calls hit the cap — so the issue is
+not token truncation. A closer look suggests the prompt format is confounding the result: the
+chain query is rendered as a nested phrase (`what is a0 of a0 of ... of a0 of g246?`), and opus's
+traces often stop after the wrong number of hops (e.g. 124 instead of 128). When the same item is
+rephrased explicitly (`Starting from g246, apply a0 128 times...`), both opus and sonnet return the
+correct answer in a clean 128-step trace. The same models' @512tok diagnostic runs on the original
+items also score 0.96 (sonnet) and 1.00 (opus), because the tight cap prevents the long nested
+phrase from derailing the count. So the low canonical scores measure a hop-counting instability in
+the nested natural-language query, not an inability to execute the serial chase.
 
 ### Profiles
 
