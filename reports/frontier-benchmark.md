@@ -383,6 +383,15 @@ escalated diagnostics 0.96 and 1.00 @512tok), sonnet on 18/25 (0.28, 0.96 @512to
 solves it given room to work. This is the within-depth regime contrast that the depth axis is
 read against.
 
+At the full **chain d128** stress length the same length cliff appears for opus and sonnet: opus
+scores 0.08 and sonnet 0.04 despite using ~10.5k and ~8k ctok per call respectively. They are not
+budget-censored there — only 1/25 opus calls and 7/25 sonnet calls hit the cap — they simply fail
+to keep a correct 128-hop serial trace. The same models' @512tok diagnostic runs on the same
+items score 0.96 (sonnet) and 1.00 (opus), so the capability is present; the failure mode is losing
+the thread inside a long chain-of-thought, not lacking the algorithm. This is the opposite profile
+from s5, where opus and sonnet need a raised budget but then solve cleanly; chain is the task
+where their long reasoning becomes self-incoherent.
+
 ### Profiles
 
 The two regimes never merge into one number; the per-model view is split into two profile
