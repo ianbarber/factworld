@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from factworld.tasks import CANONICAL, generate  # noqa: E402
 
-SPEC = CANONICAL["chain_v1"]
+SPEC = CANONICAL["chain_v2"]
 
 # The renderer has exactly one fact phrasing ("{e}'s a0 is {v}."), so the pointer map can be
 # re-parsed from the prompt and the example verified independently of the generator's own walk.

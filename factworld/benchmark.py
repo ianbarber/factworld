@@ -334,17 +334,17 @@ FACETS = {
     # depth. Breadth (k agents) grows with depth by design; read the axis as
     # "d hops over 2d+1 agents", not d hops at fixed breadth.
     "chain_nowrap": {
-        "task": "chain_v1", "lengths": (16, 32, 64, 128), "n": 25,
+        "task": "chain_v2", "lengths": (16, 32, 64, 128), "n": 25,
         "efforts": "on", "max_new_tokens": 16384},
     # chain d16 INSTANT arm: the within-item regime contrast for recall∘recall
     # composition. Same staircase spec as the chain_nowrap d16 thinking cell
-    # (chain_v1.scaled(k=2*16+1=33) via spec_for_cell, same deterministic items
+    # (chain_v2.scaled(k=2*16+1=33) via spec_for_cell, same deterministic items
     # and n, chance ~1/33), but reasoning off under the answer contract, so the
     # instant-vs-thinking contrast is within-item. A dedicated facet, not an
     # extra chain_nowrap arm: effort policies are facet-wide and this off arm
     # runs at d16 only (an "off" arm at d32-128 would buy predicted floor cells).
     "chain_instant": {
-        "task": "chain_v1", "lengths": (16,), "n": 25,
+        "task": "chain_v2", "lengths": (16,), "n": 25,
         "efforts": "off", "contract": True,
         "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
     # sanity rows: cheap positive controls at each task's first eval length.
