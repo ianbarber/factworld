@@ -326,7 +326,7 @@ FACETS = {
         "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
     # no-wrap deep chains, replacing the invalid wrap-era chain_depth facet (its
     # k=6 cycle wrapped at depth >= 6, collapsing gold to nxt^(depth mod 6)).
-    # STAIRCASE protocol: each depth d runs chain_v1.scaled(k=2*d+1). k must
+    # STAIRCASE protocol: each depth d runs chain_v2.scaled(k=2*d+1). k must
     # exceed d (the wrap gate), but k=d+2 would leave its own constant shortcut:
     # on a single complete k-cycle, d forward hops == (k-d) BACKWARD hops, so
     # k=d+2 puts gold always exactly 2 reverse lookups from start. k=2d+1 prices
@@ -403,7 +403,7 @@ def _settings(effort, *, rendering=None, format_prompt=None, leg=None,
       breadth  — pool rung B: run the task at CANONICAL[task].scaled(k=2*B,
                  recall_pool=B) (composite tasks; B=16 IS canonical
                  composite_copy_v2).
-      k_fixed  — fixed-breadth chain: chain_v1.scaled(k=k_fixed) — d hops over a
+      k_fixed  — fixed-breadth chain: chain_v2.scaled(k=k_fixed) — d hops over a
                  FIXED k-cycle, replacing the staircase k=2d+1 (k_fixed must
                  exceed the depth; tasks.py's wrap gate raises otherwise).
     """
@@ -536,7 +536,7 @@ def spec_for_cell(task: str, length: int, breadth: int | None = None,
         k=2*B, recall_pool=B). Anchored so B=CANONICAL_BREADTH (16) resolves to
         the canonical composite_copy_v2 knobs (k=32/pool16) — scaling at the
         canonical rung is a no-op by construction.
-      - ``k_fixed`` (chain family): chain_v1.scaled(k=k_fixed) — d hops over a
+      - ``k_fixed`` (chain family): chain_v2.scaled(k=k_fixed) — d hops over a
         FIXED k-cycle (composition at fixed breadth). tasks.py's wrap gate
         raises at generation time if k_fixed <= depth.
       - chain without k_fixed: the no-wrap STAIRCASE k=2*length+1 when the depth

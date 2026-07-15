@@ -24,7 +24,7 @@ Protocol rules:
     artifacts — see results/s5_horizon_recheck_20260705.jsonl). A cell whose
     empty-pred rate exceeds 0.5 gets a loud truncation-suspect warning but the
     record is kept.
-  - chain_nowrap is a STAIRCASE: depth d runs chain_v1.scaled(k=2*d+1), so the
+  - chain_nowrap is a STAIRCASE: depth d runs chain_v2.scaled(k=2*d+1), so the
     pointer cycle never wraps AND the backward walk costs d+1 hops (k=d+2 would
     leave gold a constant 2 reverse lookups from start). Breadth grows with
     depth by design.
@@ -55,7 +55,7 @@ Protocol rules:
     (+ cost_abort_reason "ctok"/"usd") and a loud warning.
   - v3 working-set-breadth rungs: a cell may carry settings["breadth"] (the pool
     rung B; the task runs at CANONICAL[task].scaled(k=2*B, recall_pool=B)) or,
-    for chain cells, settings["k_fixed"] (chain_v1.scaled(k=k_fixed), fixed
+    for chain cells, settings["k_fixed"] (chain_v2.scaled(k=k_fixed), fixed
     breadth instead of the staircase). Both keys are sentinel-dropped at their
     canonical values (B=16 / no k_fixed) so pre-breadth history resume keys are
     unchanged; when present (non-canonical) they are part of the settings hash,
@@ -486,7 +486,7 @@ def _cell_spec(cell: dict):
     """The TaskSpec this cell runs (single source of truth:
     factworld.benchmark.spec_for_cell — breadth rungs via settings["breadth"]
     (scaled(k=2*B, recall_pool=B)), fixed-k chains via settings["k_fixed"]
-    (chain_v1.scaled(k=k_fixed)), the chain_nowrap staircase k=2d+1 otherwise)."""
+    (chain_v2.scaled(k=k_fixed)), the chain_nowrap staircase k=2d+1 otherwise)."""
     s = cell["settings"]
     return spec_for_cell(cell["task"], cell["length"],
                          breadth=s.get("breadth"), k_fixed=s.get("k_fixed"))
@@ -635,7 +635,7 @@ def _run_task_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]]:
     (2d+1)-cycle — never wraps, and the backward walk costs d+1 hops so no
     direction is cheaper than the measured depth (k=d+2 would leave gold a
     constant 2 reverse lookups from start). With settings["k_fixed"] the cycle
-    size is pinned (chain_v1.scaled(k=k_fixed)): d hops at FIXED breadth, the
+    size is pinned (chain_v2.scaled(k=k_fixed)): d hops at FIXED breadth, the
     composition-as-axis arm."""
     settings = cell["settings"]
     spec = _cell_spec(cell)
@@ -916,7 +916,7 @@ def main():
     ap.add_argument("--facets", nargs="+", default=None, choices=list(FACETS),
                     help="Facets to run (default: all, including sanity rows). "
                          "chain_nowrap is a STAIRCASE: depth d runs "
-                         "chain_v1.scaled(k=2*d+1), so breadth grows with depth.")
+                         "chain_v2.scaled(k=2*d+1), so breadth grows with depth.")
     ap.add_argument("--n-scale", type=float, default=1.0, dest="n_scale",
                     help="Scouting multiplier applied to each facet's n (floor 5).")
     ap.add_argument("--lengths", nargs="+", type=int, default=None,
