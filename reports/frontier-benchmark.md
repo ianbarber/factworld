@@ -307,13 +307,17 @@ Deepseek's chain d128 is the contrast case: rerun at the same 32,768 budget it s
 length on 19/25 calls (median ctok = the cap) and scores 0.08 — still budget-bound, so its ⊘
 stands with the budget stated. Nemotron's chain d128 raise (bought on its completion evidence:
 12/25 clean-but-wrong stops) reads 0.00 at 32,768 with 16/25 still truncated — a capability
-failure confirmed at double budget, not a budget artifact. `‡` cap-escape: kimi (chain
-d64/d128) and grok-4.5 (chain d64, s5 L256 — its endpoint does not bound reasoning by the
-requested cap) exceeded the token cap on >10% of calls, so those token spends are not
-cap-comparable.
+failure confirmed at double budget, not a budget artifact. `‡` cap-escape: the provider ignored
+the requested token cap on >10% of calls, so those token spends are not cap-comparable. Kimi
+(chain d64/d128) escapes the cap. grok-4.5 also escapes it: on chain d64, 4/25 calls exceeded
+the 16,384-token cap, with the worst call running to 38,392 tokens (2.3× the cap); on s5 L256,
+5/25 calls exceeded the cap, by up to 1,863 tokens (1.11× the cap). Because grok-4.5's endpoint
+does not bound reasoning at the requested cap, the chain d128 cell was not run — it would be
+unmeasurable in the same budget terms as the rest of the roster.
 (Deepseek's superseded 16,384-token chain d128 attempt also escaped the cap; the published
 32,768 rerun did not — max ctok is exactly the cap.) `n/a` cells never ran: grok-4.5's chain
-d128 and every instant cell, and muse-spark-1.1's every instant cell.
+d128 (endpoint does not enforce the cap) and every instant cell, and muse-spark-1.1's every
+instant cell.
 
 The scores discriminate where the composed cell cannot: qwen (0.96 chain, 0.80 s5), gpt-5.6-sol
 (1.00 chain, 0.92 s5), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold
