@@ -342,15 +342,20 @@ def _ex_chain(spec, w, r, rng, depth, idx):
     present = cyc[:]; rng.shuffle(present)                            # render facts in scrambled order
     facts = " ".join(r.render_fact(a, "a0", nxt[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
     start = rng.choice(cyc)
-    cur = start
+    path = [start]
     for _ in range(depth):
-        cur = nxt[cur]
+        path.append(nxt[path[-1]])
+    gold = path[-1]
     query = "what is " + "a0 of " * depth + f"{start}?"
     # chain_v2 adds an explicit hop count to avoid models miscounting 128 repetitions
     # of "a0 of" in the nested query (a prompt-format confound at depth ≥ 64).
     if spec.name == "chain_v2":
         query += f" ({depth} hops)"
-    return Example(f"{facts} {query}", _render_answer(cur), depth, {"depth": depth, "start": start})
+    meta = {"depth": depth, "start": start, "path": path}
+    # Dense supervision: emit every intermediate node (excluding the final answer).
+    if spec.worked_trace:
+        meta["trace"] = " ".join(path[:-1])
+    return Example(f"{facts} {query}", _render_answer(gold), depth, meta)
 
 
 # ---------------------------------------------------------------------------

@@ -111,7 +111,10 @@ def run_one(spec, arch, seed, *, d_model, n_layers, steps, batch, train_n, eval_
         # so size the generation budget for trace + answer, and score the committed tail.
         max_new = (L + 6) if use_trace else None
         res = evaluate_task(backend, spec, split="test", n=eval_n, length=L, max_new_tokens=max_new)
-        out[str(L)] = {"overall": res["overall"], **prefix_decomp(res["examples"], trace_mode=use_trace)}
+        # In trace mode the answer is the LAST len(gold) tokens of the generated scratchpad,
+        # so last_n (not the canonical relaxed prefix match) is the fair overall score.
+        overall = res["metrics"]["last_n"]["overall"] if use_trace else res["overall"]
+        out[str(L)] = {"overall": overall, **prefix_decomp(res["examples"], trace_mode=use_trace)}
     del run["model"]
     torch.cuda.empty_cache()
     return {"lengths": out, "final_loss": run["final_loss"]}
