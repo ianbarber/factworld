@@ -185,18 +185,18 @@ tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchma
 
 | Model | chain d128 | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
-| x-ai/grok-4.5 | n/a | 1.00‡ | 8069 |
-| muse-spark-1.1 | 0.88ʳ | 1.00ʳ | 9704 |
-| anthropic/claude-sonnet-5 | 0.04 | 1.00ʳ | 11866 |
-| anthropic/claude-opus-4.8 | 0.08 | 1.00ʳ | 12683 |
-| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
-| z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
-| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
+| x-ai/grok-4.5 | 1.00 | 1.00‡ | 8069 |
+| muse-spark-1.1 | 0.96 | 1.00ʳ | 9704 |
+| anthropic/claude-sonnet-5 | 1.00 | 1.00ʳ | 11866 |
+| anthropic/claude-opus-4.8 | 1.00 | 1.00ʳ | 12683 |
+| openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
+| z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 1.00‡ | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| openai/gpt-5.6-sol | 1.00 | 0.72 | 2657 |
-| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
-| deepseek/deepseek-v4-pro | ⊘ʳ | ⊘ | 10043 |
-| nvidia/nemotron-3-ultra-550b-a55b | ⊘ʳ | ⊘ | 12250 |
+| google/gemini-3.5-flash | 1.00 | 0.52 | 11022 |
+| deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
 <!-- FRONTIER_TABLE_END -->
 
 The instant columns are `composite_copy_v2` cells (match, n=100): the binding leg (state

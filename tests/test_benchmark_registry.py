@@ -133,7 +133,7 @@ def test_arms_for_facets():
     chain = [c for c in opus if c["facet"] == "chain_nowrap"]
     assert [c["length"] for c in chain] == [16, 32, 64, 128]
     for c in chain:
-        assert c["task"] == "chain_v1" and c["n"] == 25
+        assert c["task"] == "chain_v2" and c["n"] == 25
         assert c["settings"]["effort"] == "high"
         assert c["settings"]["max_new_tokens"] == 16384
 
@@ -149,7 +149,7 @@ def test_arms_for_facets():
     # chain_instant: the d16 off arm of the chain staircase (within-item regime
     # contrast with the chain_nowrap d16 thinking cell — same spec k=33, same n).
     ci = [c for c in opus if c["facet"] == "chain_instant"]
-    assert [(c["task"], c["length"], c["n"]) for c in ci] == [("chain_v1", 16, 25)]
+    assert [(c["task"], c["length"], c["n"]) for c in ci] == [("chain_v2", 16, 25)]
     assert ci[0]["settings"]["effort"] == "none"
     assert ci[0]["settings"]["contract"] is True
     assert ci[0]["settings"]["max_new_tokens"] == B.ZERO_BUDGET_MAX_NEW_TOKENS
@@ -294,13 +294,13 @@ def test_prompt_tokens_est_breadth_and_k_fixed():
     assert ex.answer and ex.meta.get("holder")
     # fixed-k chain: d16 over a 257-cycle prices ~like the d128 staircase's 257
     # facts (the staircase d16 runs k=33), bounded above by d128@k257's deeper query
-    stair16 = B._prompt_tokens_est("chain_v1", 16, None)
-    stair128 = B._prompt_tokens_est("chain_v1", 128, None)          # k=257
-    d16_k257 = B._prompt_tokens_est("chain_v1", 16, None, None, 257)
+    stair16 = B._prompt_tokens_est("chain_v2", 16, None)
+    stair128 = B._prompt_tokens_est("chain_v2", 128, None)          # k=257
+    d16_k257 = B._prompt_tokens_est("chain_v2", 16, None, None, 257)
     assert stair16 < d16_k257 <= stair128
     assert d16_k257 > 3 * stair16
     # the runner and the estimator resolve the SAME spec
-    spec = B.spec_for_cell("chain_v1", 16, k_fixed=257)
+    spec = B.spec_for_cell("chain_v2", 16, k_fixed=257)
     assert spec.k == 257
     spec2 = B.spec_for_cell("composite_copy_v2", 64, breadth=64)
     assert (spec2.k, spec2.recall_pool) == (128, 64)
@@ -416,9 +416,9 @@ def test_cost_estimate_sane():
     long = B._prompt_tokens_est("composite_copy_v2", 64, None)
     assert long > short * 2
     # chain estimates use the no-wrap staircase (k=2*depth+1), so depth 128 must
-    # not trip chain_v1's wrap validity gate and deeper chains cost more.
-    d16 = B._prompt_tokens_est("chain_v1", 16, None)
-    d128 = B._prompt_tokens_est("chain_v1", 128, None)
+    # not trip chain_v2's wrap validity gate and deeper chains cost more.
+    d16 = B._prompt_tokens_est("chain_v2", 16, None)
+    d128 = B._prompt_tokens_est("chain_v2", 128, None)
     assert d128 > d16 * 3
     # composite_copy_v2 keeps v1's L/pool/prompt shape, so its prompt size is
     # comparable to the retired spec's (regenerated via RETIRED — _prompt_tokens_est
@@ -615,7 +615,7 @@ def test_recall_load_and_chain_instant_contract_cells():
         _validate_c3(rec, cell, model)
     # within-item contrast: chain_instant resolves the same spec as the
     # chain_nowrap d16 staircase cell (k=2*16+1=33)
-    assert B.spec_for_cell("chain_v1", 16).k == 33
+    assert B.spec_for_cell("chain_v2", 16).k == 33
 
 
 def test_binding_leg_rejects_holder_dump():
@@ -970,7 +970,7 @@ def test_breadth_cell_uses_scaled_spec():
 
 def test_k_fixed_chain_cell_uses_fixed_spec():
     """A chain_nowrap cell carrying settings['k_fixed'] must run
-    chain_v1.scaled(k=k_fixed) (fixed breadth at any depth) instead of the
+    chain_v2.scaled(k=k_fixed) (fixed breadth at any depth) instead of the
     staircase k=2d+1, and resume under its own key."""
     model = "z-ai/glm-5.2"
     cell = next(c for c in B.arms_for(model)
@@ -980,7 +980,7 @@ def test_k_fixed_chain_cell_uses_fixed_spec():
     cell["settings"] = {**cell["settings"], "k_fixed": 257}
     assert RFB.cell_key(model, cell) != stair_key
 
-    spec = TK.CANONICAL["chain_v1"].scaled(k=257)
+    spec = TK.CANONICAL["chain_v2"].scaled(k=257)
     gold = {e.prompt: e.answer for e in TK.generate(spec, "test", n=5, length=16)}
 
     def oracle(prompts, mnt, stop):
@@ -993,12 +993,12 @@ def test_k_fixed_chain_cell_uses_fixed_spec():
 
 
 def test_chain_nowrap_uses_scaled_spec():
-    """chain_nowrap depth d must evaluate chain_v1.scaled(k=2*d+1) — the same
+    """chain_nowrap depth d must evaluate chain_v2.scaled(k=2*d+1) — the same
     examples the task module generates under the no-wrap protocol."""
     cell = next(c for c in B.arms_for("z-ai/glm-5.2")
                 if c["facet"] == "chain_nowrap" and c["length"] == 32)
     cell["n"] = 5
-    spec = TK.CANONICAL["chain_v1"].scaled(k=65)
+    spec = TK.CANONICAL["chain_v2"].scaled(k=65)
     gold = {e.prompt: e.answer for e in TK.generate(spec, "test", n=5, length=32)}
 
     def oracle(prompts, mnt, stop):
@@ -1103,8 +1103,9 @@ def test_resume_key_uses_spec_stream_version_not_suite_version():
     any v1-stream cell): their keys must still match pre-bump history records that
     recorded suite_version "1.0"."""
     assert TK.SUITE_VERSION == "1.1"
-    # per-task stream versions: pinned v1 streams stay "1.0"; only the v2 specs are new
-    assert RFB.stream_version("chain_v1") == "1.0"
+    # per-task stream versions: pinned v1 streams stay "1.0"; chain_v2 is a new 1.1 stream
+    assert RFB.stream_version("chain_v2") == "1.1"
+    assert RFB.stream_version("chain_v1") == "1.0"  # retired, frozen
     assert RFB.stream_version("recall_copy_v1") == "1.0"
     assert RFB.stream_version("conflict_v1") == "1.0"
     assert RFB.stream_version("s5") == "1.0"              # s5_concrete facet task (non-TaskSpec)
@@ -1114,7 +1115,7 @@ def test_resume_key_uses_spec_stream_version_not_suite_version():
 
     model = "z-ai/glm-5.2"
     cells = B.arms_for(model)
-    pinned = [c for c in cells if c["facet"] in ("chain_nowrap", "s5_concrete", "sanity")]
+    pinned = [c for c in cells if c["facet"] in ("s5_concrete", "sanity")]
     v2 = [c for c in cells if c["facet"] == "zero_budget"]
     assert pinned and v2
     with tempfile.TemporaryDirectory() as tmp:

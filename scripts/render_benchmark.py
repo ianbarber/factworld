@@ -640,16 +640,34 @@ def headline_composite_length(records, model):
     return pick["metrics"]["relaxed"]
 
 
+def _latest_chain_task(records, facet):
+    """Latest chain task version among records for a chain facet (v2 over v1)."""
+    cells = by_facet(records, facet)
+    if not cells:
+        return None
+    newest = max(cells, key=lambda r: (r.get("ts") or "", r.get("task") or ""))
+    return newest.get("task")
+
+
 def stress_cell(records, facet, model, length,
                 exclude_renderings=("abstract_stated",)):
     """The model's thinking state-stress cell at (facet, length) — canonical arm
     only (breadth/fixed-k rungs are separate arms), abstract-token floor rendering
-    and wrapped chain_depth cells excluded. None when the cell never ran."""
+    and wrapped chain_depth cells excluded. None when the cell never ran.
+
+    For chain facets, only the latest chain task version is used (so a retired
+    chain_v1 history does not shadow new chain_v2 results)."""
     cells = [r for r in by_facet(records, facet)
              if r["model"] == model and r.get("length") == length
              and _settings(r).get("rendering") not in exclude_renderings
              and not chain_invalid(r)
              and canonical_arm(r)]
+    if not cells:
+        return None
+    if facet in ("chain_nowrap", "chain_instant", "chain_depth"):
+        want = _latest_chain_task(records, facet)
+        if want:
+            cells = [r for r in cells if r.get("task") == want]
     return cells[0] if cells else None
 
 
@@ -855,7 +873,7 @@ INSTANT_STRESS_NOTE = (
     "diagnostics as in the headline). recall_load scales the recall pool with "
     f"the length (recall_copy_v1 @L{RECALL_LOAD_LENGTH}, "
     f"pool {RECALL_LOAD_LENGTH}, n=50): single-query deferred recall under "
-    f"working-set load. chain_instant runs chain_v1 d{CHAIN_INSTANT_DEPTH} on "
+    f"working-set load. chain_instant runs chain_v2 d{CHAIN_INSTANT_DEPTH} on "
     f"the same k={CHAIN_INSTANT_K} staircase items as the thinking "
     f"d{CHAIN_INSTANT_DEPTH} cell (n=25): the within-item regime contrast for "
     "depth. The floor row is the uniform guess over the answer pool; escalated "
@@ -879,7 +897,7 @@ def instant_stress_columns() -> list[str]:
         "Model",
         f"instant: recall under load (recall_load, recall_copy_v1 "
         f"pool-{RECALL_LOAD_LENGTH} @L{RECALL_LOAD_LENGTH})",
-        f"instant: chain d{CHAIN_INSTANT_DEPTH} (chain_instant, chain_v1, "
+        f"instant: chain d{CHAIN_INSTANT_DEPTH} (chain_instant, chain_v2, "
         f"k={CHAIN_INSTANT_K})",
     ]
 
@@ -1458,7 +1476,7 @@ def write_results_md(records, out_path, history_path):
 
     lines += [
         "The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the "
-        f"d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}). `chain_v1` builds a single "
+        f"d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}). `chain_v2` builds a single "
         f"k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths < k "
         '(`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells '
         f"at depth >= {CHAIN_CYCLE_K} wrapped the cycle (gold == start agent at depths 12/24/48; "
@@ -2322,7 +2340,7 @@ answer; binary per item, no partial credit (<code>factworld.tasks.score_relaxed<
 Containment is the one published diagnostic. Intervals: Wilson 95% CI.
 {html.escape(NOTATION_NOTE.replace("`", ""))}
 The chain column reads the <code>chain_nowrap</code> facet only (staircase k=2d+1, so the
-d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}): <code>chain_v1</code> builds a
+d{CHAIN_STRESS_DEPTH} cell is k={CHAIN_STRESS_K}): <code>chain_v2</code> builds a
 single k={CHAIN_CYCLE_K} pointer cycle and measures depth only for depths &lt; k
 (<code>factworld/tasks.py</code> design gate), so <code>chain_depth</code> cells at depth &ge;
 {CHAIN_CYCLE_K} wrapped the cycle, measure the wrapped task rather than depth, and are marked

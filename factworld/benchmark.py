@@ -124,7 +124,8 @@ MODELS = {
         "model_name": "gpt-5.6-sol",
         "max_completion_tokens": True,
         "reasoning_model": True,
-        "supports_reasoning_effort": False},
+        "supports_reasoning_effort": False,
+        "reasoning_effort_values": {"low": "low", "medium": "medium", "high": "high"}},
     # openai/gpt-5.4 and google/gemini-3.1-pro-preview DROPPED 2026-07-08 (owner
     # decision: one flagship per vendor; Google is pushing flash).
     # no_reasoning_effort: Gemini 3 endpoints reject effort=none outright
@@ -325,7 +326,7 @@ FACETS = {
         "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
     # no-wrap deep chains, replacing the invalid wrap-era chain_depth facet (its
     # k=6 cycle wrapped at depth >= 6, collapsing gold to nxt^(depth mod 6)).
-    # STAIRCASE protocol: each depth d runs chain_v1.scaled(k=2*d+1). k must
+    # STAIRCASE protocol: each depth d runs chain_v2.scaled(k=2*d+1). k must
     # exceed d (the wrap gate), but k=d+2 would leave its own constant shortcut:
     # on a single complete k-cycle, d forward hops == (k-d) BACKWARD hops, so
     # k=d+2 puts gold always exactly 2 reverse lookups from start. k=2d+1 prices
@@ -333,17 +334,17 @@ FACETS = {
     # depth. Breadth (k agents) grows with depth by design; read the axis as
     # "d hops over 2d+1 agents", not d hops at fixed breadth.
     "chain_nowrap": {
-        "task": "chain_v1", "lengths": (16, 32, 64, 128), "n": 25,
+        "task": "chain_v2", "lengths": (16, 32, 64, 128), "n": 25,
         "efforts": "on", "max_new_tokens": 16384},
     # chain d16 INSTANT arm: the within-item regime contrast for recall∘recall
     # composition. Same staircase spec as the chain_nowrap d16 thinking cell
-    # (chain_v1.scaled(k=2*16+1=33) via spec_for_cell, same deterministic items
+    # (chain_v2.scaled(k=2*16+1=33) via spec_for_cell, same deterministic items
     # and n, chance ~1/33), but reasoning off under the answer contract, so the
     # instant-vs-thinking contrast is within-item. A dedicated facet, not an
     # extra chain_nowrap arm: effort policies are facet-wide and this off arm
     # runs at d16 only (an "off" arm at d32-128 would buy predicted floor cells).
     "chain_instant": {
-        "task": "chain_v1", "lengths": (16,), "n": 25,
+        "task": "chain_v2", "lengths": (16,), "n": 25,
         "efforts": "off", "contract": True,
         "max_new_tokens": ZERO_BUDGET_MAX_NEW_TOKENS},
     # sanity rows: cheap positive controls at each task's first eval length.
@@ -402,7 +403,7 @@ def _settings(effort, *, rendering=None, format_prompt=None, leg=None,
       breadth  — pool rung B: run the task at CANONICAL[task].scaled(k=2*B,
                  recall_pool=B) (composite tasks; B=16 IS canonical
                  composite_copy_v2).
-      k_fixed  — fixed-breadth chain: chain_v1.scaled(k=k_fixed) — d hops over a
+      k_fixed  — fixed-breadth chain: chain_v2.scaled(k=k_fixed) — d hops over a
                  FIXED k-cycle, replacing the staircase k=2d+1 (k_fixed must
                  exceed the depth; tasks.py's wrap gate raises otherwise).
     """
@@ -535,7 +536,7 @@ def spec_for_cell(task: str, length: int, breadth: int | None = None,
         k=2*B, recall_pool=B). Anchored so B=CANONICAL_BREADTH (16) resolves to
         the canonical composite_copy_v2 knobs (k=32/pool16) — scaling at the
         canonical rung is a no-op by construction.
-      - ``k_fixed`` (chain family): chain_v1.scaled(k=k_fixed) — d hops over a
+      - ``k_fixed`` (chain family): chain_v2.scaled(k=k_fixed) — d hops over a
         FIXED k-cycle (composition at fixed breadth). tasks.py's wrap gate
         raises at generation time if k_fixed <= depth.
       - chain without k_fixed: the no-wrap STAIRCASE k=2*length+1 when the depth

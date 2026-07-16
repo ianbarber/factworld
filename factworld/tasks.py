@@ -342,11 +342,20 @@ def _ex_chain(spec, w, r, rng, depth, idx):
     present = cyc[:]; rng.shuffle(present)                            # render facts in scrambled order
     facts = " ".join(r.render_fact(a, "a0", nxt[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
     start = rng.choice(cyc)
-    cur = start
+    path = [start]
     for _ in range(depth):
-        cur = nxt[cur]
+        path.append(nxt[path[-1]])
+    gold = path[-1]
     query = "what is " + "a0 of " * depth + f"{start}?"
-    return Example(f"{facts} {query}", _render_answer(cur), depth, {"depth": depth, "start": start})
+    # chain_v2 adds an explicit hop count to avoid models miscounting 128 repetitions
+    # of "a0 of" in the nested query (a prompt-format confound at depth ≥ 64).
+    if spec.name == "chain_v2":
+        query += f" ({depth} hops)"
+    meta = {"depth": depth, "start": start, "path": path}
+    # Dense supervision: emit every intermediate node (excluding the final answer).
+    if spec.worked_trace:
+        meta["trace"] = " ".join(path[:-1])
+    return Example(f"{facts} {query}", _render_answer(gold), depth, meta)
 
 
 # ---------------------------------------------------------------------------
@@ -577,7 +586,10 @@ CANONICAL = {
     # wraps to a recency shortcut (validity gate confirms majority/recency at floor). ENFORCED: generating
     # at depth >= k raises ValueError (gold collapses to nxt^(depth mod k)); deep chains must use the
     # no-wrap protocol .scaled(k=depth+2), or opt into wrap explicitly via .scaled(chain_allow_wrap=True).
-    "chain_v1":         TaskSpec("chain_v1", "chain", k=6, train_lengths=(2, 3), eval_lengths=(4, 5)),
+    # chain_v2: same pointer-chase task as chain_v1, but the query appends an explicit
+    # hop count (e.g. "... of g246? (128 hops)") to remove the depth-counting confound
+    # that caused models to miscount 128 nested "a0 of" phrases.
+    "chain_v2":         TaskSpec("chain_v2", "chain", version="1.1", k=6, train_lengths=(2, 3), eval_lengths=(4, 5)),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)
@@ -618,6 +630,11 @@ RETIRED = {
     "composite_copy_scale_v1": TaskSpec("composite_copy_scale_v1", "composite", k=5, recall_pool=5,
                                         memorized_recall=False, value_vocab_size=128, kind="retired",
                                         train_lengths=(4, 8, 16), eval_lengths=(16, 64)),
+    # Original chain pointer-chase. Retired because the nested "a0 of a0 of ..." query becomes a
+    # hop-counting confound at depth 64/128; superseded by chain_v2, which appends an explicit
+    # depth annotation ("(128 hops)") to the same query.
+    "chain_v1":         TaskSpec("chain_v1", "chain", k=6, train_lengths=(2, 3), eval_lengths=(4, 5),
+                                  kind="retired"),
 }
 
 
