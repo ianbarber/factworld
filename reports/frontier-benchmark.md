@@ -280,50 +280,52 @@ settings, plus a practical efficiency column:
 - **s5@128 ctok** — completion tokens per call on the matched s5 L128 cell, which every roster
   model ran (a per-solve average would reward early failure; the matched-cell total does not).
 
-| Model | chain d128 (k=257) | s5 @L256 | s5@128 ctok |
+| Model | chain d128 (k=257, chain_v2) | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
 | x-ai/grok-4.5 | n/a | 1.00‡ | 8069 |
-| muse-spark-1.1 | 0.88ʳ | 1.00ʳ | 9704 |
-| anthropic/claude-sonnet-5 | 0.04 | 1.00 @32,768tok (raised budget) | 11866 |
-| anthropic/claude-opus-4.8 | 0.08 | 1.00 @32,768tok (raised budget) | 12683 |
-| openai/gpt-5.5 | 0.36 | 0.96 | 6989 |
-| openai/gpt-5.6-sol | 1.00 | 0.92 | 2657 |
-| z-ai/glm-5.2 | 0.36 | 0.88 | 6282 |
-| moonshotai/kimi-k2.6 | 0.64‡ | 0.88 | 17418 |
+| muse-spark-1.1 | 0.96 | 1.00 @32,768tok (raised budget) | 9704 |
+| anthropic/claude-sonnet-5 | 1.00 | 1.00 @32,768tok (raised budget) | 11866 |
+| anthropic/claude-opus-4.8 | 1.00 | 1.00 @32,768tok (raised budget) | 12683 |
+| openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
+| z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 1.00‡ | 0.88 | 17418 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| google/gemini-3.5-flash | 0.88 | 0.52 | 11022 |
-| deepseek/deepseek-v4-pro | ⊘ @32,768tok (raised budget) | ⊘ | 10043 |
-| nvidia/nemotron-3-ultra-550b-a55b | ⊘ @32,768tok (raised budget) | ⊘ | 12250 |
+| google/gemini-3.5-flash | 1.00 | 0.52 | 11022 |
+| deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
 
 n=25 per cell; Wilson intervals ≈ ±0.15–0.19, and the one thinking test-retest pair moved 0.16 —
 differences under ~0.2 are not an ordering.
+
+The chain cells now run `chain_v2`: identical pointer chase, but the query appends an explicit
+hop count (`what is a0 of ... of g246? (128 hops)`). The original `chain_v1` nested phrase was a
+hop-counting confound — opus and sonnet's traces often stopped after the wrong number of "a0 of"
+repetitions — so the v1 d128 scores (0.08, 0.04) were artificially low. Under v2, opus, sonnet,
+and most of the roster solve the 128-hop chase cleanly.
 
 `⊘` cells are not measurable at the stated budget: majority finish=length, so the score
 reflects the token budget rather than the ability. The s5 cells marked @32,768tok (raised budget) are the
 demonstration that the mark means what it says: at 16,384 tokens opus, sonnet, and muse-spark-1.1 emitted no
 visible answer on most or all of their 25 s5 L256 calls; at 32,768 all three solve all 25 with clean stops
 (opus ctok mean 23,898, max 28,986; sonnet mean 24,071; muse-spark mean 24,434 — the cells simply need ~24k tokens).
-Deepseek's chain d128 is the contrast case: rerun at the same 32,768 budget it still hits
-length on 19/25 calls (median ctok = the cap) and scores 0.08 — still budget-bound, so its ⊘
-stands with the budget stated. Nemotron's chain d128 raise (bought on its completion evidence:
-12/25 clean-but-wrong stops) reads 0.00 at 32,768 with 16/25 still truncated — a capability
-failure confirmed at double budget, not a budget artifact. `‡` cap-escape: the provider ignored
-the requested token cap on >10% of calls, so those token spends are not cap-comparable. Kimi
-(chain d64/d128) escapes the cap. grok-4.5 also escapes it: on chain d64, 4/25 calls exceeded
-the 16,384-token cap, with the worst call running to 38,392 tokens (2.3× the cap); on s5 L256,
-5/25 calls exceeded the cap, by up to 1,863 tokens (1.11× the cap). Because grok-4.5's endpoint
-does not bound reasoning at the requested cap, the chain d128 cell was not run — it would be
-unmeasurable in the same budget terms as the rest of the roster.
-(Deepseek's superseded 16,384-token chain d128 attempt also escaped the cap; the published
-32,768 rerun did not — max ctok is exactly the cap.) `n/a` cells never ran: grok-4.5's chain
-d128 (endpoint does not enforce the cap) and every instant cell, and muse-spark-1.1's every
-instant cell.
+Deepseek's s5 @L256 remains ⊘ at 16,384 tokens. On chain, deepseek now solves d128, but the cell
+consumes ~244k completion tokens (median reasoning tokens ≈ 224k) — it is token-profligate, not
+budget-truncated. Nemotron's chain d128 reads 0.60 at 16,384 with clean stops; its s5 @L256 is
+still ⊘. `‡` cap-escape: the provider ignored the requested token cap on >10% of calls, so those
+token spends are not cap-comparable. Kimi (chain d64/d128) escapes the cap. grok-4.5 also escapes
+it: on chain d64, 4/25 calls exceeded the 16,384-token cap, with the worst call running to 38,392
+tokens (2.3× the cap); on s5 L256, 5/25 calls exceeded the cap, by up to 1,863 tokens (1.11× the
+cap). Because grok-4.5's endpoint does not bound reasoning at the requested cap, the chain d128
+cell was not run — it would be unmeasurable in the same budget terms as the rest of the roster.
+`n/a` cells never ran: grok-4.5's chain d128 (endpoint does not enforce the cap) and every instant
+cell, and muse-spark-1.1's every instant cell.
 
 The scores discriminate where the composed cell cannot: qwen (0.96 chain, 0.80 s5), gpt-5.6-sol
-(1.00 chain, 0.92 s5), muse-spark-1.1 (0.88 chain, 1.00 s5), and gemini-flash (0.88, 0.52) hold
-deep state under reasoning that they cannot hold in weights, while opus and sonnet — the
-strongest clean instant composers — post the weakest measurable chain scores (0.08, 0.04) even
-as they solve s5 L256 outright once the budget covers their ~24k-token traces.
+(0.88 chain, 0.92 s5), muse-spark-1.1 (0.96 chain, 1.00 s5), and gemini-flash (1.00 chain, 0.52)
+hold deep state under reasoning that they cannot hold in weights. opus and sonnet now solve chain
+as well as s5 once the budget covers their traces, leaving gpt-5.6-sol and glm-5.2 as the only
+thinking-regime models with a measurable chain shortfall.
 
 All thinking-regime cells are run at the maximum reasoning effort the endpoint supports
 (`effort=high` on OpenRouter, `reasoning_effort=high` for the direct OpenAI path used by
@@ -585,23 +587,34 @@ the d256 breadth sweep (§3.2) — the value leg is what collapses.
 
 ### 3.4 Chain: depth does not extrapolate
 
-Chain (recall ∘ recall) at the canonical baseline recipe (d320×4, 8k steps, registered spec:
+Chain (recall ∘ recall) at the canonical baseline recipe (d320×4, 8k steps, spec `chain_v2`:
 train depths 2–3, eval depths 4–5, n=200, 3 seeds per architecture;
-`results/local_chain_arch_20260710.jsonl`), against a 1/6 agent-guess ≈ 0.17:
+`results/local_chain_v2_20260715.md`), against a 1/6 agent-guess ≈ 0.17:
 
 | arch | composed @d4 (pconv) | @d5 | final loss |
 |---|---|---|---|
-| fprm | 0.20±0.01 (0%) | 0.21±0.02 | 0.38–0.40 |
-| transformer | 0.22±0.01 (0%) | 0.06±0.02 | 0.40–0.41 |
-| gdp_hybrid | 0.02±0.01 (0%) | 0.00±0.00 | 0.23–0.25 |
+| fprm | 0.21±0.03 (0%) | 0.15±0.03 | 0.38–0.40 |
+| transformer | 0.16±0.12 (0%) | 0.09±0.07 | 0.39–0.40 |
+| gdp_hybrid | 0.01±0.01 (0%) | 0.00±0.00 | 0.22–0.29 |
 
 No run converges (pconv 0/9). fprm and the transformer sit at the guess floor at d4 — fprm
 stays there at d5, the transformer falls below it — and gdp_hybrid fits the training
 distribution best (lowest final loss) yet scores 0.00–0.03 at both held-out depths: a
-depth-specific circuit that is systematically wrong one hop out, not a guesser. The
-depth-extrapolation row of the price table is open, with all three architectures measured at 3
-seeds each. The contrast with the frontier is the point: the same composition solves at d16 over
-the API, but only in the thinking regime (§2).
+depth-specific circuit that is systematically wrong one hop out, not a guesser.
+
+A dense-supervision pilot (`chain_v2` with worked intermediate-hop traces, same recipe;
+`results/local_chain_v2_dense_20260715.md`) made things no better:
+
+| arch | trace-supervised @d4 | @d5 |
+|---|---|---|
+| fprm | 0.12±0.04 | 0.11±0.03 |
+| transformer | 0.09±0.03 | 0.03±0.02 |
+| gdp_hybrid | 0.05±0.04 | 0.04±0.04 |
+
+So the depth-extrapolation failure is not a supervision-density problem in the s5 sense.
+The depth-extrapolation row of the price table remains open, with all three architectures
+measured at 3 seeds each. The contrast with the frontier is the point: the same composition
+solves at d16 over the API, but only in the thinking regime (§2).
 
 ### 3.5 s5: the lever is supervision density
 
@@ -636,7 +649,7 @@ free — each is paid for by an architectural or training choice.** Two rows rem
 | last-write state | recurrence, ordered by form — fprm (product recurrence) 1.00 @B6 / 0.97–0.98 seed-consistent @B16 on the binding leg, over gdp_hybrid (0.56 @B6) over transformer (0.23 @B6); at B24 fprm stops fitting (0.20, loss ≥1.0) and only the gated hybrid holds (0.67) | §3.2, breadth sweep |
 | non-abelian state (formation) | dense per-step supervision — a state checkpoint every ≤2 events, architecture-independent | §3.5; consolidated §8; [experiments §1](../docs/experiments/README.md); archived provenance phases/02 §4 |
 | non-abelian state (length extrapolation) | recurrent hybrid — gdp_hybrid 0.75 @L64; fprm (0.19) and transformer (0.22) solve in-distribution but collapse past train length | §3.5; experiments §1 |
-| depth extrapolation | **open** — no measured choice buys it: trained at chain depths 2–3, all three architectures read at or below the 1/6 guess at depths 4–5 (fprm 0.20/0.21, transformer 0.22/0.06, gdp_hybrid 0.02/0.00) | §3.4, local chain table |
+| depth extrapolation | **open** — no measured choice buys it: trained at chain depths 2–3, all three architectures read at or below the 1/6 guess at depths 4–5 (fprm 0.21/0.15, transformer 0.16/0.09, gdp_hybrid 0.01/0.00); dense intermediate-hop supervision does not help | §3.4, local chain table |
 | local composition (value leg) | **open** — value ≤0.17 in all 45 breadth-sweep runs (at/below the 1/pool guess), even on binding-solved seeds of all three architectures | §3.2, breadth sweep |
 
 The two open rows are the instrument's active edge: nothing measured so far buys depth
@@ -684,8 +697,9 @@ current canary, a few hundredths off the cycle before — inside the bar.
   `index.html` alongside).
 - Raw per-cell records (one JSON object per cell, all attempts, usage, diagnostics):
   `results/benchmark/history.jsonl` (zero-budget battery: run `bench_v2_zb2_20260709`;
-  scaffolded leg: `bench_20260710_124904`; chain/s5: `bench_v2_20260708`; recall-under-load and
-  chain d16 instant: `bench_20260710_frontier_rows`; raised-budget s5/chain cells:
+  scaffolded leg: `bench_20260710_124904`; chain_v1/s5: `bench_v2_20260708`; recall-under-load and
+  chain d16 instant: `bench_20260710_frontier_rows`; chain_v2 d16/d32/d64/d128 and chain_v2 d16
+  instant: `bench_20260715_102923` and `bench_20260715_222250`; raised-budget s5/chain cells:
   `bench_17_budget32k_20260711`; commutative roster: `bench_18_commutative_20260711` and its
   top-up; stability checks: `bench_16_*_20260711`; gpt-5.6-sol / grok-4.5 cells:
   `bench_15_newmodels_20260712`; second canary pass (the rendered glm zero-budget cells):
@@ -698,7 +712,7 @@ current canary, a few hundredths off the cycle before — inside the bar.
   `results/local_breadth/`.
 - Staged-curriculum flagship: `results/curriculum_staged_v2_d768_notrace.jsonl`; compute-matched
   scale sweep: `results/composite_scale_*.md`.
-- Local chain comparison: `results/local_chain_arch_20260710.jsonl`; commutative calibration:
+- Local chain comparison: `results/local_chain_v2_20260715.md` and `results/local_chain_v2_dense_20260715.md`; commutative calibration:
   `results/commutative_local/` and `results/commutative_frontier/`.
 - History and the running experiment log: [`phases/`](../phases/) (provenance) and
   [`docs/experiments/README.md`](../docs/experiments/README.md) (archival log).
