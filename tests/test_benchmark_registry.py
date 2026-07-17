@@ -455,8 +455,8 @@ def _validate_c3(rec, cell, model):
     assert set(rec["settings"]) == SETTINGS_KEYS
     assert set(rec["metrics"]) == {"relaxed", "exact", "contains", "last_n"}
     assert rec["metrics"]["relaxed"] is not None  # relaxed is ALWAYS present
-    diag_keys = {"empty_rate", "api_errors", "finish_errors", "finish_reasons",
-                 "cost_aborted"}
+    diag_keys = {"empty_rate", "truncated_rate", "api_errors", "finish_errors",
+                 "finish_reasons", "cost_aborted"}
     if rec["diagnostics"]["cost_aborted"]:
         diag_keys |= {"calls_completed", "cost_abort_reason"}
     if rec["settings"]["contract"]:

@@ -697,12 +697,26 @@ def _run_attempt(backend, cell: dict, n: int, max_new_tokens: int | None = None,
         metrics, examples, preds = _run_task_cell(guard, run_cell, n)
 
     _attach_example_meta(examples, guard.pop_example_meta())
+    # Truncated (finish=length) outputs are not committed answers: score them as empty.
+    # This prevents a mid-reasoning scratchpad's first token from being scored as a
+    # real answer (review: the v1 s5_chain pilot had a false positive this way).
+    truncated = 0
+    for i, ex in enumerate(examples):
+        if ex.get("finish") == "length":
+            ex["pred"] = ""
+            ex["relaxed"] = 0
+            if i < len(preds):
+                preds[i] = ""
+            truncated += 1
+    if truncated:
+        metrics["relaxed"] = sum(ex["relaxed"] for ex in examples) / max(1, len(examples))
     meta = guard.pop_call_meta()  # already a fresh dict: the escalation path mutates usage
     empty_rate = sum(1 for p in preds if not p.strip()) / max(1, len(preds))
     length_rate = (sum(1 for ex in examples if ex["finish"] == "length")
                    / max(1, len(examples)))
     diagnostics = {
         "empty_rate": round(empty_rate, 4),
+        "truncated_rate": round(truncated / max(1, len(examples)), 4),
         "api_errors": meta["errors"],
         # finish=error calls are NOT exception-path api_errors (review F8: 12
         # finish=error calls sat invisible at api_errors=0) — count them apart.

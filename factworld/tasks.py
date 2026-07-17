@@ -642,12 +642,12 @@ CANONICAL = {
     # followed by a d-hop serial dereference query. length = number of permutation events;
     # chain_depth = number of a0 hops in the query (kept < k). v1 is the hard calibration
     # prototype with ambiguous rendering; v2 is the calibrated frontier setting with explicit
-    # value-update rendering (pilot 2026-07-17: gpt-5.5/qwen 0.90-1.00, opus 0.70-0.90,
-    # gemini-flash 0.10-0.30 at L16-64).
+    # value-update rendering (pilot 2026-07-17: gpt-5.5 1.00/1.00/1.00, qwen 1.00/0.84/0.72,
+    # opus 0.96/0.88/0.80, gemini-flash 1.00/0.76/0.56 at L16/32/64).
     "s5_chain_v1":      TaskSpec("s5_chain_v1", "s5_chain", version="1.1", k=16, chain_depth=8,
                                   train_lengths=(8, 16), eval_lengths=(32, 64)),
     "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.3", k=16, chain_depth=8,
-                                  train_lengths=(8, 16), eval_lengths=(16, 32, 64)),
+                                  train_lengths=(8, 16), eval_lengths=(32, 64, 96)),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)
