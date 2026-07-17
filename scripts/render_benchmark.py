@@ -655,8 +655,8 @@ def stress_cell(records, facet, model, length,
     only (breadth/fixed-k rungs are separate arms), abstract-token floor rendering
     and wrapped chain_depth cells excluded. None when the cell never ran.
 
-    For chain facets, only the latest chain task version is used (so a retired
-    chain_v1 history does not shadow new chain_v2 results)."""
+    Only records for the facet's CURRENT task version are used, so retired
+    chain_v1/s5_chain_v1 history does not shadow the new chain_v2/s5_chain_v2 results."""
     cells = [r for r in by_facet(records, facet)
              if r["model"] == model and r.get("length") == length
              and _settings(r).get("rendering") not in exclude_renderings
@@ -664,10 +664,10 @@ def stress_cell(records, facet, model, length,
              and canonical_arm(r)]
     if not cells:
         return None
-    if facet in ("chain_nowrap", "chain_instant", "chain_depth"):
-        want = _latest_chain_task(records, facet)
-        if want:
-            cells = [r for r in cells if r.get("task") == want]
+    from factworld.benchmark import FACETS
+    facet_task = FACETS.get(facet, {}).get("task")
+    if facet_task:
+        cells = [r for r in cells if r.get("task") == facet_task]
     return cells[0] if cells else None
 
 
@@ -957,6 +957,40 @@ def s5_efficiency_rows(records):
         n = eff_rec.get("n") or 0
         ctok = (eff_rec.get("usage") or {}).get("completion_tokens")
         score = stress_value_str(score_rec)
+        ctok_per = ctok / n if n > 0 and ctok is not None else None
+        score_num = _numeric_value(score)
+        censored = score.startswith(CENSORED_CELL)
+        rows.append((
+            (1 if censored else 0,
+             -(score_num if score_num is not None else 0),
+             ctok_per if ctok_per is not None else float("inf"),
+             m),
+            [m,
+             score,
+             "n/a" if ctok_per is None else f"{ctok_per:.0f}"],
+        ))
+    rows.sort(key=lambda r: r[0])
+    return [r[1] for r in rows]
+
+
+S5_CHAIN_STRESS_LENGTH = 96
+S5_CHAIN_EFF_LENGTH = 64
+
+
+def s5_chain_rows(records):
+    """s5_chain ranking: the single composite stressor (non-abelian pointer-map state
+    tracking composed with serial dereference). Sorted by s5_chain @L96 score
+    descending, then by s5_chain@64 ctok per call ascending (the matched L64 cell
+    every current-roster model runs)."""
+    rows = []
+    for m in roster_models(records):
+        score_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_STRESS_LENGTH)
+        eff_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_EFF_LENGTH)
+        if score_rec is None and eff_rec is None:
+            continue
+        score = stress_value_str(score_rec)
+        n = eff_rec.get("n") or 0
+        ctok = (eff_rec.get("usage") or {}).get("completion_tokens") if eff_rec else None
         ctok_per = ctok / n if n > 0 and ctok is not None else None
         score_num = _numeric_value(score)
         censored = score.startswith(CENSORED_CELL)
@@ -1471,6 +1505,22 @@ def write_results_md(records, out_path, history_path):
                   "| Model | s5 @L256 | s5@128 ctok/call |",
                   "|---|---|---|"]
         for r in s5_eff:
+            lines.append("| " + " | ".join(r) + " |")
+        lines.append("")
+
+    s5c = s5_chain_rows(records)
+    if s5c:
+        lines += [
+            "## s5_chain ranking", "",
+            "s5_chain is the single composite stressor: k=16 agents with an a0 pointer map, "
+            "L order-sensitive swap/cycle events on the pointer targets, then an 8-hop serial "
+            "dereference query (`what is a0 of ... of gX? (8 hops)`). Sorted by the @L96 score, "
+            "then by completion tokens per call on the matched @L64 cell. The echo-start floor "
+            "(answer the queried agent) is 0.16 at L32 and 0.20 at L64/L96 on these items.",
+            "",
+            "| Model | s5_chain @L96 | s5_chain@64 ctok/call |",
+            "|---|---|---|"]
+        for r in s5c:
             lines.append("| " + " | ".join(r) + " |")
         lines.append("")
 
@@ -2322,6 +2372,19 @@ def write_index_html(records, out_dir, svg_paths, history_path):
             + _html_table(["Model", "s5 @L256", "s5@128 ctok/call"],
                           s5_eff_rows)
         )
+    s5c_rows = s5_chain_rows(records)
+    s5c_html = ""
+    if s5c_rows:
+        s5c_html = (
+            "<h3>s5_chain ranking</h3>\n"
+            '<p class="small">s5_chain is the single composite stressor: k=16 agents with an a0 '
+            "pointer map, L order-sensitive swap/cycle events on the pointer targets, then an "
+            "8-hop serial dereference query. Sorted by the @L96 score, then by completion tokens "
+            "per call on the matched @L64 cell. The echo-start floor (answer the queried agent) "
+            "is 0.16 at L32 and 0.20 at L64/L96 on these items.</p>\n"
+            + _html_table(["Model", "s5_chain @L96", "s5_chain@64 ctok/call"],
+                          s5c_rows)
+        )
 
     page = f"""<!DOCTYPE html>
 <html lang="en">
@@ -2368,6 +2431,7 @@ current-roster model runs.</p>
 <p class="small">{html.escape(THINKING_NOISE_NOTE)}<br>
 {html.escape(EFFICIENCY_NOTE)}</p>
 {s5_eff_html}
+{s5c_html}
 {dropped_html}
 {archived_html}
 <h2>Figures</h2>

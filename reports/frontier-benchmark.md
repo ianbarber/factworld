@@ -360,6 +360,38 @@ grok-4.5 uses the fewest tokens (8,069 ctok) and opus the most (12,683 ctok) for
 score. grok-4.5's `‡` means its provider did not enforce the requested cap, so that token spend is
 not strictly cap-comparable.
 
+**s5_chain: the single composite stressor.** The chain and s5 columns above measure the two
+state-stress components separately; `s5_chain` composes them in one task: k=16 agents with an a0
+pointer map, L order-sensitive swap/cycle events on the pointer targets, then an 8-hop serial
+dereference query. It is the natural single ranking benchmark for thinking-regime state
+composition. The task went through two pre-flight fixes: the event rendering was made explicit
+(`g6's a0 becomes g5's a0` rather than `cycles a0: g6 -> g5 -> g0`) after opus was observed
+answering from the initial map, and truncated (`finish=length`) outputs are now scored as empty.
+An echo-start floor (answer the queried agent) sits at 0.16–0.20 on these items; all roster models
+clear it.
+
+| Model | s5_chain @L96 | s5_chain@64 ctok/call |
+|---|---|---|
+| openai/gpt-5.5 | 0.96 | 7282 |
+| moonshotai/kimi-k2.6 | 0.96 | 21252 |
+| x-ai/grok-4.5 | 0.92 | 7811 |
+| deepseek/deepseek-v4-pro | 0.92 | 12255 |
+| anthropic/claude-opus-4.8 | 0.88 | 7610 |
+| muse-spark-1.1 | 0.84 | 13130 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.80 | 16802 |
+| anthropic/claude-sonnet-5 | 0.76 | 10938 |
+| z-ai/glm-5.2 | 0.68 | 9159 |
+| qwen/qwen3.7-max | 0.68 | 12581 |
+| openai/gpt-5.6-sol | 0.56 | 810 |
+| google/gemini-3.5-flash | 0.56 | 15878 |
+
+The ranking is broadly consistent with the component columns: gpt-5.5, which is strong on both
+chain and s5, tops the composite; kimi and grok, both strong on the components, are next; gemini
+and qwen, weaker on s5, fall to the bottom. The surprise is gpt-5.6-sol: it solves chain d128
+(0.88) and s5 @L256 (0.92) but reads 0.56 on the composite at L96, suggesting it does not compose
+the two abilities as reliably as its component scores predict. opus's 0.88 with the cheapest
+reasoning trace among the top five (7,610 ctok) is the efficiency note.
+
 Kimi's instant composed scores look high (≤0.94† / ≤0.77† / ≤0.93†) because its cells carry the
 same `†` leak: the model emits reasoning tokens on 65–89% of zero-budget calls despite
 effort=none, and its provider does not enforce the token cap. Those numbers are explicit upper
@@ -699,7 +731,8 @@ current canary, a few hundredths off the cycle before — inside the bar.
   `results/benchmark/history.jsonl` (zero-budget battery: run `bench_v2_zb2_20260709`;
   scaffolded leg: `bench_20260710_124904`; chain_v1/s5: `bench_v2_20260708`; recall-under-load and
   chain d16 instant: `bench_20260710_frontier_rows`; chain_v2 d16/d32/d64/d128 and chain_v2 d16
-  instant: `bench_20260715_102923` and `bench_20260715_222250`; raised-budget s5/chain cells:
+  instant: `bench_20260715_102923` and `bench_20260715_222250`; s5_chain pilot and full roster:
+  `bench_20260717_113626` and `bench_20260717_131813`; raised-budget s5/chain cells:
   `bench_17_budget32k_20260711`; commutative roster: `bench_18_commutative_20260711` and its
   top-up; stability checks: `bench_16_*_20260711`; gpt-5.6-sol / grok-4.5 cells:
   `bench_15_newmodels_20260712`; second canary pass (the rendered glm zero-budget cells):

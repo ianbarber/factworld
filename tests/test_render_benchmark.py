@@ -245,7 +245,7 @@ def make_fixture_history(path):
             if tier == "non_reasoning" and D == 128:
                 kw.update(finish_reasons={"length": 15, "stop": 10},
                           ex_finish="length")
-            recs.append(_record(model, "chain_nowrap", "chain_v1", D, 25,
+            recs.append(_record(model, "chain_nowrap", "chain_v2", D, 25,
                                 round(acc, 2), **kw))
         # Sanity rows + floor control (s5 abstract token rendering, reasoning off).
         recs.append(_record(model, "sanity", "recall_copy_v1", 4, 30, 1.0))
@@ -647,9 +647,9 @@ def test_breadth_and_k_fixed_arms():
     rung["settings"]["breadth"] = 64          # NEWER record on a different rung:
     rung["ts"] = "2026-07-10T00:00:00+00:00"  # must not dedup/shadow the plain cell
     rung["metrics"]["relaxed"] = 0.20
-    stair = _record("testlab/model-a", "chain_nowrap", "chain_v1", 16, 25, 0.95,
+    stair = _record("testlab/model-a", "chain_nowrap", "chain_v2", 16, 25, 0.95,
                     effort="high")
-    fixed = _record("testlab/model-a", "chain_nowrap", "chain_v1", 128, 25, 0.95,
+    fixed = _record("testlab/model-a", "chain_nowrap", "chain_v2", 128, 25, 0.95,
                     effort="high")
     fixed["settings"]["k_fixed"] = 257
     with tempfile.TemporaryDirectory() as tmp:
@@ -840,7 +840,7 @@ def test_pervasive_covert_and_floor_bound_gap():
                     100, 0.30, leg="binding_only", **zb_kw),   # CI ∋ 0.29 floor
             _record("testlab/model-a", "zero_budget", "composite_copy_v1", 16,
                     100, 0.25, leg=None, **zb_kw),
-            _record("testlab/model-a", "chain_nowrap", "chain_v1", 128, 25,
+            _record("testlab/model-a", "chain_nowrap", "chain_v2", 128, 25,
                     0.95, effort="high"),
         ]
         floor_recs[2]["settings"]["max_new_tokens"] = 32768   # raised budget
