@@ -645,7 +645,7 @@ CANONICAL = {
     # pilot 2026-07-17: opus 0.70-0.90 @L4-16, gpt-5.5 0.10-0.50).
     "s5_chain_v1":      TaskSpec("s5_chain_v1", "s5_chain", version="1.1", k=16, chain_depth=8,
                                   train_lengths=(8, 16), eval_lengths=(32, 64)),
-    "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.1", k=8, chain_depth=4,
+    "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.2", k=8, chain_depth=4,
                                   train_lengths=(2, 4), eval_lengths=(8, 16, 32)),
 }
 

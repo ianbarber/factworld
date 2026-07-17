@@ -55,8 +55,9 @@ class Renderer:
     _GIVE = ("gives {o} to {h}.",)
     _SWAP = ("swaps {a} and {b}.",)
     _CYCLE = ("cycles roles: {flows}.",)
-    _SWAP_A0 = ("swaps the a0 of {a} and the a0 of {b}.",)
-    _CYCLE_A0 = ("cycles a0: {flows}.",)
+    _SWAP_A0 = ("swaps the values of {a}'s a0 and {b}'s a0.",)
+    _CYCLE_A0 = ("cycles a0: {a}'s a0 becomes {b}'s a0, {b}'s a0 becomes {c}'s a0, "
+                  "and {c}'s a0 becomes {a}'s a0.",)
     _ROLE = ("{g} has role {r}.",)
     _HOLDER = ("{h} holds {o}.",)
     _TURN = ("turns {g}'s dial {n} {clicks}.",)
@@ -91,7 +92,7 @@ class Renderer:
         elif event.kind == "swap_a0":
             s = self._pick(self._SWAP_A0, k).format(a=event.args[0], b=event.args[1])
         elif event.kind == "cycle_a0":
-            s = self._pick(self._CYCLE_A0, k).format(flows=self._CYCLE_ARROW.join(event.args))
+            s = self._pick(self._CYCLE_A0, k).format(a=event.args[0], b=event.args[1], c=event.args[2])
         elif event.kind == "turn_dial":
             clicks = "click" if event.args[1] == "1" else "clicks"
             s = self._pick(self._TURN, k).format(g=event.args[0], n=event.args[1], clicks=clicks)
