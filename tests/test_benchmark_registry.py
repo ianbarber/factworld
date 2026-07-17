@@ -91,11 +91,11 @@ def test_registry_shape():
         assert reg["tier"] in B.TIERS, slug
         assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
         assert isinstance(reg["open_weights"], bool)
-    # commutative / gap_stability: EXPERIMENTAL facets (owner-approved 2026-07-11,
-    # issues #18/#16a) — no renderer section reads them yet.
+    # commutative / gap_stability / s5_chain: EXPERIMENTAL facets (owner-approved
+    # 2026-07-11/#18/#16a and 2026-07-16) — no renderer section reads them yet.
     assert set(B.FACETS) == {"zero_budget", "recall_load", "s5_concrete",
                              "chain_nowrap", "chain_instant", "sanity",
-                             "commutative", "gap_stability"}
+                             "commutative", "gap_stability", "s5_chain"}
 
 
 def test_arms_for_facets():
@@ -1051,7 +1051,7 @@ def test_skip_facets_machinery():
     for slug in INSTANT_EXCLUDED:
         cells = B.arms_for(slug)
         assert {c["facet"] for c in cells} == {"s5_concrete", "chain_nowrap",
-                                                  "commutative"}
+                                                  "commutative", "s5_chain"}
         # every planned cell is a reasoning-ON arm (there is no off arm at all)
         assert {c["settings"]["effort"] for c in cells} == {"high"}
     # simulate a partial-skip model without mutating the real registry
@@ -1062,7 +1062,7 @@ def test_skip_facets_machinery():
         assert {c["facet"] for c in cells} == {"recall_load", "s5_concrete",
                                                "chain_nowrap", "chain_instant",
                                                "sanity", "commutative",
-                                               "gap_stability"}
+                                               "gap_stability", "s5_chain"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
     assert sum(len(cells) for cells in plan.values()) == 45  # 9 models x 5 zero_budget cells
     assert sum(1 for cells in plan.values() if cells) == 9  # grok-4.5, muse-spark-1.1, kimi-k2.6 plan none

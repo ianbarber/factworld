@@ -361,6 +361,13 @@ FACETS = {
     "commutative": {
         "task": "commutative_v1", "lengths": (64,), "n": 25,
         "efforts": "on"},
+    # EXPERIMENTAL (owner-approved 2026-07-16): s5_chain — non-abelian pointer-map
+    # state tracking composed with serial dereference. length = number of swap/cycle
+    # events; chain depth is fixed at 8 hops (k=16 agents). Prototype facet for
+    # calibration; no renderer section reads it yet.
+    "s5_chain": {
+        "task": "s5_chain_v1", "lengths": (16, 32, 64), "n": 25,
+        "efforts": "on", "max_new_tokens": 16384},
     # EXPERIMENTAL (issue #16a, owner-approved 2026-07-11): gap stability — the
     # composed and binding_only legs at a SECOND operating point (L32, instant,
     # contract, n=50) for the gap-interpretable models, to test whether the

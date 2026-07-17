@@ -57,8 +57,9 @@ CANONICAL_METRIC = "relaxed"
 class TaskSpec:
     """A frozen, reproducible benchmark task. Difficulty knobs are explicit and scalable."""
     name: str
-    family: str                       # 'recall' | 'binding' | 'composite' | 's5' | 'commutative' | 'conflict' | 'chain'
+    family: str                       # 'recall' | 'binding' | 'composite' | 's5' | 'commutative' | 'conflict' | 'chain' | 's5_chain'
     version: str = _STREAM_V1         # RNG-stream version: frozen at spec introduction (see _STREAM_V1)
+    chain_depth: int = 8              # s5_chain: number of a0 hops in the final query
     seed: int = 0
     # 'benchmark' = a scored, discriminating task; 'control' = a positive control / isolation task that is
     # degenerate as a capability score (e.g. memorized-map recall); 'experimental' = correct construct but
@@ -301,6 +302,51 @@ def _ex_s5(spec, w, r, oracle, rng, length, idx):
     return Example(prompt, _render_answer(role), length, meta)
 
 
+def _ex_s5_chain(spec, w, r, rng, length, idx):
+    """s5_chain: non-abelian pointer-map state + serial dereference in composition.
+
+    World: k agents, initial a0 map = a single k-cycle (as in chain). Stream: length
+    swap/cycle events on the a0 targets (order-sensitive, so the map must be tracked).
+    Query: apply a0 `spec.chain_depth` times starting from a random agent. Gold = the
+    agent reached under the FINAL map. The task composes s5-style permutation tracking
+    with chain-style serial dereference; depth is kept < k so the cycle never wraps.
+    `length` is the number of permutation events; chain depth is a spec knob.
+    """
+    depth = spec.chain_depth
+    if depth >= spec.k:
+        raise ValueError(
+            f"{spec.name}: chain depth {depth} >= k={spec.k} wraps the {spec.k}-cycle; "
+            f"use spec.scaled(k={depth + 2}) for a no-wrap protocol."
+        )
+    cyc = rng.sample(list(w.agents), spec.k)
+    nxt = {cyc[i]: cyc[(i + 1) % spec.k] for i in range(spec.k)}
+    present = cyc[:]; rng.shuffle(present)
+    facts = " ".join(r.render_fact(a, "a0", nxt[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
+
+    events: list[Event] = []
+    for _ in range(length):
+        if rng.random() < 0.5:
+            a, b = rng.sample(cyc, 2)
+            events.append(Event("swap_a0", (a, b)))
+            nxt[a], nxt[b] = nxt[b], nxt[a]
+        else:
+            a, b, c = rng.sample(cyc, 3)
+            events.append(Event("cycle_a0", (a, b, c)))
+            nxt[a], nxt[b], nxt[c] = nxt[b], nxt[c], nxt[a]
+    hist = " ".join(r.render_history(tuple(events), with_steps=True))
+
+    start = rng.choice(cyc)
+    path = [start]
+    for _ in range(depth):
+        path.append(nxt[path[-1]])
+    gold = path[-1]
+    query = "what is " + "a0 of " * depth + f"{start}? ({depth} hops)"
+    meta = {"depth": depth, "start": start, "path": path}
+    if spec.worked_trace:
+        meta["trace"] = " ".join(path[:-1])
+    return Example(f"{facts} {hist} {query}", _render_answer(gold), length, meta)
+
+
 def _ex_conflict(spec, w, r, pmap, rng, length, idx):
     """In-weights ↔ in-context CONFLICT: the prompt states a value for the queried agent that DIFFERS from
     the value the model memorized (`pmap`) during training; the correct answer is the IN-CONTEXT value.
@@ -404,6 +450,8 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
             out.append(_ex_commutative(spec, w, r, oracle, rng, L))
         elif spec.family == "s5":
             out.append(_ex_s5(spec, w, r, oracle, rng, L, idx))
+        elif spec.family == "s5_chain":
+            out.append(_ex_s5_chain(spec, w, r, rng, L, idx))       # L = permutation events
         elif spec.family == "chain":
             out.append(_ex_chain(spec, w, r, rng, L, idx))           # L = chain depth
         else:
@@ -590,6 +638,11 @@ CANONICAL = {
     # hop count (e.g. "... of g246? (128 hops)") to remove the depth-counting confound
     # that caused models to miscount 128 nested "a0 of" phrases.
     "chain_v2":         TaskSpec("chain_v2", "chain", version="1.1", k=6, train_lengths=(2, 3), eval_lengths=(4, 5)),
+    # s5_chain: composite stressor — order-sensitive swap/cycle events on the a0 pointer map,
+    # followed by a d-hop serial dereference query. length = number of permutation events;
+    # chain_depth = number of a0 hops in the query (kept < k).
+    "s5_chain_v1":      TaskSpec("s5_chain_v1", "s5_chain", version="1.1", k=16, chain_depth=8,
+                                  train_lengths=(8, 16), eval_lengths=(32, 64)),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)
