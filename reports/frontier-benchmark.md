@@ -721,6 +721,7 @@ free — each is paid for by an architectural or training choice.** Two rows rem
 | non-abelian state (length extrapolation) | recurrent hybrid — gdp_hybrid 0.75 @L64; fprm (0.19) and transformer (0.22) solve in-distribution but collapse past train length | §3.5; experiments §1 |
 | depth extrapolation | **open** — no measured choice buys it: trained at chain depths 2–3, all three architectures read at or below the 1/6 guess at depths 4–5 (fprm 0.21/0.15, transformer 0.16/0.09, gdp_hybrid 0.01/0.00); dense intermediate-hop supervision does not help | §3.4, local chain table |
 | local composition (value leg) | **open** — value ≤0.17 in all 45 breadth-sweep runs (at/below the 1/pool guess), even on binding-solved seeds of all three architectures | §3.2, breadth sweep |
+| s5_chain composite | **open** — no architecture rises above the 1/8 guess floor even with dense hop traces (fprm 0.02/0.03, transformer 0.02/0.01, gdp_hybrid 0.02/0.03 @L4/L8) | §3.8, local s5_chain table |
 
 The two open rows are the instrument's active edge: nothing measured so far buys depth
 extrapolation, and no local training choice yet converges the value leg of the composed cell
@@ -728,16 +729,27 @@ outside the staged-curriculum recipe — and that recipe converges it only for g
 at d768×8 (0.833; the small and large cells of the compute-matched sweep fail the value leg
 too).
 
-### 3.8 s5_chain local validation (planned)
+### 3.8 s5_chain local validation
 
 The frontier composite stressor has a local calibration variant: `s5_chain_local_v1` (k=8,
 chain_depth=2, worked intermediate-hop traces, train lengths 2–4, eval lengths 4–8). The
 question is whether any architecture can learn the composite at all at small scale before we
 ask for length extrapolation. The pilot runs the same three architectures (fprm, transformer,
 gdp_hybrid) at d320×4, 8k steps, 3 seeds, with dense trace supervision — the lever that made s5
-form. If an architecture converges the eval lengths, we then scale the event stream to find the
-extrapolation cliff; if none do, the composite is added to the open rows of the price table
-(`results/local_s5_chain_20260718.md`).
+form (`results/local_s5_chain_20260718.md`):
+
+| arch | @L4 | @L8 | final loss |
+|---|---|---|---|
+| fprm | 0.02±0.01 | 0.03±0.02 | 0.32–0.37 |
+| transformer | 0.02±0.02 | 0.01±0.01 | 0.39–0.43 |
+| gdp_hybrid | 0.02±0.01 | 0.03±0.02 | 0.11–0.18 |
+
+No architecture rises above the 1/8 guess floor (0.125); all nine runs are at or below it even
+with every intermediate hop labeled. The composite pointer-map-plus-serial-dereference task is
+therefore open locally: it is not a supervision-density problem (dense traces do not help), and
+no measured architecture carries the joint state. The next local step is a curriculum probe —
+train on shorter event streams and shallower chains, then scale — to find whether the composite
+can be formed at all before asking for extrapolation.
 
 ## Appendix: protocol stability
 
@@ -795,7 +807,7 @@ current canary, a few hundredths off the cycle before — inside the bar.
   `results/local_breadth/`.
 - Staged-curriculum flagship: `results/curriculum_staged_v2_d768_notrace.jsonl`; compute-matched
   scale sweep: `results/composite_scale_*.md`.
-- Local chain comparison: `results/local_chain_v2_20260715.md` and `results/local_chain_v2_dense_20260715.md`; commutative calibration:
+- Local chain comparison: `results/local_chain_v2_20260715.md` and `results/local_chain_v2_dense_20260715.md`; local s5_chain composite: `results/local_s5_chain_20260718.md`; commutative calibration:
   `results/commutative_local/` and `results/commutative_frontier/`.
 - History and the running experiment log: [`phases/`](../phases/) (provenance) and
   [`docs/experiments/README.md`](../docs/experiments/README.md) (archival log).
