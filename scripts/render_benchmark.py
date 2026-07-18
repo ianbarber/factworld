@@ -668,7 +668,8 @@ def stress_cell(records, facet, model, length,
     facet_task = FACETS.get(facet, {}).get("task")
     if facet_task:
         cells = [r for r in cells if r.get("task") == facet_task]
-    return cells[0] if cells else None
+    # latest-timestamp-wins (e.g. an effort-rerun supersedes the earlier attempt)
+    return max(cells, key=lambda r: r.get("ts") or "") if cells else None
 
 
 def _raised_budget_suffix(rec) -> str:

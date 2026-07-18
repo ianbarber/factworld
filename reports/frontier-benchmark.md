@@ -370,27 +370,53 @@ answering from the initial map, and truncated (`finish=length`) outputs are now 
 An echo-start floor (answer the queried agent) sits at 0.16–0.20 on these items; all roster models
 clear it.
 
+All models ran `effort=xhigh` except grok-4.5, gemini-flash, and nemotron, whose maximum
+supported effort is `high`; OpenRouter maps `xhigh` down to `high` for them automatically. The
+effort bar matters: opus improved from 0.88 to 0.92 at L96 when moved from `high` to `xhigh`,
+while sonnet dropped from 0.76 to 0.24 (overthinking hurts it at the longest length). gpt-5.6-sol's
+low score is not an effort artifact — it reads 0.52 at `xhigh`, up only slightly from 0.44 at
+`high` — it genuinely struggles to hold the permutation state.
+
 | Model | s5_chain @L96 | s5_chain@64 ctok/call |
 |---|---|---|
-| openai/gpt-5.5 | 0.96 | 7282 |
-| moonshotai/kimi-k2.6 | 0.96 | 21252 |
+| openai/gpt-5.5 | 1.00 | 9590 |
+| muse-spark-1.1 | 0.96 | 14584 |
 | x-ai/grok-4.5 | 0.92 | 7811 |
-| deepseek/deepseek-v4-pro | 0.92 | 12255 |
-| anthropic/claude-opus-4.8 | 0.88 | 7610 |
-| muse-spark-1.1 | 0.84 | 13130 |
+| anthropic/claude-opus-4.8 | 0.92 | 10857 |
+| moonshotai/kimi-k2.6 | 0.88 | 20748 |
+| deepseek/deepseek-v4-pro | 0.84 | 20509 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.80 | 16802 |
-| anthropic/claude-sonnet-5 | 0.76 | 10938 |
-| z-ai/glm-5.2 | 0.68 | 9159 |
-| qwen/qwen3.7-max | 0.68 | 12581 |
-| openai/gpt-5.6-sol | 0.56 | 810 |
+| z-ai/glm-5.2 | 0.72 | 14489 |
+| qwen/qwen3.7-max | 0.64 | 12833 |
 | google/gemini-3.5-flash | 0.56 | 15878 |
+| openai/gpt-5.6-sol | 0.52 | 1708 |
+| anthropic/claude-sonnet-5 | 0.24 | 12347 |
 
 The ranking is broadly consistent with the component columns: gpt-5.5, which is strong on both
-chain and s5, tops the composite; kimi and grok, both strong on the components, are next; gemini
-and qwen, weaker on s5, fall to the bottom. The surprise is gpt-5.6-sol: it solves chain d128
-(0.88) and s5 @L256 (0.92) but reads 0.56 on the composite at L96, suggesting it does not compose
-the two abilities as reliably as its component scores predict. opus's 0.88 with the cheapest
-reasoning trace among the top five (7,610 ctok) is the efficiency note.
+chain and s5, tops the composite; muse, grok, opus, and kimi, all strong on the components, are
+next; gemini and qwen, weaker on s5, fall to the bottom. The two surprises are gpt-5.6-sol and
+sonnet. gpt-5.6-sol solves chain d128 (0.88) and s5 @L256 (0.92) but reads 0.52 on the composite
+at L96 even at `xhigh` — it does not compose the two abilities as reliably as its component
+scores predict. Sonnet's 0.24 at `xhigh` (down from 0.76 at `high`) suggests the longer reasoning
+traces at the higher effort level actively hurt its state tracking at L96.
+
+**Effort sensitivity on s5_chain @L96** (high → xhigh, models that support xhigh):
+
+| Model | high | xhigh | Δ |
+|---|---|---|---|
+| openai/gpt-5.5 | 0.96 | 1.00 | +0.04 |
+| muse-spark-1.1 | 0.84 | 0.96 | +0.12 |
+| anthropic/claude-opus-4.8 | 0.88 | 0.92 | +0.04 |
+| moonshotai/kimi-k2.6 | 0.96 | 0.88 | −0.08 |
+| deepseek/deepseek-v4-pro | 0.92 | 0.84 | −0.08 |
+| z-ai/glm-5.2 | 0.68 | 0.72 | +0.04 |
+| qwen/qwen3.7-max | 0.68 | 0.64 | −0.04 |
+| openai/gpt-5.6-sol | 0.56 | 0.52 | −0.04 |
+| anthropic/claude-sonnet-5 | 0.76 | 0.24 | −0.52 |
+
+Most models move ≤0.12, so the `high` bar is broadly adequate; the exceptions are muse (+0.12),
+opus (+0.04), and sonnet (−0.52). For future runs, only models with a demonstrated xhigh gain
+need the higher effort; the rest can stay at `high` without changing their ranking slot.
 
 Kimi's instant composed scores look high (≤0.94† / ≤0.77† / ≤0.93†) because its cells carry the
 same `†` leak: the model emits reasoning tokens on 65–89% of zero-budget calls despite
@@ -732,7 +758,8 @@ current canary, a few hundredths off the cycle before — inside the bar.
   scaffolded leg: `bench_20260710_124904`; chain_v1/s5: `bench_v2_20260708`; recall-under-load and
   chain d16 instant: `bench_20260710_frontier_rows`; chain_v2 d16/d32/d64/d128 and chain_v2 d16
   instant: `bench_20260715_102923` and `bench_20260715_222250`; s5_chain pilot and full roster:
-  `bench_20260717_113626` and `bench_20260717_131813`; raised-budget s5/chain cells:
+  `bench_20260717_113626` and `bench_20260717_131813`; s5_chain xhigh effort rerun:
+  `bench_20260718_012918`; raised-budget s5/chain cells:
   `bench_17_budget32k_20260711`; commutative roster: `bench_18_commutative_20260711` and its
   top-up; stability checks: `bench_16_*_20260711`; gpt-5.6-sol / grok-4.5 cells:
   `bench_15_newmodels_20260712`; second canary pass (the rendered glm zero-budget cells):

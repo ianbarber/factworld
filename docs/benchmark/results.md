@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-17 19:55 UTC from `results/benchmark/history.jsonl` (668 latest cells).
+Generated 2026-07-18 08:12 UTC from `results/benchmark/history.jsonl` (695 latest cells).
 
 ## Settings
 
@@ -21,6 +21,9 @@ Observed generation settings (effort -> max_new_tokens, stop_at; annotated with 
 - effort=minimal: max_new_tokens=96, stop_at=None — facets: chain_instant, recall_load, zero_budget
 - effort=none: max_new_tokens=2048, stop_at=None — facets: composite_length, decomposition, dose_response, floor, sanity
 - effort=none: max_new_tokens=96, stop_at=None — facets: chain_instant, gap_stability, recall_load, zero_budget
+- effort=xhigh: max_new_tokens=16384, stop_at=None — facets: s5_chain
+- effort=xhigh: max_new_tokens=24576, stop_at=None — facets: s5_chain
+- effort=xhigh: max_new_tokens=32768, stop_at=None — facets: s5_chain
 
 ## Instant headline (current roster)
 
@@ -124,18 +127,18 @@ s5_chain is the single composite stressor: k=16 agents with an a0 pointer map, L
 
 | Model | s5_chain @L96 | s5_chain@64 ctok/call |
 |---|---|---|
-| openai/gpt-5.5 | 0.96 @32,768tok (raised budget) | 7282 |
-| moonshotai/kimi-k2.6 | 0.96 @32,768tok (raised budget) | 21252 |
+| openai/gpt-5.5 | 1.00 @32,768tok (raised budget) | 9590 |
+| muse-spark-1.1 | 0.96 @32,768tok (raised budget) | 14584 |
 | x-ai/grok-4.5 | 0.92 @32,768tok (raised budget) | 7811 |
-| deepseek/deepseek-v4-pro | 0.92 @32,768tok (raised budget) | 12255 |
-| anthropic/claude-opus-4.8 | 0.88 @32,768tok (raised budget) | 7610 |
-| muse-spark-1.1 | 0.84 @32,768tok (raised budget) | 13130 |
+| anthropic/claude-opus-4.8 | 0.92 @32,768tok (raised budget) | 10857 |
+| moonshotai/kimi-k2.6 | 0.88 @32,768tok (raised budget) | 20748 |
+| deepseek/deepseek-v4-pro | 0.84 @32,768tok (raised budget) | 20509 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.80 @32,768tok (raised budget) | 16802 |
-| anthropic/claude-sonnet-5 | 0.76 @32,768tok (raised budget) | 10938 |
-| z-ai/glm-5.2 | 0.68 @32,768tok (raised budget) | 9159 |
-| qwen/qwen3.7-max | 0.68 @32,768tok (raised budget) | 12581 |
-| openai/gpt-5.6-sol | 0.56 @32,768tok (raised budget) | 810 |
+| z-ai/glm-5.2 | 0.72 @32,768tok (raised budget) | 14489 |
+| qwen/qwen3.7-max | 0.64 @32,768tok (raised budget) | 12833 |
 | google/gemini-3.5-flash | 0.56 @32,768tok (raised budget) | 15878 |
+| openai/gpt-5.6-sol | 0.52 @32,768tok (raised budget) | 1708 |
+| anthropic/claude-sonnet-5 | 0.24 @32,768tok (raised budget) | 12347 |
 
 The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the d128 cell is k=257). `chain_v2` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
@@ -227,8 +230,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v1 | 64 | effort=high | 25 | 0.20 [0.09, 0.39] | 0.20 | — |
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 16 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
+| anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
+| anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | anthropic/claude-opus-4.8 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-opus-4.8 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-opus-4.8 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -275,8 +281,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | anthropic/claude-sonnet-5 | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 50 | 0.50 [0.37, 0.63] | 0.64 | escalated @512tok diagnostic 0.64; canonical = first attempt @96tok |
 | anthropic/claude-sonnet-5 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.76 [0.57, 0.89] | 0.88 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.80 [0.61, 0.91] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.76 [0.57, 0.89] | 0.88 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.24 [0.11, 0.43] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
@@ -320,8 +329,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | deepseek/deepseek-v4-pro | floor | s5 | 16 | rendering=abstract_stated, effort=none | 30 | 0.17 [0.07, 0.34] | 0.17 | — |
 | deepseek/deepseek-v4-pro | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.68 [0.48, 0.83] | 0.68 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
@@ -456,8 +468,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | moonshotai/kimi-k2.6 | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 50 | 0.56 [0.42, 0.69] | 0.86 | escalated @512tok diagnostic 0.86; canonical = first attempt @96tok |
 | moonshotai/kimi-k2.6 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -484,8 +499,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 0.96 [0.80, 0.99] | 1.00 | — |
 | muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.40 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.76 [0.57, 0.89] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.68 [0.48, 0.83] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.84 [0.65, 0.94] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 1.00 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
@@ -588,8 +606,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | openai/gpt-5.5 | s5_chain | s5_chain_v1 | 64 | effort=high | 25 | 0.12 [0.04, 0.30] | 0.12 | — |
 | openai/gpt-5.5 | s5_chain | s5_chain_v2 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.5 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| openai/gpt-5.5 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.5 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| openai/gpt-5.5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.5 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| openai/gpt-5.5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -621,8 +642,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 50 | 0.26 [0.16, 0.40] | 0.26 | — |
 | openai/gpt-5.6-sol | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.16 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.20 [0.09, 0.39] | 0.20 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.24 [0.11, 0.43] | 0.24 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.44 [0.27, 0.63] | 0.44 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.56 [0.37, 0.73] | 0.56 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.52 [0.33, 0.70] | 0.52 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
@@ -664,8 +688,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | qwen/qwen3.7-max | s5_chain | s5_chain_v1 | 64 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.16 | ‡ cap-escape |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
+| qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.68 [0.48, 0.83] | 0.68 | — |
+| qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.72 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.68 [0.48, 0.83] | 0.68 | — |
+| qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.64 [0.45, 0.80] | 0.64 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
@@ -752,8 +779,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | z-ai/glm-5.2 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 30 | 0.23 [0.12, 0.41] | 0.23 | — |
 | z-ai/glm-5.2 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.68 [0.48, 0.83] | 0.68 | — |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.72 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -811,8 +841,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 23482 | stop:25 | — |
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 16 | effort=high | 0.000 | 0 | 0 | 9145 | stop:25 | — |
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 12390 | stop:25 | — |
+| anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.000 | 0 | 0 | 17299 | stop:25 | — |
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 21063 | stop:25 | — |
+| anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.000 | 0 | 0 | 33314 | stop:25 | — |
 | anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 96 | effort=high | 0.000 | 0 | 0 | 31595 | stop:25 | — |
+| anthropic/claude-opus-4.8 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.000 | 0 | 0 | 44957 | stop:25 | — |
 | anthropic/claude-opus-4.8 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 7578 | stop:25 | — |
 | anthropic/claude-opus-4.8 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 13440 | stop:25 | — |
 | anthropic/claude-opus-4.8 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 28491 | stop:25 | — |
@@ -859,8 +892,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | anthropic/claude-sonnet-5 | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | escalated @512tok diagnostic 0.64; canonical = first attempt @96tok |
 | anthropic/claude-sonnet-5 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 15910 | stop:25 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.040 | 0 | 0 | 19276 | length:1, stop:24 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 28911 | stop:25 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.000 | 0 | 0 | 36651 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=high | 0.040 | 0 | 0 | 45415 | length:1, stop:24 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.000 | 0 | 0 | 50871 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 6510 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 13050 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.040 | 0 | 1 | 28952 | error:1, stop:24 | — |
@@ -904,8 +940,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | deepseek/deepseek-v4-pro | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | deepseek/deepseek-v4-pro | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 215630 | stop:25 | — |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.160 | 0 | 0 | 306282 | length:4, stop:21 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 64 | effort=high | 0.040 | 0 | 0 | 306283 | length:1, stop:24 | — |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.280 | 0 | 0 | 500335 | length:7, stop:18 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 96 | effort=high | 0.000 | 0 | 0 | 377966 | stop:25 | — |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.160 | 0 | 0 | 638655 | length:4, stop:21 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 35520 | stop:25 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 65442 | stop:25 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 127456 | length:1, stop:24 | — |
@@ -1040,8 +1079,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | moonshotai/kimi-k2.6 | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 0.100 | 0 | 0 | 35 | length:5, stop:45 | escalated @512tok diagnostic 0.86; canonical = first attempt @96tok |
 | moonshotai/kimi-k2.6 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 19 | stop:50 | — |
 | moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 304981 | stop:25 | — |
+| moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.000 | 0 | 0 | 301855 | stop:25 | — |
 | moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 521123 | stop:25 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.040 | 0 | 0 | 507832 | length:1, stop:24 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 96 | effort=high | 0.040 | 0 | 0 | 612645 | length:1, stop:24 | — |
+| moonshotai/kimi-k2.6 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.080 | 0 | 0 | 626782 | length:2, stop:23 | — |
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 97965 | stop:25 | — |
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 171577 | stop:24 | — |
 | moonshotai/kimi-k2.6 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 247166 | stop:25 | — |
@@ -1068,8 +1110,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 128 | effort=high | 0.000 | 0 | 0 | 188054 | stop:25 | — |
 | muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 0.000 | 0 | 0 | 114743 | stop:25 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 224007 | stop:25 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.000 | 0 | 0 | 243349 | stop:25 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 326873 | stop:25 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.000 | 0 | 0 | 364311 | stop:25 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=high | 0.000 | 0 | 0 | 387842 | stop:25 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.000 | 0 | 0 | 497558 | stop:25 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 242298 | stop:25 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 467720 | stop:25 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 5435 | stop:30 | — |
@@ -1172,8 +1217,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.5 | s5_chain | s5_chain_v1 | 64 | effort=high | 0.040 | 0 | 0 | 294009 | length:1, stop:24 | — |
 | openai/gpt-5.5 | s5_chain | s5_chain_v2 | 16 | effort=high | 0.000 | 0 | 0 | 54515 | stop:25 | — |
 | openai/gpt-5.5 | s5_chain | s5_chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 93937 | stop:25 | — |
+| openai/gpt-5.5 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.000 | 0 | 0 | 136909 | stop:25 | — |
 | openai/gpt-5.5 | s5_chain | s5_chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 181860 | stop:25 | — |
+| openai/gpt-5.5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.000 | 0 | 0 | 239545 | stop:25 | — |
 | openai/gpt-5.5 | s5_chain | s5_chain_v2 | 96 | effort=high | 0.040 | 0 | 1 | 242595 | error:1, stop:24 | — |
+| openai/gpt-5.5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.000 | 0 | 0 | 301324 | stop:25 | — |
 | openai/gpt-5.5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 23664 | stop:25 | — |
 | openai/gpt-5.5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 44799 | stop:25 | — |
 | openai/gpt-5.5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 107196 | stop:25 | — |
@@ -1205,8 +1253,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.6-sol | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
 | openai/gpt-5.6-sol | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 6482 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.000 | 0 | 0 | 10629 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 19798 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.000 | 0 | 0 | 41976 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=high | 0.000 | 0 | 0 | 57098 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.000 | 0 | 0 | 71313 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 66218 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 141584 | stop:25 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
@@ -1248,8 +1299,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | qwen/qwen3.7-max | s5_chain | s5_chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 352106 | stop:25 | ‡ cap-escape |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 16 | effort=high | 0.000 | 0 | 0 | 127174 | stop:25 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 231327 | stop:25 | — |
+| qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.000 | 0 | 0 | 187988 | stop:25 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 314347 | stop:25 | — |
+| qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.000 | 0 | 0 | 320650 | stop:25 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 96 | effort=high | 0.000 | 0 | 0 | 393514 | stop:25 | — |
+| qwen/qwen3.7-max | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.000 | 0 | 0 | 414306 | stop:25 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 42853 | stop:25 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 80913 | stop:25 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 129591 | stop:25 | — |
@@ -1336,8 +1390,11 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | z-ai/glm-5.2 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 0.000 | 0 | 0 | 2621 | stop:30 | — |
 | z-ai/glm-5.2 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 36 | stop:50 | — |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 32 | effort=high | 0.040 | 0 | 0 | 146112 | length:1, stop:24 | — |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 0.120 | 0 | 0 | 180673 | length:3, stop:22 | — |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 211838 | stop:25 | — |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.040 | 0 | 0 | 275998 | length:1, stop:24 | — |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 96 | effort=high | 0.040 | 0 | 0 | 264298 | length:1, stop:24 | — |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.200 | 0 | 0 | 424708 | length:5, stop:20 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 19329 | stop:25 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 33990 | stop:25 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 62202 | stop:25 | — |
