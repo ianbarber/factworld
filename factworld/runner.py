@@ -101,6 +101,11 @@ def evaluate_task(
     by_length: dict[int, dict[str, list[int]]] = {}
     totals: dict[str, int] = {name: 0 for name in scorers}
     for example, pred in zip(examples, preds):
+        # A local model marks the end of its answer with <eos>; anything generated past it is
+        # budget-filling continuation, not answer. Without this cut a trace-mode prediction
+        # ("...scratchpad... g3. <eos> g7 g0 ...") scores its junk tail under last_n and reads
+        # as chance no matter how often the committed answer is right.
+        pred = pred.split("<eos>")[0]
         # Normalize output (detach attached punctuation, expand contractions) to canonical
         # whitespace tokens before scoring. Both prediction and gold are normalized so attached-
         # punctuation answers (e.g. "g4.") score correctly against equally-attached gold.

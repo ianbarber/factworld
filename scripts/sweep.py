@@ -116,7 +116,11 @@ def run_one(spec, arch, seed, *, d_model, n_layers, steps, batch, train_n, eval_
             max_new = len(probe.meta.get("trace", "").split()) + 6
         else:
             max_new = None
-        res = evaluate_task(backend, spec, split="test", n=eval_n, length=L, max_new_tokens=max_new)
+        # Trace-mode answers end with attached punctuation ("g3."), so the "." stop token
+        # never fires; stop at the <eos> the model emits after its answer instead (the
+        # scorer cuts at <eos> anyway — this just stops burning budget past it).
+        res = evaluate_task(backend, spec, split="test", n=eval_n, length=L, max_new_tokens=max_new,
+                            stop_at="<eos>" if use_trace else ".")
         # In trace mode the answer is the LAST len(gold) tokens of the generated scratchpad,
         # so last_n (not the canonical relaxed prefix match) is the fair overall score.
         overall = res["metrics"]["last_n"]["overall"] if use_trace else res["overall"]

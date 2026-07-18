@@ -57,6 +57,24 @@ def test_v2_stream_admits_echo_items():
     assert any(ex.meta["path"][-1] == ex.meta["start"] for ex in exs)
 
 
+def test_trace_mode_scoring_cuts_at_eos():
+    """A local model emits scratchpad, answer, <eos>, then budget-filling junk.
+    evaluate_task must cut at <eos> so last_n scores the committed answer, not
+    the junk tail (the pre-fix behavior read every trace-mode sweep as chance)."""
+    from factworld.runner import evaluate_task
+
+    spec = CANONICAL["s5_chain_local_v2"]
+    exs = generate(spec, "test", n=3, length=4)
+
+    class OracleWithJunk:
+        name = "oracle-junk"
+        def generate(self, prompts, max_new_tokens, stop_at=None):
+            return [f"{e.meta['trace']} {e.answer} <eos> g0 g1 g2" for e in exs]
+
+    res = evaluate_task(OracleWithJunk(), spec, split="test", n=3, length=4)
+    assert res["metrics"]["last_n"]["overall"] == 1.0
+
+
 def test_event_trace_checkpoints():
     """local_v2 dense supervision: the trace carries one full a0-map checkpoint
     (k agents) per event, then the query path prefix."""
