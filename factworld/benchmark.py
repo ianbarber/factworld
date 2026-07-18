@@ -102,9 +102,20 @@ MODELS = {
     "anthropic/claude-sonnet-5": {
         "tier": "frontier_pair", "prompt_price_per_M": 2.0,
         "completion_price_per_M": 10.0, "open_weights": False},
+    # Routed directly to the OpenAI API since 2026-07-18 (same vendor serving as
+    # the prior OpenRouter route; switched when the OpenRouter account exhausted
+    # its credits mid-battery). Same direct-endpoint pattern as gpt-5.6-sol.
     "openai/gpt-5.5": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
-        "completion_price_per_M": 30.0, "open_weights": False},
+        "completion_price_per_M": 30.0, "open_weights": False,
+        "base_url": "https://api.openai.com/v1",
+        "api_key_env": "OPENAI_API_KEY",
+        "model_name": "gpt-5.5",
+        "max_completion_tokens": True,
+        "reasoning_model": True,
+        "supports_reasoning_effort": False,
+        "reasoning_effort_values": {"low": "low", "medium": "medium", "high": "high",
+                                     "xhigh": "xhigh", "max": "max"}},
     # ADDED 2026-07-12 (issue #15). Pricing verified against
     # https://openrouter.ai/api/v1/models 2026-07-12 ($5/$30 per M; the -pro
     # variant is the same price and NOT what we run). effort=none probe clean:
