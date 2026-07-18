@@ -1384,7 +1384,15 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     thinking_lines = ["", "**Thinking state-stress (reasoning on)**", ""]
     thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP,
                                            sort_thinking_rows(rows))
-    lines = instant_lines + thinking_lines
+    s5c_lines = []
+    s5c = s5_chain_rows(records)
+    if s5c:
+        s5c_lines = ["", "**s5_chain (composite stressor: pointer-map permutations + 8-hop chase)**", "",
+                     "| Model | s5_chain @L96 | ctok/call |",
+                     "|---|---|---|"]
+        for m, score, ctok in s5c:
+            s5c_lines.append(f"| {m} | {_readme_compact(score)} | {ctok} |")
+    lines = instant_lines + thinking_lines + s5c_lines
     block = README_FRONTIER_START + "\n" + "\n".join(lines) + "\n" + README_FRONTIER_END
     new = text[:start] + block + text[end + len(README_FRONTIER_END):]
     if new != text:

@@ -648,6 +648,11 @@ CANONICAL = {
                                   train_lengths=(8, 16), eval_lengths=(32, 64)),
     "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.3", k=16, chain_depth=8,
                                   train_lengths=(8, 16), eval_lengths=(32, 64, 96)),
+    # Local-model calibration variant: smaller k/depth and dense hop traces, to test whether
+    # any architecture can learn the composite at all before we ask for length extrapolation.
+    "s5_chain_local_v1": TaskSpec("s5_chain_local_v1", "s5_chain", version="1.3", k=8, chain_depth=2,
+                                   train_lengths=(2, 4), eval_lengths=(4, 8), worked_trace=True,
+                                   kind="experimental"),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)

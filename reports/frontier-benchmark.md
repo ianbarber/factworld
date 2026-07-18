@@ -364,11 +364,15 @@ not strictly cap-comparable.
 state-stress components separately; `s5_chain` composes them in one task: k=16 agents with an a0
 pointer map, L order-sensitive swap/cycle events on the pointer targets, then an 8-hop serial
 dereference query. It is the natural single ranking benchmark for thinking-regime state
-composition. The task went through two pre-flight fixes: the event rendering was made explicit
-(`g6's a0 becomes g5's a0` rather than `cycles a0: g6 -> g5 -> g0`) after opus was observed
-answering from the initial map, and truncated (`finish=length`) outputs are now scored as empty.
-An echo-start floor (answer the queried agent) sits at 0.16–0.20 on these items; all roster models
-clear it.
+composition. The task went through an adversarial pre-flight review and two fixes: the event
+rendering was made explicit (`g6's a0 becomes g5's a0` rather than `cycles a0: g6 -> g5 -> g0`)
+after opus was observed answering from the initial map, and truncated (`finish=length`) outputs
+are now scored as empty. Remaining known limitations, kept deliberately: an echo-start floor
+(answer the queried agent) sits at 0.16–0.20 on these items because the 8-hop cycle has divisors
+— all roster models clear it, and we publish the floor rather than break the calibrated item
+stream; the cycle rendering has a residual sequential-assignment misreading that frontier models
+do not make but mid-tier models might; and per-item difficulty varies (some items degenerate to
+near-fixed points), which is why the cells run n=25 with Wilson intervals.
 
 All models ran `effort=xhigh` except grok-4.5, gemini-flash, and nemotron, whose maximum
 supported effort is `high`; OpenRouter maps `xhigh` down to `high` for them automatically. The
@@ -391,6 +395,14 @@ low score is not an effort artifact — it reads 0.52 at `xhigh`, up only slight
 | google/gemini-3.5-flash | 0.56 | 15878 |
 | openai/gpt-5.6-sol | 0.52 | 1708 |
 | anthropic/claude-sonnet-5 | 0.24 | 12347 |
+
+**How the components compose.** The task is a direct composition of the two state-stress
+components: the `L` swap/cycle events are s5-style non-abelian state tracking over the pointer
+map (the model must maintain the current bijection under order-sensitive updates), and the
+8-hop query is chain-style serial dereference over the resulting map (the model must apply the
+map repeatedly and count the hops). Neither component alone suffices: a model that tracks the
+permutation but cannot serially dereference fails, as does a model that can follow a static
+chain but loses the map through the events. The composite score is the conjunction.
 
 The ranking is broadly consistent with the component columns: gpt-5.5, which is strong on both
 chain and s5, tops the composite; muse, grok, opus, and kimi, all strong on the components, are
@@ -715,6 +727,17 @@ extrapolation, and no local training choice yet converges the value leg of the c
 outside the staged-curriculum recipe — and that recipe converges it only for gdp_hybrid
 at d768×8 (0.833; the small and large cells of the compute-matched sweep fail the value leg
 too).
+
+### 3.8 s5_chain local validation (planned)
+
+The frontier composite stressor has a local calibration variant: `s5_chain_local_v1` (k=8,
+chain_depth=2, worked intermediate-hop traces, train lengths 2–4, eval lengths 4–8). The
+question is whether any architecture can learn the composite at all at small scale before we
+ask for length extrapolation. The pilot runs the same three architectures (fprm, transformer,
+gdp_hybrid) at d320×4, 8k steps, 3 seeds, with dense trace supervision — the lever that made s5
+form. If an architecture converges the eval lengths, we then scale the event stream to find the
+extrapolation cliff; if none do, the composite is added to the open rows of the price table
+(`results/local_s5_chain_20260718.md`).
 
 ## Appendix: protocol stability
 

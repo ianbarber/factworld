@@ -197,6 +197,23 @@ tables and per-cell Wilson intervals: [`docs/benchmark/results.md`](docs/benchma
 | google/gemini-3.5-flash | 1.00 | 0.52 | 11022 |
 | deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
+
+**s5_chain (composite stressor: pointer-map permutations + 8-hop chase)**
+
+| Model | s5_chain @L96 | ctok/call |
+|---|---|---|
+| openai/gpt-5.5 | 1.00ʳ | 9590 |
+| muse-spark-1.1 | 0.96ʳ | 14584 |
+| x-ai/grok-4.5 | 0.92ʳ | 7811 |
+| anthropic/claude-opus-4.8 | 0.92ʳ | 10857 |
+| moonshotai/kimi-k2.6 | 0.88ʳ | 20748 |
+| deepseek/deepseek-v4-pro | 0.84ʳ | 20509 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.80ʳ | 16802 |
+| z-ai/glm-5.2 | 0.72ʳ | 14489 |
+| qwen/qwen3.7-max | 0.64ʳ | 12833 |
+| google/gemini-3.5-flash | 0.56ʳ | 15878 |
+| openai/gpt-5.6-sol | 0.52ʳ | 1708 |
+| anthropic/claude-sonnet-5 | 0.24ʳ | 12347 |
 <!-- FRONTIER_TABLE_END -->
 
 The instant columns are `composite_copy_v2` cells (match, n=100): the binding leg (state
