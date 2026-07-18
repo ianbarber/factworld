@@ -41,7 +41,7 @@ from functools import lru_cache
 
 # --- protocol constants ---------------------------------------------------------
 
-REASONING_EFFORTS = ("low", "medium", "high")   # arms that actually think
+REASONING_EFFORTS = ("low", "medium", "high", "xhigh", "max")   # arms that actually think
 REASONING_MAX_NEW_TOKENS = 8192                 # protocol rule: never truncate thinking
 DEFAULT_MAX_NEW_TOKENS = 2048                   # non-thinking arms (grid-script default)
 # zero-budget battery: tight completion budget + hard answer contract. The runner
@@ -125,7 +125,8 @@ MODELS = {
         "max_completion_tokens": True,
         "reasoning_model": True,
         "supports_reasoning_effort": False,
-        "reasoning_effort_values": {"low": "low", "medium": "medium", "high": "high"}},
+        "reasoning_effort_values": {"low": "low", "medium": "medium", "high": "high",
+                                     "xhigh": "xhigh", "max": "max"}},
     # openai/gpt-5.4 and google/gemini-3.1-pro-preview DROPPED 2026-07-08 (owner
     # decision: one flagship per vendor; Google is pushing flash).
     # no_reasoning_effort: Gemini 3 endpoints reject effort=none outright
@@ -367,7 +368,7 @@ FACETS = {
     # calibration; no renderer section reads it yet.
     "s5_chain": {
         "task": "s5_chain_v2", "lengths": (32, 64, 96), "n": 25,
-        "efforts": "on", "max_new_tokens": 16384,
+        "efforts": "xhigh", "max_new_tokens": 16384,
         "budgets": {32: 16384, 64: 24576, 96: 32768}},
     # EXPERIMENTAL (issue #16a, owner-approved 2026-07-11): gap stability — the
     # composed and binding_only legs at a SECOND operating point (L32, instant,
@@ -393,6 +394,8 @@ def _facet_efforts(policy: str, tier: dict) -> tuple:
         return ("none", "high")
     if policy == "on":
         return ("high",)
+    if policy == "xhigh":
+        return ("xhigh",)
     if policy == "off":
         return ("none",)
     raise ValueError(f"unknown effort policy {policy!r}")

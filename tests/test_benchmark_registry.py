@@ -1053,7 +1053,7 @@ def test_skip_facets_machinery():
         assert {c["facet"] for c in cells} == {"s5_concrete", "chain_nowrap",
                                                   "commutative", "s5_chain"}
         # every planned cell is a reasoning-ON arm (there is no off arm at all)
-        assert {c["settings"]["effort"] for c in cells} == {"high"}
+        assert {c["settings"]["effort"] for c in cells} == {"high", "xhigh"}
     # simulate a partial-skip model without mutating the real registry
     fake = {**B.MODELS["z-ai/glm-5.2"], "skip_facets": ("zero_budget",)}
     with mock.patch.dict(B.MODELS, {"z-ai/glm-5.2": fake}):
