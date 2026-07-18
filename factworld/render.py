@@ -56,8 +56,12 @@ class Renderer:
     _SWAP = ("swaps {a} and {b}.",)
     _CYCLE = ("cycles roles: {flows}.",)
     _SWAP_A0 = ("swaps the values of {a}'s a0 and {b}'s a0.",)
-    _CYCLE_A0 = ("cycles a0: {a}'s a0 becomes {b}'s a0, {b}'s a0 becomes {c}'s a0, "
-                  "and {c}'s a0 becomes {a}'s a0.",)
+    # The three assignments are SIMULTANEOUS: "{c}'s a0 takes {a}'s old a0" reads against
+    # a's pre-event value, not the value a was just assigned. The pre-2026-07-18 wording
+    # ("{a}'s a0 becomes {b}'s a0, ...") admitted a sequential-assignment misreading in
+    # which the last leg reads an already-updated value.
+    _CYCLE_A0 = ("cycles a0 simultaneously: {a}'s a0 takes {b}'s old a0, "
+                 "{b}'s a0 takes {c}'s old a0, and {c}'s a0 takes {a}'s old a0.",)
     _ROLE = ("{g} has role {r}.",)
     _HOLDER = ("{h} holds {o}.",)
     _TURN = ("turns {g}'s dial {n} {clicks}.",)

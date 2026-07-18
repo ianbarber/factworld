@@ -1,11 +1,12 @@
-"""s5_chain task validity: deterministic generation, no-wrap gate, explicit rendering."""
+"""s5_chain task validity: deterministic generation, no-wrap gate, explicit rendering,
+and the v3 distinct_path gate (echo/fixed-hop floors at exactly 0)."""
 import pytest
 
-from factworld.tasks import CANONICAL, generate
+from factworld.tasks import CANONICAL, RETIRED, generate
 
 
 def test_generation_deterministic():
-    spec = CANONICAL["s5_chain_v2"]
+    spec = CANONICAL["s5_chain_v3"]
     a = generate(spec, "test", n=3, length=32)
     b = generate(spec, "test", n=3, length=32)
     assert [x.prompt for x in a] == [x.prompt for x in b]
@@ -14,22 +15,56 @@ def test_generation_deterministic():
 
 
 def test_no_wrap_gate():
-    spec = CANONICAL["s5_chain_v2"].scaled(chain_depth=16)
+    spec = CANONICAL["s5_chain_v3"].scaled(chain_depth=16)
     with pytest.raises(ValueError, match="wraps"):
         generate(spec, "test", n=1, length=8)
 
 
 def test_explicit_value_update_rendering():
-    spec = CANONICAL["s5_chain_v2"]
+    spec = CANONICAL["s5_chain_v3"]
     ex = generate(spec, "test", n=1, length=8)[0]
-    assert "swaps the values of" in ex.prompt or "cycles a0:" in ex.prompt
-    assert "becomes" in ex.prompt
+    assert "swaps the values of" in ex.prompt or "cycles a0 simultaneously" in ex.prompt
+    assert "old a0" in ex.prompt or "swaps the values of" in ex.prompt
     assert "(8 hops)" in ex.prompt
 
 
 def test_path_consistency():
     """The gold answer is the last element of the stored path."""
-    spec = CANONICAL["s5_chain_v2"]
+    spec = CANONICAL["s5_chain_v3"]
     for ex in generate(spec, "test", n=10, length=32):
         assert ex.answer == f"{ex.meta['path'][-1]}."
         assert len(ex.meta["path"]) == ex.meta["depth"] + 1
+
+
+def test_distinct_path_gate():
+    """v3 validity gate: every query path visits depth+1 DISTINCT agents, so the
+    degenerate echo strategy (answer the queried agent) and every fixed-hop
+    heuristic score exactly 0 and item difficulty is uniform. The retired v2
+    stream fails this (its echo floor measured 0.16-0.32)."""
+    spec = CANONICAL["s5_chain_v3"]
+    for L in spec.eval_lengths:
+        for ex in generate(spec, "test", n=25, length=L):
+            path = ex.meta["path"]
+            assert len(set(path)) == len(path) == ex.meta["depth"] + 1
+            assert path[-1] != ex.meta["start"]
+
+
+def test_v2_stream_admits_echo_items():
+    """Defect documentation: the retired v2 stream contains items whose gold equals
+    the queried start agent (the echo floor that motivated the v3 gate)."""
+    spec = RETIRED["s5_chain_v2"]
+    exs = generate(spec, "test", n=25, length=32)
+    assert any(ex.meta["path"][-1] == ex.meta["start"] for ex in exs)
+
+
+def test_event_trace_checkpoints():
+    """local_v2 dense supervision: the trace carries one full a0-map checkpoint
+    (k agents) per event, then the query path prefix."""
+    spec = CANONICAL["s5_chain_local_v2"]
+    L = 4
+    ex = generate(spec, "test", n=1, length=L)[0]
+    toks = ex.meta["trace"].split()
+    assert len(toks) == L * spec.k + spec.chain_depth
+    # the trace tail is the query path prefix and chains to the gold answer
+    assert toks[-spec.chain_depth] == ex.meta["start"]
+    assert toks[-1] == ex.meta["path"][-2]

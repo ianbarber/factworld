@@ -112,6 +112,22 @@ class TaskSpec:
     # protocol is spec.scaled(k=depth + 2).
     chain_allow_wrap: bool = False
 
+    # s5_chain-only. distinct_path: VALIDITY GATE — require the query start to sit on a
+    # final-map cycle of length >= chain_depth+1, so all depth+1 path nodes are distinct.
+    # Without it the final permutation has cycles whose length divides the depth, and the
+    # degenerate "answer the queried agent" (echo) strategy scores far above chance
+    # (measured 0.16-0.32 on the v2 item streams vs 1/16 nominal chance); items whose
+    # paths collapse onto short cycles are also individually easier, adding item-level
+    # variance. Gated items hold echo and every fixed-hop heuristic at exactly 0 and make
+    # item difficulty uniform (the path always visits depth+1 distinct agents).
+    # event_trace: per-EVENT dense supervision — the trace prefixes the full a0 map (k
+    # values in fixed agent order) after every event, i.e. a state checkpoint per event,
+    # the supervision density that formed s5 locally; worked_trace alone emits only the
+    # final query path, which supervises the dereference but NOT the map tracking.
+    # Appended + defaulted: _rng does not key on either, so no existing stream is perturbed.
+    distinct_path: bool = False
+    event_trace: bool = False
+
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
         return replace(self, **knobs)
@@ -319,30 +335,54 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
             f"use spec.scaled(k={depth + 2}) for a no-wrap protocol."
         )
     cyc = rng.sample(list(w.agents), spec.k)
-    nxt = {cyc[i]: cyc[(i + 1) % spec.k] for i in range(spec.k)}
+    nxt0 = {cyc[i]: cyc[(i + 1) % spec.k] for i in range(spec.k)}
     present = cyc[:]; rng.shuffle(present)
-    facts = " ".join(r.render_fact(a, "a0", nxt[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
+    facts = " ".join(r.render_fact(a, "a0", nxt0[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
 
-    events: list[Event] = []
-    for _ in range(length):
-        if rng.random() < 0.5:
-            a, b = rng.sample(cyc, 2)
-            events.append(Event("swap_a0", (a, b)))
-            nxt[a], nxt[b] = nxt[b], nxt[a]
+    def _cycle_len(mapping, a):
+        n, x = 1, mapping[a]
+        while x != a:
+            n, x = n + 1, mapping[x]
+        return n
+
+    for _attempt in range(100):
+        nxt = dict(nxt0)
+        events: list[Event] = []
+        checkpoints: list[str] = []          # event_trace: full a0 map after each event
+        for _ in range(length):
+            if rng.random() < 0.5:
+                a, b = rng.sample(cyc, 2)
+                events.append(Event("swap_a0", (a, b)))
+                nxt[a], nxt[b] = nxt[b], nxt[a]
+            else:
+                a, b, c = rng.sample(cyc, 3)
+                events.append(Event("cycle_a0", (a, b, c)))
+                nxt[a], nxt[b], nxt[c] = nxt[b], nxt[c], nxt[a]
+            if spec.event_trace:
+                checkpoints.append(" ".join(nxt[a] for a in cyc))
+        if not spec.distinct_path:
+            starts = cyc
         else:
-            a, b, c = rng.sample(cyc, 3)
-            events.append(Event("cycle_a0", (a, b, c)))
-            nxt[a], nxt[b], nxt[c] = nxt[b], nxt[c], nxt[a]
+            # gate: only starts whose final-map cycle is longer than the query depth,
+            # so the depth+1 path nodes are all distinct (echo/fixed-hop floors = 0).
+            starts = [a for a in cyc if _cycle_len(nxt, a) > depth]
+            if not starts:                   # no long cycle formed: resample the events
+                continue
+        break
+    else:
+        raise RuntimeError(f"{spec.name}: no length->{depth+1} cycle in 100 event resamples")
     hist = " ".join(r.render_history(tuple(events), with_steps=True))
 
-    start = rng.choice(cyc)
+    start = rng.choice(starts)
     path = [start]
     for _ in range(depth):
         path.append(nxt[path[-1]])
     gold = path[-1]
     query = "what is " + "a0 of " * depth + f"{start}? ({depth} hops)"
     meta = {"depth": depth, "start": start, "path": path}
-    if spec.worked_trace:
+    if spec.event_trace:
+        meta["trace"] = " ".join(checkpoints + path[:-1])
+    elif spec.worked_trace:
         meta["trace"] = " ".join(path[:-1])
     return Example(f"{facts} {hist} {query}", _render_answer(gold), length, meta)
 
@@ -638,21 +678,28 @@ CANONICAL = {
     # hop count (e.g. "... of g246? (128 hops)") to remove the depth-counting confound
     # that caused models to miscount 128 nested "a0 of" phrases.
     "chain_v2":         TaskSpec("chain_v2", "chain", version="1.1", k=6, train_lengths=(2, 3), eval_lengths=(4, 5)),
-    # s5_chain: composite stressor — order-sensitive swap/cycle events on the a0 pointer map,
-    # followed by a d-hop serial dereference query. length = number of permutation events;
-    # chain_depth = number of a0 hops in the query (kept < k). v1 is the hard calibration
-    # prototype with ambiguous rendering; v2 is the calibrated frontier setting with explicit
-    # value-update rendering (pilot 2026-07-17: gpt-5.5 1.00/1.00/1.00, qwen 1.00/0.84/0.72,
-    # opus 0.96/0.88/0.80, gemini-flash 1.00/0.76/0.56 at L16/32/64).
-    "s5_chain_v1":      TaskSpec("s5_chain_v1", "s5_chain", version="1.1", k=16, chain_depth=8,
-                                  train_lengths=(8, 16), eval_lengths=(32, 64)),
-    "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.3", k=16, chain_depth=8,
+    # s5_chain: THE composite stressor — order-sensitive swap/cycle events on the a0 pointer
+    # map (non-abelian state tracking), followed by a chain_depth-hop serial dereference query
+    # over the final map. length = number of permutation events; chain_depth = hops (kept < k).
+    # v3 is the single scored spec: distinct_path gates every item so the query path visits
+    # depth+1 distinct agents — echo and fixed-hop heuristics score exactly 0, chance is
+    # 1/k, and item difficulty is uniform (the v1/v2 streams admitted an echo floor of
+    # 0.16-0.32 because final-map cycles whose length divides the depth make the start its
+    # own answer; see RETIRED).
+    "s5_chain_v3":      TaskSpec("s5_chain_v3", "s5_chain", version="2.0", k=16, chain_depth=8,
+                                  distinct_path=True,
                                   train_lengths=(8, 16), eval_lengths=(32, 64, 96)),
-    # Local-model calibration variant: smaller k/depth and dense hop traces, to test whether
-    # any architecture can learn the composite at all before we ask for length extrapolation.
-    "s5_chain_local_v1": TaskSpec("s5_chain_local_v1", "s5_chain", version="1.3", k=8, chain_depth=2,
-                                   train_lengths=(2, 4), eval_lengths=(4, 8), worked_trace=True,
-                                   kind="experimental"),
+    # Local calibration variants (experimental, never scored as the frontier task).
+    # local_v2: gated items + per-EVENT map checkpoints (event_trace) — the dense per-step
+    # supervision that formed s5 locally, which the retired local_v1 lacked (its path-only
+    # trace supervised the dereference but not the map tracking through events).
+    # local_v2_path: same gated items, path-only trace — the supervision-density contrast arm.
+    "s5_chain_local_v2": TaskSpec("s5_chain_local_v2", "s5_chain", version="2.0", k=8, chain_depth=2,
+                                   distinct_path=True, event_trace=True, worked_trace=True,
+                                   train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
+    "s5_chain_local_v2_path": TaskSpec("s5_chain_local_v2_path", "s5_chain", version="2.0", k=8,
+                                        chain_depth=2, distinct_path=True, worked_trace=True,
+                                        train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)
@@ -693,6 +740,24 @@ RETIRED = {
     "composite_copy_scale_v1": TaskSpec("composite_copy_scale_v1", "composite", k=5, recall_pool=5,
                                         memorized_recall=False, value_vocab_size=128, kind="retired",
                                         train_lengths=(4, 8, 16), eval_lengths=(16, 64)),
+    # s5_chain v1/v2 (issue #30 follow-up, retired 2026-07-18): both streams lack the
+    # distinct_path gate, so final-map cycles whose length divides chain_depth=8 make the
+    # degenerate echo strategy ("answer the queried agent") score 0.16-0.32 vs 1/16 chance,
+    # and roughly half the items have degenerate (<9 distinct-agent) query paths — item
+    # difficulty varies and sub-0.4 scores are uninterpretable. v1 additionally used the
+    # pre-explicit event rendering (its pilot scores sat AT the echo floor). Superseded
+    # knob-for-knob by s5_chain_v3 (distinct_path=True, version 2.0). Note the shared
+    # cycle_a0 wording was made simultaneity-explicit on 2026-07-18 (render.py _CYCLE_A0),
+    # so regenerated v1/v2 prompts are NOT byte-identical to the published runs; the runs
+    # are preserved in results/benchmark/history.jsonl.
+    "s5_chain_v1":      TaskSpec("s5_chain_v1", "s5_chain", version="1.1", k=16, chain_depth=8,
+                                  train_lengths=(8, 16), eval_lengths=(32, 64), kind="retired"),
+    "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.3", k=16, chain_depth=8,
+                                  train_lengths=(8, 16), eval_lengths=(32, 64, 96), kind="retired"),
+    # Ungated local pilot with path-only traces; superseded by s5_chain_local_v2[/_path].
+    "s5_chain_local_v1": TaskSpec("s5_chain_local_v1", "s5_chain", version="1.3", k=8, chain_depth=2,
+                                   train_lengths=(2, 4), eval_lengths=(4, 8), worked_trace=True,
+                                   kind="retired"),
     # Original chain pointer-chase. Retired because the nested "a0 of a0 of ..." query becomes a
     # hop-counting confound at depth 64/128; superseded by chain_v2, which appends an explicit
     # depth annotation ("(128 hops)") to the same query.

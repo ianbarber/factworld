@@ -362,14 +362,19 @@ FACETS = {
     "commutative": {
         "task": "commutative_v1", "lengths": (64,), "n": 25,
         "efforts": "on"},
-    # EXPERIMENTAL (owner-approved 2026-07-16): s5_chain — non-abelian pointer-map
-    # state tracking composed with serial dereference. length = number of swap/cycle
-    # events; chain depth is fixed at 8 hops (k=16 agents). Prototype facet for
-    # calibration; no renderer section reads it yet.
+    # s5_chain — THE headline composite stressor: non-abelian pointer-map state
+    # tracking composed with an 8-hop serial dereference (k=16 agents; length =
+    # number of swap/cycle events). Runs the distinct_path-gated v3 stream (echo
+    # and fixed-hop floors 0, chance 1/16). Protocol: every model at its maximum
+    # supported reasoning effort (xhigh; OpenRouter maps down to high where xhigh
+    # is unsupported). Per-length budgets are sized so finish=length truncation —
+    # scored as wrong — stays a rounding error, not a ranking confound (deepseek/
+    # nemotron/glm truncated 16-28% of calls at the old 16-24k budgets).
+    # Rendered by render_benchmark.s5_chain_rows (README + report ranking table).
     "s5_chain": {
-        "task": "s5_chain_v2", "lengths": (32, 64, 96), "n": 25,
-        "efforts": "xhigh", "max_new_tokens": 16384,
-        "budgets": {32: 16384, 64: 24576, 96: 32768}},
+        "task": "s5_chain_v3", "lengths": (32, 64, 96), "n": 25,
+        "efforts": "xhigh", "max_new_tokens": 32768,
+        "budgets": {32: 32768, 64: 49152, 96: 65536}},
     # EXPERIMENTAL (issue #16a, owner-approved 2026-07-11): gap stability — the
     # composed and binding_only legs at a SECOND operating point (L32, instant,
     # contract, n=50) for the gap-interpretable models, to test whether the

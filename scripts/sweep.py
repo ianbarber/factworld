@@ -107,9 +107,15 @@ def run_one(spec, arch, seed, *, d_model, n_layers, steps, batch, train_n, eval_
     backend = LocalBackend([w], arch=arch, model=run["model"], tokenizer=tok, device=device)
     out = {}
     for L in spec.eval_lengths:
-        # In trace mode the model emits the full scratchpad (length tokens) THEN the answer,
-        # so size the generation budget for trace + answer, and score the committed tail.
-        max_new = (L + 6) if use_trace else None
+        # In trace mode the model emits the full scratchpad THEN the answer, so size the
+        # generation budget for trace + answer, and score the committed tail. Sized from the
+        # actual oracle trace at this length (event_trace checkpoints are L*k tokens, far
+        # more than the L+6 that fits a path-only trace).
+        if use_trace:
+            probe = TK.generate(spec, "test", n=1, length=L)[0]
+            max_new = len(probe.meta.get("trace", "").split()) + 6
+        else:
+            max_new = None
         res = evaluate_task(backend, spec, split="test", n=eval_n, length=L, max_new_tokens=max_new)
         # In trace mode the answer is the LAST len(gold) tokens of the generated scratchpad,
         # so last_n (not the canonical relaxed prefix match) is the fair overall score.
@@ -192,6 +198,8 @@ def main():
     ap.add_argument("--worked_trace", action="store_true",
                     help="Force worked_trace=True on the spec (needed for the composite "
                          "tasks, whose default is False). Implies --use_trace.")
+    ap.add_argument("--chain_depth", type=int, default=None,
+                    help="Override spec.chain_depth (s5_chain decomposition probes).")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--out_prefix", default=None,
                     help="Output prefix (default: results/sweep_<task0>_<timestamp>).")
@@ -209,6 +217,8 @@ def main():
 
     cfg = {"tasks": tasks, "archs": archs, "seeds": a.seeds, "steps": a.steps,
            "d_model": a.d_model, "n_layers": a.n_layers, "train_n": a.train_n, "eval_n": a.eval_n}
+    if a.chain_depth is not None:
+        cfg["chain_depth"] = a.chain_depth
 
     runs = []
     total = len(tasks) * len(archs) * len(a.seeds)
@@ -218,6 +228,8 @@ def main():
         spec = TK.spec_for(task)
         if a.worked_trace:
             spec = spec.scaled(worked_trace=True)
+        if a.chain_depth is not None:
+            spec = spec.scaled(chain_depth=a.chain_depth)
         for arch in archs:
             use_short, resolved = False, arch
             if arch == "gdp_hybrid_shortconv":
