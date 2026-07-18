@@ -650,16 +650,19 @@ def _latest_chain_task(records, facet):
 
 
 def stress_cell(records, facet, model, length,
-                exclude_renderings=("abstract_stated",)):
+                exclude_renderings=("abstract_stated",), effort=None):
     """The model's thinking state-stress cell at (facet, length) — canonical arm
     only (breadth/fixed-k rungs are separate arms), abstract-token floor rendering
     and wrapped chain_depth cells excluded. None when the cell never ran.
 
     Only records for the facet's CURRENT task version are used, so retired
-    chain_v1/s5_chain_v1 history does not shadow the new chain_v2/s5_chain_v2 results."""
+    chain_v1/s5_chain_v1-v2 history does not shadow the current chain_v2/s5_chain_v3 results.
+    ``effort`` pins the facet's canonical effort arm (e.g. s5_chain's xhigh), so
+    off-protocol effort probes in history never shadow the headline cell."""
     cells = [r for r in by_facet(records, facet)
              if r["model"] == model and r.get("length") == length
              and _settings(r).get("rendering") not in exclude_renderings
+             and (effort is None or _settings(r).get("effort") == effort)
              and not chain_invalid(r)
              and canonical_arm(r)]
     if not cells:
@@ -673,10 +676,16 @@ def stress_cell(records, facet, model, length,
 
 
 def _raised_budget_suffix(rec) -> str:
-    """' @32,768tok (raised budget)' for a thinking cell rerun above the standard
-    budget (--budget-override); '' otherwise."""
+    """' @32,768tok (raised budget)' for a thinking cell rerun above its PLANNED
+    budget (--budget-override); '' otherwise. The plan is the facet's per-length
+    budget (falling back to its max_new_tokens, then THINKING_BUDGET), so facets
+    whose standard budgets exceed 16,384 — s5_chain sizes budgets so truncation
+    stays a rounding error — do not mark every cell raised."""
     cap = _settings(rec).get("max_new_tokens")
-    if cap and cap > THINKING_BUDGET:
+    from factworld.benchmark import FACETS
+    fc = FACETS.get(rec.get("facet"), {})
+    planned = fc.get("budgets", {}).get(rec.get("length")) or fc.get("max_new_tokens") or THINKING_BUDGET
+    if cap and cap > planned:
         return f" @{cap:,}tok (raised budget)"
     return ""
 
@@ -985,8 +994,8 @@ def s5_chain_rows(records):
     every current-roster model runs)."""
     rows = []
     for m in roster_models(records):
-        score_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_STRESS_LENGTH)
-        eff_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_EFF_LENGTH)
+        score_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_STRESS_LENGTH, effort="xhigh")
+        eff_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_EFF_LENGTH, effort="xhigh")
         if score_rec is None and eff_rec is None:
             continue
         score = stress_value_str(score_rec)
@@ -1363,9 +1372,10 @@ def _readme_table_lines(columns, keep, rows):
 
 def update_readme_frontier(records, readme_path=None) -> bool:
     """Rewrite the README's marked frontier block (README_FRONTIER_START/_END)
-    from the rendered records. The block now contains two tables: instant and
-    thinking. No-op — returns False, file untouched — when the file or either
-    marker is absent, so histories rendered outside the repo never grow tables."""
+    from the rendered records: the s5_chain headline ranking first, then the
+    component tables (instant composition, thinking state stress). No-op —
+    returns False, file untouched — when the file or either marker is absent,
+    so histories rendered outside the repo never grow tables."""
     if readme_path is None:
         readme_path = os.path.join(REPO, "README.md")
     if not os.path.exists(readme_path):
@@ -1377,22 +1387,23 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     if start < 0 or end < start:
         return False
     rows = list(headline_rows(records))
-    instant_rows = [r for r in sort_instant_rows(rows) if not instant_excluded(r[0])]
-    instant_lines = ["**Instant composition (reasoning off, answer contract)**", ""]
-    instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP,
-                                          instant_rows)
-    thinking_lines = ["", "**Thinking state-stress (reasoning on)**", ""]
-    thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP,
-                                           sort_thinking_rows(rows))
     s5c_lines = []
     s5c = s5_chain_rows(records)
     if s5c:
-        s5c_lines = ["", "**s5_chain (composite stressor: pointer-map permutations + 8-hop chase)**", "",
+        s5c_lines = ["**s5_chain — the headline ranking (non-abelian pointer-map tracking × 8-hop dereference)**", "",
                      "| Model | s5_chain @L96 | ctok/call |",
                      "|---|---|---|"]
         for m, score, ctok in s5c:
             s5c_lines.append(f"| {m} | {_readme_compact(score)} | {ctok} |")
-    lines = instant_lines + thinking_lines + s5c_lines
+        s5c_lines.append("")
+    instant_lines = ["**Component: instant composition (reasoning off, answer contract)**", ""]
+    instant_rows = [r for r in sort_instant_rows(rows) if not instant_excluded(r[0])]
+    instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP,
+                                          instant_rows)
+    thinking_lines = ["", "**Components: thinking state stress (reasoning on)**", ""]
+    thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP,
+                                           sort_thinking_rows(rows))
+    lines = s5c_lines + instant_lines + thinking_lines
     block = README_FRONTIER_START + "\n" + "\n".join(lines) + "\n" + README_FRONTIER_END
     new = text[:start] + block + text[end + len(README_FRONTIER_END):]
     if new != text:
@@ -1520,12 +1531,14 @@ def write_results_md(records, out_path, history_path):
     s5c = s5_chain_rows(records)
     if s5c:
         lines += [
-            "## s5_chain ranking", "",
-            "s5_chain is the single composite stressor: k=16 agents with an a0 pointer map, "
+            "## s5_chain ranking (headline)", "",
+            "s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map, "
             "L order-sensitive swap/cycle events on the pointer targets, then an 8-hop serial "
-            "dereference query (`what is a0 of ... of gX? (8 hops)`). Sorted by the @L96 score, "
-            "then by completion tokens per call on the matched @L64 cell. The echo-start floor "
-            "(answer the queried agent) is 0.16 at L32 and 0.20 at L64/L96 on these items.",
+            "dereference query (`what is a0 of ... of gX? (8 hops)`). Every item is gated so the "
+            "query path visits 9 distinct agents: answering the queried agent, or any fixed hop, "
+            "scores exactly 0, and chance is 1/16. Protocol: maximum supported reasoning effort "
+            "(xhigh), budgets sized so truncation stays a rounding error, n=25 per cell. Sorted "
+            "by the @L96 score, then by completion tokens per call on the matched @L64 cell.",
             "",
             "| Model | s5_chain @L96 | s5_chain@64 ctok/call |",
             "|---|---|---|"]
@@ -2385,12 +2398,13 @@ def write_index_html(records, out_dir, svg_paths, history_path):
     s5c_html = ""
     if s5c_rows:
         s5c_html = (
-            "<h3>s5_chain ranking</h3>\n"
-            '<p class="small">s5_chain is the single composite stressor: k=16 agents with an a0 '
+            "<h3>s5_chain ranking (headline)</h3>\n"
+            '<p class="small">s5_chain is the headline composite stressor: k=16 agents with an a0 '
             "pointer map, L order-sensitive swap/cycle events on the pointer targets, then an "
-            "8-hop serial dereference query. Sorted by the @L96 score, then by completion tokens "
-            "per call on the matched @L64 cell. The echo-start floor (answer the queried agent) "
-            "is 0.16 at L32 and 0.20 at L64/L96 on these items.</p>\n"
+            "8-hop serial dereference query. Every item is gated so the query path visits 9 "
+            "distinct agents — answering the queried agent, or any fixed hop, scores exactly 0, "
+            "and chance is 1/16. Sorted by the @L96 score, then by completion tokens per call on "
+            "the matched @L64 cell.</p>\n"
             + _html_table(["Model", "s5_chain @L96", "s5_chain@64 ctok/call"],
                           s5c_rows)
         )
