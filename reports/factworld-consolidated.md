@@ -200,11 +200,15 @@ indistinguishable L96 scores — held composite state is rented by the token, an
 differs 2.5× by model. The live table, with intervals and marks, renders in the feed and in
 the README headline block.
 
-Effort is not monotone for every model: a controlled high-vs-xhigh probe on identical items
-shows claude-sonnet-5 losing 0.24 at L96 when moved to the higher effort (0.80 → 0.56, zero
-truncation both arms, 12.7k → 16.0k ctok/call) — it reasons longer and tracks worse. The
-protocol stays maximum supported effort for every model; sonnet's headline number carries that
-measured cost.
+Effort is requested, not enforced, and two models show what that means. A controlled
+high-vs-xhigh probe on identical items shows claude-sonnet-5 losing 0.24 at L96 at the higher
+effort (0.80 → 0.56, zero truncation both arms, 12.7k → 16.0k ctok/call) — it reasons longer
+and tracks worse. gpt-5.6-sol under-allocates instead: at the same requested xhigh it spends
+4× fewer reasoning tokens than gpt-5.5 (2.3k vs 9.2k per call at L64), and its length curve is
+the roster's only inverted one (0.48 @L32 → 0.72 @L96, reasoning spend scaling with prompt
+length) — it fails short items it would likely solve with the thinking it grants longer ones.
+The protocol stays maximum supported effort for every model; what an endpoint does with the
+request is part of what it ships.
 
 ### 4.2 The composed cell and the gap (instant regime)
 
