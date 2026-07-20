@@ -1894,6 +1894,20 @@ def fig_s5_stress(records, out_dir):
                        f"(dotted: {REF_THRESHOLD} reference)")
 
 
+def fig_s5_chain(records, out_dir):
+    """The headline figure: s5_chain score vs event-stream length, current task
+    version at the facet's canonical xhigh arm only (retired-stream and
+    off-protocol effort-probe cells excluded)."""
+    from factworld.benchmark import FACETS
+    task = FACETS.get("s5_chain", {}).get("task")
+    mine = [r for r in records
+            if r.get("task") == task and _settings(r).get("effort") == "xhigh"]
+    return _stress_fig(mine, out_dir, "s5_chain", "fig_s5_chain",
+                       "permutation events before the 8-hop dereference (log scale)",
+                       "s5_chain (headline): match score vs length "
+                       f"(dotted: {REF_THRESHOLD} reference)")
+
+
 def _fig_chain(records, out_dir, facet, task_label):
     """Chain figure over a chain facet; chain_depth cells past the design gate
     (depth >= k=6, cycle wrap) are excluded — they measure the wrapped task."""
@@ -2261,7 +2275,7 @@ def fig_profiles(records, out_dir):
 
 FIGURES = [fig_zero_budget, fig_profiles_instant, fig_profiles_thinking,
            fig_dose_response, fig_composite_length, fig_s5_stress,
-           fig_chain_depth, fig_chain_nowrap, fig_decomposition]
+           fig_s5_chain, fig_chain_depth, fig_chain_nowrap, fig_decomposition]
 
 
 # --- html ---------------------------------------------------------------------
