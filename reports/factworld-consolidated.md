@@ -2,14 +2,22 @@
 
 FactWorld is a single, frozen benchmark suite that evaluates frontier models through an API and
 local architectures trained from scratch. The same tasks, oracle, and decomposition metrics are
-used in both modes. It is one instrument for studying how recall, state tracking, and
-composition interact; every number reproduces from committed scripts and can be checked with an
-API key or a single GPU.
+used in both modes. The instrument is the point: every task in it must differentiate frontier
+models and be explorable architecturally, and every number reproduces from committed scripts
+and can be checked with an API key or a single GPU. The findings — that composition shows up
+differently by regime, is bought by reasoning tokens at inference and by specific architectural
+and training choices locally — are what the instrument currently reads.
 
 **Scope.** FactWorld is a *mechanism probe for the component capabilities that agent workloads
 depend on* — working-memory recall, state tracking, and multi-step composition — not an end-to-end
 agent benchmark. Every task is single-turn and single-answer-span, with no tool use, planning, or
-multi-turn action. The component→agent mapping is a motivating analogy, not a proven one (§9).
+multi-turn action. The component→agent mapping is a motivating analogy, not a proven one (§10).
+
+This report is the project's single narrative. The rendered benchmark feed —
+[`docs/benchmark/results.md`](../docs/benchmark/results.md), with per-cell Wilson intervals,
+marks, figures, and the FactWorldBench ranking, regenerated from
+`results/benchmark/history.jsonl` by `scripts/render_benchmark.py` — carries the protocol
+detail and per-cell provenance.
 
 ## 1. What the instrument is
 
@@ -44,18 +52,22 @@ comparisons below use match for both API and local models.
 
 ## 2. The tasks
 
-**Which task version each number is on.** The worked example below and the §4 grid's give-stream
-columns (`binding_v1`, `composite_copy_v1`) are on the retired v1 give-stream family —
-historical snapshots, kept as diagnostics (the recency
-methodological note in [frontier-benchmark.md](frontier-benchmark.md) covers why the v1 sampler
-was defective). The §5 local tables are on v2
-(the trace-free 3-seed staged-curriculum measurement, corroborated by the compute-matched scale
-sweep — see §5). The §4 dose-response, the §6 scaffolded numbers, and the §7 API
-sweep are on v2 (glm to L1024; kimi at L256 and L512). The §7 local table is not
-recency-exposed: it comes from `experiment_dense_supervision.py`, whose streams are swap/cycle permutations
-(`world.sample_hard_chain`), not the give-stream, so the v1 sampler defect never touched it.
-Cross-model claims defer to the frontier benchmark
-([`frontier-benchmark.md`](frontier-benchmark.md)), which is on v2.
+**Which task version each number is on.** Every scored number in this report is on the current
+versioned specs — the v2 give-stream family (`binding_v2`, `composite_copy_v2`), `chain_v2`,
+and `s5_chain_v3`; pinned streams make cells resume byte-identically. The worked example below
+uses the retired v1 spec's rendering (same knobs and format; only the samplers differ). The §7
+local table is not give-stream-based at all: its streams are swap/cycle permutations
+(`world.sample_hard_chain`), untouched by the v1 sampler defect.
+
+> **Methodological note: the recency shortcut behind the v1 retirement.** A give-stream sampler
+> that draws events uniformly leaves the queried object's resolving write ~Geometric(1/4) from
+> the end of the stream, so a one-line recency heuristic (answer the last event's recipient)
+> scores 0.33 — indistinguishable from mid-roster state tracking. The v2 sampler places the
+> queried object's last write uniformly over the stream, which drives that heuristic to chance
+> (0.06) and exposes the object-filter floor E[1/w] as the real bar: cheap-tier models sit at
+> or below the 0.41 floor where they previously looked mid-pack. This is why the recency
+> heuristic is a permanent floor row and the validity gate checks it on every give-stream task
+> ([experiments §10](../docs/experiments/README.md)).
 
 **Composition (`composite_copy_v2`)** is the flagship probe — the state × recall composition.
 The worked example below is the retired v1 spec's rendering (same knobs and format; the samplers
@@ -78,6 +90,19 @@ so the value is read from context, not from weights.
 roles of a set of agents, and the query asks for one agent's final role. Unlike last-write-wins,
 the running permutation must be carried step by step.
 
+**s5_chain (`s5_chain_v3`)** composes the two stress components in one task, and is the
+FactWorldBench headline. k=16 agents hold an `a0` pointer map (initially one 16-cycle); L
+order-sensitive swap/cycle events permute the pointer *values* — the S₅-style state-tracking
+load; the query then dereferences the final map 8 hops deep (`what is a0 of a0 of ... of gX?
+(8 hops)`) — the pointer-chase load. Neither component alone suffices, and the mechanism shape
+is the one agent workloads exercise: hold a set of references that other events keep mutating,
+then act through them several steps deep. Every item is gated so the query start sits on a
+final-map cycle longer than the query depth: the nine path nodes are distinct, answering the
+queried agent or any fixed hop scores exactly 0, item difficulty is uniform, and chance is
+1/16. Cycle events are rendered simultaneity-explicit (`g5's a0 takes g9's old a0, ...`), so no
+sequential misreading of the three assignments is available (`tests/test_s5_chain.py` pins the
+gate and the rendering).
+
 **The remaining tasks**, grouped as components and compositions per the taxonomy
 ([`AGENTS.md`](../AGENTS.md)):
 
@@ -86,7 +111,7 @@ the running permutation must be carried step by step.
 | `recall_copy_v1` | component: recall | single-query, deferred-readout MQAR variant | pool breadth |
 | `conflict_v1` | component: recall (parametric variant) | parametric ↔ in-context override | memorized map vs. context |
 | `binding_v2` | component: state tracking | last-write-wins (absorbing updates — not group ops) | give-stream length |
-| `chain_v1` | composition: recall ∘ recall | pointer chase at fixed breadth | depth |
+| `chain_v2` | composition: recall ∘ recall | pointer chase at fixed breadth, explicit hop count | depth |
 
 ## 3. Validating the instrument
 
@@ -129,37 +154,76 @@ length.
 
 ## 4. Evaluating frontier models
 
-For frontier-model comparisons, the canonical source is the recurring benchmark report,
-[`frontier-benchmark.md`](frontier-benchmark.md): a composition instrument run in an instant
-(no-thinking) and a thinking regime on the de-skewed v2 tasks, with censoring and cleanliness
-marks and per-cell provenance. The report reads the component legs (recall, binding) against the
-composed two-hop cell at L16/L64, with a per-model composition gap (binding@L16 − composed@L16),
-shallow-heuristic floors as first-class rows, and two state-stress rows under reasoning (chain
-d128 at fixed k=257, s5 @L256). It supersedes the OpenRouter grid in this section for
-cross-model claims; the grid below remains the pretrained-model snapshot on the v1 tasks. The
-dose-response below is on the de-skewed v2 sampler.
+The recurring benchmark reads the roster (twelve models, registered in
+`factworld.benchmark.MODELS`) through the instrument in two regimes: **instant** (effort=none,
+hard one-line answer contract — what the weights compute) and **thinking** (maximum supported
+reasoning effort, explicit large completion budgets — what reasoning buys). Instant cells run
+n=100, thinking cells n=25 with Wilson 95% intervals; shallow-heuristic floors are first-class
+rows; contamination marks (⊘ not measurable at this budget, ≤x† covert-reasoning upper bound,
+‡ cap-escape) quarantine cells from orderings. The full marks legend, per-cell intervals,
+empty/truncation rates, and provenance are in the rendered feed
+([`docs/benchmark/results.md`](../docs/benchmark/results.md)); the add-a-model path is in
+[`README.md`](../README.md).
 
-The default setup for API evaluation is:
+### 4.1 FactWorldBench: the headline ranking
 
-- `max_new_tokens=2048` — enough for reasoning models to finish a scratchpad.
-- No early stop (`stop_at=None`) — truncating at `.` would cut off reasoning traces before the
-  answer.
-- Composite format instruction in the system prompt — tells the model to emit `<holder> <value>`.
-- `APIBackend` normalizes the output before scoring: it strips `<think>` blocks, common prefixes,
-  and detached trailing periods, then extracts the final answer span.
+`s5_chain_v3` (§2) is the ranking task: one number per model for how well it holds a mutating
+pointer map and then acts through it. Protocol: every model at the maximum reasoning effort its
+endpoint supports, per-length completion budgets sized so truncation — scored as wrong — stays
+a rounding error, n=25 per cell. The L96 cell (96 permutation events before the 8-hop
+dereference) ranks; the matched L64 cell prices completion tokens per call:
 
-On the retired v1 flagship `composite_copy_v1@L16` (pool-16 in-context recall × last-write-wins
-binding, length 16), n=30, greedy, match:
+| Model | s5_chain @L96 | ctok/call @L64 |
+|---|---|---|
+| openai/gpt-5.5 | 1.00 | 9343 |
+| anthropic/claude-opus-4.8 | 0.96 | 9702 |
+| muse-spark-1.1 | 0.92 | 12484 |
+| deepseek/deepseek-v4-pro | 0.92 | 17052 |
+| openai/gpt-5.6-sol | 0.72 | 2322 |
 
-| model | match |
-| --- | --- |
-| glm-5.2 | 0.867 |
-| kimi-k2.6 | 0.867 |
-| llama-3.3-70b-instruct | 0.767 |
+The task differentiates on two axes at once. Score separates the models that cannot hold the
+composite at this length (gpt-5.6-sol solves both components in isolation — chain d128 0.88,
+s5 @L256 0.92 — but reads 0.72 on their composition). Tokens-to-solve separates the models
+score cannot: the top of the table spans a 1.8× range in completion spend for
+statistically indistinguishable scores (opus 9.7k vs deepseek 17.1k per call at L64) — held
+composite state is rented by the token, and the rent differs by model. The live table, with
+intervals and marks, renders in the feed and in the README headline block.
 
-These runs use `max_new_tokens=2048` and no early stop so reasoning models can finish their
-scratchpad; `APIBackend` extracts the final answer span. A short generation budget would truncate
-the scratchpad before the answer.
+### 4.2 The composed cell and the gap (instant regime)
+
+The instant battery deconstructs what the headline measures: with reasoning off, does the
+composition exist in weights at all? The composed cell is the two-hop query in one shot ("what
+is a0 of the holder of o0?") under the zero-budget protocol (effort=none, answer contract,
+96-token cap, n=100) at L16 and L64; the **gap** — binding_only@L16 − composed@L16 — is its
+derived statistic, interpretable only where the binding component is established. The recall
+half is free (0.98–1.00 scaffolded for every measurable model), so the gap is a composition
+deficit, not a recall one:
+
+| Model | recall | binding @L16 | composed @L16 | composed @L64 | gap @L16 |
+|---|---|---|---|---|---|
+| anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 |
+| anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62† | 0.32† | +0.15† |
+| deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ |
+| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* |
+| nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ |
+| openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 |
+| openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 |
+| qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ |
+| z-ai/glm-5.2 | 1.00 | 0.71 | 0.38† | 0.13 | +0.33† |
+| *recency heuristic (floor)* | — | 0.04 | 0.04 | 0.06 | — |
+| *object-filter floor* | — | 0.41 | 0.41 | 0.15 | — |
+
+Where binding is solid the roster separates: opus composes essentially for free (gap 0.06,
+equal to the instant test-retest noise bar), while gpt-5.5 pays the largest clean deficit
+(binding 0.80, composed 0.46, gap +0.34) — the model that tops the thinking-regime headline has
+the *least* in-weights composition, which is the regime contrast in one pair of numbers. For
+deepseek, qwen, and nemotron the binding leg's interval overlaps the 0.41 object-filter floor,
+so the gap renders —ᶠ (floor − floor ≈ 0 by construction, not a measurement). Marks (†, *, the
+sonnet escalation diagnostics) and per-cell detail are in the feed; grok-4.5, muse-spark-1.1
+(thinking-only endpoints), and kimi-k2.6 (pervasive covert reasoning at effort=none) carry no
+instant numbers.
+
+### 4.3 Reasoning buys composition
 
 **Reasoning moves composition, monotonically.** On `composite_copy_v2` @L16 (n=50 per cell,
 answer-span extraction with a holder/value decomposition;
@@ -181,8 +245,8 @@ on `composite_copy_v1`@L16, n=100;
 [`docs/experiments/autoregressive-api-results.md`](../docs/experiments/autoregressive-api-results.md)
 E1b, `results/autoregressive_formatfair_20260626_224937.jsonl`).
 
-**S₅ is movable by reasoning — under a concrete rendering.** In the standard grid below (token
-rendering, no reasoning) S₅ sits at floor (~0.18). Allow reasoning *and* render the problem
+**S₅ is movable by reasoning — under a concrete rendering.** Without reasoning S₅ sits at floor
+at every length (token rendering, ~0.18; Appendix A.2). Allow reasoning *and* render the problem
 concretely (people and jobs, initial assignment stated), and a strong reasoner solves it: GLM-5.2
 holds 1.00 at L32, 0.97 at L64, and 0.90 at L128, degrading gradually with length
 (`results/s5_horizon_recheck_20260705.jsonl`, 8192-token budget). The lever is the
@@ -190,37 +254,38 @@ combination — reasoning under the token rendering leaves GLM at ~0.33, and a c
 without reasoning leaves it at chance. Appendix A gives the full curve, the reasoning × rendering
 interaction, and the per-example failure mode.
 
-The wider API capability grid below uses the standard zero-shot setup (default decoding,
-`max_new_tokens=16`, `stop_at="."`) — no reasoning — for all tasks, except that the
-`composite_copy_v1` cells for glm-5.2, kimi-k2.6, and llama-3.3-70b-instruct use the long-token
-setup above. S₅ floors in this no-reasoning grid but is movable by reasoning under a concrete
-rendering (paragraph above; Appendix A); `chain_v1` floors here but is reasoning-solvable at its
-designed depths under an 8192-token budget (paragraph after the table). The `chain_v1` column
-runs at depth 16 — past the task's design gate — so it is a wrapped-task floor check, not a
-depth score (wrap analysis after the table).
+### 4.4 The components under stress
 
-| model | recall_copy_v1 | conflict_v1 | binding_v1 | chain_v1 d16 (wrapped) | composite_copy_v1 | s5_v1@L16 |
-| --- | --- | --- | --- | --- | --- | --- |
-| glm-5.2 | 1.000 | 1.000 | 0.767 | 0.133 | 0.867 | 0.200 |
-| kimi-k2.6 | 1.000 | 1.000 | 0.633 | 0.033 | 0.867 | 0.200 |
-| llama-3.3-70b-instruct | 1.000 | 1.000 | 0.633 | 0.000 | 0.767 | 0.200 |
-| gemini-2.5-flash-lite | 1.000 | 1.000 | 0.300 | 0.100 | 0.233 | 0.167 |
-| deepseek-chat | 1.000 | 1.000 | 0.367 | 0.033 | 0.200 | 0.133 |
-| gpt-4o-mini | 1.000 | 1.000 | 0.367 | 0.067 | 0.133 | 0.200 |
+The two state-stress components are read separately in the thinking regime, at settings far
+past the composed cell's: **chain d128** (a 128-hop pointer chase at fixed breadth k=257, the
+`chain_nowrap` staircase; chance < 0.01) and **s5 @L256** (256 permutation events, concrete
+rendering; chance 0.20). Effort=high, 16,384-token budgets (raised where stated), n=25; the
+s5@128 ctok column is completion spend on the matched L128 cell every model runs:
 
-Single-hop recall and conflict are solved across the board. Binding and composition separate the
-stronger models. Depth-*k* composition (`chain_v1`) sits near floor in this no-reasoning grid,
-but with reasoning and `max_new_tokens=8192` glm-5.2 solves it at its designed depths — 1.00 at
-depth 4, n=30 (`results/chain_reasoning_pilot_20260705.json`). `chain_v1` builds a single k=6
-pointer cycle and measures depth only at depths < k (`factworld/tasks.py`: "Depths stay < k so
-the cycle never wraps"); at depth ≥ 6 the chain wraps: gold returns to the start agent at
-multiples of 6, and effective difficulty is depth mod 6. The deeper cells (the grid column
-above at depth 16, and the depth 6–32 cells in the pilot files) therefore exercise the wrapped
-task and are not depth results. Measuring depth beyond k is the axis of the scaled no-wrap
-variant (`chain_nowrap`). Non-abelian state tracking (`s5_v1`) floors here but is movable by reasoning
-under a concrete rendering (Appendix A). Reasoning-model cells require a large completion
-budget: a short budget truncates the reasoning trace before the answer and reads as an empty
-prediction.
+| Model | chain d128 | s5 @L256 | s5@128 ctok |
+|---|---|---|---|
+| x-ai/grok-4.5 | n/a | 1.00‡ | 8069 |
+| muse-spark-1.1 | 0.96 | 1.00 @32,768tok | 9704 |
+| anthropic/claude-sonnet-5 | 1.00 | 1.00 @32,768tok | 11866 |
+| anthropic/claude-opus-4.8 | 1.00 | 1.00 @32,768tok | 12683 |
+| openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
+| openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
+| z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
+| moonshotai/kimi-k2.6 | 1.00‡ | 0.88 | 17418 |
+| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
+| google/gemini-3.5-flash | 1.00 | 0.52 | 11022 |
+| deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
+
+The top half of the roster holds both components at or near ceiling — which is why the
+composite, not the components, carries the ranking (§4.1) — and the chain query carries an
+explicit hop count because the bare nested phrase is a hop-counting confound at depth 128, a
+prompt-format artifact rather than a state failure. Component cells also dissociate the regimes
+within one item set: the chain d16 cell runs in both regimes on identical items, reads
+0.96–1.00 for eleven of twelve models thinking, and floors for every cleanly-answering model
+instant (best 0.08) — a 16-hop chase is serial work no roster model holds in weights, and every
+strong model solves given room to work. Marks, budgets, and the per-cell escalation record are
+in the feed.
 
 ## 5. Evaluating local architectures
 
@@ -447,7 +512,41 @@ of densities including answer-only, and evaluate free-running. 8 seeds:
 The weaned circuit converges 8/8 free-running with no deploy-time labels and extrapolates on par
 with dense-only.
 
-## 9. Discussion
+## 9. What buys each element — the price table
+
+Three further local measurements complete the architecture picture. **Binding under breadth**
+(the working-set load axis, 45 runs at d256): fprm's product recurrence leads the binding leg
+through B16 (1.00 @B6, 0.97–0.98 seed-consistent @B16) and stops fitting at B24 (0.20, loss
+≥ 1.0), where only the gated hybrid holds (0.67); the transformer reads 0.08–0.23 throughout.
+**Chain depth** (`chain_v2`, train depths 2–3, eval 4–5, 3 seeds per architecture): no run
+converges; fprm and the transformer sit at the 1/6 guess at d4 and gdp_hybrid — the best
+training fit — scores 0.00–0.03 at both held-out depths, and dense intermediate-hop traces make
+it no better (0.00–0.10; below the guess floor means systematically wrong, a depth-specific
+circuit, `results/local_chain_v2_dense_20260718.md`). **Commutative state** (`commutative_v1`,
+d256): answer-only training reads chance for every architecture; dense per-step traces form the
+fold in-distribution for the recurrent architectures (gdp_hybrid 0.82±0.15, fprm 0.65±0.26
+@L16; transformer at chance) and no run carries it past the training lengths
+(`results/commutative_local/trace_rescored_*`).
+
+The synthesis: **no element of the composition is free — each is paid for by an architectural
+or training choice.**
+
+| element | price | evidence |
+|---|---|---|
+| adjacent (1-hop) recall | attention — every architecture aces adjacent readout (1.00) | §3 |
+| deferred recall | product recurrence — the transformer aces adjacent, fails deferred (0.19 vs gdp_hybrid 0.73) | §3 |
+| last-write state | recurrence, ordered by form — fprm through B16, only the gated hybrid at B24, transformer floors | breadth sweep, above |
+| non-abelian state (formation) | dense per-step supervision — a state checkpoint every ≤2 events, architecture-independent | §8 |
+| non-abelian state (length extrapolation) | recurrent hybrid — gdp_hybrid 0.75 @L64; fprm and transformer solve in-distribution, collapse past train length | §8 |
+| commutative state (formation) | dense per-step supervision, recurrence to use it; extrapolation unbought | above |
+| depth extrapolation | **open** — no measured choice buys it, with or without intermediate-hop traces | above |
+| local composition (value leg) | **open** at the default recipe — value ≤0.17 in all 45 breadth-sweep runs, even on binding-solved seeds; only the staged curriculum at d768 converges it | §5 |
+
+The two open rows are the instrument's active edge: nothing measured so far buys depth
+extrapolation, and no local training choice yet converges the value leg of the composed cell
+outside the staged-curriculum recipe.
+
+## 10. Discussion
 
 FactWorld is one instrument with two uses. The same composition probe that separates GLM,
 Kimi, and llama-3.3-70b from the cheaper tier via API (the `composite_copy_v1` snapshot, §4)
@@ -476,20 +575,20 @@ distinct regime from frontier inference.
 - **Architecture carries length generalization.** A learned state circuit generalizes in length
 only on a recurrent hybrid; transformers and looped blocks shortcut.
 
-These are results within the regime tested (§10); they are not scaling laws. FactWorld is a
+These are results within the regime tested (§11); they are not scaling laws. FactWorld is a
 mechanism probe for the component capabilities agents depend on, not an agent benchmark: the
 component→agent connection is a motivating proxy, not a proven mapping, and no task here
 exercises tool use, planning, or multi-turn action.
 
-## 10. Limitations and related work
+## 11. Limitations and related work
 
 **Limitations.** The scale regime is bounded (k=5 S₅; local models ~3–269M params, matched on
 compute at ~32–540 GFLOP/token rather than on parameters — §5; pretrained models from a few B
 to ~1T params, MoE and dense).
-Composition is 2-hop throughout. The API grids and sweeps in this report run small samples
-(n=25–50 per cell) because API costs scale with reasoning tokens; cross-model claims defer to
-the frontier benchmark ([frontier-benchmark.md](frontier-benchmark.md)), which runs n=100 on the
-instant battery and n=25–50 elsewhere, with Wilson 95% intervals per cell.
+Composition is 2-hop throughout except the headline's 8-hop dereference. The instant battery
+runs n=100; thinking cells run n=25–50 because API costs scale with reasoning tokens — Wilson
+95% intervals per cell are in the rendered feed, and thinking differences under ~0.2 are not an
+ordering.
 The natural-language format differs from the atomic-token format
 used in prior work on this instrument; absolute numbers are not comparable across formats, though
 the mechanism conclusions reproduced.
@@ -498,8 +597,7 @@ the mechanism conclusions reproduced.
 report strong S₅ word-problem length generalization with a looped-transformer architecture (FPRM) that
 uses a causal 1-D convolution / unroll-to-convergence mechanism; our `fprm` is a weight-tied
 variant of that block, and we did not run their model. Its v2 measurement is the breadth sweep
-in [frontier-benchmark.md](frontier-benchmark.md): fprm leads the binding leg through B16 and
-breaks at B24. The
+(§9): fprm leads the binding leg through B16 and breaks at B24. The
 shortcut-learning and length-extrapolation results engage a substantial literature on
 transformer state-tracking brittleness (Liu et al., 2023) and recurrent extrapolation, which we
 extend rather than survey.
@@ -542,7 +640,7 @@ but never extrapolates. This report's §8 weaning result contradicts that on the
 scope: the phase claim was measured on its atomic-token composite with a different supervision
 target, and stays scoped there; §8 is the current claim.
 
-## 11. Reproducibility
+## 12. Reproducibility
 
 Every headline claim maps to a committed script and raw results in `results/` or
 `docs/openrouter/`. The data/oracle/eval layer is pure-stdlib; training runs need one CUDA GPU.
@@ -569,8 +667,23 @@ python scripts/eval_openrouter_grid.py \
     --tasks composite_copy_v2 --n 30 --no_reasoning
 ```
 
-The §4 numbers on the retired v1 specs reproduce by substituting the retired task name — the
-eval CLIs accept `tasks.RETIRED` names for historical reproduction only, never for scored runs.
+**Run the recurring benchmark battery** (the §4 cells; resume-skips anything already in
+history, so only genuinely new cells cost anything):
+
+```bash
+python scripts/run_frontier_benchmark.py --dry-run     # full plan + cost estimate, no calls
+python scripts/run_frontier_benchmark.py               # appends per-cell records to results/benchmark/history.jsonl
+python scripts/render_benchmark.py                     # regenerates docs/benchmark/ (the bench feed) and the README block
+```
+
+Raw per-cell records (all attempts, usage, diagnostics) are one JSON object per cell in
+`results/benchmark/history.jsonl`; the s5_chain_v3 headline battery is run `bench_s5v3_scout`,
+the zero-budget battery `bench_v2_zb2_20260709`, and the rendered feed's caption names the
+run id behind every table.
+
+The worked-example numbers on the retired v1 specs reproduce by substituting the retired task
+name — the eval CLIs accept `tasks.RETIRED` names for historical reproduction only, never for
+scored runs.
 
 **Train and evaluate local architectures with the staged curriculum:**
 

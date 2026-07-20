@@ -870,11 +870,13 @@ def test_pervasive_covert_and_floor_bound_gap():
 
 
 def test_readme_frontier_block():
-    """README §2 rot-proofing: the marked frontier block regenerates as TWO
-    tables (instant composition + thinking state-stress) in compact cell form —
-    escalation diagnostics collapse to the canonical value + mark, raised-budget
-    cells carry ʳ, '⊘ >budget' renders ⊘, and ≤x† / —ᶠ / n/a / marks pass
-    through; a README without the markers (or a missing file) is untouched."""
+    """README §2 rot-proofing: the marked frontier block regenerates as the
+    s5_chain headline ranking (when its cells exist) followed by the two
+    component tables (instant composition + thinking state-stress) in compact
+    cell form — escalation diagnostics collapse to the canonical value + mark,
+    raised-budget cells carry ʳ, '⊘ >budget' renders ⊘, and ≤x† / —ᶠ / n/a /
+    marks pass through; a README without the markers (or a missing file) is
+    untouched."""
     if not HAS_MPL:
         return
     # compact cell transforms
@@ -900,8 +902,8 @@ def test_readme_frontier_block():
         # two tables: instant and thinking
         assert "| " + " | ".join(RB.README_INSTANT_COLUMNS) + " |" in text
         assert "| " + " | ".join(RB.README_THINKING_COLUMNS) + " |" in text
-        assert "**Instant composition (reasoning off, answer contract)**" in text
-        assert "**Thinking state-stress (reasoning on)**" in text
+        assert "**Component: instant composition (reasoning off, answer contract)**" in text
+        assert "**Components: thinking state stress (reasoning on)**" in text
         # fixture history values survive the reduction (model-b carries every mark)
         assert "| testlab/model-b | 0.78† | ≤0.63† | 0.38† | +0.15† |" in text
         assert "| testlab/model-a | 0.95 | 0.80 | 0.65 | +0.15 |" in text
