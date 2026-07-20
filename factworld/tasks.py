@@ -124,9 +124,16 @@ class TaskSpec:
     # values in fixed agent order) after every event, i.e. a state checkpoint per event,
     # the supervision density that formed s5 locally; worked_trace alone emits only the
     # final query path, which supervises the dereference but NOT the map tracking.
+    # start_trace: s5-SHAPED dense supervision — after each event emit only the query start's
+    # current pointer nxt[start] (one token per event), the exact single-quantity checkpoint
+    # shape that formed s5, rather than event_trace's full-map dump. Sufficient signal for
+    # depth-1 readout; depth>=2 still requires the joint map (hop 2's identity is unknown
+    # during the stream), so the start_trace d1-vs-d2 contrast isolates single-slot tracking
+    # from joint-map maintenance.
     # Appended + defaulted: _rng does not key on either, so no existing stream is perturbed.
     distinct_path: bool = False
     event_trace: bool = False
+    start_trace: bool = False
 
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
@@ -348,7 +355,7 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
     for _attempt in range(100):
         nxt = dict(nxt0)
         events: list[Event] = []
-        checkpoints: list[str] = []          # event_trace: full a0 map after each event
+        maps: list[dict] = []                # per-event map snapshots (trace construction)
         for _ in range(length):
             if rng.random() < 0.5:
                 a, b = rng.sample(cyc, 2)
@@ -358,8 +365,8 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
                 a, b, c = rng.sample(cyc, 3)
                 events.append(Event("cycle_a0", (a, b, c)))
                 nxt[a], nxt[b], nxt[c] = nxt[b], nxt[c], nxt[a]
-            if spec.event_trace:
-                checkpoints.append(" ".join(nxt[a] for a in cyc))
+            if spec.event_trace or spec.start_trace:
+                maps.append(dict(nxt))
         if not spec.distinct_path:
             starts = cyc
         else:
@@ -380,8 +387,17 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
     gold = path[-1]
     query = "what is " + "a0 of " * depth + f"{start}? ({depth} hops)"
     meta = {"depth": depth, "start": start, "path": path}
-    if spec.event_trace:
-        meta["trace"] = " ".join(checkpoints + path[:-1])
+    if spec.start_trace:
+        meta["trace"] = " ".join([m[start] for m in maps] + path[:-1])
+        # Interleaved variant of the same supervision (the protocol that formed s5): the
+        # checkpoint token follows its event INSIDE the stream, so credit assignment is
+        # local. Training docs use this; evaluation is free-running on the plain prompt.
+        ev_txts = [r.render_event(e, step=f"s{i}", key=f"h|{i}|{e.kind}|{'|'.join(e.args)}")
+                   for i, e in enumerate(events)]
+        meta["interleaved_prompt"] = (
+            f"{facts} " + " ".join(f"{t} {m[start]}" for t, m in zip(ev_txts, maps)) + f" {query}")
+    elif spec.event_trace:
+        meta["trace"] = " ".join(" ".join(m[a] for a in cyc) for m in maps) + " " + " ".join(path[:-1])
     elif spec.worked_trace:
         meta["trace"] = " ".join(path[:-1])
     return Example(f"{facts} {hist} {query}", _render_answer(gold), length, meta)
