@@ -42,11 +42,11 @@ then their compositions:
 | **Component: recall** | `recall_copy_v1` | single-query, deferred-readout MQAR variant; pool breadth = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models); `conflict_v1` scores the in-context override |
 | **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates — not group ops) |
-| — commutative variant | `commutative_v1` | each event turns a named entity's dial a few clicks; the query asks where one dial ends up — every event matters, order does not; experimental — reads in the thinking regime only (roster @L64 spans 0.44–0.96 but only gpt-5.5 CI-separates, so it stays off the headline; instant and d256-local at chance) |
+| — commutative variant | `commutative_v1` | each event turns a named entity's dial a few clicks; the query asks where one dial ends up — every event matters, order does not; experimental — reads in the thinking regime only (roster @L64 spans 0.44–0.96 but only gpt-5.5 CI-separates, so it stays off the headline; instant and d256-local answer-only at chance, per-step traces form it in-distribution for the recurrent archs) |
 | — non-abelian variant | `s5_v1` | order-sensitive permutation streams; length = sequence stress |
-| **Composition: state × recall** | `composite_copy_v2` | the two-hop; headline statistic = **gap** (binding − composed) |
-| **Composition: recall ∘ recall** | `chain_v1` | follow a chain of "ask X" pointers hop by hop to the fact at the end — recall applied to its own output; depth = number of hops, at fixed breadth (the no-wrap staircase builds k=2d+1) |
-| **Composition: non-abelian state × serial dereference** | `s5_chain_v3` | **the headline ranking** — track a k=16 pointer map through L order-sensitive swap/cycle events, then dereference it 8 hops deep; items gated so echo/fixed-hop heuristics score exactly 0 (chance 1/16) |
+| **Composition: state × recall** | `composite_copy_v2` | the two-hop; the **gap** (binding − composed) is its derived statistic |
+| **Composition: recall ∘ recall** | `chain_v2` | follow a chain of "ask X" pointers hop by hop to the fact at the end — recall applied to its own output; depth = number of hops, at fixed breadth (the no-wrap staircase builds k=2d+1) |
+| **Composition: non-abelian state × serial dereference** | `s5_chain_v3` | the **FactWorldBench headline task** — track a k=16 pointer map through L order-sensitive swap/cycle events, then dereference it 8 hops deep; items gated so echo/fixed-hop heuristics score exactly 0 (chance 1/16) |
 
 Each axis tests a different thing: solve rate; pool/breadth (working-set load); depth/length
 (iteration count); regime (**instant** = reasoning off + answer contract = in-weights, vs
@@ -371,23 +371,23 @@ python scripts/run_benchmark.py composite_copy_v2 --arch gdp_hybrid --d_model 32
 python scripts/run_frontier_benchmark.py --dry-run   # plan + cost preview
 python scripts/render_benchmark.py                   # re-render docs/benchmark/
 
-# Section 3.1 — state-tracking dissociation                 -> docs/state-tracking/dense-supervised.md
+# State-tracking dissociation                                -> docs/state-tracking/dense-supervised.md
 python scripts/dense_s5.py --group s5     # S5 matrix: gdp_pure / n_h=1 null / gdn / transformer / gru, 3 seeds
 python scripts/dense_s5.py --group a5     # A5 not-S5-specific control panel
 
-# Section 3.2 — recall                                       -> docs/results-ci.md, docs/recall/readout.md
+# Recall dissociation                                        -> docs/results-ci.md, docs/recall/readout.md
 python scripts/ci_dissociation.py         # recall_copy_v1 + binding_v2, 4 archs x 3 seeds (pool-2 dissociation CIs)
 python scripts/recall_attention_test.py   # attention-free attribution: gdp_pure / gdn_pure / gdp_hybrid across pools 2..8
 python scripts/recall_fair.py             # the 1-hop-vs-deferred differential (onehop/defsep/defpad; n_heads 4 vs 8)
 
-# Section 4 — composition gap                                -> docs/results.md, docs/results-ci.md, docs/composition/results.md
+# Composition gap                                            -> docs/results.md, docs/results-ci.md, docs/composition/results.md
 python scripts/collect_baselines.py       # 4-arch from-scratch reference baselines, all scored tasks (seed 0)
 python scripts/sk_composite.py            # memorization diagnostic + the n_h in {1,2,4} fixed-param mechanism control
 python scripts/iso.py                      # the n_h ∈ {1,2,4} product-structure ablation at fixed params (neg-eig on/off)
 python scripts/decompose.py               # the gap decomposed: state leg vs recall leg + routing on holder-wrong examples
 python scripts/experiment_composite_scale.py  # compute-matched scale sweep: small/medium/large × gdp/fprm/transformer
 
-# Section 5 — scale + the matched LR sweeps                  -> docs/state-tracking/scale.md
+# Scale + the matched LR sweeps                              -> docs/state-tracking/scale.md
 python scripts/scale_confirm.py           # 45M multi-seed confirmation: gdp 5 / transformer 5 / gdn 3 seeds (default recipe)
 python scripts/transformer_lr_sweep.py    # transformer 45M, 5 LRs x 2 seeds  (negative-arm control: 0/10)
 python scripts/gdn_lr_sweep.py            # gdn_hybrid 45M, 5 LRs x 2 seeds    (Layer 2: capable-but-LR-fragile, 1/10)

@@ -237,7 +237,7 @@ for both models measured:
 
 At effort=none the holder leg reads kimi 0.42 / glm 0.22 against the v2 object-filter floor of
 0.41 — object filtering, not established composition (kimi's effort=none arm carries the covert
-reasoning caveat from the frontier benchmark). Low effort already recovers most of the
+reasoning caveat — §4). Low effort already recovers most of the
 composed cell (0.92–1.00), and the curve is monotone through high. The lever is implicit
 reasoning: an explicit "write the holder, then the value" instruction hurts every model,
 including the reasoners that solve the composed cell under a plain prompt (format-fair ablation
@@ -548,21 +548,23 @@ outside the staged-curriculum recipe.
 
 ## 10. Discussion
 
-FactWorld is one instrument with two uses. The same composition probe that separates GLM,
-Kimi, and llama-3.3-70b from the cheaper tier via API (the `composite_copy_v1` snapshot, §4)
-also separates
-`gdp_hybrid`, `fprm`, and `transformer` trained locally (`composite_copy_v2`, §5). The per-leg
-decomposition links the two regimes: a finding about "routing the resolved holder into recall"
-can be checked in both settings.
+FactWorld is one instrument with two uses. The same composition probes that rank the frontier
+roster (§4) also separate `gdp_hybrid`, `fprm`, and `transformer` trained locally (§5), and the
+per-leg decomposition links the regimes: a finding about "routing the resolved holder into
+recall" can be checked in both settings.
 
 The main findings:
 
-- **Composition responds to reasoning.** It is movable at inference in the thinking regime,
-including at long context (0.94–1.00 out to L1024), for models that can reason. Depth-*k*
-composition (`chain_v1`) follows at its designed depths (< k=6, before the pointer cycle wraps):
-with reasoning and an 8192-token budget glm-5.2 solves it where the no-reasoning grid floors;
-depth behaviour beyond k is measured by the scaled no-wrap variant (`chain_nowrap`), not by
-`chain_v1`. Explicit prompting does not substitute.
+- **Composition is where frontier models still separate.** The components are largely solved
+in the thinking regime — the top half of the roster holds a 128-hop chase and 256 permutation
+events at or near ceiling (§4.4) — but their composition is not: the headline composite
+differentiates by score below the top and by tokens-to-solve within it (§4.1), and with
+reasoning off the composed cell shows most of the roster holds little of it in weights, with
+an ordering the thinking headline does not predict (gpt-5.5 tops one and pays the largest gap
+on the other — §4.2).
+- **Composition responds to reasoning, monotonically.** Effort moves the composed cell from
+floor-shaped to 0.92–1.00 (§4.3), and the thinking regime holds it at long context (0.94–1.00
+out to L1024, §7) for models that can reason. Explicit prompting does not substitute.
 - **Non-abelian state tracking also responds to reasoning — but only under a concrete rendering,
 and with a model-dependent length limit.** GLM-5.2 solves `s5_v1` with reasoning plus a concrete
 (people/jobs) rendering — 1.00 at L32, 0.97 at L64, 0.90 at L128 — while kimi-k2.6 degrades
@@ -626,7 +628,7 @@ every ≤2 events, floor below) reproduces on the natural format (§8 above;
 [`docs/experiments/README.md`](../docs/experiments/README.md) §1, where it is also shown
 architecture-independent) — that reproduction is what makes the row format-independent. Its §3
 "recall is free given a resolved pointer" (P(value|holder✓)=1.0) is the archived ancestor of the
-frontier benchmark's scaffolded-leg argument. Levers not yet re-measured on the natural format
+scaffolded-leg argument in §6. Levers not yet re-measured on the natural format
 stay citable with atomic-token scoping: the scale ladder to 357M (capacity is not the
 extrapolation lever; §5), the training-length-distribution threshold and
 concentration-beats-coverage (§6), post-training deep-state coverage to ≈8× label-free with
@@ -805,7 +807,7 @@ With reasoning on, the two renderings separate. Match accuracy, reasoning on:
 | kimi-k2.6 | token | 0.37 | 0.27 | 0.20 |
 | kimi-k2.6 | concrete | 0.67 | 0.67 | 0.33 |
 
-(Without reasoning, both renderings are at chance — A.2 / §4 grid.) Neither lever alone works:
+(Without reasoning, both renderings are at chance — A.2.) Neither lever alone works:
 reasoning under the token rendering leaves GLM at ~0.33, and a concrete rendering without reasoning
 leaves it at chance. The combination — reasoning plus a concrete rendering — solves S₅ at
 short lengths. The token rendering is the bottleneck on the reasoning arm: it is hard for the model
@@ -850,6 +852,6 @@ the lever is supervision density: dense per-step state supervision develops a le
 circuit that weans to label-free deployment (§8). These are different questions — what a frontier
 reasoner can do at inference vs. what a small model can learn from scratch — and both hold.
 Composition, chain (at its designed depths < k=6), and S₅ are all reasoning-movable at inference
-(§9); what differs is how far each holds — composition holds 0.94–1.00 out to L1024 and S₅ holds 0.90 at
+(§10); what differs is how far each holds — composition holds 0.94–1.00 out to L1024 and S₅ holds 0.90 at
 L128 for GLM, while chain's depth behaviour is measured by the scaled no-wrap variant
 (`chain_nowrap`), since `chain_v1`'s pointer cycle wraps past depth 5.
