@@ -383,9 +383,9 @@ FACETS = {
     # nemotron/glm truncated 16-28% of calls at the old 16-24k budgets).
     # Rendered by render_benchmark.s5_chain_rows (README + report ranking table).
     "s5_chain": {
-        "task": "s5_chain_v3", "lengths": (32, 64, 96), "n": 25,
+        "task": "s5_chain_v3", "lengths": (32, 64, 96, 128), "n": 25,
         "efforts": "xhigh", "max_new_tokens": 32768,
-        "budgets": {32: 32768, 64: 49152, 96: 65536}},
+        "budgets": {32: 32768, 64: 49152, 96: 65536, 128: 98304}},
     # EXPERIMENTAL (issue #16a, owner-approved 2026-07-11): gap stability — the
     # composed and binding_only legs at a SECOND operating point (L32, instant,
     # contract, n=50) for the gap-interpretable models, to test whether the

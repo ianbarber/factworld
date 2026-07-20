@@ -189,6 +189,12 @@ statistically indistinguishable scores (opus 9.7k vs deepseek 17.1k per call at 
 composite state is rented by the token, and the rent differs by model. The live table, with
 intervals and marks, renders in the feed and in the README headline block.
 
+Effort is not monotone for every model: a controlled high-vs-xhigh probe on identical items
+shows claude-sonnet-5 losing 0.24 at L96 when moved to the higher effort (0.80 → 0.56, zero
+truncation both arms, 12.7k → 16.0k ctok/call) — it reasons longer and tracks worse. The
+protocol stays maximum supported effort for every model; sonnet's headline number carries that
+measured cost.
+
 ### 4.2 The composed cell and the gap (instant regime)
 
 The instant battery deconstructs what the headline measures: with reasoning off, does the
