@@ -123,7 +123,11 @@ def gen_examples(length: int, n: int, framing: str = "concrete"):
 
 
 def score(pred_text, gold_token):
-    ct = content_tokens(pred_text)
+    # s5_concrete cells are always reasoning-arm, so a working-spilling emission is
+    # scored on its committed final line (tasks.committed_answer; inert for the clean
+    # single-line answers every measured cell has produced — 78/78 gap-free in history).
+    from factworld.tasks import committed_answer
+    ct = content_tokens(committed_answer(pred_text))
     first = ct[0] if ct else ""
     return {
         "relaxed": int(first == gold_token),          # first content token matches

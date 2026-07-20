@@ -116,6 +116,10 @@ def main():
                     help="Stop generation at this string (default: '.').")
     ap.add_argument("--no_stop", action="store_true",
                     help="Disable early stopping; needed for API reasoning models.")
+    ap.add_argument("--extract_commit", action="store_true",
+                    help="Score a multi-line emission's committed final line "
+                         "(tasks.committed_answer) — use when evaluating reasoning "
+                         "models that may spill working into the visible completion.")
     ap.add_argument("--seed", type=int, default=0, help="Random seed.")
     ap.add_argument("--json_out", default=None,
                     help="Optional JSON output path (same schema as eval_openrouter_grid.py).")
@@ -152,7 +156,8 @@ def main():
     lengths = [a.length] if a.length is not None else list(spec.eval_lengths)
     results = {
         L: evaluate_task(backend, spec, split=a.split, n=a.n, length=L,
-                         max_new_tokens=a.max_new_tokens, stop_at=stop_at)
+                         max_new_tokens=a.max_new_tokens, stop_at=stop_at,
+                         extract_commit=a.extract_commit)
         for L in lengths
     }
 
