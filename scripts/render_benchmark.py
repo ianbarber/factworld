@@ -984,33 +984,40 @@ def s5_efficiency_rows(records):
 
 
 S5_CHAIN_STRESS_LENGTH = 96
+S5_CHAIN_EXT_LENGTH = 128
 S5_CHAIN_EFF_LENGTH = 64
 
 
 def s5_chain_rows(records):
     """s5_chain ranking: the single composite stressor (non-abelian pointer-map state
-    tracking composed with serial dereference). Sorted by s5_chain @L96 score
-    descending, then by s5_chain@64 ctok per call ascending (the matched L64 cell
-    every current-roster model runs)."""
+    tracking composed with serial dereference). Sorted by the @L96 score (the full-roster
+    cell), then by the @L128 top-cluster separator, then by s5_chain@64 ctok per call
+    ascending (the matched L64 cell every current-roster model runs). Models without an
+    L128 cell render — there."""
     rows = []
     for m in roster_models(records):
         score_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_STRESS_LENGTH, effort="xhigh")
+        ext_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_EXT_LENGTH, effort="xhigh")
         eff_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_EFF_LENGTH, effort="xhigh")
         if score_rec is None and eff_rec is None:
             continue
         score = stress_value_str(score_rec)
+        ext = "—" if ext_rec is None else stress_value_str(ext_rec)
         n = eff_rec.get("n") or 0
         ctok = (eff_rec.get("usage") or {}).get("completion_tokens") if eff_rec else None
         ctok_per = ctok / n if n > 0 and ctok is not None else None
         score_num = _numeric_value(score)
+        ext_num = _numeric_value(ext)
         censored = score.startswith(CENSORED_CELL)
         rows.append((
             (1 if censored else 0,
              -(score_num if score_num is not None else 0),
+             -(ext_num if ext_num is not None else -1),
              ctok_per if ctok_per is not None else float("inf"),
              m),
             [m,
              score,
+             ext,
              "n/a" if ctok_per is None else f"{ctok_per:.0f}"],
         ))
     rows.sort(key=lambda r: r[0])
@@ -1391,10 +1398,10 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     s5c = s5_chain_rows(records)
     if s5c:
         s5c_lines = ["**s5_chain — the headline ranking (non-abelian pointer-map tracking × 8-hop dereference)**", "",
-                     "| Model | s5_chain @L96 | ctok/call |",
-                     "|---|---|---|"]
-        for m, score, ctok in s5c:
-            s5c_lines.append(f"| {m} | {_readme_compact(score)} | {ctok} |")
+                     "| Model | s5_chain @L96 | @L128 | ctok/call |",
+                     "|---|---|---|---|"]
+        for m, score, ext, ctok in s5c:
+            s5c_lines.append(f"| {m} | {_readme_compact(score)} | {_readme_compact(ext)} | {ctok} |")
         s5c_lines.append("")
     instant_lines = ["**Component: instant composition (reasoning off, answer contract)**", ""]
     instant_rows = [r for r in sort_instant_rows(rows) if not instant_excluded(r[0])]
@@ -1538,10 +1545,11 @@ def write_results_md(records, out_path, history_path):
             "query path visits 9 distinct agents: answering the queried agent, or any fixed hop, "
             "scores exactly 0, and chance is 1/16. Protocol: maximum supported reasoning effort "
             "(xhigh), budgets sized so truncation stays a rounding error, n=25 per cell. Sorted "
-            "by the @L96 score, then by completion tokens per call on the matched @L64 cell.",
+            "by the @L96 score (the full-roster cell), then by the @L128 top-cluster separator, "
+            "then by completion tokens per call on the matched @L64 cell.",
             "",
-            "| Model | s5_chain @L96 | s5_chain@64 ctok/call |",
-            "|---|---|---|"]
+            "| Model | s5_chain @L96 | @L128 | s5_chain@64 ctok/call |",
+            "|---|---|---|---|"]
         for r in s5c:
             lines.append("| " + " | ".join(r) + " |")
         lines.append("")
@@ -2417,9 +2425,10 @@ def write_index_html(records, out_dir, svg_paths, history_path):
             "pointer map, L order-sensitive swap/cycle events on the pointer targets, then an "
             "8-hop serial dereference query. Every item is gated so the query path visits 9 "
             "distinct agents — answering the queried agent, or any fixed hop, scores exactly 0, "
-            "and chance is 1/16. Sorted by the @L96 score, then by completion tokens per call on "
+            "and chance is 1/16. Sorted by the @L96 score, then by the @L128 top-cluster "
+            "separator, then by completion tokens per call on "
             "the matched @L64 cell.</p>\n"
-            + _html_table(["Model", "s5_chain @L96", "s5_chain@64 ctok/call"],
+            + _html_table(["Model", "s5_chain @L96", "@L128", "s5_chain@64 ctok/call"],
                           s5c_rows)
         )
 

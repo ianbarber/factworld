@@ -171,23 +171,34 @@ empty/truncation rates, and provenance are in the rendered feed
 pointer map and then acts through it. Protocol: every model at the maximum reasoning effort its
 endpoint supports, per-length completion budgets sized so truncation — scored as wrong — stays
 a rounding error, n=25 per cell. The L96 cell (96 permutation events before the 8-hop
-dereference) ranks; the matched L64 cell prices completion tokens per call:
+dereference) ranks the full roster; the L128 cell separates the top cluster; the matched L64
+cell prices completion tokens per call:
 
-| Model | s5_chain @L96 | ctok/call @L64 |
-|---|---|---|
-| openai/gpt-5.5 | 1.00 | 9343 |
-| anthropic/claude-opus-4.8 | 0.96 | 9702 |
-| muse-spark-1.1 | 0.92 | 12484 |
-| deepseek/deepseek-v4-pro | 0.92 | 17052 |
-| openai/gpt-5.6-sol | 0.72 | 2322 |
+| Model | s5_chain @L96 | @L128 | ctok/call @L64 |
+|---|---|---|---|
+| openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
+| x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
+| moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
+| anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
+| z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
+| muse-spark-1.1 | 0.92 | 0.76 | 12484 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
+| openai/gpt-5.6-sol | 0.72 | — | 2322 |
+| qwen/qwen3.7-max | 0.72 | — | 12588 |
+| google/gemini-3.5-flash | 0.68 | — | 19366 |
+| anthropic/claude-sonnet-5 | 0.56 | — | 12729 |
 
-The task differentiates on two axes at once. Score separates the models that cannot hold the
-composite at this length (gpt-5.6-sol solves both components in isolation — chain d128 0.88,
-s5 @L256 0.92 — but reads 0.72 on their composition). Tokens-to-solve separates the models
-score cannot: the top of the table spans a 1.8× range in completion spend for
-statistically indistinguishable scores (opus 9.7k vs deepseek 17.1k per call at L64) — held
-composite state is rented by the token, and the rent differs by model. The live table, with
-intervals and marks, renders in the feed and in the README headline block.
+The task differentiates at both ends. At L96 the bottom five spread 0.56–0.84: gpt-5.6-sol
+solves both components in isolation (chain d128 0.88, s5 @L256 0.92) yet reads 0.72 on their
+composition, and sonnet — at ceiling on both component stress cells — reads 0.56. At L128 the
+1.00 cluster splits: gpt-5.5 alone holds 1.00, grok/opus/deepseek hold 0.96, while kimi falls
+to 0.68 (16% of its calls truncate even at a 98,304-token budget — token profligacy is part of
+the failure), glm to 0.80, and muse to 0.76. Tokens-to-solve separates what score cannot: the
+L64 spend among the top cluster spans 7.7k (grok) to 19.2k (kimi) per call for
+indistinguishable L96 scores — held composite state is rented by the token, and the rent
+differs 2.5× by model. The live table, with intervals and marks, renders in the feed and in
+the README headline block.
 
 Effort is not monotone for every model: a controlled high-vs-xhigh probe on identical items
 shows claude-sonnet-5 losing 0.24 at L96 when moved to the higher effort (0.80 → 0.56, zero
@@ -564,10 +575,13 @@ The main findings:
 - **Composition is where frontier models still separate.** The components are largely solved
 in the thinking regime — the top half of the roster holds a 128-hop chase and 256 permutation
 events at or near ceiling (§4.4) — but their composition is not: the headline composite
-differentiates by score below the top and by tokens-to-solve within it (§4.1), and with
-reasoning off the composed cell shows most of the roster holds little of it in weights, with
-an ordering the thinking headline does not predict (gpt-5.5 tops one and pays the largest gap
-on the other — §4.2).
+differentiates by score at both ends and by tokens-to-solve within the top cluster (§4.1), and
+with reasoning off the composed cell shows most of the roster holds little of it in weights,
+with an ordering the thinking headline does not predict (gpt-5.5 tops one and pays the largest
+gap on the other — §4.2). The headline is a thinking-regime axis: it correlates only weakly
+with the pinned intuitive prior over the roster (Spearman +0.32 at L96, against +0.81 for the
+in-weights binding axis) — like the other thinking axes, it measures something intuition does
+not already contain.
 - **Composition responds to reasoning, monotonically.** Effort moves the composed cell from
 floor-shaped to 0.92–1.00 (§4.3), and the thinking regime holds it at long context (0.94–1.00
 out to L1024, §7) for models that can reason. Explicit prompting does not substitute.

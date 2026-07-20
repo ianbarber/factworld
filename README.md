@@ -173,14 +173,20 @@ in the [rendered feed](docs/benchmark/results.md).
 <!-- FRONTIER_TABLE_START -->
 **s5_chain — the headline ranking (non-abelian pointer-map tracking × 8-hop dereference)**
 
-| Model | s5_chain @L96 | ctok/call |
-|---|---|---|
-| openai/gpt-5.5 | 1.00 | 9343 |
-| anthropic/claude-opus-4.8 | 0.96 | 9702 |
-| muse-spark-1.1 | 0.92 | 12484 |
-| deepseek/deepseek-v4-pro | 0.92 | 17052 |
-| openai/gpt-5.6-sol | 0.72 | 2322 |
-| anthropic/claude-sonnet-5 | n/a | 12729 |
+| Model | s5_chain @L96 | @L128 | ctok/call |
+|---|---|---|---|
+| openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
+| x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
+| moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
+| anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
+| z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
+| muse-spark-1.1 | 0.92 | 0.76 | 12484 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
+| openai/gpt-5.6-sol | 0.72 | — | 2322 |
+| qwen/qwen3.7-max | 0.72 | — | 12588 |
+| google/gemini-3.5-flash | 0.68 | — | 19366 |
+| anthropic/claude-sonnet-5 | 0.56 | — | 12729 |
 
 **Component: instant composition (reasoning off, answer contract)**
 
