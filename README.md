@@ -180,13 +180,13 @@ in the [rendered feed](docs/benchmark/results.md).
 | moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
+| muse-spark-1.1 | 0.92 | 0.88 | 12484 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| muse-spark-1.1 | 0.92 | 0.76 | 12484 |
+| anthropic/claude-sonnet-5 | 0.84 | — | 12729 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
 | openai/gpt-5.6-sol | 0.72 | — | 2322 |
 | qwen/qwen3.7-max | 0.72 | — | 12588 |
 | google/gemini-3.5-flash | 0.68 | — | 19366 |
-| anthropic/claude-sonnet-5 | 0.56 | — | 12729 |
 
 **Component: instant composition (reasoning off, answer contract)**
 
@@ -209,7 +209,7 @@ in the [rendered feed](docs/benchmark/results.md).
 | Model | chain d128 | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
 | x-ai/grok-4.5 | 1.00 | 1.00‡ | 8069 |
-| muse-spark-1.1 | 0.96 | 1.00ʳ | 9704 |
+| muse-spark-1.1 | 1.00 | 1.00ʳ | 9704 |
 | anthropic/claude-sonnet-5 | 1.00 | 1.00ʳ | 11866 |
 | anthropic/claude-opus-4.8 | 1.00 | 1.00ʳ | 12683 |
 | openai/gpt-5.5 | 1.00 | 0.96 | 6989 |

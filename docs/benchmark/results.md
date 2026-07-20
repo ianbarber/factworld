@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-20 11:21 UTC from `results/benchmark/history.jsonl` (741 latest cells).
+Generated 2026-07-20 12:10 UTC from `results/benchmark/history.jsonl` (741 latest cells).
 
 ## Settings
 
@@ -91,7 +91,7 @@ Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 | Model | thinking: chain d128 (chain_nowrap, k=257, match) | thinking: s5 @L256 (s5_concrete, match) | thinking: s5@128 ctok |
 |---|---|---|---|
 | x-ai/grok-4.5 | 1.00 | 1.00‡ | 8069 |
-| muse-spark-1.1 | 0.96 | 1.00 @32,768tok (raised budget) | 9704 |
+| muse-spark-1.1 | 1.00 | 1.00 @32,768tok (raised budget) | 9704 |
 | anthropic/claude-sonnet-5 | 1.00 | 1.00 @32,768tok (raised budget) | 11866 |
 | anthropic/claude-opus-4.8 | 1.00 | 1.00 @32,768tok (raised budget) | 12683 |
 | openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
@@ -137,13 +137,13 @@ s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map,
 | moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
+| muse-spark-1.1 | 0.92 | 0.88 | 12484 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| muse-spark-1.1 | 0.92 | 0.76 | 12484 |
+| anthropic/claude-sonnet-5 | 0.84 | — | 12729 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
 | openai/gpt-5.6-sol | 0.72 | — | 2322 |
 | qwen/qwen3.7-max | 0.72 | — | 12588 |
 | google/gemini-3.5-flash | 0.68 | — | 19366 |
-| anthropic/claude-sonnet-5 | 0.56 | — | 12729 |
 
 The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the d128 cell is k=257). `chain_v2` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
@@ -290,17 +290,17 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | anthropic/claude-sonnet-5 | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 50 | 0.50 [0.37, 0.63] | 0.64 | escalated @512tok diagnostic 0.64; canonical = first attempt @96tok |
 | anthropic/claude-sonnet-5 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.76 [0.57, 0.89] | 0.88 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.96 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.80 [0.61, 0.91] | 0.96 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.76 [0.57, 0.89] | 0.88 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.24 [0.11, 0.43] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.88 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.88 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 32 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.76 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.68 [0.48, 0.83] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=high | 25 | 0.80 [0.61, 0.91] | 0.84 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.56 [0.37, 0.73] | 0.92 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.92 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
@@ -420,7 +420,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | google/gemini-3.5-flash | recall_load | recall_copy_v1 | 64 | contract, effort=minimal | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v1 | 16 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.16 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v1 | 32 | effort=high | 25 | 0.24 [0.11, 0.43] | 0.28 | — |
-| google/gemini-3.5-flash | s5_chain | s5_chain_v1 | 64 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.28 | — |
+| google/gemini-3.5-flash | s5_chain | s5_chain_v1 | 64 | effort=high | 25 | 0.12 [0.04, 0.30] | 0.28 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v2 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.76 [0.57, 0.89] | 0.76 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
@@ -466,7 +466,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | ‡ cap-escape |
-| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.64 [0.45, 0.80] | 0.68 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.68 [0.48, 0.83] | 0.68 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | moonshotai/kimi-k2.6 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | commutative | commutative_v1 | 64 | effort=high | 50 | 0.66 [0.52, 0.78] | 0.66 | ‡ cap-escape |
@@ -522,18 +522,18 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| muse-spark-1.1 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 0.96 [0.80, 0.99] | 1.00 | — |
+| muse-spark-1.1 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.40 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.76 [0.57, 0.89] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.88 [0.70, 0.96] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.68 [0.48, 0.83] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.84 [0.65, 0.94] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.84 [0.65, 0.94] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.68 [0.48, 0.83] | 0.96 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.96 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.96 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.76 [0.57, 0.89] | 0.92 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
@@ -753,7 +753,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.24 [0.17, 0.33] | 0.24 | — |
 | qwen/qwen3.7-max | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.08 [0.04, 0.15] | 0.08 | — |
 | x-ai/grok-4.3 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
-| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.23 [0.12, 0.41] | 0.83 | — |
+| x-ai/grok-4.3 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.20 [0.10, 0.37] | 0.83 | — |
 | x-ai/grok-4.3 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.10 [0.03, 0.26] | 0.23 | — |
 | x-ai/grok-4.3 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 0.37 [0.22, 0.54] | 0.80 | — |
 | x-ai/grok-4.3 | composite_length | composite_copy_v1 | 64 | effort=none | 30 | 0.10 [0.03, 0.26] | 0.10 | — |
@@ -766,7 +766,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | x-ai/grok-4.3 | decomposition | composite_copy_v1 | 16 | leg=scaffolded, effort=none | 50 | 1.00 [0.93, 1.00] | — | — |
 | x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=high | 50 | 0.22 [0.13, 0.35] | 0.86 | — |
 | x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=low | 50 | 0.22 [0.13, 0.35] | 0.42 | — |
-| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=medium | 50 | 0.32 [0.21, 0.46] | 0.66 | — |
+| x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=medium | 50 | 0.30 [0.19, 0.44] | 0.66 | — |
 | x-ai/grok-4.3 | dose_response | composite_copy_v1 | 16 | effort=none | 50 | 0.14 [0.07, 0.26] | 0.24 | — |
 | x-ai/grok-4.3 | floor | s5 | 16 | rendering=abstract_stated, effort=none | 30 | 0.27 [0.14, 0.44] | 0.27 | — |
 | x-ai/grok-4.3 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |

@@ -57,6 +57,30 @@ def test_v2_stream_admits_echo_items():
     assert any(ex.meta["path"][-1] == ex.meta["start"] for ex in exs)
 
 
+def test_committed_answer_extraction():
+    """A reasoning endpoint that spills working into the visible completion commits to
+    its single-token final line (real sonnet xhigh shapes); map-dump tails, truncated
+    working, and every single-line emission commit to nothing and pass through."""
+    from factworld.tasks import committed_answer, score_relaxed
+
+    spill = ("g15=g7\n\nNow tracing 8 hops from g11:\n1. g11 → g4\n2. g4 → g13\n"
+             "3. g13 → g1\n\n**g10**")
+    assert committed_answer(spill) == "g10"
+    assert score_relaxed(committed_answer(spill), "g10.") == 1
+    labeled = "working...\n1. g12 → g8\n\n**Answer: g11**"
+    assert committed_answer(labeled) == "g11"
+    # a map-dump last line has two content tokens: no commitment, scored as-is (0)
+    dump = "working...\n- g14→g7\n- g15→g12"
+    assert committed_answer(dump) == dump
+    assert score_relaxed(committed_answer(dump), "g12.") == 0
+    # truncated working: no single-token line, no credit
+    cut = "tracking the map:\n**Following the 8-h"
+    assert committed_answer(cut) == cut
+    # single-line answers (API clean form and local streams) pass through untouched
+    assert committed_answer("g5.") == "g5."
+    assert committed_answer("g3. <eos> g7 g0") == "g3. <eos> g7 g0"
+
+
 def test_trace_mode_scoring_cuts_at_eos():
     """A local model emits scratchpad, answer, <eos>, then budget-filling junk.
     evaluate_task must cut at <eos> so last_n scores the committed answer, not

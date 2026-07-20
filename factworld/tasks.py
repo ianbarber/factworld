@@ -527,6 +527,32 @@ def score_exact(pred: str, gold: str) -> int:
     return int(p == g)
 
 
+def committed_answer(pred: str) -> str:
+    """The answer span a multi-line emission COMMITS to — else ``pred`` unchanged.
+
+    Some reasoning endpoints spill their working into the visible completion (hop-by-hop
+    traces, map dumps) and state the answer on the FINAL line ("**Answer: g11**"). Prefix
+    scoring then reads working, not the commitment: sonnet's xhigh s5_chain cells measured
+    match 0.56 with contains 0.92 this way. When a prediction is multi-line and its last
+    non-empty line reduces to exactly ONE content token (after stripping markdown edges and
+    an "answer:"-style lead-in), that token is the committed answer and is what gets scored;
+    a last line with any other shape (map-dump rows, truncated working) commits to nothing
+    and the prediction is scored as-is. Single-line predictions — every clean API answer and
+    every local-model emission (whose decoded streams carry no newlines) — pass through
+    untouched, so the canonical metric is unchanged wherever the old behavior was correct."""
+    from .render import Renderer
+    body = pred.strip()
+    if "\n" not in body:
+        return pred
+    last = [ln for ln in body.splitlines() if ln.strip()][-1]
+    toks = [t for t in Renderer.normalize(last).split() if t not in (".", ":", ",")]
+    while toks and toks[0].lower().rstrip(":") in ("answer", "final", "the", "so"):
+        toks = toks[1:]
+    if len(toks) == 1:
+        return toks[0]
+    return pred
+
+
 def score_relaxed(pred: str, gold: str) -> int:
     """THE canonical metric: whitespace / trailing-period invariant match of the answer span.
 

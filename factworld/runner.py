@@ -22,6 +22,7 @@ from .tasks import (
     generate,
     score_contains,
     score_exact,
+    committed_answer,
     score_last_n,
     score_relaxed,
 )
@@ -37,6 +38,7 @@ def evaluate_task(
     max_new_tokens: int | None = None,
     n_shot: int = 0,
     stop_at: str | None = ".",
+    extract_commit: bool = False,
 ) -> dict:
     """Evaluate ``backend`` on a single FactWorld task.
 
@@ -51,6 +53,11 @@ def evaluate_task(
             ``max(len(e.answer.split()) + 2 for e in examples)``.
         n_shot: number of training demonstrations to prepend to each test prompt.
         stop_at: stop generation at this token; ``None`` disables early stopping.
+        extract_commit: score a multi-line emission's committed final line
+            (``tasks.committed_answer``) instead of its first tokens. Reasoning-arm
+            cells only: in the instant regime visible working is a protocol leak,
+            not an answer, so crediting a spilled trace's final line would break
+            the in-weights semantics.
 
     Returns:
         A dictionary with task name, backend name, evaluation parameters,
@@ -106,6 +113,11 @@ def evaluate_task(
         # ("...scratchpad... g3. <eos> g7 g0 ...") scores its junk tail under last_n and reads
         # as chance no matter how often the committed answer is right.
         pred = pred.split("<eos>")[0]
+        if extract_commit:
+            # A reasoning endpoint that spills working into the visible completion commits
+            # to the single-token final line, not to the working's first tokens (see
+            # tasks.committed_answer; inert for single-line answers and local streams).
+            pred = committed_answer(pred)
         # Normalize output (detach attached punctuation, expand contractions) to canonical
         # whitespace tokens before scoring. Both prediction and gold are normalized so attached-
         # punctuation answers (e.g. "g4.") score correctly against equally-attached gold.

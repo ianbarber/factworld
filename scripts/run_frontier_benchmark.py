@@ -651,6 +651,9 @@ def _run_task_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]]:
         backend, spec, split="test", n=n, length=cell["length"],
         max_new_tokens=settings["max_new_tokens"], n_shot=settings["n_shot"],
         stop_at=settings["stop_at"],
+        # Reasoning arms score the committed final line of a working-spilling
+        # emission; instant arms never do (visible working is a leak there).
+        extract_commit=settings.get("effort") in REASONING_EFFORTS,
     )
     metrics = {name: result["metrics"][name]["overall"]
                for name in ("relaxed", "exact", "contains", "last_n")}
