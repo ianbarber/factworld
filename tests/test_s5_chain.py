@@ -79,6 +79,14 @@ def test_committed_answer_extraction():
     # single-line answers (API clean form and local streams) pass through untouched
     assert committed_answer("g5.") == "g5."
     assert committed_answer("g3. <eos> g7 g0") == "g3. <eos> g7 g0"
+    # prose commitment (real muse shape): last emphasized span carries the answer
+    prose = "trace...\nso 8 applications of `a0` starting from `g14` ends at **g15** ."
+    assert committed_answer(prose) == "g15"
+    # lone token inside a trailing code fence (real muse shape)
+    fenced = "g1→g13→g8→g14\n\n```\ng14\n```"
+    assert committed_answer(fenced) == "g14"
+    # copula lead-in
+    assert committed_answer("working...\nThe answer is g10.") == "g10"
 
 
 def test_trace_mode_scoring_cuts_at_eos():

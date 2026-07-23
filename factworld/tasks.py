@@ -527,29 +527,55 @@ def score_exact(pred: str, gold: str) -> int:
     return int(p == g)
 
 
+_COMMIT_LEADINS = ("answer", "final", "the", "so", "is", "therefore", "thus", "result",
+                   "=", "**answer", "**final")
+_EMPHASIS_SPAN = None  # compiled lazily (module import order: re is stdlib, cheap)
+
+
 def committed_answer(pred: str) -> str:
     """The answer span a multi-line emission COMMITS to — else ``pred`` unchanged.
 
     Some reasoning endpoints spill their working into the visible completion (hop-by-hop
-    traces, map dumps) and state the answer on the FINAL line ("**Answer: g11**"). Prefix
-    scoring then reads working, not the commitment: sonnet's xhigh s5_chain cells measured
-    match 0.56 with contains 0.92 this way. When a prediction is multi-line and its last
-    non-empty line reduces to exactly ONE content token (after stripping markdown edges and
-    an "answer:"-style lead-in), that token is the committed answer and is what gets scored;
-    a last line with any other shape (map-dump rows, truncated working) commits to nothing
-    and the prediction is scored as-is. Single-line predictions — every clean API answer and
-    every local-model emission (whose decoded streams carry no newlines) — pass through
-    untouched, so the canonical metric is unchanged wherever the old behavior was correct."""
+    traces, map dumps) and state the answer at the END. Prefix scoring then reads working,
+    not the commitment: sonnet's xhigh s5_chain cells measured match 0.56 with contains
+    0.92 this way. The commitment is located structurally — never by demanding the model
+    emit exactly one token (rigid output-format contracts are a repeat source of scoring
+    artifacts here). On the last non-empty, non-code-fence line:
+
+      1. If the line reduces to one content token after stripping markdown edges and an
+         answer-statement lead-in ("Answer:", "The answer is", ...), that token — covers
+         "**g10**", "Answer: g11", and a lone token inside a trailing code fence.
+      2. Else, if the line carries markdown emphasis and its LAST emphasized span is one
+         content token, that token — covers prose commitments ("... ends at **g15**.").
+
+    A last line with neither shape (map-dump rows, truncated working) commits to nothing
+    and the prediction is scored as-is. Single-line predictions — every clean API answer
+    and every local-model emission (whose decoded streams carry no newlines) — pass
+    through untouched, so the canonical metric is unchanged wherever the old behavior was
+    correct."""
+    import re
     from .render import Renderer
     body = pred.strip()
     if "\n" not in body:
         return pred
-    last = [ln for ln in body.splitlines() if ln.strip()][-1]
+    lines = [ln for ln in body.splitlines()
+             if ln.strip() and not ln.strip().startswith("```")]
+    if not lines:
+        return pred
+    last = lines[-1]
     toks = [t for t in Renderer.normalize(last).split() if t not in (".", ":", ",")]
-    while toks and toks[0].lower().rstrip(":") in ("answer", "final", "the", "so"):
+    while toks and toks[0].lower().rstrip(":") in _COMMIT_LEADINS:
         toks = toks[1:]
     if len(toks) == 1:
         return toks[0]
+    spans = re.findall(r"\*\*(.+?)\*\*|`(.+?)`|__(.+?)__", last)
+    if spans:
+        span = next(s for s in spans[-1] if s)
+        stoks = [t for t in Renderer.normalize(span).split() if t not in (".", ":", ",")]
+        while stoks and stoks[0].lower().rstrip(":") in _COMMIT_LEADINS:
+            stoks = stoks[1:]
+        if len(stoks) == 1:
+            return stoks[0]
     return pred
 
 

@@ -179,10 +179,10 @@ in the [rendered feed](docs/benchmark/results.md).
 | x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
 | moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| muse-spark-1.1 | 0.96 | 0.92 | 12484 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
-| muse-spark-1.1 | 0.92 | 0.88 | 12484 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| anthropic/claude-sonnet-5 | 0.84 | — | 12729 |
+| anthropic/claude-sonnet-5 | 0.88 | — | 12729 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
 | openai/gpt-5.6-sol | 0.72 | — | 2322 |
 | qwen/qwen3.7-max | 0.72 | — | 12588 |

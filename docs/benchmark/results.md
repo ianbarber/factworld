@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-20 12:10 UTC from `results/benchmark/history.jsonl` (741 latest cells).
+Generated 2026-07-23 01:59 UTC from `results/benchmark/history.jsonl` (741 latest cells).
 
 ## Settings
 
@@ -136,10 +136,10 @@ s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map,
 | x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
 | moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| muse-spark-1.1 | 0.96 | 0.92 | 12484 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
-| muse-spark-1.1 | 0.92 | 0.88 | 12484 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| anthropic/claude-sonnet-5 | 0.84 | — | 12729 |
+| anthropic/claude-sonnet-5 | 0.88 | — | 12729 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
 | openai/gpt-5.6-sol | 0.72 | — | 2322 |
 | qwen/qwen3.7-max | 0.72 | — | 12588 |
@@ -292,15 +292,15 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.88 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.88 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 32 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.76 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.96 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=high | 25 | 0.80 [0.61, 0.91] | 0.84 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.92 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
@@ -523,17 +523,17 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.16 [0.06, 0.35] | 0.40 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.88 [0.70, 0.96] | 1.00 | — |
+| muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.20 [0.09, 0.39] | 0.40 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.96 [0.80, 0.99] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.84 [0.65, 0.94] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.84 [0.65, 0.94] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.96 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.96 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |

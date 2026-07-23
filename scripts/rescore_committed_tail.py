@@ -66,8 +66,13 @@ def main() -> int:
             # instant arm would break the in-weights semantics.
             out_lines.append(line)
             continue
-        if any(_old(ex.get("pred") or "", ex["gold"]) != ex.get("relaxed")
-               for ex in examples if ex.get("finish") != "length"):
+        # Reproduce-guard: the stored scores must come from the no-extraction pipeline —
+        # unless this record is already in the committed-tail lineage (its stored scores
+        # came from an earlier extractor version; recomputing with the current one is the
+        # point of a re-run).
+        if "committed-tail" not in str(rec.get("rescored", "")) and any(
+                _old(ex.get("pred") or "", ex["gold"]) != ex.get("relaxed")
+                for ex in examples if ex.get("finish") != "length"):
             skipped_unreproduced.append((rec.get("run_id"), rec.get("model"),
                                          rec.get("task"), rec.get("length")))
             out_lines.append(line)
@@ -82,7 +87,10 @@ def main() -> int:
             ex["relaxed"] = s
         rec["metrics"]["relaxed"] = round(sum(new_scores) / len(new_scores), 4)
         prev = rec.get("rescored")
-        rec["rescored"] = f"{prev}; {MARKER}" if prev else MARKER
+        if prev and MARKER in prev:
+            pass  # same-lineage re-run: marker already present
+        else:
+            rec["rescored"] = f"{prev}; {MARKER}" if prev else MARKER
         changed.append((rec.get("model"), rec.get("task"), rec.get("length"),
                         settings.get("effort"), old_metric, rec["metrics"]["relaxed"]))
         out_lines.append(json.dumps(rec) + "\n")
