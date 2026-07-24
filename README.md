@@ -1,41 +1,18 @@
 # FactWorld
 
-**A composition instrument: recall and state tracking, measured independently and composed —
-identically for frontier API models and local from-scratch models.**
+**An instrument to test how recall and state tracking compose, in pre-trained models and in architecture explorations.**
 
 Recall is well tested by multi-query associative recall (MQAR); state tracking by the word-problem
-literature on S₅ — the symmetric group on five elements, i.e. order-sensitive permutation
-composition. FactWorld tests both, independently *and* in composition, under one protocol for
-frontier models over an API and for small models trained from scratch. Every task is a frozen,
-versioned ``TaskSpec`` rendered as natural language over a constrained vocabulary, with
-deterministic examples; gold answers come from a symbolic **oracle**, never from parsing rendered
-text, and a validity gate certifies that no shallow baseline clears floor. The canonical metric is
-**match**: strip a trailing period from both sides and compare the model's first len(gold)
-whitespace tokens to the gold answer — binary per item, no partial credit
-(`factworld.tasks.score_relaxed`); containment is the one published diagnostic. The full narrative
-is [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md).
+literature on S₅ (order-sensitive permutation composition). FactWorld tests both, independently 
+*and* in composition, under one protocol for frontier models over an API and for small models 
+trained from scratch. 
 
-The project has three outputs:
+Every task is a frozen, versioned ``TaskSpec`` rendered as natural language over a constrained vocabulary, 
+with deterministic examples; gold answers come from a symbolic oracle, never from parsing rendered
+text, and a validity gate certifies that no shallow baseline clears floor. 
 
-1. **This repo** — the instrument itself: evaluate frontier models and explore architectures on
-   the same tasks ([the instrument](#1-the-instrument), [using it](#using-it)).
-2. **[The report](reports/factworld-consolidated.md)** — the single narrative: why the
-   instrument is interesting, with the current findings.
-3. **FactWorldBench** — the frontier ranking derived from it. Its feed is the generated
-   [`docs/benchmark/`](docs/benchmark/results.md) page (tables, figures, per-cell intervals and
-   marks), regenerated from `results/benchmark/history.jsonl` by `scripts/render_benchmark.py`;
-   the headline block below is written by the same renderer.
 
-> **What this is — and isn't.** A **mechanism probe for the component capabilities that agent
-> workloads depend on** — working-memory recall, state tracking, and multi-step composition. It
-> is **not** an end-to-end agent benchmark: every task is single-turn, single-answer-span, with
-> no tool use, planning, or multi-turn action; the component→agent mapping is a motivating
-> analogy, not a proven one.
-
-## 1. The instrument
-
-A frozen, versioned registry (``factworld.tasks.CANONICAL``). The taxonomy — components first,
-then their compositions:
+## 1. The tasks
 
 | | task | notes |
 |---|---|---|
@@ -50,14 +27,7 @@ then their compositions:
 
 Each axis tests a different thing: solve rate; pool/breadth (working-set load); depth/length
 (iteration count); regime (**instant** = reasoning off + answer contract = in-weights, vs
-**thinking** = generous budget); reasoning tokens needed to solve. Difficulty knobs are
-**calibration parameters** — used to place each model class mid-scale, never published as axes.
-
-Tasks are versioned; a defective version is retired outright, never kept scored. The v1
-give-stream family (`binding_v1`, `binding_load_v1`, `composite_v1`, `composite_copy_v1`,
-`composite_copy_scale_v1`) lives in `tasks.RETIRED`: generable for historical reproduction,
-never scored; only `benchmark`-kind tasks are scored. Why the v1 sampler was defective is the
-recency methodological note in [§2 of the report](reports/factworld-consolidated.md).
+**thinking** = generous budget); reasoning tokens needed to solve. 
 
 Scale any task to stress larger models via explicit difficulty knobs:
 
@@ -65,13 +35,11 @@ Scale any task to stress larger models via explicit difficulty knobs:
 hard = CANONICAL["composite_copy_v2"].scaled(k=64, eval_lengths=(32, 64, 128))
 ```
 
-Floors are first-class rows and marks are plain-language; the full machinery — floors, marks,
-regimes, the validity gate — is §1–§4 of [the report](reports/factworld-consolidated.md) and
-the [rendered feed](docs/benchmark/results.md).
+Floors are first-class rows and marks are plain-language
 
 ## Using it
 
-The data / oracle / eval layer is pure-stdlib (no GPU needed). Backends are
+The data / oracle / eval layer is pure-stdlib. Backends are
 installed via extras:
 
 ```bash
@@ -161,19 +129,19 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 ## 2. Benchmarking the frontier
 
-Thirteen frontier models through the instrument. The headline is one ranking — **s5_chain**, the
-composite stressor: non-abelian pointer-map tracking composed with an 8-hop serial dereference
-in a single task. Every other cell deconstructs it, across two regimes: **instant** (reasoning
-off, one-line answer contract — what the weights compute) and **thinking** (generous budgets —
-what reasoning buys). The instant and thinking rankings are near-orthogonal, so profiles are
-per-axis, never a single scalar. The narrative is [§4 of the
-report](reports/factworld-consolidated.md); per-cell Wilson intervals, marks, and figures are
-in the [rendered feed](docs/benchmark/results.md).
+To give an easier view of performance we track one composed task **s5_chain**: non-abelian pointer-map 
+tracking composed with an 8-hop serial dereference in a single task. We report both scores at two lengths, 
+and a token efficiency at a lower length (where models generally all succeed) to demonstrate reasoning efficiency.
+
+Models are run at the recommended reasoning level where applicable (usually xhigh).
+
+More details in [§4 of the report](reports/factworld-consolidated.md); per-cell Wilson intervals, marks, 
+and figures arein the [rendered feed](docs/benchmark/results.md).
 
 <!-- FRONTIER_TABLE_START -->
-**s5_chain — the headline ranking (non-abelian pointer-map tracking × 8-hop dereference)**
+**s5_chain**
 
-| Model | s5_chain @L96 | @L128 | ctok/call |
+| Model | s5_chain @L96 | @L128 | ctok/@L64 |
 |---|---|---|---|
 | anthropic/claude-fable-5 | 1.00 | 1.00 | 5014 |
 | openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
@@ -225,19 +193,6 @@ in the [rendered feed](docs/benchmark/results.md).
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
 <!-- FRONTIER_TABLE_END -->
 
-The headline table is `s5_chain_v3` (match, n=25): k=16 agents with an a0 pointer map, 96
-order-sensitive swap/cycle events, then an 8-hop dereference of the final map. Items are gated
-so the query path visits 9 distinct agents — echo and fixed-hop heuristics score exactly 0,
-chance is 1/16 — and every model runs at its maximum supported reasoning effort (xhigh, mapped
-down where unsupported) with budgets sized so truncation stays a rounding error. The ctok/call
-column prices tokens on the matched @L64 cell. The instant columns are `composite_copy_v2`
-cells (match, n=100): the binding leg (state
-tracking), the composed two-hop, and **gap** = binding − composed @L16, the composition
-deficit; the thinking columns are the component state-stress cells — chain d128
-(`chain_nowrap`, k=257: a
-128-hop pointer chase) and s5 @L256 (`s5_concrete`: 256 permutation events) — at effort=high,
-16,384 tokens, n=25.
-
 Marks:
 - `†` visible working or covert reasoning on the canonical attempt.
 - `≤x†` an explicit upper bound (covert reasoning on most calls); neither `⊘` nor `≤x†` participates in orderings.
@@ -248,18 +203,15 @@ Marks:
 - `—ᶠ` gap not interpretable (binding at the object-filter floor).
 - `n/a` cell not run; `—` not applicable to a floor row.
 
-The two floor rows are the shallow baselines every instant cell is read against — the recency
-heuristic and the object-filter floor E[1/w]. Noise bars: the instant test-retest bar is ±0.06;
-thinking cells are n=25 (Wilson ≈ ±0.15–0.19), so thinking differences under ~0.2 are not an
-ordering. Recall is not the constraint anywhere on the roster (sanity, load, and scaffolded
-recall all read 0.97–1.00) — the gap is a composition deficit, not a recall one
-([report §4](reports/factworld-consolidated.md)).
-
 ## 3. Exploring the architectures
 
-The same tasks trained from scratch — transformer, recurrent hybrids (gdp = GatedDeltaProduct,
-gdn = GatedDeltaNet), and fprm (Fast Parallel Recurrent Model, a weight-tied looped
-conv+attention block) — attribute each capability to an architectural or training component.
+We can train from-scratch models on the same tasks. Models are trained on task with dense supervision. Currently we explore: 
+
+* GDN: GatedDeltaNet, both pure and hybrid models with full and linear attention layers
+* GDP: GatedDeltaProduct, both pure and hybrid model with full and linear attention layers with a different update rule.
+* Transformer: A regular transformer stack
+* FPRM: A weight tied looped transformer with conv layers.
+  
 Comparisons are matched on compute, not parameters (fprm is weight-tied at ~5–11× fewer params),
 at budgets sufficient for the capable configuration to converge.
 
@@ -283,9 +235,8 @@ at budgets sufficient for the capable configuration to converge.
   per-step traces form the fold in-distribution for the recurrent architectures (gdp_hybrid
   0.82, fprm 0.65 @L16; transformer at chance) — and no run carries it past the training
   lengths.
-The synthesis is the price table — **no element is free**; each is paid for by an architectural
-or training choice, and the open rows (depth extrapolation, the local composition value leg)
-are the active edge. The table, with evidence per row, is
+  
+The table, with evidence per row, is
 [§9 of the report](reports/factworld-consolidated.md); local multi-seed detail and per-leg
 decomposition are §5–§8. Running log:
 [`docs/experiments/README.md`](docs/experiments/README.md).
@@ -295,17 +246,7 @@ decomposition are §5–§8. Running log:
 - 📄 [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md) — **the report**:
   the instrument and its validation, the frontier benchmark (FactWorldBench headline, the gap,
   the regime contrast), and the architecture exploration with the price table.
-- 🗂 **Prior tech reports (archived in [`phases/`](phases/); atomic-token format — mechanism
-  conclusions carry, absolute numbers do not):**
-  - [`phases/01-instrument/factworld.md`](phases/01-instrument/factworld.md) — cited for the
-    instrument's validity machinery: the oracle/no-leak render↔parse contract and the validity
-    gate that `scripts/validate_suite.py` continues.
-  - [`phases/02-non-abelian-state/report.md`](phases/02-non-abelian-state/report.md) — cited for
-    the s5 supervision-density and training-length-distribution levers, measured on the
-    atomic-token format (+ reproduction kit,
-    [`REPRODUCE.md`](phases/02-non-abelian-state/REPRODUCE.md); scoped to that hybrid and scale
-    regime, k=5 S₅, ≤357M).
-- 🧪 **Experiments using FactWorld as an RL/distillation testbed** live under
+- 🧪 **Experiments using FactWorld testbed** live under
   [`experiments/`](experiments/):
   [`experiments/mopd/`](experiments/mopd/README.md) — *Multi-teacher On-Policy Distillation*
   (MOPD) on FactWorld: RL-specialise Qwen3-1.7B on two abilities (binding, recall) with a
