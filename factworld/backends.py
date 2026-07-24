@@ -654,10 +654,18 @@ class ResponsesBackend(APIBackend):
         body: dict[str, Any] = {
             "model": self.model_name,
             "input": input_param,
-            "temperature": 0,
-            "top_p": 1,
             "max_output_tokens": max_new_tokens,
         }
+        # Same param discipline as APIBackend: reasoning models reject sampler
+        # overrides (OpenAI's Responses endpoint 400s on temperature for
+        # gpt-5.6-sol), and a vendor-mapped effort goes in the native
+        # ``reasoning`` block (this is where GPT-5.6 exposes ``max``, which the
+        # Chat Completions shim hides).
+        if not self.reasoning_model:
+            body["temperature"] = 0
+            body["top_p"] = 1
+        if self.reasoning_effort is not None:
+            body["reasoning"] = {"effort": self.reasoning_effort}
         if self.extra_body:
             body.update(self.extra_body)
 

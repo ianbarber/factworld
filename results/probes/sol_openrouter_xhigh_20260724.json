@@ -1,0 +1,202 @@
+[
+ {
+  "ok": 1,
+  "rtok": 3043,
+  "ctok": 3051,
+  "finish": "stop",
+  "gold": "g8.",
+  "pred": "g8"
+ },
+ {
+  "ok": 1,
+  "rtok": 7758,
+  "ctok": 7766,
+  "finish": "stop",
+  "gold": "g10.",
+  "pred": "g10"
+ },
+ {
+  "ok": 1,
+  "rtok": 7844,
+  "ctok": 7852,
+  "finish": "stop",
+  "gold": "g11.",
+  "pred": "g11"
+ },
+ {
+  "ok": 0,
+  "rtok": 90,
+  "ctok": 98,
+  "finish": "stop",
+  "gold": "g2.",
+  "pred": "g0"
+ },
+ {
+  "ok": 0,
+  "rtok": 134,
+  "ctok": 142,
+  "finish": "stop",
+  "gold": "g7.",
+  "pred": "g0"
+ },
+ {
+  "ok": 0,
+  "rtok": 138,
+  "ctok": 146,
+  "finish": "stop",
+  "gold": "g12.",
+  "pred": "g15"
+ },
+ {
+  "ok": 1,
+  "rtok": 8063,
+  "ctok": 8071,
+  "finish": "stop",
+  "gold": "g3.",
+  "pred": "g3"
+ },
+ {
+  "ok": 1,
+  "rtok": 5176,
+  "ctok": 5184,
+  "finish": "stop",
+  "gold": "g7.",
+  "pred": "g7"
+ },
+ {
+  "ok": 0,
+  "rtok": 116,
+  "ctok": 124,
+  "finish": "stop",
+  "gold": "g5.",
+  "pred": "g6"
+ },
+ {
+  "ok": 1,
+  "rtok": 7615,
+  "ctok": 7623,
+  "finish": "stop",
+  "gold": "g14.",
+  "pred": "g14"
+ },
+ {
+  "ok": 1,
+  "rtok": 5123,
+  "ctok": 5131,
+  "finish": "stop",
+  "gold": "g6.",
+  "pred": "g6"
+ },
+ {
+  "ok": 1,
+  "rtok": 11301,
+  "ctok": 11309,
+  "finish": "stop",
+  "gold": "g15.",
+  "pred": "g15"
+ },
+ {
+  "ok": 1,
+  "rtok": 5309,
+  "ctok": 5317,
+  "finish": "stop",
+  "gold": "g12.",
+  "pred": "g12"
+ },
+ {
+  "ok": 0,
+  "rtok": 155,
+  "ctok": 163,
+  "finish": "stop",
+  "gold": "g6.",
+  "pred": "g5"
+ },
+ {
+  "ok": 0,
+  "rtok": 102,
+  "ctok": 110,
+  "finish": "stop",
+  "gold": "g10.",
+  "pred": "g12"
+ },
+ {
+  "ok": 1,
+  "rtok": 6594,
+  "ctok": 6602,
+  "finish": "stop",
+  "gold": "g11.",
+  "pred": "g11"
+ },
+ {
+  "ok": 1,
+  "rtok": 5303,
+  "ctok": 5311,
+  "finish": "stop",
+  "gold": "g14.",
+  "pred": "g14"
+ },
+ {
+  "ok": 0,
+  "rtok": 147,
+  "ctok": 155,
+  "finish": "stop",
+  "gold": "g12.",
+  "pred": "g4"
+ },
+ {
+  "ok": 1,
+  "rtok": 3542,
+  "ctok": 3550,
+  "finish": "stop",
+  "gold": "g5.",
+  "pred": "g5"
+ },
+ {
+  "ok": 1,
+  "rtok": 2959,
+  "ctok": 2967,
+  "finish": "stop",
+  "gold": "g12.",
+  "pred": "g12"
+ },
+ {
+  "ok": 0,
+  "rtok": 135,
+  "ctok": 143,
+  "finish": "stop",
+  "gold": "g1.",
+  "pred": "g6"
+ },
+ {
+  "ok": 1,
+  "rtok": 3033,
+  "ctok": 3041,
+  "finish": "stop",
+  "gold": "g10.",
+  "pred": "g10"
+ },
+ {
+  "ok": 0,
+  "rtok": 122,
+  "ctok": 130,
+  "finish": "stop",
+  "gold": "g8.",
+  "pred": "g12"
+ },
+ {
+  "ok": 0,
+  "rtok": 89,
+  "ctok": 97,
+  "finish": "stop",
+  "gold": "g12.",
+  "pred": "g5"
+ },
+ {
+  "ok": 1,
+  "rtok": 132,
+  "ctok": 140,
+  "finish": "stop",
+  "gold": "g14.",
+  "pred": "g14"
+ }
+]

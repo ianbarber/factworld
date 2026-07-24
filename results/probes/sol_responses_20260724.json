@@ -1,0 +1,406 @@
+{
+ "xhigh": [
+  {
+   "ok": 1,
+   "rtok": 3624,
+   "otok": 3632,
+   "status": "completed",
+   "pred": "g8",
+   "gold": "g8."
+  },
+  {
+   "ok": 1,
+   "rtok": 5484,
+   "otok": 5492,
+   "status": "completed",
+   "pred": "g10",
+   "gold": "g10."
+  },
+  {
+   "ok": 1,
+   "rtok": 3162,
+   "otok": 3170,
+   "status": "completed",
+   "pred": "g11",
+   "gold": "g11."
+  },
+  {
+   "ok": 0,
+   "rtok": 141,
+   "otok": 149,
+   "status": "completed",
+   "pred": "g0",
+   "gold": "g2."
+  },
+  {
+   "ok": 0,
+   "rtok": 154,
+   "otok": 162,
+   "status": "completed",
+   "pred": "g0",
+   "gold": "g7."
+  },
+  {
+   "ok": 1,
+   "rtok": 8560,
+   "otok": 8568,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 7804,
+   "otok": 7812,
+   "status": "completed",
+   "pred": "g3",
+   "gold": "g3."
+  },
+  {
+   "ok": 0,
+   "rtok": 115,
+   "otok": 123,
+   "status": "completed",
+   "pred": "g10",
+   "gold": "g7."
+  },
+  {
+   "ok": 0,
+   "rtok": 120,
+   "otok": 128,
+   "status": "completed",
+   "pred": "g6",
+   "gold": "g5."
+  },
+  {
+   "ok": 0,
+   "rtok": 97,
+   "otok": 105,
+   "status": "completed",
+   "pred": "g4",
+   "gold": "g14."
+  },
+  {
+   "ok": 1,
+   "rtok": 5178,
+   "otok": 5186,
+   "status": "completed",
+   "pred": "g6",
+   "gold": "g6."
+  },
+  {
+   "ok": 1,
+   "rtok": 6690,
+   "otok": 6698,
+   "status": "completed",
+   "pred": "g15",
+   "gold": "g15."
+  },
+  {
+   "ok": 0,
+   "rtok": 104,
+   "otok": 112,
+   "status": "completed",
+   "pred": "g14",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 7582,
+   "otok": 7590,
+   "status": "completed",
+   "pred": "g6",
+   "gold": "g6."
+  },
+  {
+   "ok": 0,
+   "rtok": 149,
+   "otok": 157,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g10."
+  },
+  {
+   "ok": 0,
+   "rtok": 90,
+   "otok": 98,
+   "status": "completed",
+   "pred": "g2",
+   "gold": "g11."
+  },
+  {
+   "ok": 1,
+   "rtok": 8199,
+   "otok": 8207,
+   "status": "completed",
+   "pred": "g14",
+   "gold": "g14."
+  },
+  {
+   "ok": 0,
+   "rtok": 138,
+   "otok": 146,
+   "status": "completed",
+   "pred": "g4",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 3314,
+   "otok": 3322,
+   "status": "completed",
+   "pred": "g5",
+   "gold": "g5."
+  },
+  {
+   "ok": 1,
+   "rtok": 8038,
+   "otok": 8046,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g12."
+  },
+  {
+   "ok": 0,
+   "rtok": 139,
+   "otok": 147,
+   "status": "completed",
+   "pred": "g6",
+   "gold": "g1."
+  },
+  {
+   "ok": 1,
+   "rtok": 9630,
+   "otok": 9638,
+   "status": "completed",
+   "pred": "g10",
+   "gold": "g10."
+  },
+  {
+   "ok": 1,
+   "rtok": 3739,
+   "otok": 3747,
+   "status": "completed",
+   "pred": "g8",
+   "gold": "g8."
+  },
+  {
+   "ok": 1,
+   "rtok": 8824,
+   "otok": 8832,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 124,
+   "otok": 132,
+   "status": "completed",
+   "pred": "g14",
+   "gold": "g14."
+  }
+ ],
+ "max": [
+  {
+   "ok": 1,
+   "rtok": 12654,
+   "otok": 12662,
+   "status": "completed",
+   "pred": "g8",
+   "gold": "g8."
+  },
+  {
+   "ok": 1,
+   "rtok": 11745,
+   "otok": 11753,
+   "status": "completed",
+   "pred": "g10",
+   "gold": "g10."
+  },
+  {
+   "ok": 1,
+   "rtok": 10600,
+   "otok": 10608,
+   "status": "completed",
+   "pred": "g11",
+   "gold": "g11."
+  },
+  {
+   "ok": 1,
+   "rtok": 13795,
+   "otok": 13803,
+   "status": "completed",
+   "pred": "g2",
+   "gold": "g2."
+  },
+  {
+   "ok": 1,
+   "rtok": 4142,
+   "otok": 4150,
+   "status": "completed",
+   "pred": "g7",
+   "gold": "g7."
+  },
+  {
+   "ok": 1,
+   "rtok": 10753,
+   "otok": 10761,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 8461,
+   "otok": 8469,
+   "status": "completed",
+   "pred": "g3",
+   "gold": "g3."
+  },
+  {
+   "ok": 1,
+   "rtok": 13466,
+   "otok": 13474,
+   "status": "completed",
+   "pred": "g7",
+   "gold": "g7."
+  },
+  {
+   "ok": 0,
+   "rtok": 238,
+   "otok": 246,
+   "status": "completed",
+   "pred": "g6",
+   "gold": "g5."
+  },
+  {
+   "ok": 0,
+   "rtok": 193,
+   "otok": 201,
+   "status": "completed",
+   "pred": "g4",
+   "gold": "g14."
+  },
+  {
+   "ok": 0,
+   "rtok": 177,
+   "otok": 185,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g6."
+  },
+  {
+   "ok": 1,
+   "rtok": 15474,
+   "otok": 15482,
+   "status": "completed",
+   "pred": "g15",
+   "gold": "g15."
+  },
+  {
+   "ok": 1,
+   "rtok": 8198,
+   "otok": 8206,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 9352,
+   "otok": 9360,
+   "status": "completed",
+   "pred": "g6",
+   "gold": "g6."
+  },
+  {
+   "ok": 1,
+   "rtok": 9028,
+   "otok": 9036,
+   "status": "completed",
+   "pred": "g10",
+   "gold": "g10."
+  },
+  {
+   "ok": 1,
+   "rtok": 8803,
+   "otok": 8811,
+   "status": "completed",
+   "pred": "g11",
+   "gold": "g11."
+  },
+  {
+   "ok": 1,
+   "rtok": 10607,
+   "otok": 10615,
+   "status": "completed",
+   "pred": "g14",
+   "gold": "g14."
+  },
+  {
+   "ok": 1,
+   "rtok": 10604,
+   "otok": 10612,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 9432,
+   "otok": 9440,
+   "status": "completed",
+   "pred": "g5",
+   "gold": "g5."
+  },
+  {
+   "ok": 1,
+   "rtok": 8399,
+   "otok": 8407,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 6214,
+   "otok": 6222,
+   "status": "completed",
+   "pred": "g1",
+   "gold": "g1."
+  },
+  {
+   "ok": 1,
+   "rtok": 10763,
+   "otok": 10771,
+   "status": "completed",
+   "pred": "g10",
+   "gold": "g10."
+  },
+  {
+   "ok": 1,
+   "rtok": 10646,
+   "otok": 10654,
+   "status": "completed",
+   "pred": "g8",
+   "gold": "g8."
+  },
+  {
+   "ok": 1,
+   "rtok": 4993,
+   "otok": 5001,
+   "status": "completed",
+   "pred": "g12",
+   "gold": "g12."
+  },
+  {
+   "ok": 1,
+   "rtok": 271,
+   "otok": 279,
+   "status": "completed",
+   "pred": "g14",
+   "gold": "g14."
+  }
+ ]
+}

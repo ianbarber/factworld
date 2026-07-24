@@ -141,17 +141,27 @@ MODELS = {
     # rejects max_tokens in favor of max_completion_tokens, does not accept
     # temperature/top_p overrides, and does not accept the OpenRouter-style
     # reasoning-effort extra body.
+    # SWITCHED to the native Responses API 2026-07-24: the Chat Completions shim
+    # hides GPT-5.6's ``max`` reasoning level (400 "supported: none..xhigh"),
+    # silently under-realizing the max-supported-effort protocol. On identical
+    # s5_chain L96 items, Responses effort=max reads 0.88 at 8,360 rtok/call vs
+    # 0.60-0.72 at ~3.4-4.2k rtok/call for xhigh on every route (chat direct,
+    # OpenRouter, Responses) — xhigh is honored uniformly; max is simply a
+    # higher level only Responses exposes (results/probes/sol_responses_20260724
+    # .json, sol_openrouter_xhigh_20260724.json). The benchmark's top arm
+    # (xhigh = "maximum supported") therefore maps to vendor ``max``; dose arms
+    # low/medium/high stay literal.
     "openai/gpt-5.6-sol": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
         "completion_price_per_M": 30.0, "open_weights": False,
         "base_url": "https://api.openai.com/v1",
         "api_key_env": "OPENAI_API_KEY",
         "model_name": "gpt-5.6-sol",
-        "max_completion_tokens": True,
+        "responses_endpoint": True,
         "reasoning_model": True,
         "supports_reasoning_effort": False,
         "reasoning_effort_values": {"low": "low", "medium": "medium", "high": "high",
-                                     "xhigh": "xhigh", "max": "max"}},
+                                     "xhigh": "max", "max": "max"}},
     # openai/gpt-5.4 and google/gemini-3.1-pro-preview DROPPED 2026-07-08 (owner
     # decision: one flagship per vendor; Google is pushing flash).
     # no_reasoning_effort: Gemini 3 endpoints reject effort=none outright
