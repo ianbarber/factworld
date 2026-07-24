@@ -18,12 +18,12 @@ text, and a validity gate certifies that no shallow baseline clears floor.
 |---|---|---|
 | **Component: recall** | `recall_copy_v1` | single-query, deferred-readout MQAR variant; pool breadth = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models); `conflict_v1` scores the in-context override |
-| **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates — not group ops) |
-| — commutative variant | `commutative_v1` | each event turns a named entity's dial a few clicks; the query asks where one dial ends up — every event matters, order does not; experimental — reads in the thinking regime only (roster @L64 spans 0.44–0.96 but only gpt-5.5 CI-separates, so it stays off the headline; instant and d256-local answer-only at chance, per-step traces form it in-distribution for the recurrent archs) |
+| **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates, not group ops) |
+| — commutative variant | `commutative_v1` | each event turns a named entity's dial a few clicks; the query asks where one dial ends up (every event matters, order does not); experimental: reads in the thinking regime only, so it stays off the headline |
 | — non-abelian variant | `s5_v1` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite_copy_v2` | the two-hop; the **gap** (binding − composed) is its derived statistic |
-| **Composition: recall ∘ recall** | `chain_v2` | follow a chain of "ask X" pointers hop by hop to the fact at the end — recall applied to its own output; depth = number of hops, at fixed breadth (the no-wrap staircase builds k=2d+1) |
-| **Composition: non-abelian state × serial dereference** | `s5_chain_v3` | the **FactWorldBench headline task** — track a k=16 pointer map through L order-sensitive swap/cycle events, then dereference it 8 hops deep; items gated so echo/fixed-hop heuristics score exactly 0 (chance 1/16) |
+| **Composition: recall ∘ recall** | `chain_v2` | follow a chain of "ask X" pointers hop by hop to the fact at the end; recall applied to its own output; depth = number of hops at fixed breadth |
+| **Composition: non-abelian state × serial dereference** | `s5_chain_v3` | the **FactWorldBench headline task**: track a k=16 pointer map through L order-sensitive swap/cycle events, then dereference it 8 hops deep; items gated so echo/fixed-hop heuristics score exactly 0 (chance 1/16) |
 
 Each axis tests a different thing: solve rate; pool/breadth (working-set load); depth/length
 (iteration count); regime (**instant** = reasoning off + answer contract = in-weights, vs
@@ -43,7 +43,7 @@ The data / oracle / eval layer is pure-stdlib. Backends are
 installed via extras:
 
 ```bash
-# Core only — enough to generate tasks and score predictions
+# Core only: enough to generate tasks and score predictions
 pip install -e .
 
 # Add the backends you need
@@ -132,8 +132,8 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 To give an easier view of performance we track one composed task, **s5_chain**: non-abelian
 pointer-map tracking composed with an 8-hop serial dereference in a single task. The table
 reports the match score at two lengths (96 and 128 permutation events), plus completion tokens
-per call on the matched L64 cell — a length nearly every model solves, so token spend compares
-like for like.
+per call on the matched L64 cell. Nearly every model solves that length, so token spend
+compares like for like.
 
 Models run at the recommended top reasoning level, `xhigh` (mapped down where the endpoint's
 ceiling is `high`).
@@ -210,43 +210,43 @@ Marks:
 - `—ᶠ` gap not interpretable (binding at the object-filter floor).
 - `n/a` cell not run; `—` not applicable to a floor row.
 
-Reading the component tables: **gap** = binding − composed @L16 — how much accuracy vanishes
-when the model must chain the recall step onto the state it just tracked, with the
-state-tracking component held constant. The two floor rows are the shallow baselines every
-instant cell is read against: the *recency heuristic* answers the last event's recipient, and
-the *object-filter floor* filters events to the queried object but guesses among its writes —
-an instant score near 0.41 shows object filtering, not state tracking. In the thinking table,
-chain d128 is a 128-hop pointer chase over 257 agents and s5 @L256 is 256 role-permutation
-events (both described in [the tasks](#1-the-tasks) and [docs/tasks.md](docs/tasks.md)).
+Reading the component tables: **gap** = binding minus composed @L16, the accuracy lost when
+the model must chain the recall step onto the state it just tracked. The two floor rows are
+the shallow baselines every instant cell is read against: the *recency heuristic* answers the
+last event's recipient, and the *object-filter floor* filters events to the queried object but
+guesses among its writes. An instant score near 0.41 shows object filtering, not state
+tracking. In the thinking table, chain d128 is a 128-hop pointer chase over 257 agents and
+s5 @L256 is 256 role-permutation events (both described in [the tasks](#1-the-tasks) and
+[docs/tasks.md](docs/tasks.md)).
 
 ## 3. Exploring the architectures
 
-We can train from-scratch models on the same tasks (next-token prediction; answer-only
-supervision by default, a staged curriculum for the composite flagship, and dense per-step
-supervision only where it is the measured lever — the s5 and commutative formation results
-below). Currently we explore:
+We can train from-scratch models on the same tasks with next-token prediction. Supervision is
+answer-only by default, with a staged curriculum for the composite flagship; dense per-step
+supervision appears only where it is the measured lever (the s5 and commutative formation
+results below). Currently we explore:
 
-* **transformer** — a standard decoder-only stack: the attention baseline.
-* **gdn_pure / gdn_hybrid** — [GatedDeltaNet](https://arxiv.org/abs/2412.06464): gated
+* **transformer**: a standard decoder-only stack, the attention baseline.
+* **gdn_pure / gdn_hybrid**: [GatedDeltaNet](https://arxiv.org/abs/2412.06464), gated
   delta-rule linear attention; *pure* is attention-free, *hybrid* interleaves one full-attention
   layer per four.
-* **gdp_pure / gdp_hybrid** — [GatedDeltaProduct](https://arxiv.org/abs/2502.10297): the delta
-  rule generalized to a product of Householder transformations per token (n_h=4) — the
+* **gdp_pure / gdp_hybrid**: [GatedDeltaProduct](https://arxiv.org/abs/2502.10297), the delta
+  rule generalized to a product of Householder transformations per token (n_h=4). This is the
   non-commutative recurrence the state-tracking results turn on; same pure/hybrid split.
-* **fprm** — a weight-tied looped conv+attention block (after Movahedi et al., 2026): one block
+* **fprm**: a weight-tied looped conv+attention block (after Movahedi et al., 2026); one block
   applied repeatedly, so per-token FLOPs match the transformer at ~5–11× fewer parameters.
 
 Comparisons are matched on compute, not parameters, at budgets sufficient for the capable
 configuration to converge.
 
 - **Recall.** Every architecture aces adjacent 1-hop readout; deferred recall needs product
-  recurrence — attention-free `gdp_pure` supplies it, `gdn_pure` fails
+  recurrence: attention-free `gdp_pure` supplies it, `gdn_pure` fails
   ([consolidated §3](reports/factworld-consolidated.md)).
 - **Binding under breadth.** fprm leads the binding leg through B16 and breaks at B24, where
   gdp_hybrid holds 0.67; the transformer reads 0.08–0.23 throughout (45 runs, d256).
 - **Composition.** The staged-curriculum flagship converges only for gdp_hybrid: composite
   0.833±0.089 @L16 (3 seeds 0.758/0.782/0.958, eval_n=500; holder 0.999 / value 0.833); fprm
-  0.109±0.089 — perfect binding (0.998), dead value leg; transformer 0.001, a real floor.
+  0.109±0.089 with perfect binding (0.998) but a dead value leg; transformer 0.001, a real floor.
   Scale is non-monotone: convergence peaks at medium d768 (0.732±0.013 corroborates), small
   fails the value leg, large is seed-bimodal
   ([consolidated §5](reports/factworld-consolidated.md)).
@@ -257,22 +257,22 @@ configuration to converge.
   ([consolidated §8](reports/factworld-consolidated.md)).
 - **Commutative.** Answer-only training reads chance for every architecture at d256; dense
   per-step traces form the fold in-distribution for the recurrent architectures (gdp_hybrid
-  0.82, fprm 0.65 @L16; transformer at chance) — and no run carries it past the training
+  0.82, fprm 0.65 @L16; transformer at chance); no run carries it past the training
   lengths.
   
-The price table — which architectural or training choice buys each element, with per-row
-evidence — is [§9 of the report](reports/factworld-consolidated.md); local multi-seed detail
+The price table shows which architectural or training choice buys each element, with per-row
+evidence: [§9 of the report](reports/factworld-consolidated.md). Local multi-seed detail
 and per-leg decomposition are §5–§8. Running log:
 [`docs/experiments/README.md`](docs/experiments/README.md).
 
 ## Reports and prior work
 
-- 📄 [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md) — **the report**:
+- 📄 [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md), **the report**:
   the instrument and its validation, the frontier benchmark (FactWorldBench headline, the gap,
   the regime contrast), and the architecture exploration with the price table.
 - 🧪 **Experiments using FactWorld as a testbed** live under
   [`experiments/`](experiments/):
-  [`experiments/mopd/`](experiments/mopd/README.md) — *Multi-teacher On-Policy Distillation*
+  [`experiments/mopd/`](experiments/mopd/README.md), *Multi-teacher On-Policy Distillation*
   (MOPD) on FactWorld: RL-specialise Qwen3-1.7B on two abilities (binding, recall) with a
   verifiable reward, then distil both into one model that holds both (LoRA adapters on a shared
   backbone). See [`REPRODUCE.md`](experiments/mopd/REPRODUCE.md).
@@ -370,7 +370,7 @@ python scripts/gdp_confirm_5e4.py         # gdp 45M @ tuned lr 5e-4, 5 seeds   (
 python scripts/gdn_confirm_3e4.py         # gdn 45M @ lr 3e-4, 5 seeds         (W2: 4/5 converge, 1/5 extrapolate)
 python scripts/fair_config.py             # W3: transformer n_heads=8+resid (floor survives 0/10) + recurrent short-conv
 
-# Non-abelian report (phases/02-non-abelian-state/report.md) — see phases/02-non-abelian-state/REPRODUCE.md
+# Non-abelian report (phases/02-non-abelian-state/report.md): see phases/02-non-abelian-state/REPRODUCE.md
 ```
 
 </details>
