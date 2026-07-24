@@ -114,7 +114,7 @@ python scripts/eval_openrouter_grid.py --n 30
 
 # Hybrid / state-space models on OpenRouter (disable built-in chain-of-thought)
 python scripts/eval_openrouter_grid.py \\
-    --models nvidia/nemotron-3-ultra-550b-a55b moonshotai/kimi-k2.6 \\
+    --models nvidia/nemotron-3-ultra-550b-a55b moonshotai/kimi-k3 \\
     --n 30 --composite_format --no_reasoning
 
 # Evaluate a local model and merge it into the OpenRouter table
@@ -161,7 +161,7 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 ## 2. Benchmarking the frontier
 
-Twelve frontier models through the instrument. The headline is one ranking — **s5_chain**, the
+Thirteen frontier models through the instrument. The headline is one ranking — **s5_chain**, the
 composite stressor: non-abelian pointer-map tracking composed with an 8-hop serial dereference
 in a single task. Every other cell deconstructs it, across two regimes: **instant** (reasoning
 off, one-line answer contract — what the weights compute) and **thinking** (generous budgets —
@@ -175,30 +175,32 @@ in the [rendered feed](docs/benchmark/results.md).
 
 | Model | s5_chain @L96 | @L128 | ctok/call |
 |---|---|---|---|
+| anthropic/claude-fable-5 | 1.00 | 1.00 | 5014 |
 | openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
 | x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
-| moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| moonshotai/kimi-k3 | 0.96 | 0.96 | 10941 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.96ʳ | 0.96 | 17071 |
 | muse-spark-1.1 | 0.96 | 0.92 | 12484 |
+| google/gemini-3.6-flash | 0.92 | 0.96 | 8166 |
 | anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| openai/gpt-5.6-sol | 0.72 | 0.68 | 2322 |
+| openai/gpt-5.6-sol | 0.84 | 0.80 | 4966 |
 | qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
-| google/gemini-3.5-flash | 0.68 | 0.60 | 19366 |
 
 **Component: instant composition (reasoning off, answer contract)**
 
 | Model | binding @L16 | composed @L16 | composed @L64 | gap |
 |---|---|---|---|---|
 | anthropic/claude-opus-4.8 | 0.78 | 0.72 | 0.43 | +0.06 |
+| google/gemini-3.6-flash | 0.69* | 0.67* | 0.26* | +0.02* |
 | openai/gpt-5.6-sol | 0.82 | 0.65 | 0.33 | +0.17 |
-| google/gemini-3.5-flash | 0.66* | 0.64* | 0.28* | +0.02* |
 | anthropic/claude-sonnet-5 | 0.77 | 0.62† | 0.32† | +0.15† |
 | openai/gpt-5.5 | 0.80 | 0.46 | 0.33 | +0.34 |
 | deepseek/deepseek-v4-pro | 0.51 | 0.44 | 0.19 | —ᶠ |
 | z-ai/glm-5.2 | 0.71 | 0.38† | 0.13 | +0.33† |
+| moonshotai/kimi-k3 | 0.65 | 0.33 | 0.29 | +0.32 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.49 | 0.33 | 0.12 | —ᶠ |
 | qwen/qwen3.7-max | 0.51 | 0.24 | 0.08 | —ᶠ |
 | *recency heuristic (floor)* | 0.04 | 0.04 | 0.06 | — |
@@ -212,12 +214,13 @@ in the [rendered feed](docs/benchmark/results.md).
 | muse-spark-1.1 | 1.00 | 1.00ʳ | 9704 |
 | anthropic/claude-sonnet-5 | 1.00 | 1.00ʳ | 11866 |
 | anthropic/claude-opus-4.8 | 1.00 | 1.00ʳ | 12683 |
+| anthropic/claude-fable-5 | 1.00 | 0.96 | 6405 |
 | openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
 | openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
-| moonshotai/kimi-k2.6 | 1.00‡ | 0.88 | 17418 |
+| google/gemini-3.6-flash | 0.96 | 0.84 | 8234 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| google/gemini-3.5-flash | 1.00 | 0.52 | 11022 |
+| moonshotai/kimi-k3 | 1.00 | 0.52 | 11355 |
 | deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
 <!-- FRONTIER_TABLE_END -->

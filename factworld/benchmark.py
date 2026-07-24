@@ -232,9 +232,13 @@ MODELS = {
     # effort=none arm probes CLEAN — rtok=0, contract obeyed, cap respected
     # (results/probes/new_models_20260724.jsonl) — so it runs the full battery
     # including instant. Pricing verified against /api/v1/models 2026-07-24.
+    # quantization_filter off: no OpenRouter endpoint for this slug declares a
+    # quantization, so the open-weights fp8/bf16/fp16 filter 404s every call
+    # (verified 2026-07-24; the first battery attempt lost all cells to it).
     "moonshotai/kimi-k3": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 3.0,
-        "completion_price_per_M": 15.0, "open_weights": True},
+        "completion_price_per_M": 15.0, "open_weights": True,
+        "quantization_filter": False},
     "deepseek/deepseek-v4-pro": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.435,
         "completion_price_per_M": 0.87, "open_weights": True},

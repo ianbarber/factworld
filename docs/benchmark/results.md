@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-24 01:47 UTC from `results/benchmark/history.jsonl` (746 latest cells).
+Generated 2026-07-24 14:15 UTC from `results/benchmark/history.jsonl` (801 latest cells).
 
 ## Settings
 
@@ -20,7 +20,7 @@ Observed generation settings (effort -> max_new_tokens, stop_at; annotated with 
 - effort=low: max_new_tokens=8192, stop_at=None — facets: dose_response
 - effort=medium: max_new_tokens=8192, stop_at=None — facets: dose_response
 - effort=minimal: max_new_tokens=2048, stop_at=None — facets: composite_length, decomposition, dose_response, floor, sanity
-- effort=minimal: max_new_tokens=96, stop_at=None — facets: chain_instant, recall_load, zero_budget
+- effort=minimal: max_new_tokens=96, stop_at=None — facets: chain_instant, gap_stability, recall_load, zero_budget
 - effort=none: max_new_tokens=2048, stop_at=None — facets: composite_length, decomposition, dose_response, floor, sanity
 - effort=none: max_new_tokens=96, stop_at=None — facets: chain_instant, gap_stability, recall_load, zero_budget
 - effort=xhigh: max_new_tokens=16384, stop_at=None — facets: s5_chain
@@ -45,12 +45,13 @@ History also contains zero-budget cells on composite_copy_v1; the zero-budget co
 | Model | instant: recall (sanity, recall_copy_v1) | instant: state tracking (binding_only @L16, v2) | instant: composed @L16 (match, v2) | instant: composed @L64 (v2) | instant: composition gap (binding_only - composed @L16) | instant: replicate noise (|composed - replicate| @L16) |
 |---|---|---|---|---|---|---|
 | anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 | ±0.05 |
+| google/gemini-3.6-flash | 1.00 | 0.69* | 0.67* | 0.26* | +0.02* | ±0.02 |
 | openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 | ±0.05 |
-| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* | ±0.01 |
 | anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62 (diag 0.76 @512tok)† | 0.32 (diag 0.66 @512tok)† | +0.15† | ±0.03 |
 | openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 | ±0.00 |
 | deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ | ±0.00 |
 | z-ai/glm-5.2 | 1.00 | 0.71 | 0.38† | 0.13 | +0.33† | ±0.01 |
+| moonshotai/kimi-k3 | 1.00 | 0.65 | 0.33 | 0.29 | +0.32 | ±0.01 |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ | ±0.03 |
 | qwen/qwen3.7-max | 1.00 | 0.51 | 0.24 | 0.08 | —ᶠ | ±0.01 |
 | recency heuristic (floor, composite_copy_v2) | — | 0.04 | 0.04 | 0.06 | — | — |
@@ -94,12 +95,13 @@ Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 | muse-spark-1.1 | 1.00 | 1.00 @32,768tok (raised budget) | 9704 |
 | anthropic/claude-sonnet-5 | 1.00 | 1.00 @32,768tok (raised budget) | 11866 |
 | anthropic/claude-opus-4.8 | 1.00 | 1.00 @32,768tok (raised budget) | 12683 |
+| anthropic/claude-fable-5 | 1.00 | 0.96 | 6405 |
 | openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
 | openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
-| moonshotai/kimi-k2.6 | 1.00‡ | 0.88 | 17418 |
+| google/gemini-3.6-flash | 0.96 | 0.84 | 8234 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| google/gemini-3.5-flash | 1.00 | 0.52 | 11022 |
+| moonshotai/kimi-k3 | 1.00 | 0.52 | 11355 |
 | deepseek/deepseek-v4-pro | 1.00 | ⊘ >budget | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ >budget | 12250 |
 
@@ -117,12 +119,13 @@ S5 efficiency ranking: models sorted by s5 @L256 score, then by s5@128 completio
 | muse-spark-1.1 | 1.00 @32,768tok (raised budget) | 9704 |
 | anthropic/claude-sonnet-5 | 1.00 @32,768tok (raised budget) | 11866 |
 | anthropic/claude-opus-4.8 | 1.00 @32,768tok (raised budget) | 12683 |
+| anthropic/claude-fable-5 | 0.96 | 6405 |
 | openai/gpt-5.5 | 0.96 | 6989 |
 | openai/gpt-5.6-sol | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.88 | 6282 |
-| moonshotai/kimi-k2.6 | 0.88 | 17418 |
+| google/gemini-3.6-flash | 0.84 | 8234 |
 | qwen/qwen3.7-max | 0.80 | 7904 |
-| google/gemini-3.5-flash | 0.52 | 11022 |
+| moonshotai/kimi-k3 | 0.52 | 11355 |
 | deepseek/deepseek-v4-pro | ⊘ >budget | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget | 12250 |
 
@@ -132,18 +135,19 @@ s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map,
 
 | Model | s5_chain @L96 | @L128 | s5_chain@64 ctok/call |
 |---|---|---|---|
+| anthropic/claude-fable-5 | 1.00 | 1.00 | 5014 |
 | openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
 | x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
-| moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| moonshotai/kimi-k3 | 0.96 | 0.96 | 10941 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.96 @98,304tok (raised budget) | 0.96 | 17071 |
 | muse-spark-1.1 | 0.96 | 0.92 | 12484 |
+| google/gemini-3.6-flash | 0.92 | 0.96 | 8166 |
 | anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| openai/gpt-5.6-sol | 0.72 | 0.68 | 2322 |
+| openai/gpt-5.6-sol | 0.84 | 0.80 | 4966 |
 | qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
-| google/gemini-3.5-flash | 0.68 | 0.60 | 19366 |
 
 The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the d128 cell is k=257). `chain_v2` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
@@ -153,11 +157,12 @@ Two instant cells beyond the composite headline, same protocol (reasoning off, o
 
 | Model | instant: recall under load (recall_load, recall_copy_v1 pool-64 @L64) | instant: chain d16 (chain_instant, chain_v2, k=33) |
 |---|---|---|
+| anthropic/claude-fable-5 | n/a | n/a |
 | anthropic/claude-opus-4.8 | 1.00 | 0.00 (diag 0.96 @512tok)† |
 | anthropic/claude-sonnet-5 | 1.00 | 0.28 (diag 0.96 @512tok)† |
 | deepseek/deepseek-v4-pro | 1.00 | 0.00 |
-| google/gemini-3.5-flash | 1.00* | 0.00 (diag 1.00 @512tok)*† |
-| moonshotai/kimi-k2.6 | 1.00 | 0.32 (diag 0.96 @512tok)† |
+| google/gemini-3.6-flash | 1.00* | 0.00* |
+| moonshotai/kimi-k3 | 1.00 | 0.04 |
 | muse-spark-1.1 | n/a | n/a |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.00 |
 | openai/gpt-5.5 | 1.00 | 0.08 |
@@ -174,7 +179,9 @@ Models present in history but no longer in factworld.benchmark.MODELS, with thei
 | Model | dose_response (match) | composite_length (match @ L512, high) | decomposition (bind / e2e / scaffold) |
 |---|---|---|---|
 | google/gemini-3.1-pro-preview | 0.98 @ high | 0.90 | 1.00 / 0.98 / 1.00 |
+| google/gemini-3.5-flash | 1.00 @ high | 0.97 | 0.82 / 0.44 / 1.00 |
 | meta-llama/llama-4-maverick | 0.16 @ default | 0.10 | 0.96 / 0.18 / 1.00 |
+| moonshotai/kimi-k2.6 | 0.98 @ high | 0.97 | 0.78 / 0.26 / 1.00 |
 | openai/gpt-5.4 | 0.96 @ high | 0.93 | 0.86 / 0.30 / 1.00 |
 | x-ai/grok-4.3 | 0.22 @ high | 0.73 | 0.16 / 0.18 / 1.00 |
 | x-ai/grok-build-0.1 | — | — | — / — / — |
@@ -188,8 +195,6 @@ Legacy headline columns for the pre-redesign v1-only facets (dose_response, comp
 | anthropic/claude-opus-4.8 | 0.96 @ high | 1.00 | 0.88 / 0.08 / 1.00 |
 | anthropic/claude-sonnet-5 | 0.94 @ high | 1.00 | 0.86 / 0.00 / 1.00 |
 | deepseek/deepseek-v4-pro | 0.92 @ high | 0.87 | 0.24 / 0.24 / 0.98 |
-| google/gemini-3.5-flash | 1.00 @ high | 0.97 | 0.82 / 0.44 / 1.00 |
-| moonshotai/kimi-k2.6 | 0.98 @ high | 0.97 | 0.78 / 0.26 / 1.00 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.84 @ high | 0.23 | 0.60 / 0.22 / 1.00 |
 | openai/gpt-5.5 | 1.00 @ high | 1.00 | 0.96 / 0.74 / 1.00 |
 | qwen/qwen3.7-max | 0.92 @ high | 1.00 | 0.60 / 0.18 / 1.00 |
@@ -201,6 +206,17 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 
 | Model | Facet | Task | Length | Arm | n | match [95% CI] | containment (diagnostic) | note |
 |---|---|---|---|---|---|---|---|---|
+| anthropic/claude-fable-5 | chain_nowrap | chain_v2 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| anthropic/claude-fable-5 | chain_nowrap | chain_v2 | 32 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| anthropic/claude-fable-5 | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| anthropic/claude-fable-5 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| anthropic/claude-fable-5 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
+| anthropic/claude-fable-5 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| anthropic/claude-fable-5 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| anthropic/claude-fable-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| anthropic/claude-fable-5 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| anthropic/claude-fable-5 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| anthropic/claude-fable-5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | anthropic/claude-opus-4.8 | chain_instant | chain_v1 | 16 | contract, effort=none | 25 | 0.00 [0.00, 0.13] | 0.96 | escalated @512tok diagnostic 0.96; canonical = first attempt @96tok |
 | anthropic/claude-opus-4.8 | chain_instant | chain_v2 | 16 | contract, effort=none | 25 | 0.04 [0.01, 0.20] | 0.96 | escalated @512tok diagnostic 0.96; canonical = first attempt @96tok |
@@ -446,6 +462,28 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=minimal | 100 | 1.00 [0.96, 1.00] | — | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | contract, effort=minimal | 100 | 0.64 [0.54, 0.73] | 0.64 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 64 | contract, effort=minimal | 100 | 0.28 [0.20, 0.37] | 0.28 | — |
+| google/gemini-3.6-flash | chain_instant | chain_v2 | 16 | contract, effort=minimal | 25 | 0.00 [0.00, 0.13] | 0.00 | — |
+| google/gemini-3.6-flash | chain_nowrap | chain_v2 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| google/gemini-3.6-flash | chain_nowrap | chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| google/gemini-3.6-flash | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| google/gemini-3.6-flash | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| google/gemini-3.6-flash | commutative | commutative_v1 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| google/gemini-3.6-flash | gap_stability | composite_copy_v2 | 32 | leg=binding_only, contract, effort=minimal | 50 | 0.64 [0.50, 0.76] | — | — |
+| google/gemini-3.6-flash | gap_stability | composite_copy_v2 | 32 | contract, effort=minimal | 50 | 0.34 [0.22, 0.48] | 0.44 | — |
+| google/gemini-3.6-flash | recall_load | recall_copy_v1 | 64 | contract, effort=minimal | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
+| google/gemini-3.6-flash | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| google/gemini-3.6-flash | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
+| google/gemini-3.6-flash | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| google/gemini-3.6-flash | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| google/gemini-3.6-flash | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| google/gemini-3.6-flash | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
+| google/gemini-3.6-flash | sanity | conflict_v1 | 4 | effort=minimal | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
+| google/gemini-3.6-flash | sanity | recall_copy_v1 | 6 | effort=minimal | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=minimal | 100 | 0.69 [0.59, 0.77] | — | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=minimal | 100 | 0.65 [0.55, 0.74] | 0.68 | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=minimal | 100 | 1.00 [0.96, 1.00] | — | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 16 | contract, effort=minimal | 100 | 0.67 [0.57, 0.75] | 0.69 | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 64 | contract, effort=minimal | 100 | 0.26 [0.18, 0.35] | 0.29 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 30 | 0.20 [0.10, 0.37] | 0.23 | — |
 | meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 16 | effort=default | 30 | 0.23 [0.12, 0.41] | 0.73 | — |
 | meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 64 | effort=default | 30 | 0.13 [0.05, 0.30] | 0.27 | — |
@@ -517,6 +555,28 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 0.98 [0.93, 0.99] | — | — |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.84 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.93 [0.86, 0.97] | 0.95 | ‡ cap-escape |
+| moonshotai/kimi-k3 | chain_instant | chain_v2 | 16 | contract, effort=none | 25 | 0.04 [0.01, 0.20] | 0.04 | — |
+| moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
+| moonshotai/kimi-k3 | gap_stability | composite_copy_v2 | 32 | leg=binding_only, contract, effort=none | 50 | 0.42 [0.29, 0.56] | — | — |
+| moonshotai/kimi-k3 | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 50 | 0.34 [0.22, 0.48] | 0.34 | — |
+| moonshotai/kimi-k3 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 50 | 1.00 [0.93, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| moonshotai/kimi-k3 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| moonshotai/kimi-k3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.52 [0.33, 0.70] | 0.52 | — |
+| moonshotai/kimi-k3 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.65 [0.55, 0.74] | — | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.32 [0.24, 0.42] | 0.32 | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 1.00 [0.96, 1.00] | — | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.33 [0.25, 0.43] | 0.33 | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.29 [0.21, 0.39] | 0.29 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v1 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -687,10 +747,10 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.44 [0.27, 0.63] | 0.44 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.56 [0.37, 0.73] | 0.56 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.52 [0.33, 0.70] | 0.52 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.48 [0.30, 0.67] | 0.48 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.64 [0.45, 0.80] | 0.64 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.72 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.68 [0.48, 0.83] | 0.68 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.64 [0.45, 0.80] | 0.64 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.80 [0.61, 0.91] | 0.80 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
@@ -863,6 +923,17 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 
 | Model | Facet | Task | Length | Arm | empty_rate | api_errors | finish_errors | reasoning_tokens | finish_reasons | note |
 |---|---|---|---|---|---|---|---|---|---|---|
+| anthropic/claude-fable-5 | chain_nowrap | chain_v2 | 16 | effort=high | 0.000 | 0 | 0 | 1083 | stop:25 | — |
+| anthropic/claude-fable-5 | chain_nowrap | chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 1064 | stop:25 | — |
+| anthropic/claude-fable-5 | chain_nowrap | chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 2068 | stop:25 | — |
+| anthropic/claude-fable-5 | chain_nowrap | chain_v2 | 128 | effort=high | 0.000 | 0 | 0 | 2583 | stop:25 | — |
+| anthropic/claude-fable-5 | commutative | commutative_v1 | 64 | effort=high | 0.000 | 0 | 0 | 1584 | stop:25 | — |
+| anthropic/claude-fable-5 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 7260 | stop:25 | — |
+| anthropic/claude-fable-5 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 13561 | stop:25 | — |
+| anthropic/claude-fable-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 20353 | stop:25 | — |
+| anthropic/claude-fable-5 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 27879 | stop:25 | — |
+| anthropic/claude-fable-5 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 40257 | stop:25 | — |
+| anthropic/claude-fable-5 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 83901 | length:1, stop:24 | — |
 | anthropic/claude-opus-4.8 | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 1382 | stop:30 | — |
 | anthropic/claude-opus-4.8 | chain_instant | chain_v1 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:25 | escalated @512tok diagnostic 0.96; canonical = first attempt @96tok |
 | anthropic/claude-opus-4.8 | chain_instant | chain_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:25 | escalated @512tok diagnostic 0.96; canonical = first attempt @96tok |
@@ -1108,6 +1179,28 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | length:1, stop:99 | — |
 | google/gemini-3.5-flash | zero_budget | composite_copy_v2 | 64 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.6-flash | chain_instant | chain_v2 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:25 | — |
+| google/gemini-3.6-flash | chain_nowrap | chain_v2 | 16 | effort=high | 0.000 | 0 | 0 | 32141 | stop:25 | — |
+| google/gemini-3.6-flash | chain_nowrap | chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 57469 | stop:25 | — |
+| google/gemini-3.6-flash | chain_nowrap | chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 108723 | stop:25 | — |
+| google/gemini-3.6-flash | chain_nowrap | chain_v2 | 128 | effort=high | 0.000 | 0 | 0 | 146582 | stop:25 | — |
+| google/gemini-3.6-flash | commutative | commutative_v1 | 64 | effort=high | 0.000 | 0 | 0 | 70393 | stop:25 | — |
+| google/gemini-3.6-flash | gap_stability | composite_copy_v2 | 32 | leg=binding_only, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| google/gemini-3.6-flash | gap_stability | composite_copy_v2 | 32 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| google/gemini-3.6-flash | recall_load | recall_copy_v1 | 64 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| google/gemini-3.6-flash | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 166755 | stop:25 | — |
+| google/gemini-3.6-flash | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 204101 | stop:25 | — |
+| google/gemini-3.6-flash | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 340141 | stop:25 | — |
+| google/gemini-3.6-flash | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 353569 | stop:25 | — |
+| google/gemini-3.6-flash | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 205791 | stop:25 | — |
+| google/gemini-3.6-flash | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 349730 | stop:25 | — |
+| google/gemini-3.6-flash | sanity | conflict_v1 | 4 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| google/gemini-3.6-flash | sanity | recall_copy_v1 | 6 | effort=minimal | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 16 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| google/gemini-3.6-flash | zero_budget | composite_copy_v2 | 64 | contract, effort=minimal | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | meta-llama/llama-4-maverick | chain_depth | chain_v1 | 4 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 16 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | meta-llama/llama-4-maverick | composite_length | composite_copy_v1 | 64 | effort=default | 0.000 | 0 | 0 | 0 | stop:30 | — |
@@ -1179,6 +1272,28 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.020 | 0 | 0 | 40 | stop:100 | — |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.080 | 0 | 0 | 65 | length:1, stop:92 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.030 | 0 | 0 | 81 | stop:98 | ‡ cap-escape |
+| moonshotai/kimi-k3 | chain_instant | chain_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:25 | — |
+| moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 16 | effort=high | 0.000 | 0 | 0 | 12020 | stop:25 | — |
+| moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 29367 | stop:25 | — |
+| moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 64 | effort=high | 0.000 | 0 | 0 | 58383 | stop:25 | — |
+| moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 128 | effort=high | 0.000 | 0 | 0 | 116412 | stop:25 | — |
+| moonshotai/kimi-k3 | commutative | commutative_v1 | 64 | effort=high | 0.000 | 0 | 0 | 19411 | stop:25 | — |
+| moonshotai/kimi-k3 | gap_stability | composite_copy_v2 | 32 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| moonshotai/kimi-k3 | gap_stability | composite_copy_v2 | 32 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| moonshotai/kimi-k3 | recall_load | recall_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:50 | — |
+| moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 181476 | stop:25 | — |
+| moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 273112 | stop:25 | — |
+| moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 403973 | stop:25 | — |
+| moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 474233 | stop:25 | — |
+| moonshotai/kimi-k3 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 283452 | length:1, stop:24 | — |
+| moonshotai/kimi-k3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.480 | 0 | 0 | 367606 | length:12, stop:13 | — |
+| moonshotai/kimi-k3 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| moonshotai/kimi-k3 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
+| moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v1 | 16 | effort=high | 0.000 | 0 | 0 | 36177 | stop:25 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v1 | 32 | effort=high | 0.000 | 0 | 0 | 74957 | stop:25 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v1 | 64 | effort=high | 0.000 | 0 | 0 | 191568 | stop:25 | — |
@@ -1349,10 +1464,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.000 | 0 | 0 | 41976 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=high | 0.000 | 0 | 0 | 57098 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.000 | 0 | 0 | 71313 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 22534 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 57158 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 103779 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 144307 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 32287 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 123953 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 208575 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 257540 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 66218 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 141584 | stop:25 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
