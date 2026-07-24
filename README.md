@@ -135,8 +135,8 @@ reports the match score at two lengths (96 and 128 permutation events), plus com
 per call on the matched L64 cell — a length nearly every model solves, so token spend compares
 like for like.
 
-Models run at the highest reasoning effort their endpoint supports (`xhigh`, mapped down where
-the ceiling is `high`). gpt-5.6-sol's native API exposes a further `max` level; its rows use it.
+Models run at the recommended top reasoning level, `xhigh` (mapped down where the endpoint's
+ceiling is `high`).
 
 More details in [§4 of the report](reports/factworld-consolidated.md); per-cell Wilson
 intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.md).
@@ -198,8 +198,7 @@ intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.
 
 ![s5_chain scores with Wilson 95% intervals](docs/benchmark/fig_bench_headline.svg)
 
-Cells are n=25, so the intervals are wide — differences within overlapping bars are not an
-ordering; the token column and the component tables are the tie-breakers.
+n=25 per cell; bars are Wilson 95% intervals.
 
 Marks:
 - `†` visible working or covert reasoning on the canonical attempt.

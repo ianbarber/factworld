@@ -1942,29 +1942,37 @@ def fig_bench_headline(records, out_dir):
         rows.append((name, recs))
     fig, ax = plt.subplots(figsize=(7.2, 0.42 * len(rows) + 1.2))
     ys = range(len(rows))
+    # Plot in ERROR space (1 - match) on a symlog axis so the 0.92-1.00 cluster
+    # spreads out — a true log/logit axis cannot represent exact 1.00 scores.
+    # Ticks are positioned in error space but LABELED as match, so the figure
+    # reads in the table's units; linthresh = one error out of 25.
+    ONE_ERR = 1 / 25
     for series, (length, dy, mfc) in {
         "@L96": (S5_CHAIN_STRESS_LENGTH, -0.13, None),
         "@L128": (S5_CHAIN_EXT_LENGTH, 0.13, "white"),
     }.items():
         pts = [(y + dy, recs[length]) for y, (_n, recs) in zip(ys, rows)
                if recs.get(length) is not None and not majority_finish_length(recs[length])]
-        vals = [canonical_relaxed(r) for _y, r in pts]
+        errs = [1 - canonical_relaxed(r) for _y, r in pts]
         cis = [_ci(r) for _y, r in pts]
-        xerr = [[max(0.0, v - lo) for v, (lo, _hi) in zip(vals, cis)],
-                [max(0.0, hi - v) for v, (_lo, hi) in zip(vals, cis)]]
-        ax.errorbar(vals, [y for y, _r in pts], xerr=xerr, linestyle="none",
+        xerr = [[max(0.0, (1 - lo) - e) for e, (lo, _hi) in zip(errs, cis)],
+                [max(0.0, e - (1 - hi)) for e, (_lo, hi) in zip(errs, cis)]]
+        ax.errorbar(errs, [y for y, _r in pts], xerr=[xerr[1], xerr[0]], linestyle="none",
                     marker="o", markersize=5, markerfacecolor=mfc, color="#1f4e79",
                     capsize=2.5, elinewidth=0.9, label=series)
+    ax.set_xscale("symlog", linthresh=ONE_ERR, linscale=0.6)
+    tick_match = (1.00, 0.96, 0.92, 0.84, 0.72, 0.44)
+    ax.set_xticks([1 - m for m in tick_match], [f"{m:.2f}" for m in tick_match])
+    ax.set_xlim(0.62, -0.004)   # decreasing: best (match 1.00) on the right
     ax.set_yticks(list(ys), [n for n, _r in rows])
     # models on y: _style_axes' score-axis ylim clamp would crop past row 1
     ax.set_ylim(len(rows) - 0.5, -0.5)   # decreasing limits: best model on top
-    ax.set_xlim(0, 1.02)
-    ax.set_xlabel("match (Wilson 95% interval, n=25)")
-    ax.set_title("s5_chain: overlapping intervals are not an ordering", fontsize=10, loc="left")
+    ax.set_xlabel("match (log-spaced toward 1.00)")
+    ax.set_title("s5_chain", fontsize=10, loc="left")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.grid(True, axis="x", linewidth=0.4, alpha=0.4)
-    ax.legend(loc="lower left", fontsize=8, frameon=False)
+    ax.legend(loc="upper left", fontsize=8, frameon=False)
     fig.tight_layout()
     return _save(fig, out_dir, "fig_bench_headline")
 
