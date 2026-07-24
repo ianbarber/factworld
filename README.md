@@ -35,7 +35,7 @@ Scale any task to stress larger models via explicit difficulty knobs:
 hard = CANONICAL["composite_copy_v2"].scaled(k=64, eval_lengths=(32, 64, 128))
 ```
 
-Floors are first-class rows and marks are plain-language
+Floors are first-class rows and marks are plain-language.
 
 ## Using it
 
@@ -129,19 +129,22 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 ## 2. Benchmarking the frontier
 
-To give an easier view of performance we track one composed task **s5_chain**: non-abelian pointer-map 
-tracking composed with an 8-hop serial dereference in a single task. We report both scores at two lengths, 
-and a token efficiency at a lower length (where models generally all succeed) to demonstrate reasoning efficiency.
+To give an easier view of performance we track one composed task, **s5_chain**: non-abelian
+pointer-map tracking composed with an 8-hop serial dereference in a single task. The table
+reports the match score at two lengths (96 and 128 permutation events), plus completion tokens
+per call on the matched L64 cell — a length nearly every model solves, so token spend compares
+like for like.
 
-Models are run at the recommended reasoning level where applicable (usually xhigh).
+Models run at the highest reasoning effort their endpoint supports (`xhigh`, mapped down where
+the ceiling is `high`). gpt-5.6-sol's native API exposes a further `max` level; its rows use it.
 
-More details in [§4 of the report](reports/factworld-consolidated.md); per-cell Wilson intervals, marks, 
-and figures arein the [rendered feed](docs/benchmark/results.md).
+More details in [§4 of the report](reports/factworld-consolidated.md); per-cell Wilson
+intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.md).
 
 <!-- FRONTIER_TABLE_START -->
 **s5_chain**
 
-| Model | s5_chain @L96 | @L128 | ctok/@L64 |
+| Model | s5_chain @L96 | @L128 | ctok/call @L64 |
 |---|---|---|---|
 | anthropic/claude-fable-5 | 1.00 | 1.00 | 5014 |
 | openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
@@ -193,6 +196,11 @@ and figures arein the [rendered feed](docs/benchmark/results.md).
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
 <!-- FRONTIER_TABLE_END -->
 
+![s5_chain scores with Wilson 95% intervals](docs/benchmark/fig_bench_headline.svg)
+
+Cells are n=25, so the intervals are wide — differences within overlapping bars are not an
+ordering; the token column and the component tables are the tie-breakers.
+
 Marks:
 - `†` visible working or covert reasoning on the canonical attempt.
 - `≤x†` an explicit upper bound (covert reasoning on most calls); neither `⊘` nor `≤x†` participates in orderings.
@@ -203,17 +211,34 @@ Marks:
 - `—ᶠ` gap not interpretable (binding at the object-filter floor).
 - `n/a` cell not run; `—` not applicable to a floor row.
 
+Reading the component tables: **gap** = binding − composed @L16 — how much accuracy vanishes
+when the model must chain the recall step onto the state it just tracked, with the
+state-tracking component held constant. The two floor rows are the shallow baselines every
+instant cell is read against: the *recency heuristic* answers the last event's recipient, and
+the *object-filter floor* filters events to the queried object but guesses among its writes —
+an instant score near 0.41 shows object filtering, not state tracking. In the thinking table,
+chain d128 is a 128-hop pointer chase over 257 agents and s5 @L256 is 256 role-permutation
+events (both described in [the tasks](#1-the-tasks) and [docs/tasks.md](docs/tasks.md)).
+
 ## 3. Exploring the architectures
 
-We can train from-scratch models on the same tasks. Models are trained on task with dense supervision. Currently we explore: 
+We can train from-scratch models on the same tasks (next-token prediction; answer-only
+supervision by default, a staged curriculum for the composite flagship, and dense per-step
+supervision only where it is the measured lever — the s5 and commutative formation results
+below). Currently we explore:
 
-* GDN: GatedDeltaNet, both pure and hybrid models with full and linear attention layers
-* GDP: GatedDeltaProduct, both pure and hybrid model with full and linear attention layers with a different update rule.
-* Transformer: A regular transformer stack
-* FPRM: A weight tied looped transformer with conv layers.
-  
-Comparisons are matched on compute, not parameters (fprm is weight-tied at ~5–11× fewer params),
-at budgets sufficient for the capable configuration to converge.
+* **transformer** — a standard decoder-only stack: the attention baseline.
+* **gdn_pure / gdn_hybrid** — [GatedDeltaNet](https://arxiv.org/abs/2412.06464): gated
+  delta-rule linear attention; *pure* is attention-free, *hybrid* interleaves one full-attention
+  layer per four.
+* **gdp_pure / gdp_hybrid** — [GatedDeltaProduct](https://arxiv.org/abs/2502.10297): the delta
+  rule generalized to a product of Householder transformations per token (n_h=4) — the
+  non-commutative recurrence the state-tracking results turn on; same pure/hybrid split.
+* **fprm** — a weight-tied looped conv+attention block (after Movahedi et al., 2026): one block
+  applied repeatedly, so per-token FLOPs match the transformer at ~5–11× fewer parameters.
+
+Comparisons are matched on compute, not parameters, at budgets sufficient for the capable
+configuration to converge.
 
 - **Recall.** Every architecture aces adjacent 1-hop readout; deferred recall needs product
   recurrence — attention-free `gdp_pure` supplies it, `gdn_pure` fails
@@ -236,9 +261,9 @@ at budgets sufficient for the capable configuration to converge.
   0.82, fprm 0.65 @L16; transformer at chance) — and no run carries it past the training
   lengths.
   
-The table, with evidence per row, is
-[§9 of the report](reports/factworld-consolidated.md); local multi-seed detail and per-leg
-decomposition are §5–§8. Running log:
+The price table — which architectural or training choice buys each element, with per-row
+evidence — is [§9 of the report](reports/factworld-consolidated.md); local multi-seed detail
+and per-leg decomposition are §5–§8. Running log:
 [`docs/experiments/README.md`](docs/experiments/README.md).
 
 ## Reports and prior work
@@ -246,7 +271,7 @@ decomposition are §5–§8. Running log:
 - 📄 [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md) — **the report**:
   the instrument and its validation, the frontier benchmark (FactWorldBench headline, the gap,
   the regime contrast), and the architecture exploration with the price table.
-- 🧪 **Experiments using FactWorld testbed** live under
+- 🧪 **Experiments using FactWorld as a testbed** live under
   [`experiments/`](experiments/):
   [`experiments/mopd/`](experiments/mopd/README.md) — *Multi-teacher On-Policy Distillation*
   (MOPD) on FactWorld: RL-specialise Qwen3-1.7B on two abilities (binding, recall) with a

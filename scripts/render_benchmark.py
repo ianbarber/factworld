@@ -1397,8 +1397,8 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     s5c_lines = []
     s5c = s5_chain_rows(records)
     if s5c:
-        s5c_lines = ["**s5_chain — the headline ranking (non-abelian pointer-map tracking × 8-hop dereference)**", "",
-                     "| Model | s5_chain @L96 | @L128 | ctok/call |",
+        s5c_lines = ["**s5_chain**", "",
+                     "| Model | s5_chain @L96 | @L128 | ctok/call @L64 |",
                      "|---|---|---|---|"]
         for m, score, ext, ctok in s5c:
             s5c_lines.append(f"| {m} | {_readme_compact(score)} | {_readme_compact(ext)} | {ctok} |")
@@ -1926,6 +1926,49 @@ def _fig_chain(records, out_dir, facet, task_label):
                        f"(dotted: {REF_THRESHOLD} reference)")
 
 
+def fig_bench_headline(records, out_dir):
+    """The FactWorldBench noise view: one row per model, s5_chain match at L96
+    (filled) and L128 (open) with Wilson 95% intervals — the visual reading
+    guide for the README table (overlapping intervals are not an ordering)."""
+    order = s5_chain_rows(records)   # table order: L96 desc, L128 desc, ctok asc
+    if not order:
+        return []
+    rows = []
+    for name, *_ in order:
+        recs = {L: stress_cell(records, "s5_chain", name, L, effort="xhigh")
+                for L in (S5_CHAIN_STRESS_LENGTH, S5_CHAIN_EXT_LENGTH)}
+        if all(r is None or majority_finish_length(r) for r in recs.values()):
+            continue
+        rows.append((name, recs))
+    fig, ax = plt.subplots(figsize=(7.2, 0.42 * len(rows) + 1.2))
+    ys = range(len(rows))
+    for series, (length, dy, mfc) in {
+        "@L96": (S5_CHAIN_STRESS_LENGTH, -0.13, None),
+        "@L128": (S5_CHAIN_EXT_LENGTH, 0.13, "white"),
+    }.items():
+        pts = [(y + dy, recs[length]) for y, (_n, recs) in zip(ys, rows)
+               if recs.get(length) is not None and not majority_finish_length(recs[length])]
+        vals = [canonical_relaxed(r) for _y, r in pts]
+        cis = [_ci(r) for _y, r in pts]
+        xerr = [[max(0.0, v - lo) for v, (lo, _hi) in zip(vals, cis)],
+                [max(0.0, hi - v) for v, (_lo, hi) in zip(vals, cis)]]
+        ax.errorbar(vals, [y for y, _r in pts], xerr=xerr, linestyle="none",
+                    marker="o", markersize=5, markerfacecolor=mfc, color="#1f4e79",
+                    capsize=2.5, elinewidth=0.9, label=series)
+    ax.set_yticks(list(ys), [n for n, _r in rows])
+    # models on y: _style_axes' score-axis ylim clamp would crop past row 1
+    ax.set_ylim(len(rows) - 0.5, -0.5)   # decreasing limits: best model on top
+    ax.set_xlim(0, 1.02)
+    ax.set_xlabel("match (Wilson 95% interval, n=25)")
+    ax.set_title("s5_chain: overlapping intervals are not an ordering", fontsize=10, loc="left")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.grid(True, axis="x", linewidth=0.4, alpha=0.4)
+    ax.legend(loc="lower left", fontsize=8, frameon=False)
+    fig.tight_layout()
+    return _save(fig, out_dir, "fig_bench_headline")
+
+
 def fig_chain_depth(records, out_dir):
     return _fig_chain(records, out_dir, "chain_depth",
                       f"chain_v1 (depths < k={CHAIN_CYCLE_K})")
@@ -2283,7 +2326,8 @@ def fig_profiles(records, out_dir):
 
 FIGURES = [fig_zero_budget, fig_profiles_instant, fig_profiles_thinking,
            fig_dose_response, fig_composite_length, fig_s5_stress,
-           fig_s5_chain, fig_chain_depth, fig_chain_nowrap, fig_decomposition]
+           fig_s5_chain, fig_bench_headline, fig_chain_depth, fig_chain_nowrap,
+           fig_decomposition]
 
 
 # --- html ---------------------------------------------------------------------
