@@ -563,15 +563,15 @@ def committed_answer(pred: str) -> str:
          content token, that token — covers prose commitments ("... ends at **g15**.").
 
     A last line with neither shape (map-dump rows, truncated working) commits to nothing
-    and the prediction is scored as-is. Single-line predictions — every clean API answer
-    and every local-model emission (whose decoded streams carry no newlines) — pass
-    through untouched, so the canonical metric is unchanged wherever the old behavior was
-    correct."""
+    and the prediction is scored as-is. Both rules apply to single-line predictions too —
+    sonnet emits its whole dereference as one line ending in the bolded answer
+    ("g5 → g8 → ... → **g7**") — and are inert for clean answers: a bare "g5." reduces to
+    its own token, and multi-token spans commit nothing, so the canonical metric is
+    unchanged wherever the old behavior was correct. (Local eval never routes here:
+    ``extract_commit`` is a reasoning-arm setting.)"""
     import re
     from .render import Renderer
     body = pred.strip()
-    if "\n" not in body:
-        return pred
     lines = [ln for ln in body.splitlines()
              if ln.strip() and not ln.strip().startswith("```")]
     if not lines:

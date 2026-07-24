@@ -76,9 +76,12 @@ def test_committed_answer_extraction():
     # truncated working: no single-token line, no credit
     cut = "tracking the map:\n**Following the 8-h"
     assert committed_answer(cut) == cut
-    # single-line answers (API clean form and local streams) pass through untouched
-    assert committed_answer("g5.") == "g5."
+    # single-line: clean answers are score-invariant; multi-token streams commit nothing
+    assert score_relaxed(committed_answer("g5."), "g5.") == 1
     assert committed_answer("g3. <eos> g7 g0") == "g3. <eos> g7 g0"
+    # single-line hop path ending in the bolded answer (real sonnet L128 shape)
+    hop = "g5 → g8 → g0 → g2 → g14 → g15 → g6 → g13 → **g7**"
+    assert committed_answer(hop) == "g7"
     # prose commitment (real muse shape): last emphasized span carries the answer
     prose = "trace...\nso 8 applications of `a0` starting from `g14` ends at **g15** ."
     assert committed_answer(prose) == "g15"

@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-23 01:59 UTC from `results/benchmark/history.jsonl` (741 latest cells).
+Generated 2026-07-24 01:47 UTC from `results/benchmark/history.jsonl` (746 latest cells).
 
 ## Settings
 
@@ -136,14 +136,14 @@ s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map,
 | x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
 | moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.96 @98,304tok (raised budget) | 0.96 | 17071 |
 | muse-spark-1.1 | 0.96 | 0.92 | 12484 |
+| anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| anthropic/claude-sonnet-5 | 0.88 | — | 12729 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
-| openai/gpt-5.6-sol | 0.72 | — | 2322 |
-| qwen/qwen3.7-max | 0.72 | — | 12588 |
-| google/gemini-3.5-flash | 0.68 | — | 19366 |
+| openai/gpt-5.6-sol | 0.72 | 0.68 | 2322 |
+| qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
+| google/gemini-3.5-flash | 0.68 | 0.60 | 19366 |
 
 The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the d128 cell is k=257). `chain_v2` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
@@ -293,14 +293,15 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.88 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.88 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.88 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 32 | effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=high | 25 | 0.72 [0.52, 0.86] | 0.76 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.96 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=high | 25 | 0.76 [0.57, 0.89] | 0.76 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=high | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
-| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.92 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
@@ -428,6 +429,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | google/gemini-3.5-flash | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.68 [0.48, 0.83] | 0.68 | — |
+| google/gemini-3.5-flash | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.60 [0.41, 0.77] | 0.60 | — |
 | google/gemini-3.5-flash | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | google/gemini-3.5-flash | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | google/gemini-3.5-flash | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
@@ -523,10 +525,10 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.20 [0.09, 0.39] | 0.40 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 0.96 [0.80, 0.99] | 1.00 | — |
+| muse-spark-1.1 | commutative | commutative_v1 | 64 | effort=high | 25 | 0.28 [0.14, 0.48] | 0.40 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 32 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
-| muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.92 [0.75, 0.98] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=high | 25 | 0.96 [0.80, 0.99] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -568,7 +570,8 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.80 [0.61, 0.91] | 0.80 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 0.44 [0.27, 0.63] | 0.44 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 0.56 [0.37, 0.73] | 0.56 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.36 [0.20, 0.55] | 0.36 | — |
@@ -687,6 +690,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.48 [0.30, 0.67] | 0.48 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.64 [0.45, 0.80] | 0.64 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.72 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.68 [0.48, 0.83] | 0.68 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
@@ -736,6 +740,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | qwen/qwen3.7-max | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.64 [0.45, 0.80] | 0.64 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.72 [0.52, 0.86] | 0.72 | — |
+| qwen/qwen3.7-max | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.44 [0.27, 0.63] | 0.44 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.88 [0.70, 0.96] | 0.88 | — |
@@ -958,6 +963,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 33324 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=high | 0.000 | 0 | 0 | 51483 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 45586 | stop:25 | — |
+| anthropic/claude-sonnet-5 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 68590 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 6510 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 13050 | stop:25 | — |
 | anthropic/claude-sonnet-5 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.040 | 0 | 1 | 28952 | error:1, stop:24 | — |
@@ -1085,6 +1091,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | google/gemini-3.5-flash | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 261298 | stop:25 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 484090 | stop:25 | — |
 | google/gemini-3.5-flash | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 671830 | stop:25 | — |
+| google/gemini-3.5-flash | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 710496 | stop:25 | — |
 | google/gemini-3.5-flash | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 56548 | stop:25 | — |
 | google/gemini-3.5-flash | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 102124 | stop:25 | — |
 | google/gemini-3.5-flash | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 141222 | length:2, stop:23 | — |
@@ -1225,7 +1232,8 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v2 | 96 | effort=high | 0.160 | 0 | 0 | 501304 | length:4, stop:21 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 194394 | stop:25 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.160 | 0 | 0 | 339009 | length:2, stop:23 | — |
-| nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.160 | 0 | 0 | 553716 | length:3, stop:22 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 523532 | stop:25 | — |
+| nvidia/nemotron-3-ultra-550b-a55b | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 642450 | stop:25 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.560 | 0 | 0 | 27679 | stop:11 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.440 | 0 | 0 | 77065 | length:1, stop:14 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.600 | 0 | 0 | 136506 | length:10, stop:9 | — |
@@ -1344,6 +1352,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 22534 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 57158 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 103779 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 144307 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 66218 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 141584 | stop:25 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
@@ -1393,6 +1402,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | qwen/qwen3.7-max | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 215999 | stop:25 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 314522 | stop:25 | — |
 | qwen/qwen3.7-max | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 434606 | stop:25 | — |
+| qwen/qwen3.7-max | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 439884 | stop:25 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 42853 | stop:25 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 80913 | stop:25 | — |
 | qwen/qwen3.7-max | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 129591 | stop:25 | — |
@@ -1525,7 +1535,7 @@ These cells ran chain_v1 past its design gate (depth >= k=6, so the pointer cycl
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 8 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 12 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 16 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
-| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 24 | effort=high | 30 | 0.97 [0.83, 0.99] | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
+| anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 24 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 32 | effort=high | 30 | 0.97 [0.83, 0.99] | 0.97 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 48 | effort=high | 30 | 0.67 [0.49, 0.81] | 0.67 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |
 | anthropic/claude-sonnet-5 | chain_depth | chain_v1 | 64 | effort=high | 30 | 0.03 [0.01, 0.17] | 0.03 | INVALID (k=6 cycle wrap — task redesigned as chain_nowrap) |

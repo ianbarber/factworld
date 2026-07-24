@@ -180,39 +180,42 @@ cell prices completion tokens per call:
 | x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
 | moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.96ʳ | 0.96 | 17071 |
 | muse-spark-1.1 | 0.96 | 0.92 | 12484 |
+| anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| anthropic/claude-sonnet-5 | 0.88 | — | 12729 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
-| openai/gpt-5.6-sol | 0.72 | — | 2322 |
-| qwen/qwen3.7-max | 0.72 | — | 12588 |
-| google/gemini-3.5-flash | 0.68 | — | 19366 |
+| openai/gpt-5.6-sol | 0.72 | 0.68 | 2322 |
+| qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
+| google/gemini-3.5-flash | 0.68 | 0.60 | 19366 |
 
 Scores are the committed answer, located structurally — never by demanding a rigid output
 format. An endpoint that spills its working into the visible completion (sonnet and muse at
 high efforts emit hop-by-hop traces) is scored on what it commits to at the end — a
-single-token final line, a prose statement's emphasized answer ("... ends at **g15**."), or a
-lone token in a trailing code fence — never on the working's first tokens, and never on the
-instant arms, where visible working is a protocol leak rather than an answer
-(`tasks.committed_answer`; contains stays the published diagnostic, and a cell whose contains
-exceeds its match by ≥0.08 gets its predictions read before its number is believed).
+single-token final line, an emphasized answer closing a prose statement or the dereference
+line itself ("g5 → g8 → ... → **g7**"), or a lone token in a trailing code fence — never on
+the working's first tokens, and never on the instant arms, where visible working is a protocol
+leak rather than an answer (`tasks.committed_answer`; contains stays the published diagnostic,
+and a cell whose contains exceeds its match by ≥0.08 gets its predictions read before its
+number is believed).
 
-The task differentiates at both ends. At L96 the bottom five spread 0.68–0.88: gpt-5.6-sol
-solves both components in isolation (chain d128 0.88, s5 @L256 0.92) yet reads 0.72 on their
-composition. At L128 the 1.00 cluster splits: gpt-5.5 alone holds 1.00, grok/opus/deepseek
-hold 0.96, while kimi falls to 0.68 (16% of its calls truncate even at a 98,304-token budget —
-token profligacy is part of the failure) and glm to 0.80. Tokens-to-solve separates what score
-cannot: the L64 spend among the top cluster spans 7.7k (grok) to 19.2k (kimi) per call for
-indistinguishable L96 scores — held composite state is rented by the token, and the rent
-differs 2.5× by model.
+The two lengths divide the labor. L96 separates a 0.92–1.00 band from a 0.68–0.72 tail:
+gpt-5.6-sol solves both components in isolation (chain d128 0.88, s5 @L256 0.92) yet reads
+0.72 on their composition. L128 spreads the full roster 0.44–1.00: gpt-5.5 alone holds 1.00;
+qwen halves to 0.44 and gemini drops to 0.60; kimi falls from a perfect L96 to 0.68 — 16% of
+its calls truncate even at a 98,304-token budget, so token profligacy is part of the failure.
+The ʳ on nemotron's L96 is a single raised-budget rerun (98,304 tokens): at the planned budget
+it read 0.84 with 12% truncation — budget censoring, not capability — and at L128 it holds
+0.96 clean. Tokens-to-solve separates what score cannot: the L64 spend among the top cluster
+spans 7.7k (grok) to 19.2k (kimi) per call for indistinguishable L96 scores — held composite
+state is rented by the token, and the rent differs 2.5× by model.
 
 Effort is requested, not enforced: gpt-5.6-sol at requested xhigh spends 4× fewer reasoning
 tokens than gpt-5.5 (2.3k vs 9.2k per call at L64), and its length curve is the roster's only
 inverted one (0.48 @L32 → 0.72 @L96, reasoning spend scaling with prompt length) — it fails
 short items it would likely solve with the thinking it grants longer ones. Its failures are
 genuine wrong answers (match = contains), not a scoring artifact. A controlled high-vs-xhigh
-probe on sonnet shows no effort effect on identical items (0.84 vs 0.88 at L96). The live
+probe on sonnet shows no effort effect on identical items (0.84 high vs 0.92 xhigh at L96, within the n=25 interval). The live
 table, with intervals and marks, renders in the feed and in the README headline block.
 
 ### 4.2 The composed cell and the gap (instant regime)
@@ -588,7 +591,7 @@ differentiates by score at both ends and by tokens-to-solve within the top clust
 with reasoning off the composed cell shows most of the roster holds little of it in weights,
 with an ordering the thinking headline does not predict (gpt-5.5 tops one and pays the largest
 gap on the other — §4.2). The headline is a thinking-regime axis: it correlates only weakly
-with the pinned intuitive prior over the roster (Spearman +0.47 at L96, against +0.81 for the
+with the pinned intuitive prior over the roster (Spearman +0.29 at L96, against +0.81 for the
 in-weights binding axis) — like the other thinking axes, it measures something intuition does
 not already contain.
 - **Composition responds to reasoning, monotonically.** Effort moves the composed cell from

@@ -179,14 +179,14 @@ in the [rendered feed](docs/benchmark/results.md).
 | x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
 | moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.96ʳ | 0.96 | 17071 |
 | muse-spark-1.1 | 0.96 | 0.92 | 12484 |
+| anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| anthropic/claude-sonnet-5 | 0.88 | — | 12729 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.84 | — | 17071 |
-| openai/gpt-5.6-sol | 0.72 | — | 2322 |
-| qwen/qwen3.7-max | 0.72 | — | 12588 |
-| google/gemini-3.5-flash | 0.68 | — | 19366 |
+| openai/gpt-5.6-sol | 0.72 | 0.68 | 2322 |
+| qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
+| google/gemini-3.5-flash | 0.68 | 0.60 | 19366 |
 
 **Component: instant composition (reasoning off, answer contract)**
 
