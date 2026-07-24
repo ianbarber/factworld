@@ -169,8 +169,8 @@ separates the top cluster, and the matched L64 cell prices completion tokens per
 | anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| openai/gpt-5.6-sol | SOL96 | SOL128 | SOLCTOK |
 | qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
+| openai/gpt-5.6-sol | 0.60 | 0.80 | 2444 |
 
 L96 separates a 0.92 to 1.00 band from a tail. L128 spreads the roster from 0.44 to 1.00: fable and gpt-5.5 hold 1.00, qwen halves to 0.44, glm drops to
 0.80. The ʳ on nemotron's L96 is a single raised-budget rerun at 98,304 tokens: at the planned
