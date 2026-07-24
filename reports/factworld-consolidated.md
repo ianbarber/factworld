@@ -312,12 +312,13 @@ s5@128 ctok column is completion spend on the matched L128 cell every model runs
 | muse-spark-1.1 | 0.96 | 1.00 @32,768tok | 9704 |
 | anthropic/claude-sonnet-5 | 1.00 | 1.00 @32,768tok | 11866 |
 | anthropic/claude-opus-4.8 | 1.00 | 1.00 @32,768tok | 12683 |
+| anthropic/claude-fable-5 | 1.00 | 0.96 | 6405 |
 | openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
 | openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
-| moonshotai/kimi-k2.6 | 1.00‡ | 0.88 | 17418 |
+| google/gemini-3.6-flash | 0.96 | 0.84 | 8234 |
+| moonshotai/kimi-k3 | 1.00 | 0.80 @32,768tok | 11355 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| google/gemini-3.5-flash | 1.00 | 0.52 | 11022 |
 | deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
 

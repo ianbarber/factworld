@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-24 14:15 UTC from `results/benchmark/history.jsonl` (801 latest cells).
+Generated 2026-07-24 15:09 UTC from `results/benchmark/history.jsonl` (801 latest cells).
 
 ## Settings
 
@@ -101,7 +101,7 @@ Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 | z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
 | google/gemini-3.6-flash | 0.96 | 0.84 | 8234 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| moonshotai/kimi-k3 | 1.00 | 0.52 | 11355 |
+| moonshotai/kimi-k3 | 1.00 | 0.80 @32,768tok (raised budget) | 11355 |
 | deepseek/deepseek-v4-pro | 1.00 | ⊘ >budget | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ >budget | 12250 |
 
@@ -125,7 +125,7 @@ S5 efficiency ranking: models sorted by s5 @L256 score, then by s5@128 completio
 | z-ai/glm-5.2 | 0.88 | 6282 |
 | google/gemini-3.6-flash | 0.84 | 8234 |
 | qwen/qwen3.7-max | 0.80 | 7904 |
-| moonshotai/kimi-k3 | 0.52 | 11355 |
+| moonshotai/kimi-k3 | 0.80 @32,768tok (raised budget) | 11355 |
 | deepseek/deepseek-v4-pro | ⊘ >budget | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | ⊘ >budget | 12250 |
 
@@ -569,7 +569,7 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | moonshotai/kimi-k3 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
-| moonshotai/kimi-k3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.52 [0.33, 0.70] | 0.52 | — |
+| moonshotai/kimi-k3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.80 [0.61, 0.91] | 0.80 | — |
 | moonshotai/kimi-k3 | sanity | conflict_v1 | 4 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | moonshotai/kimi-k3 | sanity | recall_copy_v1 | 6 | effort=none | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
 | moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.65 [0.55, 0.74] | — | — |
@@ -1286,7 +1286,7 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 403973 | stop:25 | — |
 | moonshotai/kimi-k3 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 474233 | stop:25 | — |
 | moonshotai/kimi-k3 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 283452 | length:1, stop:24 | — |
-| moonshotai/kimi-k3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.480 | 0 | 0 | 367606 | length:12, stop:13 | — |
+| moonshotai/kimi-k3 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.160 | 0 | 0 | 510303 | length:4, stop:21 | — |
 | moonshotai/kimi-k3 | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | moonshotai/kimi-k3 | sanity | recall_copy_v1 | 6 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
 | moonshotai/kimi-k3 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.000 | 0 | 0 | 0 | stop:100 | — |
