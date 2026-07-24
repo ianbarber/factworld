@@ -157,8 +157,8 @@ intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.
 | anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| openai/gpt-5.6-sol | 0.84 | 0.80 | 4966 |
 | qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
+| openai/gpt-5.6-sol | 0.60 | 0.80 | 2444 |
 
 **Component: instant composition (reasoning off, answer contract)**
 
