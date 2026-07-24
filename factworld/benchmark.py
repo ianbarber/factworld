@@ -102,9 +102,20 @@ MODELS = {
     "anthropic/claude-sonnet-5": {
         "tier": "frontier_pair", "prompt_price_per_M": 2.0,
         "completion_price_per_M": 10.0, "open_weights": False},
+    # Routed directly to the OpenAI API since 2026-07-18 (same vendor serving as
+    # the prior OpenRouter route; switched when the OpenRouter account exhausted
+    # its credits mid-battery). Same direct-endpoint pattern as gpt-5.6-sol.
     "openai/gpt-5.5": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
-        "completion_price_per_M": 30.0, "open_weights": False},
+        "completion_price_per_M": 30.0, "open_weights": False,
+        "base_url": "https://api.openai.com/v1",
+        "api_key_env": "OPENAI_API_KEY",
+        "model_name": "gpt-5.5",
+        "max_completion_tokens": True,
+        "reasoning_model": True,
+        "supports_reasoning_effort": False,
+        "reasoning_effort_values": {"low": "low", "medium": "medium", "high": "high",
+                                     "xhigh": "xhigh", "max": "max"}},
     # ADDED 2026-07-12 (issue #15). Pricing verified against
     # https://openrouter.ai/api/v1/models 2026-07-12 ($5/$30 per M; the -pro
     # variant is the same price and NOT what we run). effort=none probe clean:
@@ -362,14 +373,19 @@ FACETS = {
     "commutative": {
         "task": "commutative_v1", "lengths": (64,), "n": 25,
         "efforts": "on"},
-    # EXPERIMENTAL (owner-approved 2026-07-16): s5_chain — non-abelian pointer-map
-    # state tracking composed with serial dereference. length = number of swap/cycle
-    # events; chain depth is fixed at 8 hops (k=16 agents). Prototype facet for
-    # calibration; no renderer section reads it yet.
+    # s5_chain — THE headline composite stressor: non-abelian pointer-map state
+    # tracking composed with an 8-hop serial dereference (k=16 agents; length =
+    # number of swap/cycle events). Runs the distinct_path-gated v3 stream (echo
+    # and fixed-hop floors 0, chance 1/16). Protocol: every model at its maximum
+    # supported reasoning effort (xhigh; OpenRouter maps down to high where xhigh
+    # is unsupported). Per-length budgets are sized so finish=length truncation —
+    # scored as wrong — stays a rounding error, not a ranking confound (deepseek/
+    # nemotron/glm truncated 16-28% of calls at the old 16-24k budgets).
+    # Rendered by render_benchmark.s5_chain_rows (README + report ranking table).
     "s5_chain": {
-        "task": "s5_chain_v2", "lengths": (32, 64, 96), "n": 25,
-        "efforts": "xhigh", "max_new_tokens": 16384,
-        "budgets": {32: 16384, 64: 24576, 96: 32768}},
+        "task": "s5_chain_v3", "lengths": (32, 64, 96, 128), "n": 25,
+        "efforts": "xhigh", "max_new_tokens": 32768,
+        "budgets": {32: 32768, 64: 49152, 96: 65536, 128: 98304}},
     # EXPERIMENTAL (issue #16a, owner-approved 2026-07-11): gap stability — the
     # composed and binding_only legs at a SECOND operating point (L32, instant,
     # contract, n=50) for the gap-interpretable models, to test whether the

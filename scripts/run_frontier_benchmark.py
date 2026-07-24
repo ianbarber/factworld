@@ -385,12 +385,18 @@ def parse_budget_overrides(specs: list[str] | None) -> dict[tuple[str, int], int
 
 def build_plan(models: list[str], facets: list[str] | None, n_scale: float,
                lengths: list[int] | None = None,
-               budget_overrides: dict[tuple[str, int], int] | None = None) -> dict[str, list[dict]]:
+               budget_overrides: dict[tuple[str, int], int] | None = None,
+               effort_override: str | None = None) -> dict[str, list[dict]]:
     """Per-model cell lists with the scouting multiplier applied (n floor of 5).
 
     ``lengths`` (from --lengths) keeps only cells at those lengths/depths;
     ``budget_overrides`` (from --budget-override) replaces matching cells'
     max_new_tokens — see parse_budget_overrides for the resume-key semantics.
+    ``effort_override`` (from --effort-override) replaces the effort arm on
+    every thinking cell in the plan — for off-protocol effort probes (e.g. the
+    s5_chain high-vs-xhigh check). Effort is part of the settings hash, so
+    overridden cells get fresh resume keys, and renderer surfaces that pin
+    their facet's canonical arm never read them.
     """
     plan = {}
     for model in models:
@@ -403,6 +409,8 @@ def build_plan(models: list[str], facets: list[str] | None, n_scale: float,
                 override = budget_overrides.get((c["facet"], c["length"]))
                 if override is not None:
                     c["settings"]["max_new_tokens"] = override
+            if effort_override and c["settings"].get("effort") in REASONING_EFFORTS:
+                c["settings"]["effort"] = effort_override
         plan[model] = cells
     return plan
 
@@ -643,6 +651,9 @@ def _run_task_cell(backend, cell, n) -> tuple[dict, list[dict], list[str]]:
         backend, spec, split="test", n=n, length=cell["length"],
         max_new_tokens=settings["max_new_tokens"], n_shot=settings["n_shot"],
         stop_at=settings["stop_at"],
+        # Reasoning arms score the committed final line of a working-spilling
+        # emission; instant arms never do (visible working is a leak there).
+        extract_commit=settings.get("effort") in REASONING_EFFORTS,
     )
     metrics = {name: result["metrics"][name]["overall"]
                for name in ("relaxed", "exact", "contains", "last_n")}
@@ -941,6 +952,11 @@ def main():
                          "budget is part of the settings hash, so overridden cells "
                          "get fresh resume keys and re-run; the renderer's latest-ts "
                          "dedup then displays the raised-budget record.")
+    ap.add_argument("--effort-override", default=None, dest="effort_override",
+                    choices=list(REASONING_EFFORTS),
+                    help="Replace the effort arm on every planned thinking cell "
+                         "(off-protocol effort probes; fresh resume keys, never "
+                         "read by effort-pinned renderer surfaces).")
     ap.add_argument("--run-id", default=None, dest="run_id",
                     help="Run identifier (default: bench_<UTC stamp>).")
     ap.add_argument("--history", default=os.path.join(REPO, "results", "benchmark", "history.jsonl"),
@@ -961,7 +977,8 @@ def main():
 
     run_id = a.run_id or f"bench_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
     plan = build_plan(a.models, a.facets, a.n_scale, lengths=a.lengths,
-                      budget_overrides=parse_budget_overrides(a.budget_override))
+                      budget_overrides=parse_budget_overrides(a.budget_override),
+                      effort_override=a.effort_override)
     done = history_keys(a.history)
     n_done = sum(1 for m, cells in plan.items() for c in cells
                  if should_skip(m, c, done, a.force, a.canary))

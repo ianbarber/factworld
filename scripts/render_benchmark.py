@@ -650,16 +650,19 @@ def _latest_chain_task(records, facet):
 
 
 def stress_cell(records, facet, model, length,
-                exclude_renderings=("abstract_stated",)):
+                exclude_renderings=("abstract_stated",), effort=None):
     """The model's thinking state-stress cell at (facet, length) — canonical arm
     only (breadth/fixed-k rungs are separate arms), abstract-token floor rendering
     and wrapped chain_depth cells excluded. None when the cell never ran.
 
     Only records for the facet's CURRENT task version are used, so retired
-    chain_v1/s5_chain_v1 history does not shadow the new chain_v2/s5_chain_v2 results."""
+    chain_v1/s5_chain_v1-v2 history does not shadow the current chain_v2/s5_chain_v3 results.
+    ``effort`` pins the facet's canonical effort arm (e.g. s5_chain's xhigh), so
+    off-protocol effort probes in history never shadow the headline cell."""
     cells = [r for r in by_facet(records, facet)
              if r["model"] == model and r.get("length") == length
              and _settings(r).get("rendering") not in exclude_renderings
+             and (effort is None or _settings(r).get("effort") == effort)
              and not chain_invalid(r)
              and canonical_arm(r)]
     if not cells:
@@ -673,10 +676,16 @@ def stress_cell(records, facet, model, length,
 
 
 def _raised_budget_suffix(rec) -> str:
-    """' @32,768tok (raised budget)' for a thinking cell rerun above the standard
-    budget (--budget-override); '' otherwise."""
+    """' @32,768tok (raised budget)' for a thinking cell rerun above its PLANNED
+    budget (--budget-override); '' otherwise. The plan is the facet's per-length
+    budget (falling back to its max_new_tokens, then THINKING_BUDGET), so facets
+    whose standard budgets exceed 16,384 — s5_chain sizes budgets so truncation
+    stays a rounding error — do not mark every cell raised."""
     cap = _settings(rec).get("max_new_tokens")
-    if cap and cap > THINKING_BUDGET:
+    from factworld.benchmark import FACETS
+    fc = FACETS.get(rec.get("facet"), {})
+    planned = fc.get("budgets", {}).get(rec.get("length")) or fc.get("max_new_tokens") or THINKING_BUDGET
+    if cap and cap > planned:
         return f" @{cap:,}tok (raised budget)"
     return ""
 
@@ -975,33 +984,40 @@ def s5_efficiency_rows(records):
 
 
 S5_CHAIN_STRESS_LENGTH = 96
+S5_CHAIN_EXT_LENGTH = 128
 S5_CHAIN_EFF_LENGTH = 64
 
 
 def s5_chain_rows(records):
     """s5_chain ranking: the single composite stressor (non-abelian pointer-map state
-    tracking composed with serial dereference). Sorted by s5_chain @L96 score
-    descending, then by s5_chain@64 ctok per call ascending (the matched L64 cell
-    every current-roster model runs)."""
+    tracking composed with serial dereference). Sorted by the @L96 score (the full-roster
+    cell), then by the @L128 top-cluster separator, then by s5_chain@64 ctok per call
+    ascending (the matched L64 cell every current-roster model runs). Models without an
+    L128 cell render — there."""
     rows = []
     for m in roster_models(records):
-        score_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_STRESS_LENGTH)
-        eff_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_EFF_LENGTH)
+        score_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_STRESS_LENGTH, effort="xhigh")
+        ext_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_EXT_LENGTH, effort="xhigh")
+        eff_rec = stress_cell(records, "s5_chain", m, S5_CHAIN_EFF_LENGTH, effort="xhigh")
         if score_rec is None and eff_rec is None:
             continue
         score = stress_value_str(score_rec)
+        ext = "—" if ext_rec is None else stress_value_str(ext_rec)
         n = eff_rec.get("n") or 0
         ctok = (eff_rec.get("usage") or {}).get("completion_tokens") if eff_rec else None
         ctok_per = ctok / n if n > 0 and ctok is not None else None
         score_num = _numeric_value(score)
+        ext_num = _numeric_value(ext)
         censored = score.startswith(CENSORED_CELL)
         rows.append((
             (1 if censored else 0,
              -(score_num if score_num is not None else 0),
+             -(ext_num if ext_num is not None else -1),
              ctok_per if ctok_per is not None else float("inf"),
              m),
             [m,
              score,
+             ext,
              "n/a" if ctok_per is None else f"{ctok_per:.0f}"],
         ))
     rows.sort(key=lambda r: r[0])
@@ -1363,9 +1379,10 @@ def _readme_table_lines(columns, keep, rows):
 
 def update_readme_frontier(records, readme_path=None) -> bool:
     """Rewrite the README's marked frontier block (README_FRONTIER_START/_END)
-    from the rendered records. The block now contains two tables: instant and
-    thinking. No-op — returns False, file untouched — when the file or either
-    marker is absent, so histories rendered outside the repo never grow tables."""
+    from the rendered records: the s5_chain headline ranking first, then the
+    component tables (instant composition, thinking state stress). No-op —
+    returns False, file untouched — when the file or either marker is absent,
+    so histories rendered outside the repo never grow tables."""
     if readme_path is None:
         readme_path = os.path.join(REPO, "README.md")
     if not os.path.exists(readme_path):
@@ -1377,14 +1394,23 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     if start < 0 or end < start:
         return False
     rows = list(headline_rows(records))
+    s5c_lines = []
+    s5c = s5_chain_rows(records)
+    if s5c:
+        s5c_lines = ["**s5_chain — the headline ranking (non-abelian pointer-map tracking × 8-hop dereference)**", "",
+                     "| Model | s5_chain @L96 | @L128 | ctok/call |",
+                     "|---|---|---|---|"]
+        for m, score, ext, ctok in s5c:
+            s5c_lines.append(f"| {m} | {_readme_compact(score)} | {_readme_compact(ext)} | {ctok} |")
+        s5c_lines.append("")
+    instant_lines = ["**Component: instant composition (reasoning off, answer contract)**", ""]
     instant_rows = [r for r in sort_instant_rows(rows) if not instant_excluded(r[0])]
-    instant_lines = ["**Instant composition (reasoning off, answer contract)**", ""]
     instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP,
                                           instant_rows)
-    thinking_lines = ["", "**Thinking state-stress (reasoning on)**", ""]
+    thinking_lines = ["", "**Components: thinking state stress (reasoning on)**", ""]
     thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP,
                                            sort_thinking_rows(rows))
-    lines = instant_lines + thinking_lines
+    lines = s5c_lines + instant_lines + thinking_lines
     block = README_FRONTIER_START + "\n" + "\n".join(lines) + "\n" + README_FRONTIER_END
     new = text[:start] + block + text[end + len(README_FRONTIER_END):]
     if new != text:
@@ -1512,15 +1538,18 @@ def write_results_md(records, out_path, history_path):
     s5c = s5_chain_rows(records)
     if s5c:
         lines += [
-            "## s5_chain ranking", "",
-            "s5_chain is the single composite stressor: k=16 agents with an a0 pointer map, "
+            "## s5_chain ranking (headline)", "",
+            "s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map, "
             "L order-sensitive swap/cycle events on the pointer targets, then an 8-hop serial "
-            "dereference query (`what is a0 of ... of gX? (8 hops)`). Sorted by the @L96 score, "
-            "then by completion tokens per call on the matched @L64 cell. The echo-start floor "
-            "(answer the queried agent) is 0.16 at L32 and 0.20 at L64/L96 on these items.",
+            "dereference query (`what is a0 of ... of gX? (8 hops)`). Every item is gated so the "
+            "query path visits 9 distinct agents: answering the queried agent, or any fixed hop, "
+            "scores exactly 0, and chance is 1/16. Protocol: maximum supported reasoning effort "
+            "(xhigh), budgets sized so truncation stays a rounding error, n=25 per cell. Sorted "
+            "by the @L96 score (the full-roster cell), then by the @L128 top-cluster separator, "
+            "then by completion tokens per call on the matched @L64 cell.",
             "",
-            "| Model | s5_chain @L96 | s5_chain@64 ctok/call |",
-            "|---|---|---|"]
+            "| Model | s5_chain @L96 | @L128 | s5_chain@64 ctok/call |",
+            "|---|---|---|---|"]
         for r in s5c:
             lines.append("| " + " | ".join(r) + " |")
         lines.append("")
@@ -1870,6 +1899,20 @@ def fig_s5_stress(records, out_dir):
     return _stress_fig(records, out_dir, "s5_concrete", "fig_s5_horizon",
                        "permutation sequence length (log scale)",
                        "s5_concrete (thinking): match score vs length "
+                       f"(dotted: {REF_THRESHOLD} reference)")
+
+
+def fig_s5_chain(records, out_dir):
+    """The headline figure: s5_chain score vs event-stream length, current task
+    version at the facet's canonical xhigh arm only (retired-stream and
+    off-protocol effort-probe cells excluded)."""
+    from factworld.benchmark import FACETS
+    task = FACETS.get("s5_chain", {}).get("task")
+    mine = [r for r in records
+            if r.get("task") == task and _settings(r).get("effort") == "xhigh"]
+    return _stress_fig(mine, out_dir, "s5_chain", "fig_s5_chain",
+                       "permutation events before the 8-hop dereference (log scale)",
+                       "s5_chain (headline): match score vs length "
                        f"(dotted: {REF_THRESHOLD} reference)")
 
 
@@ -2240,7 +2283,7 @@ def fig_profiles(records, out_dir):
 
 FIGURES = [fig_zero_budget, fig_profiles_instant, fig_profiles_thinking,
            fig_dose_response, fig_composite_length, fig_s5_stress,
-           fig_chain_depth, fig_chain_nowrap, fig_decomposition]
+           fig_s5_chain, fig_chain_depth, fig_chain_nowrap, fig_decomposition]
 
 
 # --- html ---------------------------------------------------------------------
@@ -2377,13 +2420,15 @@ def write_index_html(records, out_dir, svg_paths, history_path):
     s5c_html = ""
     if s5c_rows:
         s5c_html = (
-            "<h3>s5_chain ranking</h3>\n"
-            '<p class="small">s5_chain is the single composite stressor: k=16 agents with an a0 '
+            "<h3>s5_chain ranking (headline)</h3>\n"
+            '<p class="small">s5_chain is the headline composite stressor: k=16 agents with an a0 '
             "pointer map, L order-sensitive swap/cycle events on the pointer targets, then an "
-            "8-hop serial dereference query. Sorted by the @L96 score, then by completion tokens "
-            "per call on the matched @L64 cell. The echo-start floor (answer the queried agent) "
-            "is 0.16 at L32 and 0.20 at L64/L96 on these items.</p>\n"
-            + _html_table(["Model", "s5_chain @L96", "s5_chain@64 ctok/call"],
+            "8-hop serial dereference query. Every item is gated so the query path visits 9 "
+            "distinct agents — answering the queried agent, or any fixed hop, scores exactly 0, "
+            "and chance is 1/16. Sorted by the @L96 score, then by the @L128 top-cluster "
+            "separator, then by completion tokens per call on "
+            "the matched @L64 cell.</p>\n"
+            + _html_table(["Model", "s5_chain @L96", "@L128", "s5_chain@64 ctok/call"],
                           s5c_rows)
         )
 

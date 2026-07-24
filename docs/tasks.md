@@ -8,7 +8,8 @@ the difference between a formatting error and a reasoning error.
 The taxonomy ([`AGENTS.md`](../AGENTS.md)) orders the page: **components** first — recall
 (`recall_copy_v1`; parametric variants `conflict_v1`/`recall_v1`) and state tracking
 (`binding` = last-write-wins, `s5_v1` = non-abelian) — then their **compositions** — state × recall
-(`composite`) and recall ∘ recall (`chain_v1`). Examples shown on a retired v1 sampler are marked;
+(`composite`), recall ∘ recall (`chain_v1`), and the headline non-abelian state × serial
+dereference (`s5_chain_v3`). Examples shown on a retired v1 sampler are marked;
 the scored give-stream tasks are the v2 family
 ([#11](https://github.com/ianbarber/factworld/issues/11)).
 
@@ -153,6 +154,32 @@ the a0 of g0 is g1 . g3 's a0 is g0 . what is a0 of a0 of a0 of a0 of g1 ? :
 | qwen2.5-7b-instruct | `g4 .` | off-by-one depth error |
 
 Even the best pretrained models peak at 0.300 on this task.
+
+---
+
+## `s5_chain_v3` — composition: non-abelian state × serial dereference (the headline)
+
+Sixteen agents hold an `a0` pointer map (initially one 16-cycle). A stream of order-sensitive
+`swap`/`cycle` events permutes the pointer *values*; the query then dereferences the final map
+8 hops deep. Every item is gated so the query path visits 9 distinct agents: echoing the queried
+agent, or any fixed hop, scores exactly 0, and chance is 1/16.
+
+**Example prompt** (short L=8 stream; benchmark cells run L=32/64/96)
+
+```
+g10's a0 is g12. g3's a0 is g9. g7's a0 is g10. ... (16 initial pointer facts)
+s0 cycles a0 simultaneously: g7's a0 takes g3's old a0, g3's a0 takes g12's old
+a0, and g12's a0 takes g7's old a0. s1 cycles a0 simultaneously: ...
+s3 swaps the values of g0's a0 and g1's a0. ...
+what is a0 of a0 of a0 of a0 of a0 of a0 of a0 of a0 of g9? (8 hops)
+```
+
+**Gold answer:** `g11.`  (g9 → g8 → g3 → g5 → g10 → g14 → g0 → g7 → g11 under the final map)
+
+Cycle events are rendered simultaneity-explicit ("takes …'s old a0"), so a sequential reading
+of the three assignments is not available; swap events are order-sensitive against every later
+event touching the same agents. The task fails a model that tracks the permutation but cannot
+dereference serially, and one that follows a static chain but loses the map through the events.
 
 ---
 

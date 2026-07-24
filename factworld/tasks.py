@@ -112,6 +112,37 @@ class TaskSpec:
     # protocol is spec.scaled(k=depth + 2).
     chain_allow_wrap: bool = False
 
+    # s5_chain-only. distinct_path: VALIDITY GATE — require the query start to sit on a
+    # final-map cycle of length >= chain_depth+1, so all depth+1 path nodes are distinct.
+    # Without it the final permutation has cycles whose length divides the depth, and the
+    # degenerate "answer the queried agent" (echo) strategy scores far above chance
+    # (measured 0.16-0.32 on the v2 item streams vs 1/16 nominal chance); items whose
+    # paths collapse onto short cycles are also individually easier, adding item-level
+    # variance. Gated items hold echo and every fixed-hop heuristic at exactly 0 and make
+    # item difficulty uniform (the path always visits depth+1 distinct agents).
+    # event_trace: per-EVENT dense supervision — the trace prefixes the full a0 map (k
+    # values in fixed agent order) after every event, i.e. a state checkpoint per event,
+    # the supervision density that formed s5 locally; worked_trace alone emits only the
+    # final query path, which supervises the dereference but NOT the map tracking.
+    # start_trace: s5-SHAPED dense supervision — after each event emit only the query start's
+    # current pointer nxt[start] (one token per event), the exact single-quantity checkpoint
+    # shape that formed s5, rather than event_trace's full-map dump. Sufficient signal for
+    # depth-1 readout; depth>=2 still requires the joint map (hop 2's identity is unknown
+    # during the stream), so the start_trace d1-vs-d2 contrast isolates single-slot tracking
+    # from joint-map maintenance.
+    # compact_events: LOCAL-ONLY rendering ablation (issue #31) — events render in the
+    # s5-style compact grammar ("s0 swaps a0: g1 and g3." / "s1 cycles a0: g1 -> g3 -> g5.",
+    # ~4-5x fewer tokens per event than the canonical explicit-value sentences), to test
+    # whether the wordy rendering is what blocks local circuit formation. The arrow cycle
+    # form was retired for FRONTIER cells as ambiguity-confounded English; a from-scratch
+    # model has no English prior — the training grammar's semantics are defined by the
+    # generator — so the ablation is valid locally and never scored over the API.
+    # Appended + defaulted: _rng does not key on either, so no existing stream is perturbed.
+    distinct_path: bool = False
+    event_trace: bool = False
+    start_trace: bool = False
+    compact_events: bool = False
+
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
         return replace(self, **knobs)
@@ -319,30 +350,69 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
             f"use spec.scaled(k={depth + 2}) for a no-wrap protocol."
         )
     cyc = rng.sample(list(w.agents), spec.k)
-    nxt = {cyc[i]: cyc[(i + 1) % spec.k] for i in range(spec.k)}
+    nxt0 = {cyc[i]: cyc[(i + 1) % spec.k] for i in range(spec.k)}
     present = cyc[:]; rng.shuffle(present)
-    facts = " ".join(r.render_fact(a, "a0", nxt[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
+    facts = " ".join(r.render_fact(a, "a0", nxt0[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
 
-    events: list[Event] = []
-    for _ in range(length):
-        if rng.random() < 0.5:
-            a, b = rng.sample(cyc, 2)
-            events.append(Event("swap_a0", (a, b)))
-            nxt[a], nxt[b] = nxt[b], nxt[a]
+    def _cycle_len(mapping, a):
+        n, x = 1, mapping[a]
+        while x != a:
+            n, x = n + 1, mapping[x]
+        return n
+
+    for _attempt in range(100):
+        nxt = dict(nxt0)
+        events: list[Event] = []
+        maps: list[dict] = []                # per-event map snapshots (trace construction)
+        for _ in range(length):
+            if rng.random() < 0.5:
+                a, b = rng.sample(cyc, 2)
+                events.append(Event("swap_a0", (a, b)))
+                nxt[a], nxt[b] = nxt[b], nxt[a]
+            else:
+                a, b, c = rng.sample(cyc, 3)
+                events.append(Event("cycle_a0", (a, b, c)))
+                nxt[a], nxt[b], nxt[c] = nxt[b], nxt[c], nxt[a]
+            if spec.event_trace or spec.start_trace:
+                maps.append(dict(nxt))
+        if not spec.distinct_path:
+            starts = cyc
         else:
-            a, b, c = rng.sample(cyc, 3)
-            events.append(Event("cycle_a0", (a, b, c)))
-            nxt[a], nxt[b], nxt[c] = nxt[b], nxt[c], nxt[a]
-    hist = " ".join(r.render_history(tuple(events), with_steps=True))
+            # gate: only starts whose final-map cycle is longer than the query depth,
+            # so the depth+1 path nodes are all distinct (echo/fixed-hop floors = 0).
+            starts = [a for a in cyc if _cycle_len(nxt, a) > depth]
+            if not starts:                   # no long cycle formed: resample the events
+                continue
+        break
+    else:
+        raise RuntimeError(f"{spec.name}: no length->{depth+1} cycle in 100 event resamples")
+    if spec.compact_events:
+        ev_txts = [f"s{i} " + (f"swaps a0: {e.args[0]} and {e.args[1]}."
+                               if e.kind == "swap_a0"
+                               else "cycles a0: " + " -> ".join(e.args) + ".")
+                   for i, e in enumerate(events)]
+    else:
+        ev_txts = [r.render_event(e, step=f"s{i}", key=f"h|{i}|{e.kind}|{'|'.join(e.args)}")
+                   for i, e in enumerate(events)]
+    hist = " ".join(ev_txts)
 
-    start = rng.choice(cyc)
+    start = rng.choice(starts)
     path = [start]
     for _ in range(depth):
         path.append(nxt[path[-1]])
     gold = path[-1]
     query = "what is " + "a0 of " * depth + f"{start}? ({depth} hops)"
     meta = {"depth": depth, "start": start, "path": path}
-    if spec.worked_trace:
+    if spec.start_trace:
+        meta["trace"] = " ".join([m[start] for m in maps] + path[:-1])
+        # Interleaved variant of the same supervision (the protocol that formed s5): the
+        # checkpoint token follows its event INSIDE the stream, so credit assignment is
+        # local. Training docs use this; evaluation is free-running on the plain prompt.
+        meta["interleaved_prompt"] = (
+            f"{facts} " + " ".join(f"{t} {m[start]}" for t, m in zip(ev_txts, maps)) + f" {query}")
+    elif spec.event_trace:
+        meta["trace"] = " ".join(" ".join(m[a] for a in cyc) for m in maps) + " " + " ".join(path[:-1])
+    elif spec.worked_trace:
         meta["trace"] = " ".join(path[:-1])
     return Example(f"{facts} {hist} {query}", _render_answer(gold), length, meta)
 
@@ -469,6 +539,58 @@ def score_exact(pred: str, gold: str) -> int:
     g = gold.split()
     p = pred.split()[:len(g)]
     return int(p == g)
+
+
+_COMMIT_LEADINS = ("answer", "final", "the", "so", "is", "therefore", "thus", "result",
+                   "=", "**answer", "**final")
+_EMPHASIS_SPAN = None  # compiled lazily (module import order: re is stdlib, cheap)
+
+
+def committed_answer(pred: str) -> str:
+    """The answer span a multi-line emission COMMITS to — else ``pred`` unchanged.
+
+    Some reasoning endpoints spill their working into the visible completion (hop-by-hop
+    traces, map dumps) and state the answer at the END. Prefix scoring then reads working,
+    not the commitment: sonnet's xhigh s5_chain cells measured match 0.56 with contains
+    0.92 this way. The commitment is located structurally — never by demanding the model
+    emit exactly one token (rigid output-format contracts are a repeat source of scoring
+    artifacts here). On the last non-empty, non-code-fence line:
+
+      1. If the line reduces to one content token after stripping markdown edges and an
+         answer-statement lead-in ("Answer:", "The answer is", ...), that token — covers
+         "**g10**", "Answer: g11", and a lone token inside a trailing code fence.
+      2. Else, if the line carries markdown emphasis and its LAST emphasized span is one
+         content token, that token — covers prose commitments ("... ends at **g15**.").
+
+    A last line with neither shape (map-dump rows, truncated working) commits to nothing
+    and the prediction is scored as-is. Both rules apply to single-line predictions too —
+    sonnet emits its whole dereference as one line ending in the bolded answer
+    ("g5 → g8 → ... → **g7**") — and are inert for clean answers: a bare "g5." reduces to
+    its own token, and multi-token spans commit nothing, so the canonical metric is
+    unchanged wherever the old behavior was correct. (Local eval never routes here:
+    ``extract_commit`` is a reasoning-arm setting.)"""
+    import re
+    from .render import Renderer
+    body = pred.strip()
+    lines = [ln for ln in body.splitlines()
+             if ln.strip() and not ln.strip().startswith("```")]
+    if not lines:
+        return pred
+    last = lines[-1]
+    toks = [t for t in Renderer.normalize(last).split() if t not in (".", ":", ",")]
+    while toks and toks[0].lower().rstrip(":") in _COMMIT_LEADINS:
+        toks = toks[1:]
+    if len(toks) == 1:
+        return toks[0]
+    spans = re.findall(r"\*\*(.+?)\*\*|`(.+?)`|__(.+?)__", last)
+    if spans:
+        span = next(s for s in spans[-1] if s)
+        stoks = [t for t in Renderer.normalize(span).split() if t not in (".", ":", ",")]
+        while stoks and stoks[0].lower().rstrip(":") in _COMMIT_LEADINS:
+            stoks = stoks[1:]
+        if len(stoks) == 1:
+            return stoks[0]
+    return pred
 
 
 def score_relaxed(pred: str, gold: str) -> int:
@@ -638,16 +760,28 @@ CANONICAL = {
     # hop count (e.g. "... of g246? (128 hops)") to remove the depth-counting confound
     # that caused models to miscount 128 nested "a0 of" phrases.
     "chain_v2":         TaskSpec("chain_v2", "chain", version="1.1", k=6, train_lengths=(2, 3), eval_lengths=(4, 5)),
-    # s5_chain: composite stressor — order-sensitive swap/cycle events on the a0 pointer map,
-    # followed by a d-hop serial dereference query. length = number of permutation events;
-    # chain_depth = number of a0 hops in the query (kept < k). v1 is the hard calibration
-    # prototype with ambiguous rendering; v2 is the calibrated frontier setting with explicit
-    # value-update rendering (pilot 2026-07-17: gpt-5.5 1.00/1.00/1.00, qwen 1.00/0.84/0.72,
-    # opus 0.96/0.88/0.80, gemini-flash 1.00/0.76/0.56 at L16/32/64).
-    "s5_chain_v1":      TaskSpec("s5_chain_v1", "s5_chain", version="1.1", k=16, chain_depth=8,
-                                  train_lengths=(8, 16), eval_lengths=(32, 64)),
-    "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.3", k=16, chain_depth=8,
+    # s5_chain: THE composite stressor — order-sensitive swap/cycle events on the a0 pointer
+    # map (non-abelian state tracking), followed by a chain_depth-hop serial dereference query
+    # over the final map. length = number of permutation events; chain_depth = hops (kept < k).
+    # v3 is the single scored spec: distinct_path gates every item so the query path visits
+    # depth+1 distinct agents — echo and fixed-hop heuristics score exactly 0, chance is
+    # 1/k, and item difficulty is uniform (the v1/v2 streams admitted an echo floor of
+    # 0.16-0.32 because final-map cycles whose length divides the depth make the start its
+    # own answer; see RETIRED).
+    "s5_chain_v3":      TaskSpec("s5_chain_v3", "s5_chain", version="2.0", k=16, chain_depth=8,
+                                  distinct_path=True,
                                   train_lengths=(8, 16), eval_lengths=(32, 64, 96)),
+    # Local calibration variants (experimental, never scored as the frontier task).
+    # local_v2: gated items + per-EVENT map checkpoints (event_trace) — the dense per-step
+    # supervision that formed s5 locally, which the retired local_v1 lacked (its path-only
+    # trace supervised the dereference but not the map tracking through events).
+    # local_v2_path: same gated items, path-only trace — the supervision-density contrast arm.
+    "s5_chain_local_v2": TaskSpec("s5_chain_local_v2", "s5_chain", version="2.0", k=8, chain_depth=2,
+                                   distinct_path=True, event_trace=True, worked_trace=True,
+                                   train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
+    "s5_chain_local_v2_path": TaskSpec("s5_chain_local_v2_path", "s5_chain", version="2.0", k=8,
+                                        chain_depth=2, distinct_path=True, worked_trace=True,
+                                        train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)
@@ -688,6 +822,24 @@ RETIRED = {
     "composite_copy_scale_v1": TaskSpec("composite_copy_scale_v1", "composite", k=5, recall_pool=5,
                                         memorized_recall=False, value_vocab_size=128, kind="retired",
                                         train_lengths=(4, 8, 16), eval_lengths=(16, 64)),
+    # s5_chain v1/v2 (issue #30 follow-up, retired 2026-07-18): both streams lack the
+    # distinct_path gate, so final-map cycles whose length divides chain_depth=8 make the
+    # degenerate echo strategy ("answer the queried agent") score 0.16-0.32 vs 1/16 chance,
+    # and roughly half the items have degenerate (<9 distinct-agent) query paths — item
+    # difficulty varies and sub-0.4 scores are uninterpretable. v1 additionally used the
+    # pre-explicit event rendering (its pilot scores sat AT the echo floor). Superseded
+    # knob-for-knob by s5_chain_v3 (distinct_path=True, version 2.0). Note the shared
+    # cycle_a0 wording was made simultaneity-explicit on 2026-07-18 (render.py _CYCLE_A0),
+    # so regenerated v1/v2 prompts are NOT byte-identical to the published runs; the runs
+    # are preserved in results/benchmark/history.jsonl.
+    "s5_chain_v1":      TaskSpec("s5_chain_v1", "s5_chain", version="1.1", k=16, chain_depth=8,
+                                  train_lengths=(8, 16), eval_lengths=(32, 64), kind="retired"),
+    "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.3", k=16, chain_depth=8,
+                                  train_lengths=(8, 16), eval_lengths=(32, 64, 96), kind="retired"),
+    # Ungated local pilot with path-only traces; superseded by s5_chain_local_v2[/_path].
+    "s5_chain_local_v1": TaskSpec("s5_chain_local_v1", "s5_chain", version="1.3", k=8, chain_depth=2,
+                                   train_lengths=(2, 4), eval_lengths=(4, 8), worked_trace=True,
+                                   kind="retired"),
     # Original chain pointer-chase. Retired because the nested "a0 of a0 of ..." query becomes a
     # hop-counting confound at depth 64/128; superseded by chain_v2, which appends an explicit
     # depth annotation ("(128 hops)") to the same query.

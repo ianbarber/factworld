@@ -36,11 +36,17 @@ from factworld.render import Renderer
 from factworld.runner import evaluate_task
 
 
-def build_docs(examples, use_trace=False):
-    """prompt + (optional oracle worked-trace) + answer, single-space separated."""
+def build_docs(examples, use_trace=False, interleaved=False):
+    """prompt + (optional oracle worked-trace) + answer, single-space separated.
+
+    ``interleaved`` uses meta["interleaved_prompt"] — checkpoint tokens inside the
+    event stream (the protocol that formed s5) instead of a trace appended after
+    the query; evaluation stays free-running on the plain prompt."""
     docs = []
     for e in examples:
-        if use_trace and "trace" in e.meta:
+        if interleaved and "interleaved_prompt" in e.meta:
+            docs.append(f"{e.meta['interleaved_prompt']} {e.answer}")
+        elif use_trace and "trace" in e.meta:
             docs.append(f"{e.prompt} {e.meta['trace']} {e.answer}")
         else:
             docs.append(f"{e.prompt} {e.answer}")
@@ -92,14 +98,14 @@ def prefix_decomp(inspected, trace_mode=False):
 
 
 def run_one(spec, arch, seed, *, d_model, n_layers, steps, batch, train_n, eval_n,
-            use_short_conv, use_trace, device):
+            use_short_conv, use_trace, device, interleaved=False):
     """Train one config; return {length: {overall, decomp}} and final loss."""
     import torch
 
     d_ff = 4 * d_model
     w, r = TK.build_world(spec)
     train = TK.generate(spec, "train", n=train_n)
-    tok, docs, _ = T.prepare(build_docs(train, use_trace), [], [w], renderer=r)
+    tok, docs, _ = T.prepare(build_docs(train, use_trace, interleaved), [], [w], renderer=r)
     run = T.run(
         arch, tok, docs, [], steps=steps, batch=batch, d_model=d_model, n_layers=n_layers,
         d_ff=d_ff, seed=seed, return_model=True, device=device, use_short_conv=use_short_conv,
@@ -107,14 +113,26 @@ def run_one(spec, arch, seed, *, d_model, n_layers, steps, batch, train_n, eval_
     backend = LocalBackend([w], arch=arch, model=run["model"], tokenizer=tok, device=device)
     out = {}
     for L in spec.eval_lengths:
-        # In trace mode the model emits the full scratchpad (length tokens) THEN the answer,
-        # so size the generation budget for trace + answer, and score the committed tail.
-        max_new = (L + 6) if use_trace else None
-        res = evaluate_task(backend, spec, split="test", n=eval_n, length=L, max_new_tokens=max_new)
+        # In trace mode the model emits the full scratchpad THEN the answer, so size the
+        # generation budget for trace + answer, and score the committed tail. Sized from the
+        # actual oracle trace at this length (event_trace checkpoints are L*k tokens, far
+        # more than the L+6 that fits a path-only trace). Interleaved supervision lives only
+        # in the TRAINING docs; its eval is the standard free-running answer-only protocol.
+        emits_trace = use_trace and not interleaved
+        if emits_trace:
+            probe = TK.generate(spec, "test", n=1, length=L)[0]
+            max_new = len(probe.meta.get("trace", "").split()) + 6
+        else:
+            max_new = None
+        # Trace-mode answers end with attached punctuation ("g3."), so the "." stop token
+        # never fires; stop at the <eos> the model emits after its answer instead (the
+        # scorer cuts at <eos> anyway — this just stops burning budget past it).
+        res = evaluate_task(backend, spec, split="test", n=eval_n, length=L, max_new_tokens=max_new,
+                            stop_at="<eos>" if emits_trace else ".")
         # In trace mode the answer is the LAST len(gold) tokens of the generated scratchpad,
         # so last_n (not the canonical relaxed prefix match) is the fair overall score.
-        overall = res["metrics"]["last_n"]["overall"] if use_trace else res["overall"]
-        out[str(L)] = {"overall": overall, **prefix_decomp(res["examples"], trace_mode=use_trace)}
+        overall = res["metrics"]["last_n"]["overall"] if emits_trace else res["overall"]
+        out[str(L)] = {"overall": overall, **prefix_decomp(res["examples"], trace_mode=emits_trace)}
     del run["model"]
     torch.cuda.empty_cache()
     return {"lengths": out, "final_loss": run["final_loss"]}
@@ -192,6 +210,20 @@ def main():
     ap.add_argument("--worked_trace", action="store_true",
                     help="Force worked_trace=True on the spec (needed for the composite "
                          "tasks, whose default is False). Implies --use_trace.")
+    ap.add_argument("--chain_depth", type=int, default=None,
+                    help="Override spec.chain_depth (s5_chain decomposition probes).")
+    ap.add_argument("--k", type=int, default=None,
+                    help="Override spec.k (calibration sweeps toward the learnable edge).")
+    ap.add_argument("--start_trace", action="store_true",
+                    help="s5-shaped single-slot checkpoints (spec.start_trace=True; takes "
+                         "precedence over event_trace in the trace builder).")
+    ap.add_argument("--interleaved", action="store_true",
+                    help="Train on interleaved checkpoints (inside the event stream, the s5 "
+                         "dense protocol) instead of an appended trace; eval is free-running. "
+                         "Use with --start_trace.")
+    ap.add_argument("--compact_events", action="store_true",
+                    help="s5-style compact event grammar (spec.compact_events=True; local-only "
+                         "rendering ablation, issue #31).")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--out_prefix", default=None,
                     help="Output prefix (default: results/sweep_<task0>_<timestamp>).")
@@ -209,6 +241,14 @@ def main():
 
     cfg = {"tasks": tasks, "archs": archs, "seeds": a.seeds, "steps": a.steps,
            "d_model": a.d_model, "n_layers": a.n_layers, "train_n": a.train_n, "eval_n": a.eval_n}
+    if a.chain_depth is not None:
+        cfg["chain_depth"] = a.chain_depth
+    if a.k is not None:
+        cfg["k"] = a.k
+    if a.interleaved:
+        cfg["interleaved"] = True
+    if a.compact_events:
+        cfg["compact_events"] = True
 
     runs = []
     total = len(tasks) * len(archs) * len(a.seeds)
@@ -218,6 +258,14 @@ def main():
         spec = TK.spec_for(task)
         if a.worked_trace:
             spec = spec.scaled(worked_trace=True)
+        if a.chain_depth is not None:
+            spec = spec.scaled(chain_depth=a.chain_depth)
+        if a.k is not None:
+            spec = spec.scaled(k=a.k)
+        if a.start_trace:
+            spec = spec.scaled(start_trace=True)
+        if a.compact_events:
+            spec = spec.scaled(compact_events=True)
         for arch in archs:
             use_short, resolved = False, arch
             if arch == "gdp_hybrid_shortconv":
@@ -229,7 +277,8 @@ def main():
                     r = run_one(spec, resolved, seed, d_model=a.d_model, n_layers=a.n_layers,
                                 steps=a.steps, batch=a.batch, train_n=a.train_n, eval_n=a.eval_n,
                                 use_short_conv=use_short,
-                                use_trace=(a.use_trace or a.worked_trace), device=a.device)
+                                use_trace=(a.use_trace or a.worked_trace), device=a.device,
+                                interleaved=a.interleaved)
                 except Exception as e:  # noqa: BLE001
                     import traceback; traceback.print_exc()
                     r = {"error": str(e)}

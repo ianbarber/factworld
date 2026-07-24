@@ -114,14 +114,17 @@ def test_gen_examples_accepts_internal_framing_names():
 
 
 def test_score_semantics():
-    # exactly the old script's semantics: content_tokens strips punctuation, keeps case
+    # content_tokens strips punctuation, keeps case
     assert score("Driver .", "Driver") == {"relaxed": 1, "contains": 1}
     assert score("Driver", "Driver") == {"relaxed": 1, "contains": 1}
     assert score("Driver.", "Driver") == {"relaxed": 1, "contains": 1}
     assert score("driver x", "Driver") == {"relaxed": 0, "contains": 0}  # case-sensitive
-    assert score("The answer is Driver.", "Driver") == {"relaxed": 0, "contains": 1}
+    # an answer-statement lead-in commits its trailing token (tasks.committed_answer:
+    # the commitment is located structurally, never by demanding a bare-token format)
+    assert score("The answer is Driver.", "Driver") == {"relaxed": 1, "contains": 1}
     assert score("", "Driver") == {"relaxed": 0, "contains": 0}
     assert score("r2 .", "r2") == {"relaxed": 1, "contains": 1}
+    # a bare multi-token stream commits nothing and scores its first content token
     assert score("r0 r2", "r2") == {"relaxed": 0, "contains": 1}
 
 

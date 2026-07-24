@@ -1,0 +1,710 @@
+{
+  "cfg": {
+    "task": "commutative_v1",
+    "archs": [
+      "transformer",
+      "gdp_hybrid",
+      "fprm"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "steps": 8000,
+    "d_model": 256,
+    "n_layers": 4,
+    "batch": 32,
+    "train_n": 8000,
+    "eval_n": 200,
+    "eval_lengths": [
+      16,
+      32,
+      64
+    ],
+    "train_lengths": [
+      4,
+      8,
+      16
+    ],
+    "use_trace": true,
+    "k_positions": 5,
+    "m": 4
+  },
+  "summary": {
+    "fprm": {
+      "16": {
+        "mean": 0.65,
+        "std": 0.255962236798061,
+        "n": 3,
+        "p_converge": 0.3333333333333333
+      },
+      "32": {
+        "mean": 0.21,
+        "std": 0.026770630673681687,
+        "n": 3,
+        "p_converge": 0.0
+      },
+      "64": {
+        "mean": 0.21,
+        "std": 0.017795130420052176,
+        "n": 3,
+        "p_converge": 0.0
+      }
+    },
+    "gdp_hybrid": {
+      "16": {
+        "mean": 0.82,
+        "std": 0.15253414918196734,
+        "n": 3,
+        "p_converge": 0.3333333333333333
+      },
+      "32": {
+        "mean": 0.165,
+        "std": 0.01414213562373095,
+        "n": 3,
+        "p_converge": 0.0
+      },
+      "64": {
+        "mean": 0.20333333333333334,
+        "std": 0.008498365855987969,
+        "n": 3,
+        "p_converge": 0.0
+      }
+    },
+    "transformer": {
+      "16": {
+        "mean": 0.2,
+        "std": 0.021602468994692873,
+        "n": 3,
+        "p_converge": 0.0
+      },
+      "32": {
+        "mean": 0.21333333333333335,
+        "std": 0.012472191289246473,
+        "n": 3,
+        "p_converge": 0.0
+      },
+      "64": {
+        "mean": 0.15833333333333333,
+        "std": 0.06980130530457308,
+        "n": 3,
+        "p_converge": 0.0
+      }
+    }
+  },
+  "runs": [
+    {
+      "arch": "transformer",
+      "seed": 0,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 3.1,
+      "lengths": {
+        "16": {
+          "overall": 0.18,
+          "prefix": {
+            "0": 0.82,
+            "1": 0.18,
+            "2": 0.0
+          },
+          "holder_acc": 0.18,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.21,
+          "prefix": {
+            "0": 0.79,
+            "1": 0.21,
+            "2": 0.0
+          },
+          "holder_acc": 0.21,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.215,
+          "prefix": {
+            "0": 0.785,
+            "1": 0.215,
+            "2": 0.0
+          },
+          "holder_acc": 0.215,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.43423593044281006
+    },
+    {
+      "arch": "transformer",
+      "seed": 1,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 3.62,
+      "lengths": {
+        "16": {
+          "overall": 0.23,
+          "prefix": {
+            "0": 0.77,
+            "1": 0.23,
+            "2": 0.0
+          },
+          "holder_acc": 0.23,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.2,
+          "prefix": {
+            "0": 0.8,
+            "1": 0.2,
+            "2": 0.0
+          },
+          "holder_acc": 0.2,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.2,
+          "prefix": {
+            "0": 0.8,
+            "1": 0.2,
+            "2": 0.0
+          },
+          "holder_acc": 0.2,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.48040932416915894
+    },
+    {
+      "arch": "transformer",
+      "seed": 2,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 3.35,
+      "lengths": {
+        "16": {
+          "overall": 0.19,
+          "prefix": {
+            "0": 0.81,
+            "1": 0.19,
+            "2": 0.0
+          },
+          "holder_acc": 0.19,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.23,
+          "prefix": {
+            "0": 0.77,
+            "1": 0.23,
+            "2": 0.0
+          },
+          "holder_acc": 0.23,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.06,
+          "prefix": {
+            "0": 0.94,
+            "1": 0.06,
+            "2": 0.0
+          },
+          "holder_acc": 0.06,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.49027329683303833
+    },
+    {
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 4.08,
+      "lengths": {
+        "16": {
+          "overall": 0.62,
+          "prefix": {
+            "0": 0.38,
+            "1": 0.62,
+            "2": 0.0
+          },
+          "holder_acc": 0.62,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.185,
+          "prefix": {
+            "0": 0.815,
+            "1": 0.185,
+            "2": 0.0
+          },
+          "holder_acc": 0.185,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.2,
+          "prefix": {
+            "0": 0.8,
+            "1": 0.2,
+            "2": 0.0
+          },
+          "holder_acc": 0.2,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.35973381996154785
+    },
+    {
+      "arch": "gdp_hybrid",
+      "seed": 1,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 5.01,
+      "lengths": {
+        "16": {
+          "overall": 0.85,
+          "prefix": {
+            "0": 0.15,
+            "1": 0.85,
+            "2": 0.0
+          },
+          "holder_acc": 0.85,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.155,
+          "prefix": {
+            "0": 0.845,
+            "1": 0.155,
+            "2": 0.0
+          },
+          "holder_acc": 0.155,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.195,
+          "prefix": {
+            "0": 0.805,
+            "1": 0.195,
+            "2": 0.0
+          },
+          "holder_acc": 0.195,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.3455166518688202
+    },
+    {
+      "arch": "gdp_hybrid",
+      "seed": 2,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 2.92,
+      "lengths": {
+        "16": {
+          "overall": 0.99,
+          "prefix": {
+            "0": 0.01,
+            "1": 0.99,
+            "2": 0.0
+          },
+          "holder_acc": 0.99,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.155,
+          "prefix": {
+            "0": 0.845,
+            "1": 0.155,
+            "2": 0.0
+          },
+          "holder_acc": 0.155,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.215,
+          "prefix": {
+            "0": 0.785,
+            "1": 0.215,
+            "2": 0.0
+          },
+          "holder_acc": 0.215,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.34221068024635315
+    },
+    {
+      "arch": "fprm",
+      "seed": 0,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 3.53,
+      "lengths": {
+        "16": {
+          "overall": 1.0,
+          "prefix": {
+            "0": 0.0,
+            "1": 1.0,
+            "2": 0.0
+          },
+          "holder_acc": 1.0,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.18,
+          "prefix": {
+            "0": 0.82,
+            "1": 0.18,
+            "2": 0.0
+          },
+          "holder_acc": 0.18,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.235,
+          "prefix": {
+            "0": 0.765,
+            "1": 0.235,
+            "2": 0.0
+          },
+          "holder_acc": 0.235,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.3705347776412964
+    },
+    {
+      "arch": "fprm",
+      "seed": 1,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 3.19,
+      "lengths": {
+        "16": {
+          "overall": 0.555,
+          "prefix": {
+            "0": 0.445,
+            "1": 0.555,
+            "2": 0.0
+          },
+          "holder_acc": 0.555,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.245,
+          "prefix": {
+            "0": 0.755,
+            "1": 0.245,
+            "2": 0.0
+          },
+          "holder_acc": 0.245,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.195,
+          "prefix": {
+            "0": 0.805,
+            "1": 0.195,
+            "2": 0.0
+          },
+          "holder_acc": 0.195,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.39197075366973877
+    },
+    {
+      "arch": "fprm",
+      "seed": 2,
+      "task": "commutative_v1",
+      "archs": [
+        "transformer",
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 256,
+      "n_layers": 4,
+      "batch": 32,
+      "train_n": 8000,
+      "eval_n": 200,
+      "eval_lengths": [
+        16,
+        32,
+        64
+      ],
+      "train_lengths": [
+        4,
+        8,
+        16
+      ],
+      "use_trace": true,
+      "k_positions": 5,
+      "m": 4,
+      "wall_min": 3.27,
+      "lengths": {
+        "16": {
+          "overall": 0.395,
+          "prefix": {
+            "0": 0.605,
+            "1": 0.395,
+            "2": 0.0
+          },
+          "holder_acc": 0.395,
+          "value_acc": 0.0
+        },
+        "32": {
+          "overall": 0.205,
+          "prefix": {
+            "0": 0.795,
+            "1": 0.205,
+            "2": 0.0
+          },
+          "holder_acc": 0.205,
+          "value_acc": 0.0
+        },
+        "64": {
+          "overall": 0.2,
+          "prefix": {
+            "0": 0.8,
+            "1": 0.2,
+            "2": 0.0
+          },
+          "holder_acc": 0.2,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.39465612173080444
+    }
+  ]
+}

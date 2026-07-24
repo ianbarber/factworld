@@ -1,0 +1,347 @@
+{
+  "cfg": {
+    "tasks": [
+      "s5_chain_local_v2"
+    ],
+    "archs": [
+      "gdp_hybrid",
+      "fprm"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "steps": 8000,
+    "d_model": 320,
+    "n_layers": 4,
+    "train_n": 8000,
+    "eval_n": 200,
+    "chain_depth": 2,
+    "k": 4
+  },
+  "summary": {
+    "s5_chain_local_v2": {
+      "gdp_hybrid": {
+        "4": {
+          "mean": 0.32833333333333337,
+          "std": 0.009428090415820642,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.32833333333333337,
+          "value_acc": 0.0
+        },
+        "8": {
+          "mean": 0.33,
+          "std": 0.017795130420052176,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.33,
+          "value_acc": 0.0
+        }
+      },
+      "fprm": {
+        "4": {
+          "mean": 0.3666666666666667,
+          "std": 0.027788886667555118,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.3666666666666667,
+          "value_acc": 0.0
+        },
+        "8": {
+          "mean": 0.2783333333333333,
+          "std": 0.010274023338281615,
+          "n": 3,
+          "p_converge": 0.0,
+          "holder_acc": 0.2783333333333333,
+          "value_acc": 0.0
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "task": "s5_chain_local_v2",
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "tasks": [
+        "s5_chain_local_v2"
+      ],
+      "archs": [
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 320,
+      "n_layers": 4,
+      "train_n": 8000,
+      "eval_n": 200,
+      "chain_depth": 2,
+      "k": 4,
+      "lengths": {
+        "4": {
+          "overall": 0.315,
+          "prefix": {
+            "0": 0.685,
+            "1": 0.315,
+            "2": 0.0
+          },
+          "holder_acc": 0.315,
+          "value_acc": 0.0
+        },
+        "8": {
+          "overall": 0.32,
+          "prefix": {
+            "0": 0.68,
+            "1": 0.32,
+            "2": 0.0
+          },
+          "holder_acc": 0.32,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.21547232568264008
+    },
+    {
+      "task": "s5_chain_local_v2",
+      "arch": "gdp_hybrid",
+      "seed": 1,
+      "tasks": [
+        "s5_chain_local_v2"
+      ],
+      "archs": [
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 320,
+      "n_layers": 4,
+      "train_n": 8000,
+      "eval_n": 200,
+      "chain_depth": 2,
+      "k": 4,
+      "lengths": {
+        "4": {
+          "overall": 0.335,
+          "prefix": {
+            "0": 0.665,
+            "1": 0.335,
+            "2": 0.0
+          },
+          "holder_acc": 0.335,
+          "value_acc": 0.0
+        },
+        "8": {
+          "overall": 0.315,
+          "prefix": {
+            "0": 0.685,
+            "1": 0.315,
+            "2": 0.0
+          },
+          "holder_acc": 0.315,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.18669241666793823
+    },
+    {
+      "task": "s5_chain_local_v2",
+      "arch": "gdp_hybrid",
+      "seed": 2,
+      "tasks": [
+        "s5_chain_local_v2"
+      ],
+      "archs": [
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 320,
+      "n_layers": 4,
+      "train_n": 8000,
+      "eval_n": 200,
+      "chain_depth": 2,
+      "k": 4,
+      "lengths": {
+        "4": {
+          "overall": 0.335,
+          "prefix": {
+            "0": 0.665,
+            "1": 0.335,
+            "2": 0.0
+          },
+          "holder_acc": 0.335,
+          "value_acc": 0.0
+        },
+        "8": {
+          "overall": 0.355,
+          "prefix": {
+            "0": 0.645,
+            "1": 0.355,
+            "2": 0.0
+          },
+          "holder_acc": 0.355,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.22734811902046204
+    },
+    {
+      "task": "s5_chain_local_v2",
+      "arch": "fprm",
+      "seed": 0,
+      "tasks": [
+        "s5_chain_local_v2"
+      ],
+      "archs": [
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 320,
+      "n_layers": 4,
+      "train_n": 8000,
+      "eval_n": 200,
+      "chain_depth": 2,
+      "k": 4,
+      "lengths": {
+        "4": {
+          "overall": 0.34,
+          "prefix": {
+            "0": 0.66,
+            "1": 0.34,
+            "2": 0.0
+          },
+          "holder_acc": 0.34,
+          "value_acc": 0.0
+        },
+        "8": {
+          "overall": 0.265,
+          "prefix": {
+            "0": 0.735,
+            "1": 0.265,
+            "2": 0.0
+          },
+          "holder_acc": 0.265,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.2556537389755249
+    },
+    {
+      "task": "s5_chain_local_v2",
+      "arch": "fprm",
+      "seed": 1,
+      "tasks": [
+        "s5_chain_local_v2"
+      ],
+      "archs": [
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 320,
+      "n_layers": 4,
+      "train_n": 8000,
+      "eval_n": 200,
+      "chain_depth": 2,
+      "k": 4,
+      "lengths": {
+        "4": {
+          "overall": 0.405,
+          "prefix": {
+            "0": 0.595,
+            "1": 0.405,
+            "2": 0.0
+          },
+          "holder_acc": 0.405,
+          "value_acc": 0.0
+        },
+        "8": {
+          "overall": 0.28,
+          "prefix": {
+            "0": 0.72,
+            "1": 0.28,
+            "2": 0.0
+          },
+          "holder_acc": 0.28,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.22212563455104828
+    },
+    {
+      "task": "s5_chain_local_v2",
+      "arch": "fprm",
+      "seed": 2,
+      "tasks": [
+        "s5_chain_local_v2"
+      ],
+      "archs": [
+        "gdp_hybrid",
+        "fprm"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "steps": 8000,
+      "d_model": 320,
+      "n_layers": 4,
+      "train_n": 8000,
+      "eval_n": 200,
+      "chain_depth": 2,
+      "k": 4,
+      "lengths": {
+        "4": {
+          "overall": 0.355,
+          "prefix": {
+            "0": 0.645,
+            "1": 0.355,
+            "2": 0.0
+          },
+          "holder_acc": 0.355,
+          "value_acc": 0.0
+        },
+        "8": {
+          "overall": 0.29,
+          "prefix": {
+            "0": 0.71,
+            "1": 0.29,
+            "2": 0.0
+          },
+          "holder_acc": 0.29,
+          "value_acc": 0.0
+        }
+      },
+      "final_loss": 0.22938893735408783
+    }
+  ]
+}
