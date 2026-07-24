@@ -130,10 +130,18 @@ class TaskSpec:
     # depth-1 readout; depth>=2 still requires the joint map (hop 2's identity is unknown
     # during the stream), so the start_trace d1-vs-d2 contrast isolates single-slot tracking
     # from joint-map maintenance.
+    # compact_events: LOCAL-ONLY rendering ablation (issue #31) — events render in the
+    # s5-style compact grammar ("s0 swaps a0: g1 and g3." / "s1 cycles a0: g1 -> g3 -> g5.",
+    # ~4-5x fewer tokens per event than the canonical explicit-value sentences), to test
+    # whether the wordy rendering is what blocks local circuit formation. The arrow cycle
+    # form was retired for FRONTIER cells as ambiguity-confounded English; a from-scratch
+    # model has no English prior — the training grammar's semantics are defined by the
+    # generator — so the ablation is valid locally and never scored over the API.
     # Appended + defaulted: _rng does not key on either, so no existing stream is perturbed.
     distinct_path: bool = False
     event_trace: bool = False
     start_trace: bool = False
+    compact_events: bool = False
 
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
@@ -378,7 +386,15 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
         break
     else:
         raise RuntimeError(f"{spec.name}: no length->{depth+1} cycle in 100 event resamples")
-    hist = " ".join(r.render_history(tuple(events), with_steps=True))
+    if spec.compact_events:
+        ev_txts = [f"s{i} " + (f"swaps a0: {e.args[0]} and {e.args[1]}."
+                               if e.kind == "swap_a0"
+                               else "cycles a0: " + " -> ".join(e.args) + ".")
+                   for i, e in enumerate(events)]
+    else:
+        ev_txts = [r.render_event(e, step=f"s{i}", key=f"h|{i}|{e.kind}|{'|'.join(e.args)}")
+                   for i, e in enumerate(events)]
+    hist = " ".join(ev_txts)
 
     start = rng.choice(starts)
     path = [start]
@@ -392,8 +408,6 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
         # Interleaved variant of the same supervision (the protocol that formed s5): the
         # checkpoint token follows its event INSIDE the stream, so credit assignment is
         # local. Training docs use this; evaluation is free-running on the plain prompt.
-        ev_txts = [r.render_event(e, step=f"s{i}", key=f"h|{i}|{e.kind}|{'|'.join(e.args)}")
-                   for i, e in enumerate(events)]
         meta["interleaved_prompt"] = (
             f"{facts} " + " ".join(f"{t} {m[start]}" for t, m in zip(ev_txts, maps)) + f" {query}")
     elif spec.event_trace:

@@ -221,6 +221,9 @@ def main():
                     help="Train on interleaved checkpoints (inside the event stream, the s5 "
                          "dense protocol) instead of an appended trace; eval is free-running. "
                          "Use with --start_trace.")
+    ap.add_argument("--compact_events", action="store_true",
+                    help="s5-style compact event grammar (spec.compact_events=True; local-only "
+                         "rendering ablation, issue #31).")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--out_prefix", default=None,
                     help="Output prefix (default: results/sweep_<task0>_<timestamp>).")
@@ -244,6 +247,8 @@ def main():
         cfg["k"] = a.k
     if a.interleaved:
         cfg["interleaved"] = True
+    if a.compact_events:
+        cfg["compact_events"] = True
 
     runs = []
     total = len(tasks) * len(archs) * len(a.seeds)
@@ -259,6 +264,8 @@ def main():
             spec = spec.scaled(k=a.k)
         if a.start_trace:
             spec = spec.scaled(start_trace=True)
+        if a.compact_events:
+            spec = spec.scaled(compact_events=True)
         for arch in archs:
             use_short, resolved = False, arch
             if arch == "gdp_hybrid_shortconv":
