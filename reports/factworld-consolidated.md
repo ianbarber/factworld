@@ -154,7 +154,7 @@ length.
 
 ## 4. Evaluating frontier models
 
-The recurring benchmark reads the roster (twelve models, registered in
+The recurring benchmark reads the roster (thirteen models, registered in
 `factworld.benchmark.MODELS`) through the instrument in two regimes: **instant** (effort=none,
 hard one-line answer contract — what the weights compute) and **thinking** (maximum supported
 reasoning effort, explicit large completion budgets — what reasoning buys). Instant cells run
@@ -176,18 +176,27 @@ cell prices completion tokens per call:
 
 | Model | s5_chain @L96 | @L128 | ctok/call @L64 |
 |---|---|---|---|
+| anthropic/claude-fable-5 | 1.00 | 1.00 | 5014 |
 | openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
 | x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
-| moonshotai/kimi-k2.6 | 1.00 | 0.68 | 19212 |
 | anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
+| moonshotai/kimi-k3 | 0.96 | 0.96 | 10941 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.96ʳ | 0.96 | 17071 |
 | muse-spark-1.1 | 0.96 | 0.92 | 12484 |
+| google/gemini-3.6-flash | 0.92 | 0.96 | 8166 |
 | anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| openai/gpt-5.6-sol | 0.72 | 0.68 | 2322 |
+| openai/gpt-5.6-sol | 0.84 | 0.80 | 4966 |
 | qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
-| google/gemini-3.5-flash | 0.68 | 0.60 | 19366 |
+
+Roster changes render in the archived section of the feed: kimi-k2.6 and gemini-3.5-flash are
+superseded by their versioned successors (the 3.5 slug still routes separately, so no archived
+cell was ever silently upgraded), and both successors move sharply — k3 holds L128 at 0.96
+where k2.6 collapsed to 0.68, and 3.6-flash reads 0.92/0.96 where 3.5 read 0.68/0.60.
+claude-fable-5 enters at the top of the table at the top cluster's lowest token spend; it is
+thinking-only (no clean off-arm) and its endpoint content-filters the v-token composite
+prompts, so like grok and muse it carries no instant numbers.
 
 Scores are the committed answer, located structurally — never by demanding a rigid output
 format. An endpoint that spills its working into the visible completion (sonnet and muse at
@@ -199,24 +208,27 @@ leak rather than an answer (`tasks.committed_answer`; contains stays the publish
 and a cell whose contains exceeds its match by ≥0.08 gets its predictions read before its
 number is believed).
 
-The two lengths divide the labor. L96 separates a 0.92–1.00 band from a 0.68–0.72 tail:
-gpt-5.6-sol solves both components in isolation (chain d128 0.88, s5 @L256 0.92) yet reads
-0.72 on their composition. L128 spreads the full roster 0.44–1.00: gpt-5.5 alone holds 1.00;
-qwen halves to 0.44 and gemini drops to 0.60; kimi falls from a perfect L96 to 0.68 — 16% of
-its calls truncate even at a 98,304-token budget, so token profligacy is part of the failure.
-The ʳ on nemotron's L96 is a single raised-budget rerun (98,304 tokens): at the planned budget
-it read 0.84 with 12% truncation — budget censoring, not capability — and at L128 it holds
-0.96 clean. Tokens-to-solve separates what score cannot: the L64 spend among the top cluster
-spans 7.7k (grok) to 19.2k (kimi) per call for indistinguishable L96 scores — held composite
-state is rented by the token, and the rent differs 2.5× by model.
+The two lengths divide the labor. L96 separates a 0.92–1.00 band from a tail (sol 0.84,
+qwen 0.72). L128 spreads the roster 0.44–1.00: fable and gpt-5.5 hold 1.00, qwen halves to
+0.44, and glm drops to 0.80. The ʳ on nemotron's L96 is a single raised-budget rerun (98,304
+tokens): at the planned budget it read 0.84 with 12% truncation — budget censoring, not
+capability — and at L128 it holds 0.96 clean. Tokens-to-solve separates what score cannot:
+the L64 spend among the 0.96–1.00 cluster spans 5.0k (fable) to 17.1k (nemotron) per call —
+held composite state is rented by the token, and the rent differs 3.4× by model.
 
-Effort is requested, not enforced: gpt-5.6-sol at requested xhigh spends 4× fewer reasoning
-tokens than gpt-5.5 (2.3k vs 9.2k per call at L64), and its length curve is the roster's only
-inverted one (0.48 @L32 → 0.72 @L96, reasoning spend scaling with prompt length) — it fails
-short items it would likely solve with the thinking it grants longer ones. Its failures are
-genuine wrong answers (match = contains), not a scoring artifact. A controlled high-vs-xhigh
-probe on sonnet shows no effort effect on identical items (0.84 high vs 0.92 xhigh at L96, within the n=25 interval). The live
-table, with intervals and marks, renders in the feed and in the README headline block.
+The maximum-supported-effort protocol must locate the maximum on the model's *native* API.
+gpt-5.6-sol's Chat Completions shim caps the effort ladder at xhigh, while its native
+Responses API exposes a higher `max` level: on identical L96 items, xhigh reads 0.60–0.72 at
+~3.4–4.2k reasoning tokens per call on every route (direct chat, OpenRouter, and Responses
+alike — the parameter is honored uniformly), while Responses `max` reads 0.88 at 8.4k
+(`results/probes/sol_responses_20260724.json`). The benchmark's top arm therefore maps to
+vendor `max` on the native endpoint, and sol's table rows carry the corrected protocol. Even
+at its true ceiling, sol's length curve is the roster's only inverted one (0.64 @L32 at 1.3k
+reasoning tokens per call, rising with prompt length) — it under-allocates thinking to short
+prompts at every level, and those failures are genuine wrong answers (match = contains). A
+controlled high-vs-xhigh probe on sonnet shows no effort effect on identical items (0.84 vs
+0.92, within the n=25 interval). The live table, with intervals and marks, renders in the
+feed and in the README headline block.
 
 ### 4.2 The composed cell and the gap (instant regime)
 
@@ -233,7 +245,8 @@ deficit, not a recall one:
 | anthropic/claude-opus-4.8 | 1.00 | 0.78 | 0.72 | 0.43 | +0.06 |
 | anthropic/claude-sonnet-5 | 0.97 | 0.77 | 0.62† | 0.32† | +0.15† |
 | deepseek/deepseek-v4-pro | 1.00 | 0.51 | 0.44 | 0.19 | —ᶠ |
-| google/gemini-3.5-flash | 1.00 | 0.66* | 0.64* | 0.28* | +0.02* |
+| google/gemini-3.6-flash | 1.00 | 0.69* | 0.67* | 0.26* | +0.02* |
+| moonshotai/kimi-k3 | 1.00 | 0.65 | 0.33 | 0.29 | +0.32 |
 | nvidia/nemotron-3-ultra-550b-a55b | 1.00 | 0.49 | 0.33 | 0.12 | —ᶠ |
 | openai/gpt-5.5 | 1.00 | 0.80 | 0.46 | 0.33 | +0.34 |
 | openai/gpt-5.6-sol | 1.00 | 0.82 | 0.65 | 0.33 | +0.17 |
@@ -244,13 +257,15 @@ deficit, not a recall one:
 
 Where binding is solid the roster separates: opus composes essentially for free (gap 0.06,
 equal to the instant test-retest noise bar), while gpt-5.5 pays the largest clean deficit
-(binding 0.80, composed 0.46, gap +0.34) — the model that tops the thinking-regime headline has
-the *least* in-weights composition, which is the regime contrast in one pair of numbers. For
-deepseek, qwen, and nemotron the binding leg's interval overlaps the 0.41 object-filter floor,
-so the gap renders —ᶠ (floor − floor ≈ 0 by construction, not a measurement). Marks (†, *, the
-sonnet escalation diagnostics) and per-cell detail are in the feed; grok-4.5, muse-spark-1.1
-(thinking-only endpoints), and kimi-k2.6 (pervasive covert reasoning at effort=none) carry no
-instant numbers.
+(binding 0.80, composed 0.46, gap +0.34) — the model that shares the top of the thinking-regime
+headline has among the *least* in-weights composition, which is the regime contrast in one pair
+of numbers. kimi-k3 is the same shape (binding 0.65, gap +0.32 against a top-cluster headline);
+its predecessor k2.6 could never be measured here at all — k3's effort=none arm is clean
+(contract 1.00, zero covert reasoning), so Moonshot gets in-weights numbers for the first time.
+For deepseek, qwen, and nemotron the binding leg's interval overlaps the 0.41 object-filter
+floor, so the gap renders —ᶠ (floor − floor ≈ 0 by construction, not a measurement). Marks
+(†, *, the sonnet escalation diagnostics) and per-cell detail are in the feed; grok-4.5,
+muse-spark-1.1, and claude-fable-5 (thinking-only endpoints) carry no instant numbers.
 
 ### 4.3 Reasoning buys composition
 
@@ -297,12 +312,13 @@ s5@128 ctok column is completion spend on the matched L128 cell every model runs
 | muse-spark-1.1 | 0.96 | 1.00 @32,768tok | 9704 |
 | anthropic/claude-sonnet-5 | 1.00 | 1.00 @32,768tok | 11866 |
 | anthropic/claude-opus-4.8 | 1.00 | 1.00 @32,768tok | 12683 |
+| anthropic/claude-fable-5 | 1.00 | 0.96 | 6405 |
 | openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
 | openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
 | z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
-| moonshotai/kimi-k2.6 | 1.00‡ | 0.88 | 17418 |
+| google/gemini-3.6-flash | 0.96 | 0.84 | 8234 |
+| moonshotai/kimi-k3 | 1.00 | 0.80 @32,768tok | 11355 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| google/gemini-3.5-flash | 1.00 | 0.52 | 11022 |
 | deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
 
@@ -311,7 +327,7 @@ composite, not the components, carries the ranking (§4.1) — and the chain que
 explicit hop count because the bare nested phrase is a hop-counting confound at depth 128, a
 prompt-format artifact rather than a state failure. Component cells also dissociate the regimes
 within one item set: the chain d16 cell runs in both regimes on identical items, reads
-0.96–1.00 for eleven of twelve models thinking, and floors for every cleanly-answering model
+0.96–1.00 for twelve of thirteen models thinking, and floors for every cleanly-answering model
 instant (best 0.08) — a 16-hop chase is serial work no roster model holds in weights, and every
 strong model solves given room to work. Marks, budgets, and the per-cell escalation record are
 in the feed.
@@ -697,7 +713,7 @@ python scripts/eval_openrouter_grid.py --n 30
 
 # Disable reasoning to confirm the collapse
 python scripts/eval_openrouter_grid.py \
-    --models moonshotai/kimi-k2.6 z-ai/glm-5.2 meta-llama/llama-3.3-70b-instruct \
+    --models moonshotai/kimi-k3 z-ai/glm-5.2 meta-llama/llama-3.3-70b-instruct \
     --tasks composite_copy_v2 --n 30 --no_reasoning
 ```
 

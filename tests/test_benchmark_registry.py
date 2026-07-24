@@ -53,7 +53,7 @@ def _efforts(cells, facet):
 # --- registry -------------------------------------------------------------------
 
 def test_registry_shape():
-    assert len(B.MODELS) == 12
+    assert len(B.MODELS) == 13
     # roster decisions 2026-07-07/08/09: maverick, gpt-5.4, gemini-3.1-pro
     # dropped; the UNMEASURABLE x-ai endpoints stay off the roster (mainline
     # grok bio-filtered on composite prompts; grok-build dropped for provider
@@ -189,7 +189,7 @@ def test_arm_settings_protocol():
 
 def test_gemini_off_arm_is_minimal():
     """Gemini 3 cannot disable reasoning: its "none" arms substitute "minimal"."""
-    for slug in ("google/gemini-3.5-flash",):
+    for slug in ("google/gemini-3.6-flash",):
         efforts = {c["settings"]["effort"] for c in B.arms_for(slug)}
         assert "none" not in efforts
         assert "minimal" in efforts
@@ -324,7 +324,7 @@ def test_cell_dollar_cap():
     # gpt-5.6-sol prices like gpt-5.5 ($30/M) -> same caps apply
     assert B.cell_dollar_cap("openai/gpt-5.6-sol", 25, 32768) == 24.576
     # below the threshold: gemini flash ($9/M) and the cheap tier are uncapped
-    assert B.cell_dollar_cap("google/gemini-3.5-flash", 25, 16384) is None
+    assert B.cell_dollar_cap("google/gemini-3.6-flash", 25, 16384) is None
     assert B.cell_dollar_cap("z-ai/glm-5.2", 25, 32768) is None
     assert B.cell_dollar_cap("x-ai/grok-4.5", 25, 16384) is None  # $6/M completion
     assert B.cell_dollar_cap("not/on-roster", 25, 16384) is None
@@ -1039,12 +1039,12 @@ def test_skip_facets_machinery():
     motivating case; grok-4.5 is the LIVE case since 2026-07-12 — no clean
     off-arm, so every "off"-policy facet is unplanned and its cell plan is
     thinking facets only). The full-roster zero_budget plan covers the other
-    9 instant-measured models (all except grok-4.5, muse-spark-1.1, and
-    kimi-k2.6)."""
+    10 instant-measured models (all except grok-4.5, muse-spark-1.1, and
+    claude-fable-5)."""
     from unittest import mock
-    # grok-4.5 and muse-spark-1.1 are thinking-only by endpoint design;
-    # kimi-k2.6 is instant-excluded because its effort=none arm is contaminated.
-    INSTANT_EXCLUDED = {"x-ai/grok-4.5", "muse-spark-1.1", "moonshotai/kimi-k2.6"}
+    # grok-4.5, muse-spark-1.1, and claude-fable-5 are thinking-only by endpoint
+    # design (fable additionally content-filters the composite contract prompts).
+    INSTANT_EXCLUDED = {"x-ai/grok-4.5", "muse-spark-1.1", "anthropic/claude-fable-5"}
     for slug in B.MODELS:
         if slug not in INSTANT_EXCLUDED:
             assert not B.MODELS[slug].get("skip_facets")
@@ -1064,8 +1064,8 @@ def test_skip_facets_machinery():
                                                "sanity", "commutative",
                                                "gap_stability", "s5_chain"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
-    assert sum(len(cells) for cells in plan.values()) == 45  # 9 models x 5 zero_budget cells
-    assert sum(1 for cells in plan.values() if cells) == 9  # grok-4.5, muse-spark-1.1, kimi-k2.6 plan none
+    assert sum(len(cells) for cells in plan.values()) == 50  # 10 models x 5 zero_budget cells
+    assert sum(1 for cells in plan.values() if cells) == 10  # grok-4.5, muse-spark-1.1, fable-5 plan none
 
 
 def test_v2_task_cells_get_fresh_resume_keys():

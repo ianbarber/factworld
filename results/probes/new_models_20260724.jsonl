@@ -1,0 +1,13 @@
+{"ts": "2026-07-24T07:54:17.861838+00:00", "model": "anthropic/claude-fable-5", "probe": "effort_none_contract", "effort": "none", "max_tokens": 96, "ok": false, "error": "BadRequestError: Error code: 400 - {'error': {'message': 'Reasoning is mandatory for this endpoint and cannot be disabled.', 'code': 400, 'metadata': {'provider_name': None, 'previous_errors': [{'code': 400, 'message': 'Reasoning is mandatory for this endpoint and cannot be disabled.'}, {'code': 400"}
+{"ts": "2026-07-24T07:54:20.240389+00:00", "model": "anthropic/claude-fable-5", "probe": "cap_respect_high", "effort": "high", "max_tokens": 1024, "ok": true, "finish": "content_filter", "text": "", "ctok": 2, "rtok": 0}
+{"ts": "2026-07-24T07:54:24.600503+00:00", "model": "moonshotai/kimi-k3", "probe": "effort_none_contract", "effort": "none", "max_tokens": 96, "ok": true, "finish": "stop", "text": "Answer: g13 v70", "ctok": 16, "rtok": 0}
+{"ts": "2026-07-24T07:54:35.896354+00:00", "model": "moonshotai/kimi-k3", "probe": "cap_respect_high", "effort": "high", "max_tokens": 1024, "ok": true, "finish": "stop", "text": "Answer: g13 v70", "ctok": 195, "rtok": 174}
+{"ts": "2026-07-24T07:54:35.918873+00:00", "model": "google/gemini-3.6-flash", "probe": "effort_none_contract", "effort": "none", "max_tokens": 96, "ok": false, "error": "BadRequestError: Error code: 400 - {'error': {'message': 'Reasoning is mandatory for this endpoint and cannot be disabled.', 'code': 400, 'metadata': {'provider_name': None, 'previous_errors': [{'code': 400, 'message': 'Reasoning is mandatory for this endpoint and cannot be disabled.'}]}}, 'user_id'"}
+{"ts": "2026-07-24T07:54:39.025565+00:00", "model": "google/gemini-3.6-flash", "probe": "cap_respect_high", "effort": "high", "max_tokens": 1024, "ok": true, "finish": "stop", "text": "Answer: g13 v70", "ctok": 715, "rtok": 707}
+{"probe": "fable s5_chain#0", "finish": "stop", "ctok": 1732, "rtok": 172, "text": "g15"}
+{"probe": "fable s5_chain#1", "finish": "stop", "ctok": 1438, "rtok": 279, "text": "g5"}
+{"probe": "fable s5_chain#2", "finish": "stop", "ctok": 1527, "rtok": 116, "text": "g13"}
+{"probe": "fable composite#1", "finish": "content_filter", "ctok": 2, "rtok": 0, "text": ""}
+{"probe": "fable composite#2", "finish": "content_filter", "ctok": 2, "rtok": 0, "text": ""}
+{"probe": "fable minimal-offarm", "finish": "stop", "ctok": 32, "rtok": 26, "text": "Answer: g13 v70"}
+{"probe": "gemini3.6 minimal-offarm", "finish": "stop", "ctok": 8, "rtok": 0, "text": "Answer: g13 v70"}

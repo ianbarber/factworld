@@ -99,6 +99,20 @@ MODELS = {
     "anthropic/claude-opus-4.8": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
         "completion_price_per_M": 25.0, "open_weights": False},
+    # ADDED 2026-07-24 (roster refresh). Thinking-only: effort=none rejected 400
+    # ("Reasoning is mandatory"), and effort=minimal still reasons (rtok=26 on a
+    # 96-token contract probe) — no clean off-arm, so every instant facet is
+    # skipped structurally like grok-4.5/muse. Its endpoint content-filters the
+    # v-token composite contract prompts (3/3 finish=content_filter, the
+    # mainline-grok blocker shape) — those are all instant cells, so the skip
+    # list already covers them; the headline s5_chain prompts probe clean (3/3
+    # stop, correct single-token answers). Cap respected. Pricing verified
+    # against /api/v1/models 2026-07-24 ($10/$50 per M).
+    "anthropic/claude-fable-5": {
+        "tier": "frontier_pair", "prompt_price_per_M": 10.0,
+        "completion_price_per_M": 50.0, "open_weights": False,
+        "skip_facets": ("zero_budget", "recall_load", "chain_instant",
+                        "sanity", "gap_stability")},
     "anthropic/claude-sonnet-5": {
         "tier": "frontier_pair", "prompt_price_per_M": 2.0,
         "completion_price_per_M": 10.0, "open_weights": False},
@@ -127,25 +141,40 @@ MODELS = {
     # rejects max_tokens in favor of max_completion_tokens, does not accept
     # temperature/top_p overrides, and does not accept the OpenRouter-style
     # reasoning-effort extra body.
+    # SWITCHED to the native Responses API 2026-07-24: the Chat Completions shim
+    # hides GPT-5.6's ``max`` reasoning level (400 "supported: none..xhigh"),
+    # silently under-realizing the max-supported-effort protocol. On identical
+    # s5_chain L96 items, Responses effort=max reads 0.88 at 8,360 rtok/call vs
+    # 0.60-0.72 at ~3.4-4.2k rtok/call for xhigh on every route (chat direct,
+    # OpenRouter, Responses) — xhigh is honored uniformly; max is simply a
+    # higher level only Responses exposes (results/probes/sol_responses_20260724
+    # .json, sol_openrouter_xhigh_20260724.json). The benchmark's top arm
+    # (xhigh = "maximum supported") therefore maps to vendor ``max``; dose arms
+    # low/medium/high stay literal.
     "openai/gpt-5.6-sol": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
         "completion_price_per_M": 30.0, "open_weights": False,
         "base_url": "https://api.openai.com/v1",
         "api_key_env": "OPENAI_API_KEY",
         "model_name": "gpt-5.6-sol",
-        "max_completion_tokens": True,
+        "responses_endpoint": True,
         "reasoning_model": True,
         "supports_reasoning_effort": False,
         "reasoning_effort_values": {"low": "low", "medium": "medium", "high": "high",
-                                     "xhigh": "xhigh", "max": "max"}},
+                                     "xhigh": "max", "max": "max"}},
     # openai/gpt-5.4 and google/gemini-3.1-pro-preview DROPPED 2026-07-08 (owner
     # decision: one flagship per vendor; Google is pushing flash).
     # no_reasoning_effort: Gemini 3 endpoints reject effort=none outright
     # ("Reasoning is mandatory ... cannot be disabled", 400); effort=minimal is
     # the closest off-arm (0 reasoning tokens on flash).
-    "google/gemini-3.5-flash": {
+    # ADDED 2026-07-24, replacing gemini-3.5-flash (DROPPED same day: superseded
+    # by version — the 3.5 slug still routes separately, so old cells were never
+    # silently upgraded; explicit-version policy). Same endpoint behavior as 3.5:
+    # effort=none rejected 400, effort=minimal is a clean off-arm (rtok=0,
+    # contract obeyed). Pricing verified against /api/v1/models 2026-07-24.
+    "google/gemini-3.6-flash": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 1.5,
-        "completion_price_per_M": 9.0, "open_weights": False,
+        "completion_price_per_M": 7.5, "open_weights": False,
         "no_reasoning_effort": "minimal"},
     # ADDED 2026-07-13. Muse Spark 1.1 is served directly by the Meta Model API
     # (not OpenRouter) and speaks the OpenAI Responses API. The endpoint cannot
@@ -198,16 +227,18 @@ MODELS = {
     "z-ai/glm-5.2": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.93,
         "completion_price_per_M": 3.0, "open_weights": True},
-    # INSTANT FACETS EXCLUDED: kimi-k2.6 emits reasoning tokens on 65-89% of
-    # effort=none calls despite the answer contract, and its provider does not
-    # enforce the requested token cap, so its instant numbers are explicit upper
-    # bounds rather than in-weights measurements. It runs in the thinking regime
-    # only, like grok-4.5 and muse-spark-1.1.
-    "moonshotai/kimi-k2.6": {
-        "tier": "cheap_reasoner", "prompt_price_per_M": 0.66,
-        "completion_price_per_M": 3.41, "open_weights": True,
-        "skip_facets": ("zero_budget", "recall_load", "chain_instant",
-                        "sanity", "gap_stability")},
+    # ADDED 2026-07-24, replacing kimi-k2.6 (DROPPED same day: superseded by
+    # version; its cells render in the archived section). Unlike k2.6, k3's
+    # effort=none arm probes CLEAN — rtok=0, contract obeyed, cap respected
+    # (results/probes/new_models_20260724.jsonl) — so it runs the full battery
+    # including instant. Pricing verified against /api/v1/models 2026-07-24.
+    # quantization_filter off: no OpenRouter endpoint for this slug declares a
+    # quantization, so the open-weights fp8/bf16/fp16 filter 404s every call
+    # (verified 2026-07-24; the first battery attempt lost all cells to it).
+    "moonshotai/kimi-k3": {
+        "tier": "cheap_reasoner", "prompt_price_per_M": 3.0,
+        "completion_price_per_M": 15.0, "open_weights": True,
+        "quantization_filter": False},
     "deepseek/deepseek-v4-pro": {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.435,
         "completion_price_per_M": 0.87, "open_weights": True},
