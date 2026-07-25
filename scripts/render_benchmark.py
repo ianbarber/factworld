@@ -1397,8 +1397,8 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     s5c_lines = []
     s5c = s5_chain_rows(records)
     if s5c:
-        s5c_lines = ["**s5_chain — the headline ranking (non-abelian pointer-map tracking × 8-hop dereference)**", "",
-                     "| Model | s5_chain @L96 | @L128 | ctok/call |",
+        s5c_lines = ["**s5_chain**", "",
+                     "| Model | s5_chain @L96 | @L128 | ctok/call @L64 |",
                      "|---|---|---|---|"]
         for m, score, ext, ctok in s5c:
             s5c_lines.append(f"| {m} | {_readme_compact(score)} | {_readme_compact(ext)} | {ctok} |")
@@ -1926,6 +1926,57 @@ def _fig_chain(records, out_dir, facet, task_label):
                        f"(dotted: {REF_THRESHOLD} reference)")
 
 
+def fig_bench_headline(records, out_dir):
+    """The FactWorldBench noise view: one row per model, s5_chain match at L96
+    (filled) and L128 (open) with Wilson 95% intervals — the visual reading
+    guide for the README table (overlapping intervals are not an ordering)."""
+    order = s5_chain_rows(records)   # table order: L96 desc, L128 desc, ctok asc
+    if not order:
+        return []
+    rows = []
+    for name, *_ in order:
+        recs = {L: stress_cell(records, "s5_chain", name, L, effort="xhigh")
+                for L in (S5_CHAIN_STRESS_LENGTH, S5_CHAIN_EXT_LENGTH)}
+        if all(r is None or majority_finish_length(r) for r in recs.values()):
+            continue
+        rows.append((name, recs))
+    fig, ax = plt.subplots(figsize=(7.2, 0.42 * len(rows) + 1.2))
+    ys = range(len(rows))
+    # Plot in ERROR space (1 - match) on a symlog axis so the 0.92-1.00 cluster
+    # spreads out — a true log/logit axis cannot represent exact 1.00 scores.
+    # Ticks are positioned in error space but LABELED as match, so the figure
+    # reads in the table's units; linthresh = one error out of 25.
+    ONE_ERR = 1 / 25
+    for series, (length, dy, mfc) in {
+        "@L96": (S5_CHAIN_STRESS_LENGTH, -0.13, None),
+        "@L128": (S5_CHAIN_EXT_LENGTH, 0.13, "white"),
+    }.items():
+        pts = [(y + dy, recs[length]) for y, (_n, recs) in zip(ys, rows)
+               if recs.get(length) is not None and not majority_finish_length(recs[length])]
+        errs = [1 - canonical_relaxed(r) for _y, r in pts]
+        cis = [_ci(r) for _y, r in pts]
+        xerr = [[max(0.0, (1 - lo) - e) for e, (lo, _hi) in zip(errs, cis)],
+                [max(0.0, e - (1 - hi)) for e, (_lo, hi) in zip(errs, cis)]]
+        ax.errorbar(errs, [y for y, _r in pts], xerr=[xerr[1], xerr[0]], linestyle="none",
+                    marker="o", markersize=5, markerfacecolor=mfc, color="#1f4e79",
+                    capsize=2.5, elinewidth=0.9, label=series)
+    ax.set_xscale("symlog", linthresh=ONE_ERR, linscale=0.6)
+    tick_match = (1.00, 0.96, 0.92, 0.84, 0.72, 0.44)
+    ax.set_xticks([1 - m for m in tick_match], [f"{m:.2f}" for m in tick_match])
+    ax.set_xlim(0.62, -0.004)   # decreasing: best (match 1.00) on the right
+    ax.set_yticks(list(ys), [n for n, _r in rows])
+    # models on y: _style_axes' score-axis ylim clamp would crop past row 1
+    ax.set_ylim(len(rows) - 0.5, -0.5)   # decreasing limits: best model on top
+    ax.set_xlabel("match (log-spaced toward 1.00)")
+    ax.set_title("s5_chain", fontsize=10, loc="left")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.grid(True, axis="x", linewidth=0.4, alpha=0.4)
+    ax.legend(loc="upper left", fontsize=8, frameon=False)
+    fig.tight_layout()
+    return _save(fig, out_dir, "fig_bench_headline")
+
+
 def fig_chain_depth(records, out_dir):
     return _fig_chain(records, out_dir, "chain_depth",
                       f"chain_v1 (depths < k={CHAIN_CYCLE_K})")
@@ -2283,7 +2334,8 @@ def fig_profiles(records, out_dir):
 
 FIGURES = [fig_zero_budget, fig_profiles_instant, fig_profiles_thinking,
            fig_dose_response, fig_composite_length, fig_s5_stress,
-           fig_s5_chain, fig_chain_depth, fig_chain_nowrap, fig_decomposition]
+           fig_s5_chain, fig_bench_headline, fig_chain_depth, fig_chain_nowrap,
+           fig_decomposition]
 
 
 # --- html ---------------------------------------------------------------------

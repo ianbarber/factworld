@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-24 15:09 UTC from `results/benchmark/history.jsonl` (801 latest cells).
+Generated 2026-07-24 20:31 UTC from `results/benchmark/history.jsonl` (801 latest cells).
 
 ## Settings
 
@@ -146,8 +146,8 @@ s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map,
 | anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
 | deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
 | z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| openai/gpt-5.6-sol | 0.84 | 0.80 | 4966 |
 | qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
+| openai/gpt-5.6-sol | 0.60 | 0.80 | 2444 |
 
 The chain column reads the `chain_nowrap` facet only (staircase k=2d+1, so the d128 cell is k=257). `chain_v2` builds a single k=6 pointer cycle and measures depth only for depths < k (`factworld/tasks.py`: "Depths stay < k so the cycle never wraps"); `chain_depth` cells at depth >= 6 wrapped the cycle (gold == start agent at depths 12/24/48; effective difficulty depth mod 6), measure the wrapped task rather than depth, and are marked `INVALID (k=6 cycle wrap — task redesigned as chain_nowrap)` in the tables below and excluded from the chain figure.
 
@@ -747,9 +747,9 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 25 | 0.44 [0.27, 0.63] | 0.44 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=high | 25 | 0.56 [0.37, 0.73] | 0.56 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 25 | 0.52 [0.33, 0.70] | 0.52 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.64 [0.45, 0.80] | 0.64 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.84 [0.65, 0.94] | 0.84 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 25 | 0.32 [0.17, 0.52] | 0.32 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.60 [0.41, 0.77] | 0.60 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.60 [0.41, 0.77] | 0.60 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.80 [0.61, 0.91] | 0.80 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
@@ -1464,10 +1464,10 @@ finish_errors counts per-example finish=='error' calls (surfaced even where diag
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 64 | effort=xhigh | 0.000 | 0 | 0 | 41976 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=high | 0.000 | 0 | 0 | 57098 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_chain | s5_chain_v2 | 96 | effort=xhigh | 0.000 | 0 | 0 | 71313 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 32287 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 123953 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 208575 | stop:25 | — |
-| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 257540 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 32 | effort=xhigh | 0.000 | 0 | 0 | 16083 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 60888 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 77188 | stop:25 | — |
+| openai/gpt-5.6-sol | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 175420 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 66218 | stop:25 | — |
 | openai/gpt-5.6-sol | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 141584 | stop:25 | — |
 | openai/gpt-5.6-sol | sanity | conflict_v1 | 4 | effort=none | 0.000 | 0 | 0 | 0 | stop:30 | — |
