@@ -217,7 +217,12 @@ last event's recipient, and the *object-filter floor* filters events to the quer
 guesses among its writes. An instant score near 0.41 shows object filtering, not state
 tracking. In the thinking table, chain d128 is a 128-hop pointer chase over 257 agents and
 s5 @L256 is 256 role-permutation events (both described in [the tasks](#1-the-tasks) and
-[docs/tasks.md](docs/tasks.md)).
+[docs/tasks.md](docs/tasks.md)). Efficiency is priced at a lower length than the score in both
+tables for the same reason: token spend only compares like for like on a cell every model
+completes. At the scoring lengths some models truncate or run at different budgets, so spend
+there measures the budget, not the cost to solve. Three models (grok-4.5, muse-spark-1.1,
+claude-fable-5) appear only in the thinking tables: their endpoints cannot disable reasoning,
+so they have no instant cells.
 
 ## 3. Exploring the architectures
 
