@@ -1,6 +1,6 @@
 """Compute-matched scale sweep for FactWorld composition.
 
-The headline local result (reports/factworld-consolidated.md §5) compared `gdp_hybrid`, `fprm`,
+The headline local result (reports/factworld.tex §5.1) compared `gdp_hybrid`, `fprm`,
 and `transformer` at matched `(d_model, n_layers)` and called all three "~40M params". That label
 is misleading on two counts this sweep corrects:
 
@@ -65,7 +65,7 @@ from experiment_curriculum_staged import (  # noqa: E402
 )
 
 # Parameter buckets. (d_model, n_layers, batch, steps). d_model must be divisible by n_heads (4).
-# batch=128 matches the §5 recipe (reports/factworld-consolidated.md §5) for small/medium; large uses
+# batch=128 matches the §5 recipe (reports/factworld.tex §5.1) for small/medium; large uses
 # 64 to stay memory-safe on the 268M gdp model. The script prints the MEASURED param count + FLOPs per
 # arch so the buckets are auditable. `steps` is the total curriculum budget (phase lengths scale off it).
 SCALES = {
@@ -201,7 +201,7 @@ def write_markdown(summary, size_map, cfg, path: Path):
     lines = [
         "# FactWorld composition — compute-matched scale sweep",
         "",
-        "Same staged curriculum and eval as `reports/factworld-consolidated.md` §5, varied ONLY in "
+        "Same staged curriculum and eval as `reports/factworld.tex` §5.1, varied ONLY in "
         "model size. **The match is on compute, not parameters.** All architectures share "
         "(d_model, depth); `fprm` is weight-tied (one block looped `n_loops` times), so at matched "
         "(d_model, depth) its per-token FLOPs equal the transformer's while its parameter count is "

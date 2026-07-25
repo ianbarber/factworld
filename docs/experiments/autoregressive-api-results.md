@@ -8,7 +8,7 @@ re-run, the honest comparison). Both n=30–100, composite_copy_v1@L16 + s5_v1@L
 
 All conditions carry the composite format instruction, so the only variable is the reasoning regime.
 This is a format-fair ablation, not the headline cross-model comparison; the headline
-`composite_copy_v1@L16` numbers are in `reports/factworld-consolidated.md` §4.
+`composite_copy_v1@L16` numbers were folded into the report (`reports/factworld.tex`).
 
 `composite_copy_v1 @ L16` — value accuracy (binding column = holder accuracy):
 

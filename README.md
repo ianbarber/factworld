@@ -138,7 +138,7 @@ compares like for like.
 Models run at the recommended top reasoning level, `xhigh` (mapped down where the endpoint's
 ceiling is `high`).
 
-More details in [§4 of the report](reports/factworld-consolidated.md); per-cell Wilson
+More details in [§4 of the report](reports/factworld.pdf); per-cell Wilson
 intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.md).
 
 <!-- FRONTIER_TABLE_START -->
@@ -246,7 +246,7 @@ configuration to converge.
 
 - **Recall.** Every architecture aces adjacent 1-hop readout; deferred recall needs product
   recurrence: attention-free `gdp_pure` supplies it, `gdn_pure` fails
-  ([consolidated §3](reports/factworld-consolidated.md)).
+  ([report §3](reports/factworld.pdf)).
 - **Binding under breadth.** fprm leads the binding leg through B16 and breaks at B24, where
   gdp_hybrid holds 0.67; the transformer reads 0.08–0.23 throughout (45 runs, d256).
 - **Composition.** The staged-curriculum flagship converges only for gdp_hybrid: composite
@@ -254,27 +254,28 @@ configuration to converge.
   0.109±0.089 with perfect binding (0.998) but a dead value leg; transformer 0.001, a real floor.
   Scale is non-monotone: convergence peaks at medium d768 (0.732±0.013 corroborates), small
   fails the value leg, large is seed-bimodal
-  ([consolidated §5](reports/factworld-consolidated.md)).
+  ([report §5.2](reports/factworld.pdf)).
 - **Chain.** No architecture extrapolates depth (3 archs × 3 seeds): gdp_hybrid fits training
   best yet scores below the guess at held-out depths.
 - **s5.** Dense per-step supervision forms the non-abelian circuit in every architecture; only
   the recurrent hybrid extrapolates length
-  ([consolidated §8](reports/factworld-consolidated.md)).
+  ([report §5.5](reports/factworld.pdf)).
 - **Commutative.** Answer-only training reads chance for every architecture at d256; dense
   per-step traces form the fold in-distribution for the recurrent architectures (gdp_hybrid
   0.82, fprm 0.65 @L16; transformer at chance); no run carries it past the training
   lengths.
   
 The price table shows which architectural or training choice buys each element, with per-row
-evidence: [§9 of the report](reports/factworld-consolidated.md). Local multi-seed detail
-and per-leg decomposition are §5–§8. Running log:
+evidence: [§6 of the report](reports/factworld.pdf). Local multi-seed detail and per-leg
+decomposition are §5 of the report. Running log:
 [`docs/experiments/README.md`](docs/experiments/README.md).
 
 ## Reports and prior work
 
-- 📄 [`reports/factworld-consolidated.md`](reports/factworld-consolidated.md), **the report**:
-  the instrument and its validation, the frontier benchmark (FactWorldBench headline, the gap,
-  the regime contrast), and the architecture exploration with the price table.
+- 📄 [`reports/factworld.pdf`](reports/factworld.pdf), **the report**: the instrument and its
+  validation, the frontier benchmark, and the architecture exploration with the requirements
+  table. Source is [`reports/factworld.tex`](reports/factworld.tex), built by
+  `scripts/build_arxiv.sh`.
 - 🧪 **Experiments using FactWorld as a testbed** live under
   [`experiments/`](experiments/):
   [`experiments/mopd/`](experiments/mopd/README.md), *Multi-teacher On-Policy Distillation*

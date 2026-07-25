@@ -20,9 +20,10 @@ A task that does neither is calibration work or dead weight, and does not appear
 - **The repo** — a project for evaluating and exploring models and architectures. `README.md`
   carries the project sense: what the instrument is, the taxonomy, how to use it, where results
   live.
-- **The report** (`reports/factworld-consolidated.md`) — the single narrative: why the
-  instrument is interesting, with the current findings. Practitioner-oriented, results-bearing,
-  terse. There is exactly one report.
+- **The report** (`reports/factworld.tex`, built to `reports/factworld.pdf` by
+  `scripts/build_arxiv.sh`): the single narrative, arXiv-style. Why the instrument is
+  interesting, with the current findings. Practitioner-oriented, results-bearing, terse.
+  There is exactly one report.
 - **FactWorldBench** — a frontier-model ranking derived from the instrument, published
   externally. Its feed is the generated `docs/benchmark/` page (`scripts/render_benchmark.py` →
   results.md / results.csv / index.html / figures, all regenerated from
@@ -86,5 +87,5 @@ instant regime shows what survives in weights.
   answer contract. Discriminate before spending: never buy cells predicted to sit at ceiling/floor.
 - Tasks are versioned; a defective version is retired outright, never kept scored.
 
-Primary docs: `reports/factworld-consolidated.md` (the report), `docs/benchmark/results.md`
+Primary docs: `reports/factworld.tex` (the report), `docs/benchmark/results.md`
 (rendered bench feed), `docs/experiments/README.md` (log), `factworld/benchmark.py` (registry).
