@@ -6,11 +6,11 @@ task in it must pass two tests: does it differentiate frontier models, and can i
 architecturally. Every number reproduces from committed scripts and can be checked with an API
 key or a single GPU.
 
-The findings, in brief: the component abilities are largely solved at the frontier, but their
-composition is not. With reasoning off, most models hold little composition in their weights.
-With reasoning on, composition is bought by the token, and the price differs several-fold by
-model. Locally, no element of the composition is free: each is paid for by a specific
-architectural or training choice, and two elements have no known price yet.
+We find that the component abilities are largely solved at the frontier, but their
+composition is not. With reasoning off, most models hold little composition in their weights
+and architecture. With reasoning on, composition is bought by the token, and the price
+differs significantly by model. In task-specific training, each element of the composition
+requires a specific architectural or training capability.
 
 **Scope.** FactWorld is a mechanism probe for component capabilities, not an end-to-end agent
 benchmark. Every task is single-turn and single-answer-span, with no tool use, planning, or
@@ -340,8 +340,8 @@ what collapses; the routing deficit is scale-invariant.
 
 fprm's product recurrence leads the binding leg through B16 (1.00 at B6, 0.97 to 0.98
 seed-consistent at B16) and stops fitting at B24, where only the gated hybrid holds (0.67);
-the transformer reads 0.08 to 0.23 throughout (45 runs at d256). Recurrence buys last-write
-state, ordered by recurrence form, and breaks by form as the working set grows.
+the transformer reads 0.08 to 0.23 throughout (45 runs at d256). Last-write state requires recurrence, ordered by recurrence form, and breaks by form as the
+working set grows.
 
 ### 5.4 Chain depth does not extrapolate
 
@@ -378,27 +378,28 @@ The commutative rung (per-entity accumulation, order-free) does not form under a
 supervision at any measured setting: chance for every architecture at d256. Dense per-step
 traces form it in-distribution for the recurrent architectures (gdp_hybrid 0.82 ± 0.15, fprm
 0.65 ± 0.26 at L16; transformer at chance), and no run carries it past the training lengths.
-The pattern matches S5: supervision density buys formation, and extrapolation is a separate,
-unbought item.
+The pattern matches S5: supervision density enables formation, and extrapolation is a
+separate, unmet requirement.
 
-## 6. The price table
+## 6. What each element of the composition requires
 
-No element of the composition is free. Each is paid for by an architectural or training
-choice:
+In task-specific training, each element of the composition requires a specific architectural
+or training capability:
 
-| element | price |
+| element | requirement |
 |---|---|
 | adjacent (1-hop) recall | attention: every architecture aces adjacent readout |
 | deferred recall | product recurrence: the transformer aces adjacent, fails deferred (0.19 vs 0.73) |
 | last-write state | recurrence, ordered by form: fprm through B16, only the gated hybrid at B24, transformer floors |
 | non-abelian state (formation) | dense per-step supervision, a checkpoint every ≤2 events, architecture-independent |
 | non-abelian state (length extrapolation) | recurrent hybrid: gdp_hybrid 0.75 @L64; fprm and transformer collapse past train length |
-| commutative state (formation) | dense per-step supervision plus recurrence; extrapolation unbought |
-| depth extrapolation | **open**: no measured choice buys it, with or without intermediate-hop traces |
+| commutative state (formation) | dense per-step supervision plus recurrence; extrapolation does not follow |
+| depth extrapolation | **open**: unsolved by every measured choice, with or without intermediate-hop traces |
 | local composition (value leg) | **open** at the default recipe: only the staged curriculum at 768×8 converges it |
 
-Nothing measured so far buys depth extrapolation, and no local training choice converges the
-value leg of the composed cell outside one curriculum at one scale.
+Depth extrapolation and the value leg of the composed cell remain unsolved at the scales
+tested: no measured architectural or training choice provides the first, and only one
+curriculum at one scale converges the second.
 
 ## 7. Discussion
 

@@ -31,63 +31,45 @@ FactWorld is a benchmark suite that measures recall, state tracking, and their c
 identically for frontier models over an API and for small models trained from scratch. Every
 task must pass two tests: does it differentiate frontier models, and can it be explored
 architecturally. Every number reproduces from committed scripts and can be checked with an API
-key or a single GPU. The findings, in brief: the component abilities are largely solved at the
-frontier, but their composition is not. With reasoning off, most models hold little
-composition in their weights. With reasoning on, composition is bought by the token, and the
-price differs several-fold by model. Locally, no element of the composition is free: each is
-paid for by a specific architectural or training choice, and two elements have no known price
-yet.
+key or a single GPU. We find that the component abilities are largely solved at the frontier,
+but their composition is not. With reasoning off, most models hold little composition in their
+weights and architecture. With reasoning on, composition is bought by the token, and the price
+differs significantly by model. In task-specific training, each element of the composition
+requires a specific architectural or training capability.
 \end{abstract}
 
-FactWorld is a mechanism probe for component capabilities, not an end-to-end agent benchmark.
-Every task is single-turn and single-answer-span, with no tool use, planning, or multi-turn
-action.
+\section{Introduction}
 
-\section{The instrument}
+Recall and state tracking are usually benchmarked separately. Recall has multi-query
+associative recall \citep{arora2023zoology}; state tracking has the \Sfive{} word-problem
+literature \citep{barrington1989,liu2023}. Whether a model can compose them, tracking a
+changing state and then acting through what it tracked, is a different question, and it is the
+question FactWorld measures.
 
-The suite is a frozen, versioned registry of \code{TaskSpec} objects. Each task renders to
-natural language over a constrained vocabulary, with deterministic examples from fixed seeds.
-Gold answers come from a symbolic oracle applied to the underlying world state, never from
-parsing rendered text, so labels cannot leak. A validity gate certifies that no shallow
-shortcut clears floor on any task: majority class, recency, first position, and entity-blind
-aggregates are all checked.
+FactWorld is a frozen, versioned suite of tasks that render to natural language over a
+constrained vocabulary, with deterministic examples from fixed seeds. Gold answers come from a
+symbolic oracle applied to the underlying world state, never from parsing rendered text, so
+labels cannot leak. A validity gate certifies that no shallow shortcut clears floor on any
+task. One scoring rule and one protocol serve both frontier models over an API and small
+models trained from scratch, so a finding made in one regime can be checked in the other.
 
-The canonical metric is \textbf{match}: strip a trailing period from both sides and compare
-the model's first $\mathrm{len}(\mathrm{gold})$ whitespace tokens to the gold answer, binary
-per item, no partial credit. Containment is the one published diagnostic, and any cell where
-containment exceeds match by 0.08 or more has its raw predictions read before the number is
-believed. On reasoning arms, match scores the answer a multi-line emission commits to (a
-single-token final line, an emphasized answer closing a statement, or a lone token in a
-trailing code fence), never the working's first tokens. The commitment is located
-structurally, never by demanding a rigid output format.
+Measured this way, the component abilities are largely solved at the frontier, but their
+composition is not. With reasoning off, most models hold little composition in their weights
+and architecture, and the ordering does not follow the reasoning-on ranking. With reasoning
+on, composition is bought by the token, and the price differs significantly by model. In
+task-specific training, each element of the composition requires a specific architectural or
+training capability, and the composed task itself remains unsolved at the scales tested.
 
-Frontier models run over any OpenAI-compatible API. Local architectures train from scratch on
-the same tasks; the data, oracle, and eval layer is pure stdlib.
+The instrument is deliberately narrow. Every task is single-turn and single-answer-span, with
+no tool use, planning, or multi-turn action, and the results are measurements within the
+regime tested, not scaling laws.
 
-Every frontier model runs in two regimes. \textbf{Instant} is reasoning off with a hard
-one-line answer contract and a 96-token cap: what the weights compute. \textbf{Thinking} is a
-generous reasoning budget at the shared top effort arm: what reasoning buys. The two rankings
-are near-orthogonal, so profiles are per-axis, never a single scalar.
+\section{The FactWorld instrument}
 
-Instant cells are read against two floors, recomputed at render time from the exact task
-items. The \emph{recency heuristic} answers the last event's recipient and scores 0.04
-(chance, because the sampler places the queried object's last write uniformly over the
-stream). The \emph{object-filter floor} filters events to the queried object but guesses among
-its writes and scores $\mathbb{E}[1/w]$: 0.41 at L16, decaying roughly as $1/L$. A score near
-the floor shows object filtering, not state tracking.
+\subsection{Tasks}
 
-Difficulty knobs (length $L$, pool breadth, chain depth) are calibration parameters, used to
-place each model class mid-scale.
-
-\paragraph{Methodological note: the recency shortcut.} A give-stream sampler that draws events
-uniformly leaves the queried object's resolving write close to the end of the stream, so a
-one-line recency heuristic scores 0.33, indistinguishable from mid-roster state tracking. The
-current sampler places the queried object's last write uniformly over the stream, which drives
-that heuristic to chance and exposes the object-filter floor as the real bar: cheap-tier
-models sit at or below 0.41 where they previously looked mid-pack. This is why the recency
-heuristic is a permanent floor row and the validity gate checks it on every give-stream task.
-
-\section{The tasks}
+Each task isolates one component ability or one composition of them
+(Table~\ref{tab:taxonomy}).
 
 \begin{table}[h]
 \centering
@@ -107,6 +89,7 @@ Composition: state $\times$ dereference & \code{s5\_chain\_v3} & the FactWorldBe
 \bottomrule
 \end{tabular}
 \caption{The task taxonomy: components first, then their compositions.}
+\label{tab:taxonomy}
 \end{table}
 
 \paragraph{Composition (\code{composite\_copy\_v2}).} A set of facts maps agents to values,
@@ -140,6 +123,41 @@ so the query start sits on a final-map cycle longer than the query depth: the ni
 are distinct, answering the queried agent or any fixed hop scores exactly 0, item difficulty
 is uniform, and chance is $1/16$. Cycle events are rendered simultaneity-explicit, so no
 sequential misreading of the assignments is available. Tests pin the gate and the rendering.
+
+Difficulty knobs (length $L$, pool breadth, chain depth) are calibration parameters, used to
+place each model class mid-scale.
+
+\subsection{Scoring}
+
+The metric is \textbf{match}: strip a trailing period from both sides and compare the model's
+first $\mathrm{len}(\mathrm{gold})$ whitespace tokens to the gold answer, binary per item, no
+partial credit. Containment is the one published diagnostic, and any cell where containment
+exceeds match by 0.08 or more has its raw predictions read before the number is believed. On
+reasoning arms, match scores the answer a multi-line emission commits to (a single-token final
+line, an emphasized answer closing a statement, or a lone token in a trailing code fence),
+never the working's first tokens. The commitment is located structurally, never by demanding a
+rigid output format.
+
+\subsection{Regimes and floors}
+
+Every frontier model runs in two regimes. \textbf{Instant} is reasoning off with a hard
+one-line answer contract and a 96-token cap: what the weights compute. \textbf{Thinking} is a
+generous reasoning budget at the shared top effort arm: what reasoning buys. The two rankings
+are near-orthogonal, so profiles are per-axis, never a single scalar.
+
+Instant cells are read against two floors, recomputed at render time from the exact task
+items. The \emph{recency heuristic} answers the last event's recipient and scores 0.04. The
+\emph{object-filter floor} filters events to the queried object but guesses among its writes
+and scores $\mathbb{E}[1/w]$: 0.41 at L16, decaying roughly as $1/L$. A score near the floor
+shows object filtering, not state tracking.
+
+The floors exist because samplers leak shortcuts. A give-stream sampler that draws events
+uniformly leaves the queried object's resolving write close to the end of the stream, so a
+one-line recency heuristic scores 0.33, indistinguishable from mid-roster state tracking. The
+current sampler places the queried object's last write uniformly over the stream, which drives
+that heuristic to chance and exposes the object-filter floor as the real bar: cheap-tier
+models sit at or below 0.41 where they previously looked mid-pack. The validity gate checks
+the recency heuristic on every give-stream task.
 
 \section{Validating the instrument}
 
@@ -451,8 +469,8 @@ the routing deficit is scale-invariant.
 
 fprm's product recurrence leads the binding leg through B16 (1.00 at B6, 0.97 to 0.98
 seed-consistent at B16) and stops fitting at B24, where only the gated hybrid holds (0.67);
-the transformer reads 0.08 to 0.23 throughout (45 runs at $d=256$). Recurrence buys last-write
-state, ordered by recurrence form, and breaks by form as the working set grows.
+the transformer reads 0.08 to 0.23 throughout (45 runs at $d=256$). Last-write state requires recurrence, ordered by recurrence form, and breaks by form as the
+working set grows.
 
 \subsection{Chain depth does not extrapolate}
 
@@ -498,37 +516,38 @@ The commutative rung (per-entity accumulation, order-free) does not form under a
 supervision at any measured setting: chance for every architecture at $d=256$. Dense per-step
 traces form it in-distribution for the recurrent architectures (gdp\_hybrid $0.82 \pm 0.15$,
 fprm $0.65 \pm 0.26$ at L16; transformer at chance), and no run carries it past the training
-lengths. The pattern matches \Sfive: supervision density buys formation, and extrapolation is a
-separate, unbought item.
+lengths. The pattern matches \Sfive: supervision density enables formation, and extrapolation is a
+separate, unmet requirement.
 
-\section{The price table}
+\section{What each element of the composition requires}
 
-No element of the composition is free. Each is paid for by an architectural or training
-choice (Table~\ref{tab:price}).
+In task-specific training, each element of the composition requires a specific architectural
+or training capability (Table~\ref{tab:price}).
 
 \begin{table}[h]
 \centering
 \small
 \begin{tabular}{lp{9.5cm}}
 \toprule
-element & price \\
+element & requirement \\
 \midrule
 adjacent (1-hop) recall & attention: every architecture aces adjacent readout \\
 deferred recall & product recurrence: the transformer aces adjacent, fails deferred (0.19 vs 0.73) \\
 last-write state & recurrence, ordered by form: fprm through B16, only the gated hybrid at B24, transformer floors \\
 non-abelian state (formation) & dense per-step supervision, a checkpoint every $\le 2$ events, architecture-independent \\
 non-abelian state (extrapolation) & recurrent hybrid: gdp\_hybrid 0.75 @L64; fprm and transformer collapse past train length \\
-commutative state (formation) & dense per-step supervision plus recurrence; extrapolation unbought \\
-depth extrapolation & \textbf{open}: no measured choice buys it, with or without intermediate-hop traces \\
+commutative state (formation) & dense per-step supervision plus recurrence; extrapolation does not follow \\
+depth extrapolation & \textbf{open}: unsolved by every measured choice, with or without intermediate-hop traces \\
 local composition (value leg) & \textbf{open} at the default recipe: only the staged curriculum at $768\times8$ converges it \\
 \bottomrule
 \end{tabular}
-\caption{What buys each element of the composition.}
+\caption{What each element of the composition requires.}
 \label{tab:price}
 \end{table}
 
-Nothing measured so far buys depth extrapolation, and no local training choice converges the
-value leg of the composed cell outside one curriculum at one scale.
+Depth extrapolation and the value leg of the composed cell remain unsolved at the scales
+tested: no measured architectural or training choice provides the first, and only one
+curriculum at one scale converges the second.
 
 \section{Discussion}
 
