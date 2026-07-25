@@ -70,6 +70,8 @@ FactWorld's central contribution is orthogonal to each cluster above. The state-
 
 **Okpekpe, D. and Orvieto, A.** (2025). Revisiting associative recall in modern recurrent models. *arXiv:2508.19029*.
 
+**Movahedi, S., Milovanović, V., Feigin, S.L., Theus, A., Hofmann, T., Boeva, V., Rusch, T.K., and Orvieto, A.** (2026). Fixed-Point Reasoners: Stable and Adaptive Deep Looped Transformers. *arXiv:2606.18206*.
+
 **Peng, B., Zhang, R., Goldstein, D., Alcaide, E., Du, X., Hou, H., Lin, J., Liu, J., Lu, J., Merrill, W., et al.** (2025). RWKV-7 "Goose" with Expressive Dynamic State Evolution. *arXiv:2503.14456*.
 
 **Qwen Team.** (2025). Qwen3 Technical Report. *arXiv:2505.09388*. [Note: Qwen3-Next is a subsequent hybrid-attention release from the same team; no separate arXiv paper was located at time of writing — cite as Qwen Team 2025 / Qwen3-Next model release.]

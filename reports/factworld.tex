@@ -358,9 +358,10 @@ appears only where it is the measured lever (the \Sfive{} and commutative format
   delta rule generalized to a product of Householder transformations per token ($n_h=4$). This
   is the non-commutative recurrence the state-tracking results turn on; same pure/hybrid
   split.
-\item \textbf{fprm}: a weight-tied looped conv+attention block;\footnote{After Movahedi et
-  al.\ (2026); we did not run their model.} one block applied repeatedly, so per-token FLOPs
-  match the transformer at 5 to $11\times$ fewer parameters.
+\item \textbf{fprm}: a weight-tied looped conv+attention block, a variant of the
+  fixed-point looped transformer of \citet{movahedi2026fixedpoint} (we did not run their
+  model); one block applied repeatedly, so per-token FLOPs match the transformer at 5 to
+  $11\times$ fewer parameters.
 \end{itemize}
 
 Comparisons are matched on compute, not parameters, at budgets sufficient for the capable
@@ -601,6 +602,11 @@ Transformers. \emph{TACL}, 11:531--545.
 \bibitem[Merrill et al.(2024)]{merrill2024illusion}
 Merrill, W., Petty, J., and Sabharwal, A. (2024). The Illusion of State in State-Space Models.
 arXiv:2404.08819.
+
+\bibitem[Movahedi et al.(2026)]{movahedi2026fixedpoint}
+Movahedi, S., Milovanovi\'c, V., Feigin, S.L., Theus, A., Hofmann, T., Boeva, V., Rusch,
+T.K., and Orvieto, A. (2026). Fixed-Point Reasoners: Stable and Adaptive Deep Looped
+Transformers. arXiv:2606.18206.
 
 \bibitem[Siems et al.(2025)]{siems2025deltaproduct}
 Siems, J., Carstensen, T., Zela, A., Hutter, F., Pontil, M., and Grazzi, R. (2025).

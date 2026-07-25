@@ -155,11 +155,10 @@ separates the top cluster, and the matched L64 cell prices completion tokens per
 | openai/gpt-5.6-sol | 0.60 | 0.80 | 2444 |
 
 L96 separates a 0.92 to 1.00 band from a tail. L128 spreads the roster from 0.44 to 1.00: fable and gpt-5.5 hold 1.00, qwen halves to 0.44, glm drops to
-0.80. The ʳ on nemotron's L96 is a single raised-budget rerun at 98,304 tokens: at the planned
-budget it read 0.84 with 12% truncation, budget censoring rather than capability, and at L128
-it holds 0.96 clean. Tokens-to-solve separates what score cannot: the L64 spend among the top
-cluster spans 5.0k (fable) to 17.1k (nemotron) per call, a 3.4× range in the rent for held
-composite state.
+0.80. The ʳ on nemotron's L96 marks a single rerun at a raised 98,304-token budget. At the planned
+budget it scored 0.84 with 12% truncation, a budget artifact rather than a capability limit;
+at L128 it holds 0.96 with no truncation. Token spend also separates the top cluster: the L64
+spend spans 5.0k (fable) to 17.1k (nemotron) per call, a 3.4× range for the same scores.
 
 The serving stack constrains the measurement. gpt-5.6-sol's Chat Completions shim caps the
 effort ladder at `xhigh`, while its native Responses API exposes a further `max` level that
@@ -274,7 +273,8 @@ The architectures:
 * **gdp_pure / gdp_hybrid**: GatedDeltaProduct (arXiv:2502.10297), the delta rule generalized
   to a product of Householder transformations per token (n_h=4). This is the non-commutative
   recurrence the state-tracking results turn on; same pure/hybrid split.
-* **fprm**: a weight-tied looped conv+attention block (after Movahedi et al., 2026); one block
+* **fprm**: a weight-tied looped conv+attention block, a variant of the fixed-point looped
+  transformer of Movahedi et al. (2026, arXiv:2606.18206); one block
   applied repeatedly, so per-token FLOPs match the transformer at 5 to 11× fewer parameters.
 
 Comparisons are matched on compute, not parameters, at budgets sufficient for the capable
@@ -430,7 +430,7 @@ depth-limited shortcuts; Grazzi et al. (2024) unlock state tracking in linear RN
 negative eigenvalues; Siems et al. (2025) introduce the Householder-product recurrence
 (DeltaProduct) that our gdp models use; Yang, Kautz, and Hatamizadeh (2024) introduce
 GatedDeltaNet. The fprm architecture is a weight-tied variant of the looped-transformer
-approach of Movahedi et al. (2026); we did not run their model. FactWorld's contribution is
+approach of Movahedi et al. (2026, arXiv:2606.18206); we did not run their model. FactWorld's contribution is
 measuring the components independently and composed, under one protocol, for API models and
 from-scratch models alike.
 
