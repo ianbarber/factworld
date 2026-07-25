@@ -1,13 +1,10 @@
 # FactWorld: A Reproducible Instrument for Composing State Tracking and Recall
 
 FactWorld is a benchmark suite that measures recall, state tracking, and their composition,
-identically for frontier models over an API and for small models trained from scratch. Every
-task in it must pass two tests: does it differentiate frontier models, and can it be explored
-architecturally. Every number reproduces from committed scripts and can be checked with an API
+identically for frontier models over an API and for small models trained from scratch. Every task must both differentiate frontier models and support architecture exploration in small models trained from scratch. Every number reproduces from committed scripts and can be checked with an API
 key or a single GPU.
 
-We find that the component abilities are largely solved at the frontier, but their
-composition is not. With reasoning off, most models hold little composition in their weights
+We find that the component abilities are largely solved at the frontier, but their composition is not. With reasoning off, most models hold little composition in their weights
 and architecture. With reasoning on, composition is bought by the token, and the price
 differs significantly by model. In task-specific training, each element of the composition
 requires a specific architectural or training capability.
@@ -21,15 +18,11 @@ multi-turn action.
 The suite is a frozen, versioned registry of `TaskSpec` objects (`factworld.tasks.CANONICAL`).
 Each task renders to natural language over a constrained vocabulary, with deterministic
 examples from fixed seeds. Gold answers come from a symbolic oracle applied to the underlying
-world state, never from parsing rendered text, so labels cannot leak. A validity gate
-(`scripts/validate_suite.py`) certifies that no shallow shortcut clears floor on any task:
-majority class, recency, first position, and entity-blind aggregates are all checked.
+world state, never from parsing rendered text, so labels cannot leak. A validity gate (`scripts/validate_suite.py`) certifies that no shallow shortcut succeeds on any task: majority class, recency, first position, and entity-blind aggregates are all checked.
 
 The canonical metric is **match**: strip a trailing period from both sides and compare the
 model's first len(gold) whitespace tokens to the gold answer, binary per item, no partial
-credit. Containment is the one published diagnostic, and any cell where containment exceeds
-match by 0.08 or more has its raw predictions read before the number is believed. On reasoning
-arms, match scores the answer a multi-line emission commits to (a single-token final line, an
+credit. Containment is the one published diagnostic, and any cell (one model on one task at one setting) where containment exceeds match by 0.08 or more has its raw predictions read before the number is believed. When reasoning is on, match scores the answer a multi-line emission commits to (a single-token final line, an
 emphasized answer closing a statement, or a lone token in a trailing code fence), never the
 working's first tokens. The commitment is located structurally, never by demanding a rigid
 output format.
@@ -37,9 +30,7 @@ output format.
 Frontier models run over any OpenAI-compatible API. Local architectures train from scratch on
 the same tasks; the data, oracle, and eval layer is pure stdlib.
 
-Every frontier model runs in two regimes. **Instant** is reasoning off with a hard one-line
-answer contract and a 96-token cap: what the weights compute. **Thinking** is a generous
-reasoning budget at the shared top effort arm: what reasoning buys. The two rankings are
+Every frontier model runs in two regimes. **Instant** disables reasoning under a hard one-line answer contract and a 96-token cap; it measures what the weights alone compute. **Thinking** grants a generous reasoning budget at the shared top effort setting; it measures what reasoning adds. The two rankings are
 near-orthogonal, so profiles are per-axis, never a single scalar.
 
 Instant cells are read against two floors, recomputed at render time from the exact task
@@ -58,7 +49,7 @@ hard = CANONICAL["composite_copy_v2"].scaled(k=64, eval_lengths=(32, 64, 128))
 
 > **Methodological note: the recency shortcut.** A give-stream sampler that draws events
 > uniformly leaves the queried object's resolving write close to the end of the stream, so a
-> one-line recency heuristic scores 0.33, indistinguishable from mid-roster state tracking.
+> one-line recency heuristic scores 0.33, indistinguishable from genuine mid-pack state tracking.
 > The current sampler places the queried object's last write uniformly over the stream, which
 > drives that heuristic to chance and exposes the object-filter floor as the real bar:
 > cheap-tier models sit at or below 0.41 where they previously looked mid-pack. This is why
@@ -74,9 +65,9 @@ hard = CANONICAL["composite_copy_v2"].scaled(k=64, eval_lengths=(32, 64, 128))
 | Component: state tracking | `binding_v2` | last-write-wins over a give-stream (absorbing updates, not group ops) |
 | Component: state tracking (commutative) | `commutative_v1` | per-entity accumulation mod k; every event matters, order does not |
 | Component: state tracking (non-abelian) | `s5_v1` | order-sensitive role permutations; length is sequence stress |
-| Composition: state × recall | `composite_copy_v2` | the two-hop; the gap (binding minus composed) is its derived statistic |
+| Composition: state × recall | `composite_copy_v2` | two-hop composition; §4.2 derives the gap statistic from it |
 | Composition: recall ∘ recall | `chain_v2` | pointer chase at fixed breadth with an explicit hop count |
-| Composition: non-abelian state × serial dereference | `s5_chain_v3` | the FactWorldBench headline task |
+| Composition: non-abelian state × serial dereference | `s5_chain_v3` | the ranking task for the frontier benchmark (§4.1) |
 
 **Composition (`composite_copy_v2`).** A set of facts maps agents to values, and a stream of
 give events moves objects between agents. The query asks for the value of the agent that
@@ -100,30 +91,20 @@ throughout the report.
 the query asks for one agent's final role. Swaps and cycles do not commute, so the running
 permutation must be carried step by step.
 
-**s5_chain (`s5_chain_v3`).** The headline composes the two stress components in one task.
+**s5_chain (`s5_chain_v3`).** The ranking task composes the two stress components in one task.
 k=16 agents hold an `a0` pointer map, initially one 16-cycle. L order-sensitive swap/cycle
 events permute the pointer values: the S5-style state-tracking load. The query then
 dereferences the final map 8 hops deep (`what is a0 of a0 of ... of gX? (8 hops)`): the
-pointer-chase load. Neither component alone suffices. Every item is gated so the query start
-sits on a final-map cycle longer than the query depth: the nine path nodes are distinct,
-answering the queried agent or any fixed hop scores exactly 0, item difficulty is uniform, and
-chance is 1/16. Cycle events are rendered simultaneity-explicit (`g5's a0 takes g9's old a0,
-...`), so no sequential misreading of the assignments is available. Tests pin the gate and the
-rendering.
+pointer-chase load. Neither component alone suffices. Every item is gated so that the query start sits on a final-map cycle longer than the query depth. The nine path nodes are therefore distinct, echoing the queried agent or any fixed hop scores exactly 0, difficulty is uniform across items, and chance is 1/16. Cycle events state all their assignments simultaneously (`g5's a0 takes g9's old a0, ...`), so no sequential misreading is available. Unit tests pin both the gate and the rendering.
 
 ## 3. Validating the instrument
 
-Before the suite compares architectures or models, it must reproduce the field's established
-single-capability dissociations. All three reproduce on the natural-language format, three
-seeds each (`scripts/experiment_canonical_repro.py`).
+Before the suite compares architectures or models, it must reproduce the field's established single-capability dissociations. Three of them reproduce on the natural-language format, three seeds each (`scripts/experiment_canonical_repro.py`).
 
 **1-hop associative recall (MQAR).** The value is read adjacent to the key. Attention solves
 it: gdp_hybrid 1.00, fprm 1.00, transformer 1.00 (pool 16).
 
-**Deferred readout recall.** The value must be read at an arbitrary later position, the regime
-composition actually requires: gdp_hybrid 0.73, fprm 0.50, transformer 0.19 (pool 5). The
-dissociation reproduces: every architecture aces 1-hop, only the recurrent hybrid solves
-deferred readout.
+**Deferred readout recall.** The value must be read out at an arbitrary later position; this is the regime that composition actually requires. Scores: gdp_hybrid 0.73, fprm 0.50, transformer 0.19 (pool 5). Every architecture aces 1-hop; only the recurrent hybrid solves deferred readout.
 
 **S5 length extrapolation under dense supervision.** Train dense, evaluate free-running past
 the training length:
@@ -139,11 +120,11 @@ trained length.
 
 ## 4. Benchmarking the frontier
 
-The recurring benchmark reads a thirteen-model roster through the instrument. Instant cells
+We run thirteen frontier models through the instrument. Instant cells
 run n=100 under the answer contract. Thinking cells run n=25 with per-length completion
 budgets sized so truncation, scored as wrong, stays a rounding error; Wilson 95% intervals
 accompany every cell, and thinking differences under about 0.2 are not an ordering. Models run
-at the shared top effort arm, `xhigh`, mapped down where the endpoint's ceiling is `high`.
+at the shared top effort setting, `xhigh`, mapped down where the endpoint's ceiling is `high`.
 Contamination marks quarantine cells from orderings: ⊘ means not measurable at this budget,
 ≤x† means an upper bound from covert reasoning, ‡ means the provider ignored the token cap.
 Three models (grok-4.5, muse-spark-1.1, claude-fable-5) are thinking-only: their endpoints
@@ -179,21 +160,21 @@ it holds 0.96 clean. Tokens-to-solve separates what score cannot: the L64 spend 
 cluster spans 5.0k (fable) to 17.1k (nemotron) per call, a 3.4× range in the rent for held
 composite state.
 
-Serving behavior is part of what a model ships. gpt-5.6-sol's Chat Completions shim caps the
+The serving stack constrains the measurement. gpt-5.6-sol's Chat Completions shim caps the
 effort ladder at `xhigh`, while its native Responses API exposes a further `max` level that
 lifts L96 from 0.60 to 0.88 at 2.3× the reasoning tokens; the scored rows stay on the shared
-`xhigh` arm for cross-model fairness, and the `max` probe is reported here
-(`results/probes/sol_responses_20260724.json`). Sol's length curve is also the roster's only
-inverted one: it under-allocates thinking to short prompts at every effort level, and those
-failures are genuine wrong answers (match equals containment).
+`xhigh` setting for cross-model fairness, and the `max` probe is reported in
+`results/probes/sol_responses_20260724.json`. Sol is also the only model whose scores rise
+with prompt length: it allocates reasoning in proportion to input size, gives short prompts
+too little, and its failures are genuine wrong answers (match equals containment).
 
 ### 4.2 The composed cell and the gap (instant regime)
 
 With reasoning off, does the composition exist in weights at all? The composed cell is the
-two-hop query under the zero-budget protocol at L16 and L64. The **gap**, binding_only@L16
-minus composed@L16, is interpretable only where the binding component is established. The
-recall half is free (0.97 to 1.00 on sanity, load, and scaffolded recall for every measurable
-model), so the gap is a composition deficit, not a recall one:
+two-hop query under the instant protocol at L16 and L64. The **gap**, binding_only@L16
+minus composed@L16, is interpretable only where the binding component is established. The recall half is free: every measurable model scores 0.97 to 1.00 across all recall
+variants, from the sanity check to the scaffolded probe. The gap is therefore a composition
+deficit, not a recall one:
 
 | Model | recall | binding @L16 | composed @L16 | composed @L64 | gap @L16 |
 |---|---|---|---|---|---|
@@ -210,11 +191,11 @@ model), so the gap is a composition deficit, not a recall one:
 | *recency heuristic (floor)* | — | 0.04 | 0.04 | 0.06 | — |
 | *object-filter floor* | — | 0.41 | 0.41 | 0.15 | — |
 
-Where binding is solid the roster separates. Opus composes essentially for free: gap 0.06,
-equal to the instant test-retest noise bar. gpt-5.5 pays the largest clean deficit (binding
-0.80, composed 0.46, gap +0.34): the model that shares the top of the thinking headline has
+Where binding is solid the roster separates. Opus composes essentially for free: its gap of 0.06 is within instant test-retest
+variability. gpt-5.5 pays the largest clean deficit (binding
+0.80, composed 0.46, gap +0.34): the model that shares the top of the thinking ranking has
 among the least in-weights composition. kimi-k3 is
-the same shape (gap +0.32 against a top-cluster headline). For deepseek, qwen, and nemotron
+the same shape (gap +0.32 against a top-cluster ranking). For deepseek, qwen, and nemotron
 the binding leg's interval overlaps the 0.41 object-filter floor, so the gap renders —ᶠ:
 floor minus floor is zero by construction, not a measurement.
 
@@ -238,7 +219,7 @@ composed cell under a plain prompt (format-fair ablation, n=100).
 The two state-stress components are read separately in the thinking regime, far past the
 composed cell's settings: chain d128 (a 128-hop pointer chase at fixed breadth k=257, chance
 below 0.01) and s5 @L256 (256 permutation events, concrete rendering, chance 0.20). The
-s5@128 ctok column is completion spend on the matched L128 cell every model runs:
+s5@128 ctok column is completion spend on the matched L128 cell that every model runs:
 
 | Model | chain d128 | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
@@ -263,15 +244,15 @@ the repetitions and stop a few hops short, a prompt-format artifact rather than 
 failure.
 
 The components also dissociate the regimes within one item set. The chain d16 cell runs in
-both regimes on identical items. Thinking, it reads 0.96 to 1.00 for twelve of thirteen
-models. Instant, every cleanly-answering model floors (best 0.08). A 16-hop pointer chase is
+both regimes on identical items. In the thinking regime, twelve of thirteen models score 0.96 to 1.00. In the instant regime,
+every model that answers cleanly is at floor (best 0.08). A 16-hop pointer chase is
 serial work no roster model holds in weights, and every strong model solves it given room to
 work.
 
 ### 4.5 Long context
 
 Both regimes are stressed well past their calibration points. The thinking regime holds
-composition at long context: glm-5.2 reads 0.94 to 0.98 from L64 out to L1024 on the composed
+composition at long context: glm-5.2 holds 0.94 to 0.98 from L64 out to L1024 on the composed
 task (k=32/pool16), while its instant arm sits at or below the object-filter floor from L128
 on. kimi's measured cells confirm the shape (1.00 at L256, 0.96 at L512, no truncation). At
 this breadth, length is not the binding constraint for the thinking regime. S5 under a
@@ -279,8 +260,8 @@ concrete rendering with reasoning holds 0.90 at L128, degrading gradually (Appen
 
 ## 5. Exploring the architectures
 
-The same tasks train from scratch with next-token prediction. Supervision is answer-only by
-default, with a staged curriculum for the composite flagship; dense per-step supervision
+The same tasks supply training data for models trained from scratch with next-token
+prediction. Supervision is answer-only by default, with a staged curriculum for the composite flagship; dense per-step supervision
 appears only where it is the measured lever (the s5 and commutative formation results).
 The architectures:
 
@@ -316,7 +297,7 @@ both legs. The per-leg decomposition names the deficit: the failure is routing t
 recall lookup, the same deficit the frontier's instant gap measures.
 
 The scaffolded probe sharpens the contrast. Given the correct holder, frontier models recall
-the value at 0.98 to 1.00; the local flagship reads 0.096. API models can do each leg when the
+the value at 0.98 to 1.00; the local flagship scores 0.096. API models can do each leg when the
 problem is split for them and struggle to compose the legs in one prompt; the local models
 that fail cannot do the second hop even when handed the first.
 
@@ -340,12 +321,13 @@ what collapses; the routing deficit is scale-invariant.
 
 fprm's product recurrence leads the binding leg through B16 (1.00 at B6, 0.97 to 0.98
 seed-consistent at B16) and stops fitting at B24, where only the gated hybrid holds (0.67);
-the transformer reads 0.08 to 0.23 throughout (45 runs at d256). Last-write state requires recurrence, ordered by recurrence form, and breaks by form as the
-working set grows.
+the transformer reads 0.08 to 0.23 throughout (45 runs at d256). Last-write state requires recurrence, and the form of the recurrence sets a breadth ceiling:
+fprm holds through breadth 16, only the gated hybrid holds at breadth 24, and the transformer
+never fits.
 
 ### 5.4 Chain depth does not extrapolate
 
-Trained at chain depths 2 and 3, no architecture reads above the 1/6 guess at depths 4 and 5
+Trained at chain depths 2 and 3, no architecture scores above the 1/6 guess at depths 4 and 5
 (fprm 0.21/0.15, transformer 0.16/0.09, gdp_hybrid 0.01/0.00; 3 seeds each). gdp_hybrid fits
 the training distribution best and scores worst held-out: a depth-specific circuit,
 systematically wrong one hop out, not a guesser. Dense intermediate-hop supervision does not
@@ -383,8 +365,8 @@ separate, unmet requirement.
 
 ## 6. What each element of the composition requires
 
-In task-specific training, each element of the composition requires a specific architectural
-or training capability:
+The table below assigns each element of the composition the architectural or training
+capability that produced it in local training:
 
 | element | requirement |
 |---|---|
@@ -410,10 +392,10 @@ settings.
 The main findings:
 
 - **Composition is where frontier models still separate.** The components are largely solved
-  in the thinking regime, but their composition is not: the headline composite differentiates
+  in the thinking regime, but their composition is not: the ranking composite differentiates
   by score at both ends and by tokens-to-solve within the top cluster. With reasoning off, the
   composed cell shows most of the roster holds little composition in weights, with an ordering
-  the thinking headline does not predict: gpt-5.5 shares the top of one and pays the largest
+  the thinking ranking does not predict: gpt-5.5 shares the top of one and pays the largest
   gap on the other.
 - **Composition responds to reasoning, monotonically.** Effort moves the composed cell from
   near floor to 0.92 and above, and the thinking regime holds it out to L1024. Explicit
@@ -432,7 +414,7 @@ These are results within the regime tested, not scaling laws.
 
 **Limitations.** The scale regime is bounded: k=5 S5, local models of 3M to 269M params
 matched on compute at 32 to 540 GFLOP/token, pretrained models from a few billion to about a
-trillion parameters. Composition is 2-hop throughout except the headline's 8-hop dereference.
+trillion parameters. Composition is 2-hop throughout except the ranking task's 8-hop dereference.
 Instant cells run n=100; thinking cells run n=25 to 50 because API costs scale with reasoning
 tokens, and thinking differences under about 0.2 are not an ordering. The component-to-agent
 mapping is a motivating analogy, not a proven one.
@@ -451,7 +433,7 @@ from-scratch models alike.
 
 ## 9. Reproducibility
 
-Every headline claim maps to a committed script and raw results in `results/`. The data,
+Every claim maps to a committed script and raw results in `results/`. The data,
 oracle, and eval layer is pure stdlib; training runs need one CUDA GPU.
 
 ```bash
