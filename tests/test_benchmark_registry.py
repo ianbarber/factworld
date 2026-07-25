@@ -120,12 +120,13 @@ def test_arms_for_facets():
         assert c["settings"]["contract"] is True
         assert c["settings"]["max_new_tokens"] == B.ZERO_BUDGET_MAX_NEW_TOKENS == 96
 
-    # s5_concrete: mid-band only (ceiling lengths dropped), reasoning on, 16384 budget.
+    # s5_concrete: mid-band only (ceiling lengths dropped), reasoning on; L128 at the
+    # 16384 default, L256 raised to 32768 (the truncation-as-rounding-error rule).
     s5 = [c for c in opus if c["facet"] == "s5_concrete"]
     assert [c["length"] for c in s5] == [128, 256]
     for c in s5:
         assert c["n"] == 25 and c["settings"]["effort"] == "high"
-        assert c["settings"]["max_new_tokens"] == 16384
+        assert c["settings"]["max_new_tokens"] == (16384 if c["length"] == 128 else 32768)
         assert c["settings"]["rendering"] == "concrete"
         assert c["settings"]["contract"] is False
 
@@ -1158,14 +1159,14 @@ def test_budget_override_and_lengths_filter():
     cells only, which changes the settings hash (fresh resume key); --lengths
     keeps only matching cells. Malformed/unknown specs fail loudly."""
     overrides = RFB.parse_budget_overrides(
-        ["s5_concrete:256:32768", "chain_nowrap:128:32768"])
-    assert overrides == {("s5_concrete", 256): 32768, ("chain_nowrap", 128): 32768}
+        ["s5_concrete:256:49152", "chain_nowrap:128:32768"])
+    assert overrides == {("s5_concrete", 256): 49152, ("chain_nowrap", 128): 32768}
 
     model = "anthropic/claude-opus-4.8"
     plan = RFB.build_plan([model], ["s5_concrete"], 1.0, budget_overrides=overrides)
     cells = plan[model]
     by_len = {c["length"]: c for c in cells}
-    assert by_len[256]["settings"]["max_new_tokens"] == 32768
+    assert by_len[256]["settings"]["max_new_tokens"] == 49152
     assert by_len[128]["settings"]["max_new_tokens"] == 16384  # untouched
     # the override is part of the settings hash -> fresh resume key
     planned = next(c for c in B.arms_for(model)

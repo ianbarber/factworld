@@ -181,19 +181,19 @@ intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.
 
 | Model | chain d128 | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
-| x-ai/grok-4.5 | 1.00 | 1.00‡ | 8069 |
-| muse-spark-1.1 | 1.00 | 1.00ʳ | 9704 |
-| anthropic/claude-sonnet-5 | 1.00 | 1.00ʳ | 11866 |
-| anthropic/claude-opus-4.8 | 1.00 | 1.00ʳ | 12683 |
-| anthropic/claude-fable-5 | 1.00 | 0.96 | 6405 |
-| openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
+| anthropic/claude-fable-5 | 1.00 | 1.00 | 6405 |
+| openai/gpt-5.5 | 1.00 | 1.00 | 6989 |
+| google/gemini-3.6-flash | 0.96 | 1.00 | 8234 |
+| muse-spark-1.1 | 1.00 | 1.00 | 9704 |
+| deepseek/deepseek-v4-pro | 1.00 | 1.00 | 10043 |
+| anthropic/claude-sonnet-5 | 1.00 | 1.00 | 11866 |
+| anthropic/claude-opus-4.8 | 1.00 | 1.00 | 12683 |
 | openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
-| z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
-| google/gemini-3.6-flash | 0.96 | 0.84 | 8234 |
+| x-ai/grok-4.5 | 1.00 | 0.88 | 8069 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| moonshotai/kimi-k3 | 1.00 | 0.80ʳ | 11355 |
-| deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
+| moonshotai/kimi-k3 | 1.00 | 0.80 | 11355 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | 0.80 | 12250 |
+| z-ai/glm-5.2 | 0.92 | 0.76 | 6282 |
 <!-- FRONTIER_TABLE_END -->
 
 ![s5_chain scores with Wilson 95% intervals](docs/benchmark/fig_bench_headline.svg)

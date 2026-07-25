@@ -301,29 +301,31 @@ s5@128 ctok column is completion spend on the matched L128 cell that every model
 \toprule
 Model & chain d128 & s5 @L256 & s5@128 ctok \\
 \midrule
-x-ai/grok-4.5 & n/a & 1.00\markddag & 8069 \\
-muse-spark-1.1 & 0.96 & 1.00\markr & 9704 \\
-anthropic/claude-sonnet-5 & 1.00 & 1.00\markr & 11866 \\
-anthropic/claude-opus-4.8 & 1.00 & 1.00\markr & 12683 \\
-anthropic/claude-fable-5 & 1.00 & 0.96 & 6405 \\
-openai/gpt-5.5 & 1.00 & 0.96 & 6989 \\
+anthropic/claude-fable-5 & 1.00 & 1.00 & 6405 \\
+openai/gpt-5.5 & 1.00 & 1.00 & 6989 \\
+google/gemini-3.6-flash & 0.96 & 1.00 & 8234 \\
+muse-spark-1.1 & 1.00 & 1.00 & 9704 \\
+deepseek/deepseek-v4-pro & 1.00 & 1.00 & 10043 \\
+anthropic/claude-sonnet-5 & 1.00 & 1.00 & 11866 \\
+anthropic/claude-opus-4.8 & 1.00 & 1.00 & 12683 \\
 openai/gpt-5.6-sol & 0.88 & 0.92 & 2657 \\
-z-ai/glm-5.2 & 0.92 & 0.88 & 6282 \\
-google/gemini-3.6-flash & 0.96 & 0.84 & 8234 \\
-moonshotai/kimi-k3 & 1.00 & 0.80\markr & 11355 \\
+x-ai/grok-4.5 & 1.00 & 0.88 & 8069 \\
 qwen/qwen3.7-max & 0.96 & 0.80 & 7904 \\
-deepseek/deepseek-v4-pro & 1.00 & \censored & 10043 \\
-nvidia/nemotron-3-ultra & 0.60 & \censored & 12250 \\
+moonshotai/kimi-k3 & 1.00 & 0.80 & 11355 \\
+nvidia/nemotron-3-ultra & 0.60 & 0.80 & 12250 \\
+z-ai/glm-5.2 & 0.92 & 0.76 & 6282 \\
 \bottomrule
 \end{tabular}
-\caption{Thinking-regime component stress cells, match, $n=25$. \markr{} marks a single
-raised-budget rerun at 32{,}768 tokens; \censored{} means majority truncation at the standard
-budget.}
+\caption{Thinking-regime component stress cells, match, $n=25$: chain d128 (a 128-hop
+pointer chase, chance below 0.01), \Sfive{} at L256 (256 permutation events, chance 0.20),
+and completion tokens per call on the matched L128 cell.}
 \label{tab:components}
 \end{table}
 
 The top half of the roster holds both components at or near ceiling, which is why the
-composite, not the components, carries the ranking. The chain query includes an explicit hop
+composite, not the components, carries the ranking. Every cell runs at a budget sized so
+truncation stays a rounding error; the one exception is nemotron, which truncates on 20\% of
+its \Sfive{} L256 calls even at 32{,}768 tokens. The chain query includes an explicit hop
 count because the bare nested phrase is a hop-counting confound at depth 128: models miscount
 the repetitions and stop a few hops short, a prompt-format artifact rather than a state
 failure.

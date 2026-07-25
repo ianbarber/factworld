@@ -125,8 +125,9 @@ run n=100 under the answer contract. Thinking cells run n=25 with per-length com
 budgets sized so truncation, scored as wrong, stays a rounding error; Wilson 95% intervals
 accompany every cell, and thinking differences under about 0.2 are not an ordering. Models run
 at the shared top effort setting, `xhigh`, mapped down where the endpoint's ceiling is `high`.
-Contamination marks quarantine cells from orderings: ⊘ means not measurable at this budget,
-≤x† means an upper bound from covert reasoning, ‡ means the provider ignored the token cap.
+Cells that carry a contamination mark are excluded from orderings: ⊘ means not measurable at
+this budget, ≤x† means an upper bound from covert reasoning, and ‡ means the provider ignored
+the token cap.
 Three models (grok-4.5, muse-spark-1.1, claude-fable-5) are thinking-only: their endpoints
 cannot disable reasoning, so they carry no instant numbers.
 
@@ -223,22 +224,24 @@ s5@128 ctok column is completion spend on the matched L128 cell that every model
 
 | Model | chain d128 | s5 @L256 | s5@128 ctok |
 |---|---|---|---|
-| x-ai/grok-4.5 | n/a | 1.00‡ | 8069 |
-| muse-spark-1.1 | 0.96 | 1.00 @32,768tok | 9704 |
-| anthropic/claude-sonnet-5 | 1.00 | 1.00 @32,768tok | 11866 |
-| anthropic/claude-opus-4.8 | 1.00 | 1.00 @32,768tok | 12683 |
-| anthropic/claude-fable-5 | 1.00 | 0.96 | 6405 |
-| openai/gpt-5.5 | 1.00 | 0.96 | 6989 |
+| anthropic/claude-fable-5 | 1.00 | 1.00 | 6405 |
+| openai/gpt-5.5 | 1.00 | 1.00 | 6989 |
+| google/gemini-3.6-flash | 0.96 | 1.00 | 8234 |
+| muse-spark-1.1 | 1.00 | 1.00 | 9704 |
+| deepseek/deepseek-v4-pro | 1.00 | 1.00 | 10043 |
+| anthropic/claude-sonnet-5 | 1.00 | 1.00 | 11866 |
+| anthropic/claude-opus-4.8 | 1.00 | 1.00 | 12683 |
 | openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
-| z-ai/glm-5.2 | 0.92 | 0.88 | 6282 |
-| google/gemini-3.6-flash | 0.96 | 0.84 | 8234 |
-| moonshotai/kimi-k3 | 1.00 | 0.80 @32,768tok | 11355 |
+| x-ai/grok-4.5 | 1.00 | 0.88 | 8069 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| deepseek/deepseek-v4-pro | 1.00 | ⊘ | 10043 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | ⊘ | 12250 |
+| moonshotai/kimi-k3 | 1.00 | 0.80 | 11355 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | 0.80 | 12250 |
+| z-ai/glm-5.2 | 0.92 | 0.76 | 6282 |
 
 The top half of the roster holds both components at or near ceiling, which is why the
-composite, not the components, carries the ranking. The chain query includes an explicit hop
+composite, not the components, carries the ranking. Every cell runs at a budget sized so
+truncation stays a rounding error; the one exception is nemotron, which truncates on 20% of
+its s5 @L256 calls even at 32,768 tokens. The chain query includes an explicit hop
 count because the bare nested phrase is a hop-counting confound at depth 128: models miscount
 the repetitions and stop a few hops short, a prompt-format artifact rather than a state
 failure.
