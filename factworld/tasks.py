@@ -143,6 +143,17 @@ class TaskSpec:
     start_trace: bool = False
     compact_events: bool = False
 
+    # s5_chain-only, depth 1 only: TYPED-VALUE ablation. In s5 the tracked values (roles
+    # r0..r4) are a different token type from the slots they sit in (agents g0..g4); in
+    # s5_chain the pointer values ARE agents, so every agent token in the stream is
+    # ambiguous between "slot being written" and "value being moved" and the distinction
+    # is recoverable only from syntactic position. With typed_values the a0 map sends
+    # agents to ROLES, restoring the s5 type split while keeping the s5_chain event
+    # grammar and stream. See _ex_s5_chain_typed and CANONICAL["s5_chain_typed_v1"].
+    # Appended + defaulted: _rng does not key on it, and typed items are built by a
+    # SEPARATE builder, so no existing stream is perturbed.
+    typed_values: bool = False
+
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
         return replace(self, **knobs)
@@ -417,6 +428,115 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
     return Example(f"{facts} {hist} {query}", _render_answer(gold), length, meta)
 
 
+def _ex_s5_chain_typed(spec, w, r, rng, length, idx):
+    """s5_chain with TYPED pointer values — the key/value type-ambiguity ablation (depth 1).
+
+    The a0 map sends agents to ROLES instead of to agents: facts read ``g3's a0 is r5.``, the
+    events are the same swap_a0/cycle_a0 stream over the same agent slots, and the query is a
+    single dereference ``what is a0 of g3? (1 hops)`` answered with a role. Everything else
+    follows ``_ex_s5_chain`` apart from the two consequences enumerated below.
+
+    WHAT THE CONTRAST TESTS. Against the depth-1 untyped arm (``s5_chain_local_v2`` at
+    ``chain_depth=1``) — same k, same lengths, same event distribution, same supervision, same
+    rendering — the intended difference is whether a token in value position can also appear in
+    slot position. In the untyped task every agent id occurs in both roles, so a from-scratch
+    model must resolve "is this the slot being written or the value being moved?" from syntax
+    alone, with no lexical cue; a pretrained model gets that distinction from English, which is
+    one reason the frontier and local regimes may not be measuring the same thing here. In s5,
+    which DOES form locally, the split is lexical: slots are agents, values are roles.
+
+    IT IS NOT A ONE-KNOB CONTRAST. Two further things differ, both entailed by the type split
+    rather than chosen, and both of which move the floors:
+
+      INITIAL-MAP STRUCTURE. ``_ex_s5_chain`` builds its initial map as a single k-cycle over
+      the k sampled agents — no fixed points, every agent reachable from every other. Values
+      here come from a disjoint pool, so the map is instead a uniform random agent -> role
+      bijection and "cycle" is undefined for it. The two arms therefore start from differently
+      distributed maps, which is visible in the initial-map-chase floor.
+
+      distinct_path. The untyped arm carries the gate; this one does not (and
+      ``CANONICAL["s5_chain_typed_v1"]`` leaves it False). At depth 1 the gate restricts the
+      queried start to a non-fixed-point of the FINAL map, resampling the event stream in the
+      rare case where no such start exists. Typing buys what the gate buys — a role can never
+      equal an agent, so echo scores 0 by construction — but not the same conditioning: the
+      untyped answer space excludes the queried agent and so has chance 1/(k-1), while the
+      typed answer space is the k roles at chance 1/k.
+
+    A spec-level diff of the two arms is pinned in tests/test_s5_chain.py; only ``name``,
+    ``typed_values`` and ``distinct_path`` may differ.
+
+    READING THE OUTCOMES (both arms at the same k, depth 1, over >= 8 seeds, each against its
+    OWN operative floor — ``validity.operative_floor``, the max over the registered shallow
+    adversaries — never against 1/k and never against the other arm's floor):
+      typed forms, untyped floors   — key/value type ambiguity is the binding constraint at
+                                      depth 1. The s5_chain null is then about representation,
+                                      not about composing tracking with dereference, and the
+                                      informative next step is a typed depth-2 construct.
+      both form                     — depth 1 is not where s5_chain fails; the null belongs to
+                                      composition depth and the depth-2 arms are the experiment.
+      both floor                    — the depth-1 readout itself does not form under this
+                                      budget, so no depth-2 result is interpretable and the
+                                      budget-matched arm has to come first.
+      typed floors, untyped forms   — the ablation is confounded (a role-typed answer space is
+                                      not harder in any intended sense); inspect the predictions
+                                      before reading anything else in the family.
+
+    Depth is restricted to 1: values are not keys here, so there is nothing to chase twice.
+    """
+    if spec.chain_depth != 1:
+        raise ValueError(
+            f"{spec.name}: typed_values is a depth-1 construct (chain_depth={spec.chain_depth}); "
+            f"the pointer values are roles, not agents, so a second hop has no defined start.")
+    if spec.k > len(w.roles):
+        raise ValueError(f"{spec.name}: k={spec.k} exceeds the {len(w.roles)}-role value pool")
+    slots = rng.sample(list(w.agents), spec.k)
+    vals = rng.sample(list(w.roles), spec.k)
+    # a uniformly random agent -> role bijection; _ex_s5_chain uses a single k-cycle instead,
+    # which is not expressible across disjoint pools (see the docstring)
+    cur = dict(zip(slots, vals))
+    present = slots[:]; rng.shuffle(present)
+    facts = " ".join(r.render_fact(a, "a0", cur[a], key=f"{a}|{idx}|{rng.random()}") for a in present)
+
+    events: list[Event] = []
+    maps: list[dict] = []
+    for _ in range(length):
+        if rng.random() < 0.5:
+            a, b = rng.sample(slots, 2)
+            events.append(Event("swap_a0", (a, b)))
+            cur[a], cur[b] = cur[b], cur[a]
+        else:
+            a, b, c = rng.sample(slots, 3)
+            events.append(Event("cycle_a0", (a, b, c)))
+            cur[a], cur[b], cur[c] = cur[b], cur[c], cur[a]
+        if spec.event_trace or spec.start_trace:
+            maps.append(dict(cur))
+
+    if spec.compact_events:
+        ev_txts = [f"s{i} " + (f"swaps a0: {e.args[0]} and {e.args[1]}."
+                               if e.kind == "swap_a0"
+                               else "cycles a0: " + " -> ".join(e.args) + ".")
+                   for i, e in enumerate(events)]
+    else:
+        ev_txts = [r.render_event(e, step=f"s{i}", key=f"h|{i}|{e.kind}|{'|'.join(e.args)}")
+                   for i, e in enumerate(events)]
+    hist = " ".join(ev_txts)
+
+    start = rng.choice(slots)
+    gold = cur[start]
+    path = [start, gold]
+    query = f"what is a0 of {start}? (1 hops)"
+    meta = {"depth": 1, "start": start, "path": path, "typed_values": True}
+    if spec.start_trace:
+        meta["trace"] = " ".join([m[start] for m in maps] + path[:-1])
+        meta["interleaved_prompt"] = (
+            f"{facts} " + " ".join(f"{t} {m[start]}" for t, m in zip(ev_txts, maps)) + f" {query}")
+    elif spec.event_trace:
+        meta["trace"] = " ".join(" ".join(m[a] for a in slots) for m in maps) + " " + " ".join(path[:-1])
+    elif spec.worked_trace:
+        meta["trace"] = " ".join(path[:-1])
+    return Example(f"{facts} {hist} {query}", _render_answer(gold), length, meta)
+
+
 def _ex_conflict(spec, w, r, pmap, rng, length, idx):
     """In-weights ↔ in-context CONFLICT: the prompt states a value for the queried agent that DIFFERS from
     the value the model memorized (`pmap`) during training; the correct answer is the IN-CONTEXT value.
@@ -521,7 +641,10 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
         elif spec.family == "s5":
             out.append(_ex_s5(spec, w, r, oracle, rng, L, idx))
         elif spec.family == "s5_chain":
-            out.append(_ex_s5_chain(spec, w, r, rng, L, idx))       # L = permutation events
+            # typed items are built by a separate function so the untyped stream's sequence of
+            # rng draws — and therefore every published s5_chain example — is untouched.
+            build = _ex_s5_chain_typed if spec.typed_values else _ex_s5_chain
+            out.append(build(spec, w, r, rng, L, idx))               # L = permutation events
         elif spec.family == "chain":
             out.append(_ex_chain(spec, w, r, rng, L, idx))           # L = chain depth
         else:
@@ -782,6 +905,18 @@ CANONICAL = {
     "s5_chain_local_v2_path": TaskSpec("s5_chain_local_v2_path", "s5_chain", version="2.0", k=8,
                                         chain_depth=2, distinct_path=True, worked_trace=True,
                                         train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
+    # experimental: the TYPED-VALUE ablation against s5_chain_local_v2 at chain_depth=1. The a0
+    # map sends agents to ROLES, so a token in value position can never appear in slot position;
+    # this probes key/value type ambiguity — the structural difference between s5 (which forms
+    # locally) and s5_chain (which does not) that is not composition depth. Three spec fields
+    # differ from the untyped arm — name, typed_values and distinct_path — and the builders
+    # differ in initial-map structure; _ex_s5_chain_typed documents all of it and
+    # tests/test_s5_chain.py pins the field-level diff. Read each arm against its own operative
+    # floor (validity.operative_floor), never against 1/k or against the other arm's floor.
+    "s5_chain_typed_v1": TaskSpec("s5_chain_typed_v1", "s5_chain", version="2.0", k=8,
+                                   chain_depth=1, typed_values=True,
+                                   event_trace=True, worked_trace=True,
+                                   train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)

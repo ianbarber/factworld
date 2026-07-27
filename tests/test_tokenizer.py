@@ -135,6 +135,78 @@ def test_rendering_has_no_unk():
         assert tok.decode(ids) == s
 
 
+def _task_strings(spec):
+    """Every string a local run feeds through the tokenizer for ``spec``.
+
+    That is the prompt and the answer of both splits at every registered length, plus the
+    meta strings the sweep builds training documents from (``trace``, ``interleaved_prompt``).
+    s5_chain specs are additionally sampled under the two rendering/supervision ablations the
+    local runs use (``compact_events``, ``start_trace``), since those change the surface
+    grammar rather than the item stream.
+    """
+    from factworld.tasks import generate
+
+    variants = [spec]
+    if spec.family == "s5_chain":
+        variants.append(spec.scaled(compact_events=True, start_trace=True))
+    for sp in variants:
+        for split, lengths in (("train", (None,)), ("test", sp.eval_lengths)):
+            for L in lengths:
+                for ex in generate(sp, split, n=6, length=L):
+                    yield ex.prompt
+                    yield ex.answer
+                    for value in ex.meta.values():
+                        if isinstance(value, str):
+                            yield value
+
+
+def test_every_canonical_task_round_trips_losslessly():
+    """THE tokenizer contract, over the tasks that are actually trained locally.
+
+    ``decode(encode(x)) == x`` and no ``<unk>`` for every string a local run sees. An
+    <unk> here is silent input corruption: the model never observes the token the task
+    turns on, so the cell measures the tokenizer rather than the architecture.
+    """
+    from factworld.tasks import CANONICAL, build_world
+
+    for name, spec in CANONICAL.items():
+        world, renderer = build_world(spec)
+        tok = Tokenizer.build([world], renderer)
+        for s in _task_strings(spec):
+            assert tok.unk_id not in tok.encode(s), f"{name}: <unk> in {s!r}"
+            assert tok.decode(tok.encode(s)) == s, f"{name}: round trip broken on {s!r}"
+
+
+def test_retired_tasks_round_trip_losslessly():
+    """Retired specs stay generable for historical reproduction, so they stay encodable."""
+    from factworld.tasks import RETIRED, build_world
+
+    for name, spec in RETIRED.items():
+        world, renderer = build_world(spec)
+        tok = Tokenizer.build([world], renderer)
+        for s in _task_strings(spec):
+            assert tok.unk_id not in tok.encode(s), f"{name}: <unk> in {s!r}"
+            assert tok.decode(tok.encode(s)) == s, f"{name}: round trip broken on {s!r}"
+
+
+def test_pointer_map_event_grammar_is_covered():
+    """The s5_chain event vocabulary — the load-bearing tokens of the composite stressor.
+
+    ``swaps the values of ...`` / ``cycles a0 simultaneously: ... takes ... old a0,`` and the
+    compact ``swaps a0:`` / ``cycles a0:`` forms, plus the ``(N hops)`` query annotation.
+    """
+    for tk in ("values", "simultaneously:", "takes", "old", "a0,", "a0.", "a0:", "hops)",
+               "(1", "(2", "(8", "(128"):
+        assert tk in _TOK.token_to_id, tk
+
+
+def test_holder_assertion_object_form_is_covered():
+    """``g3 holds o0.`` glues the period to the object (the aux-world trace documents)."""
+    s = _R.render_holder(_TARGET.objects[0], _TARGET.agents[0])
+    assert _TOK.unk_id not in _TOK.encode(s)
+    assert _TOK.decode(_TOK.encode(s)) == s
+
+
 def _run() -> int:
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

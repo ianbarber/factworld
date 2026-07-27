@@ -110,6 +110,118 @@ def test_trace_mode_scoring_cuts_at_eos():
     assert res["metrics"]["last_n"]["overall"] == 1.0
 
 
+def test_typed_values_answer_a_different_token_type():
+    """The typed-value ablation: slots are agents, values are roles, so no token is ambiguous
+    between the two positions — the one structural property s5 has and s5_chain does not."""
+    from factworld.render import classify
+
+    spec = CANONICAL["s5_chain_typed_v1"]
+    for L in spec.eval_lengths:
+        for ex in generate(spec, "test", n=25, length=L):
+            assert classify(ex.answer.rstrip(".")) == "r"
+            assert classify(ex.meta["start"]) == "g"
+            assert ex.meta["depth"] == 1 and ex.meta["typed_values"] is True
+            assert ex.meta["path"] == [ex.meta["start"], ex.answer.rstrip(".")]
+            # facts map agents to roles; the event stream still names only agents
+            assert f"{ex.meta['start']}'s a0 is " in ex.prompt
+            assert "swaps the values of" in ex.prompt or "cycles a0 simultaneously" in ex.prompt
+
+
+def test_typed_values_echo_floor_is_structurally_zero():
+    """distinct_path buys echo=0 in the untyped task; typing buys it by construction, so the
+    gate is neither applied nor needed here."""
+    from factworld.validity import s5_chain_floors
+
+    spec = CANONICAL["s5_chain_typed_v1"]
+    assert spec.distinct_path is False
+    for L in spec.eval_lengths:
+        floors = s5_chain_floors(generate(spec, "test", n=200, length=L), spec.k)
+        assert floors["echo"] == 0.0
+        assert floors["uniform"] == 1.0 / spec.k
+        # answer space is the roles, so the query start is not a candidate: no 1/(k-1) discount
+        assert floors["uniform_non_start"] == 1.0 / spec.k
+
+
+def test_typed_values_is_depth_one_only():
+    spec = CANONICAL["s5_chain_typed_v1"].scaled(chain_depth=2)
+    with pytest.raises(ValueError, match="depth-1 construct"):
+        generate(spec, "test", n=1, length=4)
+
+
+def test_typed_and_untyped_initial_maps_have_different_structure():
+    """The second documented difference, entailed by the type split rather than chosen: the
+    untyped initial map is a single k-cycle (no fixed points, every agent reachable from every
+    other), the typed one a uniform agent->role bijection, for which cycles are undefined."""
+    import re
+
+    fact = re.compile(r"\b(g\d+)'s a0 is ([a-z]+\d+)\.")
+    untyped = CANONICAL["s5_chain_local_v2"].scaled(chain_depth=1)
+    for ex in generate(untyped, "test", n=10, length=4):
+        nxt = dict(fact.findall(ex.prompt))
+        assert set(nxt) == set(nxt.values())                # endo-map on the agent set
+        node, seen = next(iter(nxt)), 0
+        while True:                                         # one cycle covering every slot
+            node, seen = nxt[node], seen + 1
+            if node == next(iter(nxt)):
+                break
+        assert seen == len(nxt) == untyped.k
+
+    typed = CANONICAL["s5_chain_typed_v1"]
+    for ex in generate(typed, "test", n=10, length=4):
+        m = dict(fact.findall(ex.prompt))
+        assert len(m) == typed.k and len(set(m.values())) == typed.k
+        assert not (set(m) & set(m.values()))               # disjoint pools: no cycles at all
+
+
+def test_typed_and_untyped_arms_differ_in_exactly_the_documented_fields():
+    """The contrast is only readable if the differences are enumerated.
+
+    Whole-dataclass comparison rather than a hand-listed subset: a field added later that
+    silently diverges between the arms would slip past a subset check and confound the
+    ablation. Three fields may differ, and each is documented in _ex_s5_chain_typed:
+    ``name`` (it keys the RNG stream), ``typed_values`` (the intended change), and
+    ``distinct_path`` (typing makes the echo adversary type-invalid, so the gate is neither
+    applied nor needed — at the cost of a different chance level, 1/k against 1/(k-1)).
+    """
+    import dataclasses
+
+    typed = dataclasses.asdict(CANONICAL["s5_chain_typed_v1"])
+    untyped = dataclasses.asdict(CANONICAL["s5_chain_local_v2"].scaled(chain_depth=1))
+    assert set(typed) == set(untyped)
+    differing = {f for f in typed if typed[f] != untyped[f]}
+    assert differing == {"name", "typed_values", "distinct_path"}
+    assert typed["typed_values"] and not untyped["typed_values"]
+    assert untyped["distinct_path"] and not typed["distinct_path"]
+
+
+def test_typed_values_supervision_shapes():
+    """event_trace dumps the whole agent->role map per event; start_trace emits the queried
+    slot's current value per event and builds the interleaved training prompt."""
+    spec = CANONICAL["s5_chain_typed_v1"]
+    L = 4
+    ex = generate(spec, "test", n=1, length=L)[0]
+    toks = ex.meta["trace"].split()
+    assert len(toks) == L * spec.k + spec.chain_depth
+    assert toks[-1] == ex.meta["start"]
+
+    st = generate(spec.scaled(start_trace=True), "test", n=1, length=L)[0]
+    trace = st.meta["trace"].split()
+    assert len(trace) == L + 1
+    assert trace[L - 1] == st.answer.rstrip(".")          # last checkpoint IS the depth-1 gold
+    assert st.meta["interleaved_prompt"].endswith(st.prompt.split("what is")[-1].strip())
+
+
+def test_typed_values_does_not_perturb_the_untyped_stream():
+    """Frozen-spec immutability: the typed builder is a separate function reached only via
+    spec.typed_values, so the registered s5_chain streams are untouched."""
+    spec = CANONICAL["s5_chain_local_v2"]
+    a = generate(spec, "test", n=5, length=4)
+    generate(CANONICAL["s5_chain_typed_v1"], "test", n=5, length=4)
+    b = generate(spec, "test", n=5, length=4)
+    assert [x.prompt for x in a] == [x.prompt for x in b]
+    assert [x.answer for x in a] == [x.answer for x in b]
+
+
 def test_event_trace_checkpoints():
     """local_v2 dense supervision: the trace carries one full a0-map checkpoint
     (k agents) per event, then the query path prefix."""

@@ -196,6 +196,133 @@ def comm_shallow_accuracy(examples, k: int) -> dict[str, float]:
     return {name: hits[name] / len(examples) for name in names}
 
 
+# ---------------------------------------------------------------------------
+# s5_chain shallow adversaries (chain / s5_chain families), in the strong_recency_pred idiom:
+# regexes over the canonical rendered grammar ("g6's a0 is g2." initial-map facts, the
+# "what is a0 of ... g6? (N hops)" query), scored against the oracle gold.
+#
+# INITIAL-MAP CHASE ignores every event and chases the stated initial a0 map `depth` times.
+# It is the shallow policy the task's own structure hands a model — the facts state a complete
+# map, the query is a pure dereference of *a* map, and only the events make it the wrong map.
+# Its value depends on (k, depth, L): more events move the final map further from the initial
+# one, and a bigger k leaves fewer chances of coincidence, so it is a per-cell number, not a
+# constant.
+#
+# UNIFORM-OVER-NON-START is chance for a guesser that has learned only "never answer the agent
+# you were asked about": distinct_path guarantees gold != start, so that guesser scores
+# 1/(k-1), not 1/k. ECHO (answer the queried agent) is exactly 0 under distinct_path and is
+# reported so that gate is visible rather than assumed.
+#
+# NO SINGLE ROW IS THE FLOOR. The chase is not uniformly dominant: uniform-over-non-start
+# exceeds it on 7 of the 16 registered local cells (k6/d1/L8, k6/d2/L4, k6/d2/L8, k5/d1/L4,
+# k5/d2/L4, k4/d1/L8, k4/d2/L4), and on two of those — k5/d2/L4 (0.185) and k6/d2/L8 (0.160) —
+# it sits below even plain 1/k (0.200 and 0.167). A cell's operative floor is the MAX over the
+# registered adversaries (``operative_floor``), and that is the only number a score may be
+# read against.
+#
+# Reference values, measured on the s5_chain_local_v2 item streams at eval_n=200 — the exact
+# item count a local cell scores. The rows are a property of that item set, so they move with
+# n: the k6/d2/L4 chase is 0.195 at n=200 and 0.215 at n=5000.
+#
+#     cell        chase   unif_non_start   operative
+#     k8/d1/L4    0.335   0.143            0.335  (chase)
+#     k8/d2/L4    0.235   0.143            0.235  (chase)
+#     k6/d1/L4    0.275   0.200            0.275  (chase)
+#     k6/d2/L4    0.195   0.200            0.200  (uniform_non_start)
+#     k6/d2/L8    0.160   0.200            0.200  (uniform_non_start)
+#     k4/d1/L4    0.335   0.333            0.335  (chase)
+#     k4/d1/L8    0.325   0.333            0.333  (uniform_non_start)
+#
+# The chase is a shallow policy only where an event stream exists. The `chain` family has no
+# events, so the initial map IS the final map and the chase is the ORACLE: it measures 1.000.
+# ``has_events=False`` drops the row rather than printing an oracle score as a floor.
+# ---------------------------------------------------------------------------
+_A0_FACT_RE = re.compile(r"\b(g\d+)'s a0 is ([a-z]+\d+)\.")
+_A0_QUERY_RE = re.compile(r"what is ((?:a0 of )+)(g\d+)\?")
+
+
+def s5_chain_shallow_preds(prompt: str) -> dict[str, str | None]:
+    """The s5_chain shallow adversaries' answers for one rendered prompt.
+
+    Returns {name: answer} in canonical rendered form (attached trailing period), or None
+    values when the prompt carries no parseable initial map / chain query.
+      initial_map_chase — chase the STATED INITIAL a0 map `depth` times (ignore every event)
+      echo              — answer the queried agent itself
+    """
+    names = ("initial_map_chase", "echo")
+    m = _A0_QUERY_RE.search(prompt)
+    if m is None:
+        return {n: None for n in names}
+    depth = m.group(1).count("a0 of")
+    start = m.group(2)
+    nxt0 = dict(_A0_FACT_RE.findall(prompt))
+    node = start
+    for _ in range(depth):
+        node = nxt0.get(node)
+        if node is None:
+            return {"initial_map_chase": None, "echo": f"{start}."}
+    return {"initial_map_chase": f"{node}.", "echo": f"{start}."}
+
+
+S5_CHAIN_ADVERSARIES = ("initial_map_chase", "echo", "uniform_non_start", "uniform")
+
+
+def operative_floor(floors: dict[str, float]) -> float | None:
+    """The number a cell has to clear: the max over whichever adversaries are registered.
+
+    Reading a score against one named row understates the floor wherever that row is not the
+    largest, which is most of the low-k end of the local grid.
+    """
+    vals = [v for name, v in floors.items() if name in S5_CHAIN_ADVERSARIES and v is not None]
+    return max(vals) if vals else None
+
+
+def s5_chain_floors(examples, k: int, has_events: bool = True) -> dict[str, float]:
+    """Shallow-adversary floors for a list of s5_chain/chain ``tasks.Example``.
+
+    Recomputed from the exact deterministic items a cell scores, so a floor row is a
+    property of that cell rather than a global constant. Take the max over the returned
+    rows (``operative_floor``) — which row is largest varies by cell.
+
+      initial_map_chase  — accuracy of the initial-map chase. Omitted when ``has_events`` is
+                           False: with no events to ignore the chase reproduces the oracle
+                           and scores 1.000, which is a correctness check, not a floor.
+      echo               — accuracy of answering the queried agent (0 under distinct_path)
+      uniform_non_start  — expected accuracy of guessing uniformly over the answer space
+                           minus the queried agent; chance for a gated stream. Falls back to
+                           plain uniform where the answer is a different token type from the
+                           query start (the typed-value ablation), since the start is then
+                           not a candidate answer.
+      uniform            — 1/k, the answer space with nothing excluded
+    """
+    from .render import classify
+
+    n = len(examples)
+    if not n:
+        return {}
+    hits = Counter()
+    non_start = 0.0
+    for e in examples:
+        preds = s5_chain_shallow_preds(e.prompt)
+        for name, pred in preds.items():
+            hits[name] += int(pred is not None and pred == e.answer)
+        gold = e.answer.strip().rstrip(".")
+        start = e.meta.get("start")
+        if start is None or classify(gold) != classify(start):
+            non_start += 1.0 / k                    # start is not in the answer space
+        elif gold != start:
+            non_start += 1.0 / max(1, k - 1)
+    out = {
+        "initial_map_chase": hits["initial_map_chase"] / n,
+        "echo": hits["echo"] / n,
+        "uniform_non_start": non_start / n,
+        "uniform": 1.0 / k,
+    }
+    if not has_events:
+        del out["initial_map_chase"]
+    return out
+
+
 def _fmt(report: dict) -> str:
     lines = ["FactWorld — validity gate", "=" * 46, ""]
     lines.append(f"{'family':<12}{'floor':>8}{'KLexc':>8}{'major':>8}{'recency':>9}{'n.bayes':>9}")

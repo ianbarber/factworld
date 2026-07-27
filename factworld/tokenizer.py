@@ -24,16 +24,40 @@ The vocabulary is the union of:
     ``entities, value_vocab, attribute_names, objects, locations, agents, roles``.
 
 (c) Step tokens ``s0 .. s{max_step-1}`` (``max_step`` default 256) — emitted by
-    ``render_history(with_steps=True)`` and used as as-of-t query labels.
+    ``render_history(with_steps=True)`` and used as as-of-t query labels. The same
+    integer range supplies the chain/s5_chain hop annotation ``(N`` … ``hops)``.
 
 (d) Structural / function tokens. These are derived *robustly* by rendering a
     probe of every statement type the renderer supports (``render_fact``;
     ``render_history`` with ``with_steps`` False AND True over an easy and a hard
-    chain; ``render_query`` for families ``recall``/``state_easy``/``state_hard``
-    with ``t=None`` AND ``t`` set) and collecting every token that is NOT a
-    content/step token. A fixed seed set of structural words used by the corpus's
-    role/holder assertion lines is additionally unioned in so the vocab does not
-    depend on which paraphrase slots a given seed happens to select.
+    chain; the pointer-map events ``swap_a0``/``cycle_a0``; the dial event and
+    assertion; ``render_query`` for families ``recall``/``state_easy``/
+    ``state_hard``/``state_comm`` with ``t=None`` AND ``t`` set) and collecting
+    every token that is NOT a content/step token. A fixed seed set of structural
+    words used by the corpus's role/holder assertion lines is additionally unioned
+    in so the vocab does not depend on which paraphrase slots a given seed happens
+    to select.
+
+Coverage: vocabulary, not encode-time normalisation
+---------------------------------------------------
+Some surface forms glue punctuation to a content id (``g5's``, ``a0,``, ``o3.``) or
+to an integer (``(2``, ``hops)``). Two ways to cover them exist, and the contract
+``decode(encode(x)) == x`` decides between them:
+
+* **Normalise at encode time** — split ``a0,`` into ``a0`` + ``,``. This breaks the
+  round trip: ``decode`` joins with single spaces and has no way to know which of
+  the two tokens were originally glued, so ``x`` cannot be reconstructed. Making
+  decode re-attach by rule would bake renderer-specific grammar into the tokenizer
+  and still be ambiguous (``.`` follows both glued and free tokens).
+* **Extend the vocabulary** — enumerate exactly the glued forms the renderer and
+  the task suite can emit. Whitespace splitting stays the whole of tokenization,
+  so the round trip is exact by construction.
+
+The second is what this module does. The cost is vocabulary size, so the
+enumeration is deliberately minimal: each content token is combined only with the
+suffixes its TYPE can occupy (see ``_NAT_SUFFIX_BY_TYPE``) rather than with the
+full punctuation product, and the hop annotation reuses the step-token integer
+range instead of a second independent range.
 
 Id-ordering scheme
 ------------------
@@ -42,6 +66,16 @@ order. Every other token (content + step + structural) is gathered into one set
 and assigned ids 4.. in plain ``sorted()`` order of the token string. Because the
 input is a set sorted by string, identical worlds always yield identical
 ``token_to_id`` maps, independent of insertion order.
+
+Stability is *within* a vocabulary, not across changes to it. The 256 ``(N`` hop
+forms are added unconditionally, for every world, so extending the vocabulary
+reorders the sorted set: ids shift from the first added string onward and
+``vocab_size`` grows even for tasks that emit none of the new tokens. Local numbers
+predating an extension are therefore not bit-reproducible, since both the
+embedding/output shapes and the seeded initialisation that fills them depend on the
+vocabulary. Re-running a pre-extension configuration reproduces its protocol, not
+its exact value. Task items are unaffected — ``tasks.generate`` never consults the
+tokenizer, so the item streams and every floor computed from them are stable.
 """
 from __future__ import annotations
 
@@ -126,6 +160,11 @@ class Tokenizer:
         # use the full content x {'s, ., ?} product.
         tokens.update(cls._natural_surface_forms(worlds, renderer))
         tokens.update(f"s{i}?" for i in range(max_step))
+        # Hop annotation on the chain / s5_chain query ("... of g246? (128 hops)"). The count is
+        # glued to the opening paren, so it is a surface form like the ones above; it ranges over
+        # the same integers as the step labels.
+        tokens.update(f"({i}" for i in range(max_step))
+        tokens.add("hops)")
 
         # Specials are reserved at fixed ids; never let a probe shadow them.
         tokens.difference_update(_SPECIALS)
@@ -144,10 +183,14 @@ class Tokenizer:
         "g":   ("'s", "?", "."),   # agent: fact-subject ('s), recall entity (?), give-dest / answer (.)
         "e":   ("'s", "?", "."),   # entity: same slots as agent
         "v":   (".",),              # value: fact value + answer
-        "o":   ("?",),              # object: state_easy / composite-holder query target
+        "o":   ("?", "."),          # object: query target (?), holder assertion "g3 holds o0." (.)
         "r":   (".",),              # role: s5 answer
         "loc": (".",),              # location: move destination
         "p":   (".",),              # dial position: dial assertion + commutative answer
+        # attribute: the pointer-map events glue punctuation to the attribute name —
+        # "... takes g4's old a0," / "... old a0." (cycle_a0) and "swaps a0:" / "cycles a0:"
+        # (the compact s5-style event grammar, tasks.TaskSpec.compact_events).
+        "a":   (",", ".", ":"),
     }
 
     @staticmethod
@@ -160,7 +203,7 @@ class Tokenizer:
         forms: set[str] = set()
         for w in worlds:
             for bucket in (w.entities, w.agents, w.value_vocab, w.objects, w.locations, w.roles,
-                           w.positions):
+                           w.positions, w.attribute_names):
                 for tk in bucket:
                     c = classify(tk)
                     for suf in Tokenizer._NAT_SUFFIX_BY_TYPE.get(c, ()):
@@ -207,6 +250,17 @@ class Tokenizer:
             agent = world.agents[0]
             yield renderer.render_query("state_hard", target=agent, t=None)
             yield renderer.render_query("state_hard", target=agent, t=5)
+
+        # pointer-map (a0) events — the s5_chain grammar. swap_a0 needs two agents,
+        # cycle_a0 three. These carry the only tokens in the suite that glue punctuation
+        # to the attribute name ("old a0," / "old a0.") plus "values"/"simultaneously:"/
+        # "takes"/"old", none of which appear in any other statement type.
+        if len(world.agents) >= 2:
+            a, b = world.agents[0], world.agents[1]
+            yield renderer.render_event(Event("swap_a0", (a, b)), step="s0")
+        if len(world.agents) >= 3:
+            a, b, c = world.agents[0], world.agents[1], world.agents[2]
+            yield renderer.render_event(Event("cycle_a0", (a, b, c)), step="s0")
 
         # commutative-state — needs agents and dial positions.
         if world.agents and world.positions:
