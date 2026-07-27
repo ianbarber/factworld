@@ -350,7 +350,9 @@ FACETS = {
     "s5_concrete": {
         "task": "s5", "lengths": (128, 256), "n": 25,
         "rendering": "concrete", "efforts": "on",
-        "budgets": {128: 16384, 256: 16384}},
+        "budgets": {128: 16384, 256: 32768}},  # L256 raised to the s5_chain rule
+        # (budgets sized so truncation stays a rounding error): at 16,384 four
+        # models needed single raised reruns and two were majority-truncated.
     # recall under load: the recall COMPONENT measured at working-set breadth in
     # the instant regime. The legacy frontier recall evidence is the sanity row
     # only (recall_copy_v1 @L6, pool 6 — near ceiling for this roster), so the
