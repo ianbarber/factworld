@@ -144,6 +144,8 @@ intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.
 <!-- FRONTIER_TABLE_START -->
 **s5_chain**
 
+History also contains s5_chain cells on s5_chain_v4. The table publishes s5_chain_v3: a replacement version publishes once it covers the ranked cell (@L96, effort=xhigh) for every model the published version covers, so a battery in flight neither empties nor shrinks the table — s5_chain_v4 is missing it for every model in the table. The unpublished version's cells are in the per-cell tables meanwhile.
+
 | Model | s5_chain @L96 | @L128 | worked calls @L96 | event-blind @L96 | mean ctok/call @L64 |
 |---|---|---|---|---|---|
 | anthropic/claude-fable-5 | 1.00 | 1.00 | 1.00 | 0.00 | 5014 |
@@ -201,13 +203,14 @@ Repeat runs at identical settings, the table publishing the last run: openai/gpt
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
 | moonshotai/kimi-k3 | 1.00 | 0.80 (trunc 0.16) | 11355 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 (trunc 0.32) | 0.80 (trunc 0.20) | 12250 |
-| z-ai/glm-5.2 | 0.92 (trunc 0.04) | 0.76 (trunc 0.04) | 6282 |
+| z-ai/glm-5.2 | 0.92 (calls failed 0.04) (trunc 0.04) | 0.76 (trunc 0.04) | 6282 |
 
 **Marks**
 
 - `†` visible working or covert reasoning on the canonical attempt.
 - `ᵘ` unworked answers on a large fraction of calls; the cell measures engagement, not capability.
 - `(trunc 0.NN)` the fraction of the cell's calls that ran out of budget before an answer; those calls score 0, so the cell's score is a lower bound.
+- `(calls failed 0.NN)` the fraction of the cell's calls the API rejected; those calls score 0, so the cell's score is a lower bound.
 - `*` off-arm ran effort=minimal (the endpoint cannot disable reasoning).
 - `ʳ` single rerun at a raised token budget (98,304 tokens).
 - `—ᶠ` gap not interpretable: the binding input sits at the object-filter floor.

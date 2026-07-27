@@ -54,14 +54,29 @@ generated from the rendered cells, so it lists exactly the marks the tables use
 and no others — a README without the markers is untouched.
 
 EXCLUSION FROM ORDERINGS is one rule with one implementation: ``exclusion_mark``
-names the mark (⊘ budget censoring, ≤x† pervasive covert reasoning, ᵘ unworked
+names the mark (⊘ censoring, ≤x† pervasive covert reasoning, ᵘ unworked
 answers) and ``ordering_value`` returns the number a cell contributes to a sort,
-which for a marked cell is nothing. Marked rows therefore sort last on their
+which for a marked cell is nothing. ⊘ has two causes and says which: '⊘ >budget'
+where the calls were majority finish=length, and '⊘ calls failed' where the API
+rejected them — a call that never reached the model is not a measurement of the
+model, so the cell publishes the cause instead of the 0.00 its unanswered calls
+score. Failed calls leave the per-call diagnostics too (``call_failed``): the
+work rate reads the calls that completed, so a billing failure cannot render as
+the ᵘ engagement pathology, and a cell that spent no tokens because its requests
+were rejected never wins the ctok efficiency tiebreak. Marked rows therefore sort last on their
 name, never on their score, in every table and in fig_bench_headline, where they
 plot below a rule in grey with their mark on the tick label: published, not
 ranked. The rule reaches the tiebreaks and the derived statistics too: a marked
 row's ctok is not read as a tiebreak, and the published thinking noise bar reads
 unmarked cells only.
+
+A facet publishes the TASK VERSION its measurements were taken on, read off the
+population its surfaces publish — canonical-arm cells of current-roster models —
+and a replacement version takes over only once it covers the cell the surface
+RANKS on (``RANKED_CELL``: s5_chain @L96 at the shared xhigh arm) for every model
+the outgoing version covers. A battery in flight therefore neither empties nor
+shrinks a table, and while a replacement sits unpublished the section says so and
+names the ranked cells it still lacks (``pending_task_note``).
 
 Thinking cells carry two per-call diagnostics beside the score. WORK RATE is the
 fraction of a cell's calls whose completion exceeds the working line, with match
@@ -106,7 +121,14 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SCRIPTS = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, REPO)
+# The runner is the source of truth for the system prompt each cell's regime is
+# defined against (``protocol_prompt_fp``), so it is importable from here whatever
+# the renderer was launched as. Appended, not prepended: nothing in scripts/ may
+# take precedence over the stdlib or the package.
+if SCRIPTS not in sys.path:
+    sys.path.append(SCRIPTS)
 
 try:
     import matplotlib
@@ -176,17 +198,74 @@ def canonical_rung(rec) -> bool:
     return breadth_of(rec) == CANONICAL_BREADTH and not k_fixed_of(rec)
 
 
+@functools.lru_cache(maxsize=256)
+def protocol_prompt_fp(facet, task, effort, leg, rendering):
+    """The fingerprint of the system prompt the RUNNER resolves for a cell of this
+    shape — the text that cell is defined against. None when the runner's texts
+    are unavailable (a rendering environment without the scripts package).
+
+    NAMED, not inferred: ``run_frontier_benchmark.system_prompt_for`` IS the rule
+    that picks a cell's prompt (a reasoning-effort arm the neutral text, an instant
+    arm the base text, s5_concrete its own framing prompt in both regimes), so
+    asking it what this cell should have run under tracks every edit to those texts
+    and every regime rule that reads them. Deriving the thinking texts as "canonical
+    and not sentinel-dropped" does not: the drop set is CLOSED and a new or edited
+    prompt joins CANONICAL alone (factworld.benchmark), so the next edit to the base
+    text or to the s5_concrete framing would file that text as a thinking prompt and
+    quietly take every instant cell stamped with it off the published surfaces."""
+    try:
+        import run_frontier_benchmark as RF
+        from factworld.benchmark import system_prompt_fingerprint
+        return system_prompt_fingerprint(RF.system_prompt_for({
+            "facet": facet, "task": task,
+            "settings": {"effort": effort, "leg": leg, "rendering": rendering}}))
+    except Exception:  # pragma: no cover - environment guard
+        return None
+
+
 def off_protocol_prompt(rec) -> bool:
-    """True when the cell ran under a system prompt that is not one the instrument
-    is defined against. The runner sentinel-drops ``settings.system_prompt_fp`` at
-    the canonical prompts (factworld.benchmark.with_system_prompt), so a scored
-    cell carries no fingerprint and any fingerprint present names another prompt."""
-    return bool(_settings(rec).get("system_prompt_fp"))
+    """True when the cell ran under a system prompt its REGIME is not defined
+    against.
+
+    The runner derives the prompt from the regime and stamps the resolved text's
+    fingerprint into the settings (run_frontier_benchmark.system_prompt_for ->
+    factworld.benchmark.with_system_prompt): a reasoning-effort arm takes the
+    neutral prompt, an instant arm the base text. The stamp is sentinel-dropped at
+    the texts every record already in history was measured under, so the
+    fingerprint field reads:
+
+      absent        one of the archive's prompts. CANONICAL: instant cells take
+                    the base text by protocol, and so did every thinking cell
+                    measured before the regimes split — those are the published
+                    numbers. s5_concrete keeps its own framing prompt in both
+                    regimes and is sentinel-dropped in both.
+      its regime's  canonical: the text ``system_prompt_for`` resolves for this
+                    cell's facet, task, regime and leg.
+      anything else off-protocol — the neutral prompt on an instant arm, where
+                    suppressing reasoning IS the measurement, and the base text
+                    named explicitly on a reasoning-effort arm.
+
+    A cell whose protocol text cannot be resolved keeps its number: an unreadable
+    runner is not evidence that the cell was off-protocol, and blanking a scored
+    surface on it is the failure this predicate exists to prevent.
+
+    When one cell has both an archived (no fingerprint) and a re-measured neutral
+    record, both are canonical and both survive dedup — ``cell_key`` keys on the
+    fingerprint. ``published_cells`` and the headline's latest-timestamp rule then
+    publish the newer one, so the re-measured cell supersedes the archived cell
+    rather than doubling it."""
+    s = _settings(rec)
+    fp = s.get("system_prompt_fp")
+    if not fp:
+        return False
+    want = protocol_prompt_fp(rec.get("facet"), rec.get("task"), s.get("effort"),
+                              s.get("leg"), s.get("rendering"))
+    return want is not None and fp != want
 
 
 def canonical_arm(rec) -> bool:
-    """True for cells on the canonical arm — canonical rungs and the protocol's
-    system prompt. Only these feed the headline columns and figures; an
+    """True for cells on the canonical arm — canonical rungs and the cell's
+    regime's system prompt. Only these feed the headline columns and figures; an
     off-protocol prompt is a different measurement, so such a cell stays in the
     per-cell tables and never shadows the scored one."""
     return canonical_rung(rec) and not off_protocol_prompt(rec)
@@ -223,9 +302,20 @@ THINKING_BUDGET = 16384
 CHAIN_STRESS_DEPTH = 128
 CHAIN_STRESS_K = 2 * CHAIN_STRESS_DEPTH + 1  # staircase k=2d+1 -> 257
 S5_STRESS_LENGTH = 256
-# The s5_chain headline runs at the maximum supported reasoning effort; cells at
-# any other effort are probes and never enter the ranking or its aggregates.
+# The s5_chain headline runs the SHARED xhigh arm for every model — cross-model
+# fairness over per-vendor ceilings, so a vendor level above xhigh (gpt-5.6-sol's
+# Responses-only ``max``) is a probe finding, not a scored arm. Cells at any other
+# effort are probes and never enter the ranking or its aggregates.
 S5_CHAIN_EFFORT = "xhigh"
+S5_CHAIN_STRESS_LENGTH = 96   # the RANKED cell: the ranking sorts on this score
+S5_CHAIN_EXT_LENGTH = 128     # the top-cluster separator (second sort key)
+S5_CHAIN_EFF_LENGTH = 64      # the matched efficiency cell every roster model runs
+# The cell a facet's published surface RANKS on, as (length, effort). A
+# replacement task version publishes only once it covers this cell for every model
+# the outgoing version covers (``published_task``), so a battery in flight neither
+# empties nor shrinks the surface. Facets absent here have no ranked cell and read
+# the newest record of the population their surfaces publish.
+RANKED_CELL = {"s5_chain": (S5_CHAIN_STRESS_LENGTH, S5_CHAIN_EFFORT)}
 # Instant component-stress cells beyond the composite headline (facets
 # recall_load / chain_instant): single-query deferred recall under working-set
 # load (the pool scales with the length) and the chain d16 off arm of the
@@ -235,6 +325,23 @@ RECALL_LOAD_LENGTH = 64                       # recall_copy_v1 @L64, pool == L
 CHAIN_INSTANT_DEPTH = 16
 CHAIN_INSTANT_K = 2 * CHAIN_INSTANT_DEPTH + 1  # staircase k=2d+1 -> 33
 CENSORED_CELL = "⊘ >budget"  # majority finish=length: not measurable at this budget
+# The second cause of a ⊘ cell: the CALLS FAILED. A request the API rejected
+# (billing, rate limit, provider outage) never reached the model — the runner
+# scores the missing answer 0 like any other empty answer, but nothing about the
+# model was measured, so the cell is censored and carries the cause in plain
+# language rather than publishing a number that reads as "this model scored zero".
+FAILED_CELL = "⊘ calls failed"
+# Above this fraction of a cell's calls the cell is censored; at or below it the
+# cell publishes its score with the rate beside it, the way partial truncation
+# does. The line is CAP_ESCAPE_RATE's and UNWORKED_RATE's: the instrument already
+# treats a per-call anomaly on more than a tenth of a cell's calls as
+# contamination. It also splits the two readings of a failed call. Every failed
+# call scores 0, so the failure rate IS the downward bias on the published score:
+# at a tenth or less that bias stays inside the thinking regime's noise bar
+# (Wilson ±0.15-0.19 at n=25) and the score is a lower bound worth publishing;
+# above it the bias is the measurement — 16 of 25 calls completed is a coverage
+# problem, and there is no score to publish.
+FAILED_CENSOR_RATE = 0.10
 # Facets of the instant regime (reasoning off, one-line answer contract). Short
 # completions are the POINT there — the work-rate diagnostics below apply to the
 # thinking regime only, where a short completion means the model did not work.
@@ -403,10 +510,11 @@ GAP_NOTE = (
 CENSOR_NOTE = (
     f"{CENSORED_CELL} = not measurable at this budget: the cell's calls were majority "
     "finish=length (the token budget ran out before an answer), so the cell has no "
-    "score at these settings.")
+    f"score at these settings. {FAILED_CELL} = the cell's calls failed: the API "
+    "rejected them, so the model never answered and there is nothing to score.")
 SYMMETRY_NOTE = (
-    "⊘ = not measurable at this budget; ≤x† = upper bound, covert reasoning on most "
-    "calls; neither participates in orderings.")
+    "⊘ = not measurable at this budget, or the cell's calls failed; ≤x† = upper "
+    "bound, covert reasoning on most calls; neither participates in orderings.")
 NOTATION_NOTE = (
     "Notation: `@Ln` = stream length (events, or hops for chain depth d); "
     "`@Ntok` = a completion-token budget. Instant escalations render "
@@ -519,6 +627,16 @@ TRUNC_FOOTNOTE = (
     "(trunc 0.NN) the cell's truncation rate, where some calls ended finish=length: "
     "those calls score 0 whatever the model knew, so the published score is a lower "
     f"bound. Above 0.50 the cell renders {CENSORED_CELL} instead of a number.")
+FAILED_CALL_FOOTNOTE = (
+    "(calls failed 0.NN) the fraction of the cell's calls the API rejected — a "
+    "billing, rate-limit or provider failure, so the model never saw those prompts. "
+    "They score 0 like any other empty answer, so the published score is a lower "
+    f"bound. Above {FAILED_CENSOR_RATE:.0%} the cell renders {FAILED_CELL} instead "
+    "of a number: the calls did not happen, so the cell is not a measurement of the "
+    "model, and like every ⊘ cell it takes no part in orderings. Failed calls are "
+    "also out of the per-call diagnostics — the worked-calls split reads the calls "
+    "that completed, so a billing failure cannot render as the unworked-answers "
+    "pathology.")
 EVENT_BLIND_NOTE = (
     "event-blind: the fraction of a cell's predictions equal to the 8-hop "
     "dereference of the INITIAL pointer map — the answer a model gives if it reads "
@@ -712,6 +830,71 @@ def majority_finish_length(rec) -> bool:
     return rate is not None and rate > 0.5
 
 
+def call_failed(ex) -> bool:
+    """True for the per-example row of a call that FAILED: no finish reason AND no
+    tokens billed. That pair is what the runner writes for a request the API
+    rejected — ``_attach_example_meta`` fills a zeros/None row so the rows stay
+    aligned with the prompts — and it is what separates a failed call from a call
+    that reached the model and returned nothing usable (those carry the tokens they
+    burned). A row that predates per-example token logging (ctok is None) is not a
+    failure: it carries no per-call evidence either way."""
+    return ex.get("finish") is None and ex.get("ctok") == 0
+
+
+def failed_call_count(rec) -> int:
+    """How many of the cell's calls failed. The record says it two ways and the
+    LARGER count stands: ``diagnostics.api_errors`` (the runner's exception-path
+    count, ``backends.pop_call_meta``) and the per-example rows that carry the
+    failure call by call (``call_failed``). Neither alone is enough — review F8
+    found failed calls the exception path did not count, and records written before
+    per-example token logging carry only the aggregate."""
+    api = (rec.get("diagnostics") or {}).get("api_errors") or 0
+    return max(int(api), sum(1 for e in rec.get("examples") or [] if call_failed(e)))
+
+
+def failed_call_rate(rec):
+    """Fraction of the cell's calls that failed; None when the record carries no n.
+    One derivation, read by both the censor and the work-rate split, for every
+    model and every run."""
+    n = rec.get("n") or 0
+    return failed_call_count(rec) / n if n else None
+
+
+def calls_failed(rec) -> bool:
+    """True when more than FAILED_CENSOR_RATE of the cell's calls failed: the model
+    never answered on those calls, so the cell is censored ('⊘ calls failed') and,
+    like every ⊘ cell, takes no part in any ordering, tiebreak or derived
+    statistic. This is the censor ``majority_finish_length`` cannot see: an
+    all-error cell has ``finish_reasons == {}`` and so no truncation rate at all."""
+    rate = failed_call_rate(rec)
+    return rate is not None and rate > FAILED_CENSOR_RATE
+
+
+def censored_str(rec):
+    """The ⊘ string a censored cell publishes instead of a score, None when the
+    cell publishes a number. Failed calls are read first: a call that never reached
+    the model says nothing about token budgets."""
+    if rec is None:
+        return None
+    if calls_failed(rec):
+        return FAILED_CELL
+    if majority_finish_length(rec):
+        return CENSORED_CELL
+    return None
+
+
+def mean_ctok_per_call(rec):
+    """A cell's mean completion tokens per call (its usage total over n) — the
+    efficiency columns and the ctok tiebreaks. None when the cell never ran, has no
+    usage, or its calls failed: a cell that spent no tokens because its requests
+    were rejected would otherwise read as the most efficient model in the roster."""
+    if rec is None or calls_failed(rec):
+        return None
+    n = rec.get("n") or 0
+    ctok = (rec.get("usage") or {}).get("completion_tokens")
+    return ctok / n if n > 0 and ctok is not None else None
+
+
 def thinking_cell(rec) -> bool:
     """True for cells of the thinking regime (reasoning on). The instant facets and
     the effort=none/minimal arms are excluded: there a short completion is the
@@ -725,11 +908,17 @@ def work_stats(rec):
     {"rate", "worked", "unworked", "acc_worked", "acc_unworked"} — the fraction of
     calls above WORK_LINE plus match conditional on working and on not working.
 
+    FAILED calls are in neither the numerator nor the denominator (``call_failed``).
+    A rejected request never reached the model, so it is not evidence that the model
+    declined to work; counted as unworked it renders a billing failure as the
+    engagement pathology the ᵘ mark names.
+
     None when the record predates per-example token logging (records written
-    before 2026-07-17 carry no ctok/rtok/finish per example); the diagnostic then
-    renders not-available, never 0."""
+    before 2026-07-17 carry no ctok/rtok/finish per example) and when every call
+    failed; the diagnostic then renders not-available, never 0."""
     ex = [e for e in rec.get("examples") or []
-          if e.get("ctok") is not None and e.get("relaxed") is not None]
+          if e.get("ctok") is not None and e.get("relaxed") is not None
+          and not call_failed(e)]
     if not ex:
         return None
     worked = [e for e in ex if e["ctok"] > WORK_LINE]
@@ -817,7 +1006,8 @@ def event_blind_counts(rec):
     reading. ELIGIBILITY, the one rule every event-blind number on every surface
     uses: an item counts when its blind answer differs from its gold answer under
     the canonical **match** evaluator (where the two coincide the diagnostic
-    cannot separate the two readings), and a HIT is a prediction that matches the
+    cannot separate the two readings) and its call did not fail (a rejected request
+    left no prediction to read), and a HIT is a prediction that matches the
     blind answer under the same evaluator. None for non-s5_chain cells, and
     whenever the regenerated stream does not reproduce the cell's stored gold
     answers item for item — the diagnostic reports nothing rather than something
@@ -839,6 +1029,8 @@ def event_blind_counts(rec):
     for e, (blind, gold) in zip(ex, items):
         if blind is None or TK.score_relaxed(blind, gold):
             continue  # ineligible: the shallow answer IS the gold answer
+        if call_failed(e):
+            continue  # ineligible: the call failed, so there is no prediction
         eligible += 1
         hits += TK.score_relaxed(e.get("pred") or "", blind)
     return hits, eligible
@@ -855,20 +1047,21 @@ def event_blind_rate(rec):
 
 def event_blind_scoped_cells(records):
     """The cells a PUBLISHED event-blind aggregate reads: the current roster's
-    scored s5_chain cells — the facet's registry task (retired task versions carry
-    no published number), the canonical arm, the published effort, every length.
-    Archived models are excluded for the same reason they are excluded from the
-    headline: a published number describes the published roster."""
-    try:
-        from factworld.benchmark import FACETS
-        task = FACETS.get("s5_chain", {}).get("task")
-    except Exception:  # pragma: no cover - environment guard
-        task = None
+    scored s5_chain cells — the facet's published task (superseded task versions
+    carry no published number), the canonical arm, the published effort, every
+    length. Archived models are excluded for the same reason they are excluded
+    from the headline: a published number describes the published roster. The
+    aggregate is a count over cells, so it reads ``published_cells``: a cell
+    re-measured under the thinking regime's neutral prompt contributes its newer
+    record, not both. A cell whose calls failed is censored and so carries no
+    published number to aggregate."""
+    task = published_task(records, "s5_chain")
     roster = set(roster_models(records))
-    return [r for r in by_facet(records, "s5_chain")
-            if r.get("model") in roster and canonical_arm(r)
+    return [r for r in published_cells(by_facet(records, "s5_chain"))
+            if r.get("model") in roster
             and (task is None or r.get("task") == task)
-            and _settings(r).get("effort") == S5_CHAIN_EFFORT]
+            and _settings(r).get("effort") == S5_CHAIN_EFFORT
+            and not calls_failed(r)]
 
 
 def event_blind_aggregate(records):
@@ -952,25 +1145,53 @@ def _settings(rec) -> dict:
     return rec.get("settings") or {}
 
 
-def cell_key(rec) -> tuple:
-    """Dedup key: (model, facet, task, length, hash of {effort, leg, rendering,
-    breadth, k_fixed, system_prompt_fp}) — every breadth/fixed-k rung is its own
-    arm (records without the v3 keys read as the canonical rung).
-
-    ``system_prompt_fp`` is in the arm for the same reason the RUNNER's resume key
-    carries it (factworld.benchmark.settings_hash): a cell run under a different
-    system prompt is a different measurement, and without the key an off-protocol
-    record would dedup into — and publish as — the scored cell. The runner
-    sentinel-drops the key at the canonical prompts, so every scored record carries
-    no fingerprint here and keys exactly as it always did."""
+def publication_key(rec) -> tuple:
+    """The cell a record publishes AS: (model, facet, task, length, hash of
+    {effort, leg, rendering, breadth, k_fixed}) — everything that names a cell
+    except the system prompt it was measured under. Two canonical records sharing
+    this key are the same published cell measured twice, so only the newer of them
+    belongs on a surface (see ``published_cells``)."""
     s = _settings(rec)
     arm = json.dumps(
         {"effort": s.get("effort"), "leg": s.get("leg"), "rendering": s.get("rendering"),
-         "breadth": s.get("breadth"), "k_fixed": s.get("k_fixed"),
-         "system_prompt_fp": s.get("system_prompt_fp")},
+         "breadth": s.get("breadth"), "k_fixed": s.get("k_fixed")},
         sort_keys=True,
     )
     return (rec.get("model"), rec.get("facet"), rec.get("task"), rec.get("length"), arm)
+
+
+def cell_key(rec) -> tuple:
+    """Dedup key: ``publication_key`` plus ``system_prompt_fp`` — every breadth/
+    fixed-k rung is its own arm (records without the v3 keys read as the canonical
+    rung), and so is every system prompt.
+
+    The prompt is in the key for the same reason the RUNNER's resume key carries it
+    (factworld.benchmark.settings_hash): a cell run under a different system prompt
+    is a different measurement, and without the key an off-protocol record would
+    dedup into — and publish as — the scored cell. The runner sentinel-drops the
+    stamp at the prompts the archive was measured under, so every archived record
+    keys exactly as it always did, and a cell re-measured under the thinking
+    regime's neutral prompt keys separately from its archived record instead of
+    overwriting it."""
+    return publication_key(rec) + (_settings(rec).get("system_prompt_fp"),)
+
+
+def published_cells(records):
+    """Canonical-arm records, one per published cell: where a cell carries both an
+    archived record and a re-measurement under the thinking regime's neutral
+    prompt, the newer record publishes and the older is a superseded measurement,
+    not a second data point. Surfaces that read a SET of cells (figures, the
+    event-blind aggregate) go through this; surfaces that ask for one cell use
+    ``stress_cell``, which applies the same latest-timestamp rule."""
+    kept = [r for r in records if canonical_arm(r)]
+    newest: dict[tuple, tuple] = {}
+    for i, rec in enumerate(kept):
+        key = publication_key(rec)
+        order = rec.get("ts") or ""
+        if key not in newest or order >= newest[key][0]:
+            newest[key] = (order, i)
+    chosen = {i for _order, i in newest.values()}
+    return [r for i, r in enumerate(kept) if i in chosen]
 
 
 def replicate_key(rec) -> tuple:
@@ -1032,6 +1253,9 @@ def cell_note(rec) -> str:
         notes.append("‡ cap-escape")
     if unworked_bound(rec):
         notes.append(f"{UNWORKED_MARK} unworked answers on a large fraction of calls")
+    failed = failed_call_rate(rec)
+    if failed:
+        notes.append(f"calls failed {failed:.2f}")
     trunc = truncation_rate(rec)
     if trunc:
         notes.append(f"truncation {trunc:.2f}")
@@ -1092,7 +1316,7 @@ def arm_label(rec) -> str:
         parts.append(f"B={s['breadth']}")
     if s.get("k_fixed"):  # fixed-breadth chain (vs the k=2d+1 staircase)
         parts.append(f"k_fixed={s['k_fixed']}")
-    if s.get("system_prompt_fp"):  # off-protocol prompt (canonical ones carry no key)
+    if s.get("system_prompt_fp"):  # the prompt is part of the arm; the archive's are dropped
         parts.append(f"sysprompt={s['system_prompt_fp']}")
     parts.append(f"effort={s.get('effort') or 'default'}")
     return ", ".join(parts)
@@ -1125,13 +1349,110 @@ def headline_composite_length(records, model):
     return pick["metrics"]["relaxed"]
 
 
-def _latest_chain_task(records, facet):
-    """Latest chain task version among records for a chain facet (v2 over v1)."""
-    cells = by_facet(records, facet)
+def published_population(records, facet):
+    """The records a facet's published surfaces read from: canonical-arm cells of
+    current-roster models. One definition, so ``published_task`` and
+    ``pending_task_note`` cannot disagree about what counts as measured."""
+    return [r for r in by_facet(records, facet)
+            if canonical_arm(r) and not archived_roster(records, r.get("model"))]
+
+
+def newest_task_stamps(cells):
+    """task version -> its newest (ts, task) stamp. The task name breaks a
+    timestamp tie, so a later version wins when two records share a ts."""
+    newest = {}
+    for r in cells:
+        task = r.get("task")
+        stamp = (r.get("ts") or "", task or "")
+        if task not in newest or stamp > newest[task]:
+            newest[task] = stamp
+    return newest
+
+
+def ranked_cell_coverage(cells, facet):
+    """task version -> the models whose RANKED cell (``RANKED_CELL``) it has.
+    Empty for a facet with no ranked cell, so every version covers the same
+    nothing and the newest one publishes."""
+    covered = defaultdict(set)
+    ranked = RANKED_CELL.get(facet)
+    if ranked is None:
+        return covered
+    length, effort = ranked
+    for r in cells:
+        if r.get("length") == length and _settings(r).get("effort") == effort:
+            covered[r.get("task")].add(r.get("model"))
+    return covered
+
+
+def published_task(records, facet):
+    """The task version a facet's published surfaces read: the newest version that
+    covers what those surfaces publish. None when the facet never ran.
+
+    The population is the one the surfaces publish from — canonical-arm cells of
+    current-roster models — and, where the facet ranks on one cell
+    (``RANKED_CELL``, s5_chain @L96 at the shared xhigh arm), a replacement
+    version publishes only once it covers that cell for every model the outgoing
+    version covers.
+
+    A surface publishes the task version its MEASUREMENTS were taken on, not the
+    version the registry currently plans. The two differ exactly while a
+    replacement task exists and its cells have not been bought, and in that window
+    the newest record of ANY kind is the wrong reading: an effort probe, a cell on
+    an archived model, a cell under an off-protocol prompt, or the first length of
+    a battery in flight each carries the new task while none of them is a ranked
+    cell, so switching on one drops the table to the rows the replacement happens
+    to have — none, in the common case. Coverage keeps the measured table standing
+    until the replacement can stand in its place; superseded versions' cells stay
+    in the per-cell tables either way."""
+    cells = published_population(records, facet)
     if not cells:
         return None
-    newest = max(cells, key=lambda r: (r.get("ts") or "", r.get("task") or ""))
-    return newest.get("task")
+    newest = newest_task_stamps(cells)
+    covered = ranked_cell_coverage(cells, facet)
+    for task in sorted(newest, key=lambda t: newest[t], reverse=True):
+        if all(covered[task] >= covered[other] for other in newest):
+            return task
+    # No version's ranked coverage contains every other's (a battery that added a
+    # model and has not re-bought another): the widest coverage publishes.
+    return max(newest, key=lambda t: (len(covered[t]), newest[t]))
+
+
+def pending_task_note(records, facet) -> str:
+    """A line naming a task version whose cells are in history but which the facet
+    does not publish yet, and the ranked cells it still lacks. '' when the newest
+    measured version is the one publishing — the ordinary state, including a
+    history that carries retired OLDER versions.
+
+    ``published_task`` holds a surface on the version that covers its ranked cell,
+    which is what keeps a battery in flight from emptying or shrinking the table.
+    The cost of that rule is that a replacement can sit in history unpublished, so
+    the state says so here instead of reading as a table nobody re-ran."""
+    published = published_task(records, facet)
+    ranked = RANKED_CELL.get(facet)
+    if published is None or ranked is None:
+        return ""
+    cells = published_population(records, facet)
+    newest = newest_task_stamps(cells)
+    pending = sorted(t for t in newest
+                     if t != published and newest[t] > newest[published])
+    covered = ranked_cell_coverage(cells, facet)
+    parts = []
+    for task in pending:
+        missing = sorted(covered[published] - covered[task])
+        if not missing:
+            continue
+        parts.append(f"{task} is missing it for " + (
+            "every model in the table" if len(missing) == len(covered[published])
+            else ", ".join(missing)))
+    if not parts:
+        return ""
+    length, effort = ranked
+    return (f"History also contains {facet} cells on {', '.join(pending)}. The table "
+            f"publishes {published}: a replacement version publishes once it covers "
+            f"the ranked cell (@L{length}, effort={effort}) for every model the "
+            "published version covers, so a battery in flight neither empties nor "
+            "shrinks the table — " + "; ".join(parts) + ". The unpublished version's "
+            "cells are in the per-cell tables meanwhile.")
 
 
 def stress_cell(records, facet, model, length,
@@ -1140,8 +1461,9 @@ def stress_cell(records, facet, model, length,
     only (breadth/fixed-k rungs are separate arms), abstract-token floor rendering
     and wrapped chain_depth cells excluded. None when the cell never ran.
 
-    Only records for the facet's CURRENT task version are used, so retired
-    chain_v1/s5_chain_v1-v2 history does not shadow the current chain_v2/s5_chain_v3 results.
+    Only records for the facet's PUBLISHED task version are used (``published_task``
+    — the version its measurements were taken on), so superseded chain_v1 /
+    s5_chain_v1-v2 history does not shadow the version the surface publishes.
     ``effort`` pins the facet's canonical effort arm (e.g. s5_chain's xhigh), so
     off-protocol effort probes in history never shadow the headline cell."""
     cells = [r for r in by_facet(records, facet)
@@ -1152,11 +1474,11 @@ def stress_cell(records, facet, model, length,
              and canonical_arm(r)]
     if not cells:
         return None
-    from factworld.benchmark import FACETS
-    facet_task = FACETS.get(facet, {}).get("task")
+    facet_task = published_task(records, facet)
     if facet_task:
         cells = [r for r in cells if r.get("task") == facet_task]
-    # latest-timestamp-wins (e.g. an effort-rerun supersedes the earlier attempt)
+    # latest-timestamp-wins: an effort rerun, or a re-measurement under the
+    # thinking regime's neutral prompt, supersedes the earlier attempt
     return max(cells, key=lambda r: r.get("ts") or "") if cells else None
 
 
@@ -1179,21 +1501,26 @@ def stress_value_str(rec) -> str:
     """One thinking state-stress headline cell: the plain match score at the
     named setting, ‡ when the cell escaped the token cap, ᵘ when the cell's
     unworked calls make the score a measure of engagement rather than capability;
-    CENSORED_CELL when the cell's calls were majority finish=length (not
-    measurable at this budget — never a number); a raised budget publishes with
-    the number ('1.00 @32,768tok (raised budget)'); partial truncation and repeat
-    runs publish as parenthesised rates ('0.52 (trunc 0.48)', '0.60 (3 runs,
-    spread 0.24)'); 'n/a' when the cell never ran."""
+    a ⊘ censor string (``censored_str``) when the cell's calls failed or were
+    majority finish=length — never a number; a raised budget publishes with
+    the number ('1.00 @32,768tok (raised budget)'); partial truncation, failed
+    calls under the censor line and repeat runs publish as parenthesised rates
+    ('0.52 (trunc 0.48)', '0.92 (calls failed 0.04)', '0.60 (3 runs, spread
+    0.24)'); 'n/a' when the cell never ran."""
     if rec is None:
         return "n/a"
-    if majority_finish_length(rec):
-        return CENSORED_CELL + _raised_budget_suffix(rec) + replicate_str(rec)
+    censor = censored_str(rec)
+    if censor is not None:
+        return censor + _raised_budget_suffix(rec) + replicate_str(rec)
     val = _fmt(canonical_relaxed(rec))
     if cap_escape(rec):
         val += "‡"
     if unworked_bound(rec):
         val += UNWORKED_MARK
     val += _raised_budget_suffix(rec)
+    failed = failed_call_rate(rec)
+    if failed:
+        val += f" (calls failed {failed:.2f})"
     trunc = truncation_rate(rec)
     if trunc:
         val += f" (trunc {trunc:.2f})"
@@ -1216,11 +1543,7 @@ def zb_latest_task(records):
     equal ts). A history that mixes v1-task cells with v2-task cells publishes
     the latest task's cells only; the older task's cells stay in the per-cell
     tables. None when the facet never ran."""
-    cells = by_facet(records, "zero_budget")
-    if not cells:
-        return None
-    newest = max(cells, key=lambda r: (r.get("ts") or "", r.get("task") or ""))
-    return newest.get("task")
+    return published_task(records, "zero_budget")
 
 
 def _zb_mixed_task_note(records, zb_task) -> str:
@@ -1285,9 +1608,14 @@ def zb_marks(rec, model_minimal=False) -> str:
 def zb_value_str(rec, model_minimal=False) -> str:
     """One zero-budget headline cell: canonical value + escalated diagnostic suffix
     + cleanliness marks; pervasively covert cells render as the explicit upper
-    bound '≤x†'; 'n/a' when the cell never ran (F9)."""
+    bound '≤x†'; a cell whose calls failed renders '⊘ calls failed' — the instant
+    regime reads the same censor as the thinking regime, since a rejected request
+    is not a measurement under any answer contract; 'n/a' when the cell never ran
+    (F9)."""
     if rec is None:
         return "n/a"
+    if calls_failed(rec):
+        return FAILED_CELL
     val = _fmt(canonical_relaxed(rec))
     if pervasive_covert(rec):
         val = "≤" + val
@@ -1435,16 +1763,12 @@ def headline_efficiency(records, model):
     """s5@128 mean ctok/call: the cell's total completion tokens divided by n on the
     matched s5_concrete cell at
     L=S5_EFF_LENGTH — the cell every current-roster model runs, replacing the
-    selection-biased ctok/solve (F10). None when the cell never ran."""
+    selection-biased ctok/solve (F10). None when the cell never ran or its calls
+    failed (``mean_ctok_per_call``)."""
     cells = [r for r in by_facet(records, "s5_concrete")
              if r["model"] == model and r.get("length") == S5_EFF_LENGTH
              and _settings(r).get("rendering") != "abstract_stated"]
-    if not cells:
-        return None
-    r = cells[0]
-    n = r.get("n") or 0
-    ctok = (r.get("usage") or {}).get("completion_tokens")
-    return ctok / n if n > 0 and ctok is not None else None
+    return mean_ctok_per_call(cells[0]) if cells else None
 
 
 def s5_efficiency_rows(records):
@@ -1461,10 +1785,8 @@ def s5_efficiency_rows(records):
         eff_rec = stress_cell(records, "s5_concrete", m, S5_EFF_LENGTH)
         if eff_rec is None:
             continue
-        n = eff_rec.get("n") or 0
-        ctok = (eff_rec.get("usage") or {}).get("completion_tokens")
         score = stress_value_str(score_rec)
-        ctok_per = ctok / n if n > 0 and ctok is not None else None
+        ctok_per = mean_ctok_per_call(eff_rec)
         excluded = out_of_ordering(score)
         score_num = ordering_value(score)
         rows.append((
@@ -1480,30 +1802,26 @@ def s5_efficiency_rows(records):
     return [r[1] for r in rows]
 
 
-S5_CHAIN_STRESS_LENGTH = 96
-S5_CHAIN_EXT_LENGTH = 128
-S5_CHAIN_EFF_LENGTH = 64
-
-
 # The marks that take a cell out of every ordering, with the plain-language
 # reason each one gives. One dict, so the tables, the figure tick labels and the
 # README legend cannot disagree about which marks these are or what they mean.
 EXCLUSION_MARKS = {
     UNWORKED_MARK: "unworked answers on a large fraction of calls",
-    "⊘": "not measurable at this budget",
+    "⊘": "not measurable at this budget, or the calls failed",
     "≤": "upper bound: covert reasoning on most calls",
 }
 
 
 def exclusion_mark(cell) -> str:
     """The mark that takes a rendered cell out of orderings, '' when the cell
-    takes part: ⊘ budget censoring, ≤x† pervasive covert reasoning, ᵘ unworked
-    answers — the same symmetric rule for every mark that says the number is not
-    a capability measurement."""
+    takes part: ⊘ censoring (either cause — the budget ran out, or the calls
+    failed), ≤x† pervasive covert reasoning, ᵘ unworked answers — the same
+    symmetric rule for every mark that says the number is not a capability
+    measurement."""
     s = str(cell)
     if UNWORKED_MARK in s:
         return UNWORKED_MARK
-    if s.startswith(CENSORED_CELL):
+    if s.startswith("⊘"):
         return "⊘"
     if s.startswith("≤"):
         return "≤"
@@ -1548,13 +1866,14 @@ def s5_chain_rows(records):
             continue
         score = stress_value_str(score_rec)
         ext = "—" if ext_rec is None else stress_value_str(ext_rec)
-        n = (eff_rec.get("n") or 0) if eff_rec else 0
-        ctok = (eff_rec.get("usage") or {}).get("completion_tokens") if eff_rec else None
-        ctok_per = ctok / n if n > 0 and ctok is not None else None
+        ctok_per = mean_ctok_per_call(eff_rec)
         excluded = out_of_ordering(score)
         score_num = ordering_value(score)
         ext_num = None if excluded else ordering_value(ext)
-        blind = event_blind_rate(score_rec) if score_rec is not None else None
+        # a censored cell reports no per-call diagnostic either: the event-blind
+        # rate of a cell whose calls failed is read off answers nobody gave.
+        blind = (None if score_rec is None or calls_failed(score_rec)
+                 else event_blind_rate(score_rec))
         rows.append((
             (1 if excluded else 0,
              -(score_num if score_num is not None else 0),
@@ -1951,9 +2270,14 @@ README_MARKS = [
     (UNWORKED_MARK, "unworked answers on a large fraction of calls; the cell "
                     "measures engagement, not capability"),
     ("⊘", "not measurable at this budget (majority of calls finish=length)"),
+    (FAILED_CELL, "no measurement: the API rejected the cell's calls, so the model "
+                  "never answered"),
     ("(trunc 0.NN)", "the fraction of the cell's calls that ran out of budget "
                      "before an answer; those calls score 0, so the cell's score "
                      "is a lower bound"),
+    ("(calls failed 0.NN)", "the fraction of the cell's calls the API rejected; "
+                            "those calls score 0, so the cell's score is a lower "
+                            "bound"),
     ("*", "off-arm ran effort=minimal (the endpoint cannot disable reasoning)"),
     (RAISED_MARK, "single rerun at a raised token budget"),
     ("‡", "provider ignored the token cap"),
@@ -1962,7 +2286,7 @@ README_MARKS = [
     ("n/a", "cell not run"),
     ("—", "not applicable to this row"),
 ]
-README_ORDERING_MARKS = ("≤x†", UNWORKED_MARK, "⊘")
+README_ORDERING_MARKS = ("≤x†", UNWORKED_MARK, "⊘", FAILED_CELL)
 README_ORDERING_LINE = (
     "{subject}: {pronoun} published, but {take} no part in any ordering — not in "
     "these tables' sorts, not in the figures.")
@@ -1974,10 +2298,11 @@ def _readme_compact(cell: str) -> str:
     raised-budget reruns render the ʳ mark ('1.00 @32,768tok (raised budget)' ->
     '1.00ʳ'; a censored raised cell -> '⊘ʳ'), the repeat-run suffix drops (the
     repeat-run line under the table carries every run's value); '⊘ >budget' -> '⊘'.
-    The truncation rate does NOT compact to a mark — a cell truncating on a fifth
-    of its calls and one truncating on a single call are not the same finding, so
-    the rate travels to every surface. ≤x†, ᵘ, —ᶠ, n/a and the *, †, ‡ marks pass
-    through unchanged."""
+    The truncation and failed-call rates do NOT compact to a mark — a cell
+    truncating on a fifth of its calls and one truncating on a single call are not
+    the same finding, so the rate travels to every surface — and '⊘ calls failed'
+    keeps its cause for the same reason: the two censors are different findings.
+    ≤x†, ᵘ, —ᶠ, n/a and the *, †, ‡ marks pass through unchanged."""
     raised = bool(_RAISED_SUFFIX.search(cell))
     cell = _RUNS_SUFFIX.sub("", cell)
     cell = _RAISED_SUFFIX.sub("", cell)
@@ -2019,8 +2344,12 @@ _MARK_PATTERNS = {
     "†": r"†",
     "≤x†": r"≤",
     UNWORKED_MARK: re.escape(UNWORKED_MARK),
-    "⊘": r"⊘",
+    # the budget censor compacts to a bare ⊘; the failed-calls censor keeps its
+    # cause in the cell, so each gloss appears only for the censor it explains
+    "⊘": r"⊘(?! calls failed)",
+    FAILED_CELL: re.escape(FAILED_CELL),
     "(trunc 0.NN)": r"\(trunc \d\.\d\d\)",
+    "(calls failed 0.NN)": r"\(calls failed \d\.\d\d\)",
     "*": r"\d\*",
     RAISED_MARK: re.escape(RAISED_MARK),
     "‡": r"‡",
@@ -2101,10 +2430,13 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     s5c_lines = []
     s5c = s5_chain_rows(records)
     if s5c:
-        s5c_lines = ["**s5_chain**", "",
-                     "| Model | s5_chain @L96 | @L128 | worked calls @L96 | "
-                     "event-blind @L96 | mean ctok/call @L64 |",
-                     "|---|---|---|---|---|---|"]
+        s5c_lines = ["**s5_chain**", ""]
+        pending = pending_task_note(records, "s5_chain")
+        if pending:
+            s5c_lines += [pending, ""]
+        s5c_lines += ["| Model | s5_chain @L96 | @L128 | worked calls @L96 | "
+                      "event-blind @L96 | mean ctok/call @L64 |",
+                      "|---|---|---|---|---|---|"]
         for m, score, ext, work, blind, ctok in s5c:
             s5c_lines.append(f"| {m} | {_readme_compact(score)} | "
                              f"{_readme_compact(ext)} | {work} | {blind} | {ctok} |")
@@ -2238,7 +2570,8 @@ def write_results_md(records, out_path, history_path):
             continue
         lines.append("| " + " | ".join(str(c) for c in [row[0]] + row[len(inst_cols):]) + " |")
     lines += ["", thinking_noise_note(records), "", EFFICIENCY_NOTE, "", CTOK_STATISTIC_NOTE, "",
-              PROMPT_PROBE_NOTE, "", unworked_footnote(records), "", TRUNC_FOOTNOTE, ""]
+              PROMPT_PROBE_NOTE, "", unworked_footnote(records), "", TRUNC_FOOTNOTE, "",
+              FAILED_CALL_FOOTNOTE, ""]
 
     s5_eff = s5_efficiency_rows(records)
     if s5_eff:
@@ -2258,13 +2591,18 @@ def write_results_md(records, out_path, history_path):
             "L order-sensitive swap/cycle events on the pointer targets, then an 8-hop serial "
             "dereference query (`what is a0 of ... of gX? (8 hops)`). Every item is gated so the "
             "query path visits 9 distinct agents: answering the queried agent, or any fixed hop, "
-            "scores exactly 0, and chance is 1/16. Protocol: maximum supported reasoning effort "
-            "(xhigh), budgets sized so truncation stays a rounding error, n=25 per cell. Sorted "
+            "scores exactly 0, and chance is 1/16. Protocol: the shared xhigh arm for every "
+            "model (cross-model fairness over per-vendor ceilings), budgets sized so "
+            "truncation stays a rounding error, n=25 per cell. Sorted "
             "by the @L96 score (the full-roster cell), then by the @L128 top-cluster separator, "
             "then by mean completion tokens per call on the matched @L64 cell. A cell marked "
-            f"`{UNWORKED_MARK}` or `{CENSORED_CELL}` takes no part in the ordering: its row "
+            f"`{UNWORKED_MARK}` or `⊘` takes no part in the ordering: its row "
             "sorts last on its name whatever its score, here and in the figure.",
-            "",
+            ""]
+        pending = pending_task_note(records, "s5_chain")
+        if pending:
+            lines += [pending, ""]
+        lines += [
             "| Model | s5_chain @L96 | @L128 | worked calls @L96 | event-blind @L96 | "
             "s5_chain@64 mean ctok/call |",
             "|---|---|---|---|---|---|"]
@@ -2330,10 +2668,18 @@ def write_results_md(records, out_path, history_path):
     def _cell_row(r) -> str:
         mt = r.get("metrics") or {}
         lo, hi = _ci(r)
+        # A cell whose calls failed has no score column ANYWHERE, this provenance
+        # table included: the calls did not happen, so there is no proportion to
+        # put an interval around. A budget-censored cell keeps its number here
+        # with the truncation rate in the note — those calls reached the model and
+        # spent its budget; the answer is what ran out.
+        failed = calls_failed(r)
+        score = (FAILED_CELL if failed
+                 else f"{_fmt(canonical_relaxed(r))} [{lo:.2f}, {hi:.2f}]")
         return (
             f"| {r['model']} | {r['facet']} | {r['task']} | {r.get('length', '—')} | "
-            f"{arm_label(r)} | {r.get('n', '—')} | {_fmt(canonical_relaxed(r))} "
-            f"[{lo:.2f}, {hi:.2f}] | {_fmt(mt.get('contains'))} | {cell_note(r)} |")
+            f"{arm_label(r)} | {r.get('n', '—')} | {score} | "
+            f"{'—' if failed else _fmt(mt.get('contains'))} | {cell_note(r)} |")
 
     CELL_HEADER = ("| Model | Facet | Task | Length | Arm | n | match [95% CI] | "
                    "containment (diagnostic) | note |",
@@ -2341,8 +2687,9 @@ def write_results_md(records, out_path, history_path):
     lines += ["## Full per-cell results", "",
               "match is the CANONICAL value (first attempt for escalated cells; the "
               "escalated diagnostic is in the note column). ‡ = cap-escape (see headline "
-              "footnotes). INVALID chain_depth cells are quarantined in the provenance "
-              "section at the end.", "",
+              f"footnotes). {FAILED_CELL} = the API rejected the cell's calls, so it has "
+              "no score and no interval. INVALID chain_depth cells are quarantined in the "
+              "provenance section at the end.", "",
               *CELL_HEADER]
     for r in valid:
         lines.append(_cell_row(r))
@@ -2448,7 +2795,12 @@ def write_results_csv(records, out_path):
                 "format_prompt": s.get("format_prompt"), "n_shot": s.get("n_shot"),
                 # match is the CANONICAL value (metrics.relaxed in the stored
                 # record; first attempt for escalated cells); the escalated
-                # rerun exports as escalated_match (a diagnostic).
+                # rerun exports as escalated_match (a diagnostic). A censored
+                # cell keeps its raw value in this flat export — as the
+                # budget-censored cells always have — with the censor named in
+                # `note` and countable from api_errors/n; the rendered surfaces
+                # are where a censored cell publishes its cause instead of a
+                # number.
                 "match": canonical_relaxed(r),
                 "match_ci_lo": round(lo, 4), "match_ci_hi": round(hi, 4),
                 "contains": mt.get("contains"),
@@ -2607,11 +2959,16 @@ def fig_composite_length(records, out_dir):
 
 
 def _stress_fig(records, out_dir, facet, name, xlabel, title):
-    """Score-vs-depth/length figure for a thinking state-stress facet."""
+    """Score-vs-depth/length figure for a thinking state-stress facet. A cell whose
+    calls failed is not plotted at all: its 0.00 is a gap, not a point on the
+    curve (the budget-censored cells stay, plotted hollow — those calls reached the
+    model and spent its budget)."""
     cells = roster_cells(
-        r for r in by_facet(records, facet)
+        r for r in published_cells(by_facet(records, facet))
         if _settings(r).get("rendering") != "abstract_stated"
-        and canonical_arm(r))  # one line per model: canonical arm only
+        and not calls_failed(r))
+    # one line per model: canonical arm only, one point per cell (a cell
+    # re-measured under the neutral prompt plots its newer record, not both)
     if not cells:
         return []
     models = models_of(cells)
@@ -2667,11 +3024,10 @@ def fig_s5_stress(records, out_dir):
 
 
 def fig_s5_chain(records, out_dir):
-    """The headline figure: s5_chain score vs event-stream length, current task
-    version at the facet's canonical xhigh arm only (retired-stream and
+    """The headline figure: s5_chain score vs event-stream length, published task
+    version at the facet's canonical xhigh arm only (superseded-stream and
     off-protocol effort-probe cells excluded)."""
-    from factworld.benchmark import FACETS
-    task = FACETS.get("s5_chain", {}).get("task")
+    task = published_task(records, "s5_chain")
     mine = [r for r in records
             if r.get("task") == task and _settings(r).get("effort") == "xhigh"]
     return _stress_fig(mine, out_dir, "s5_chain", "fig_s5_chain",
@@ -2701,7 +3057,7 @@ def bench_headline_rows(records):
     for name, score, *_rest in s5_chain_rows(records):
         recs = {L: stress_cell(records, "s5_chain", name, L, effort=S5_CHAIN_EFFORT)
                 for L in (S5_CHAIN_STRESS_LENGTH, S5_CHAIN_EXT_LENGTH)}
-        if all(r is None or majority_finish_length(r) for r in recs.values()):
+        if all(r is None or censored_str(r) is not None for r in recs.values()):
             continue
         rows.append((name, recs, exclusion_mark(score)))
     return [r for r in rows if not r[2]] + [r for r in rows if r[2]]
@@ -2734,7 +3090,7 @@ def fig_bench_headline(records, out_dir):
             pts = [(y + dy, recs[length])
                    for y, (_n, recs, mark) in zip(ys, rows)
                    if bool(mark) is excluded and recs.get(length) is not None
-                   and not majority_finish_length(recs[length])]
+                   and censored_str(recs[length]) is None]
             if not pts:
                 continue
             errs = [1 - canonical_relaxed(r) for _y, r in pts]
@@ -2971,13 +3327,14 @@ def _profile_cell(value, display, marks="", status="ok"):
 def _profile_score_cell(rec, minimal=False):
     """Profile cell from a score-valued record: the canonical match value with
     the cell's cleanliness marks (pervasively covert instant cells display as
-    the upper bound ≤x); 'censored' (⊘, not measurable at this budget) when the
-    cell's calls were majority finish=length; 'missing' when the cell never
-    ran."""
+    the upper bound ≤x); 'censored' (⊘, with the cause it carries — the budget ran
+    out, or the calls failed) when the cell publishes no score; 'missing' when the
+    cell never ran."""
     if rec is None:
         return _profile_cell(None, "n/a", status="missing")
-    if majority_finish_length(rec):
-        return _profile_cell(None, CENSORED_CELL, status="censored")
+    censor = censored_str(rec)
+    if censor is not None:
+        return _profile_cell(None, censor, status="censored")
     v = canonical_relaxed(rec)
     if v is None:
         return _profile_cell(None, "—", status="missing")
@@ -3072,8 +3429,8 @@ def _fig_profile_grid(records, out_dir, name, models, axis_labels, title, footno
                 ax.text(min(c["norm"], 1.0) + 0.03, y, c["display"] + c["marks"],
                         va="center", fontsize=6, color="#333333")
             else:  # a gap, not a zero: no bar, the mark text only
-                txt = CENSORED_CELL if c["status"] == "censored" else c["display"]
-                ax.text(0.03, y, txt, va="center", fontsize=6, color="#999999")
+                ax.text(0.03, y, c["display"], va="center", fontsize=6,
+                        color="#999999")
         ax.set_yticks(ys)
         ax.set_yticklabels(axis_labels if k % ncols == 0 else [""] * n_ax,
                            fontsize=6)
@@ -3240,10 +3597,15 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         u = r.get("usage") or {}
         lo, hi = _ci(r)
         blind = event_blind_rate(r)
+        # same rule as the markdown per-cell table: a cell whose calls failed
+        # publishes the cause, not a score, and has no interval to report
+        failed = calls_failed(r)
         cell_rows.append([
             r["model"], r["facet"], r["task"], r.get("length", "—"), arm_label(r),
-            r.get("n", "—"), _fmt(canonical_relaxed(r)), f"[{lo:.2f}, {hi:.2f}]",
-            _fmt(mt.get("contains")),
+            r.get("n", "—"),
+            FAILED_CELL if failed else _fmt(canonical_relaxed(r)),
+            "—" if failed else f"[{lo:.2f}, {hi:.2f}]",
+            "—" if failed else _fmt(mt.get("contains")),
             _fmt(d.get("empty_rate"), 3), d.get("api_errors", "—"),
             finish_error_count(r), u.get("reasoning_tokens", "—"),
             work_cell_str(r) if thinking_cell(r) else "—",
@@ -3281,6 +3643,7 @@ def write_index_html(records, out_dir, svg_paths, history_path):
         )
     s5c_rows = s5_chain_rows(records)
     s5c_repeat_line = s5_chain_repeat_line(records)
+    s5c_pending = pending_task_note(records, "s5_chain")
     s5c_html = ""
     if s5c_rows:
         s5c_html = (
@@ -3291,9 +3654,11 @@ def write_index_html(records, out_dir, svg_paths, history_path):
             "distinct agents — answering the queried agent, or any fixed hop, scores exactly 0, "
             "and chance is 1/16. Sorted by the @L96 score, then by the @L128 top-cluster "
             "separator, then by mean completion tokens per call on the matched @L64 cell. "
-            f"A cell marked {UNWORKED_MARK} or {CENSORED_CELL} takes no part in the "
+            f"A cell marked {UNWORKED_MARK} or ⊘ takes no part in the "
             "ordering: its row sorts last on its name whatever its score, here and in "
             "the figure.</p>\n"
+            + (f'<p class="small">{html.escape(s5c_pending)}</p>\n'
+               if s5c_pending else "")
             + _html_table(["Model", "s5_chain @L96", "@L128", "worked calls @L96",
                            "event-blind @L96", "s5_chain@64 mean ctok/call"],
                           s5c_rows)
@@ -3352,7 +3717,8 @@ current-roster model runs.</p>
 {html.escape(CTOK_STATISTIC_NOTE)}<br>
 {html.escape(PROMPT_PROBE_NOTE)}<br>
 {html.escape(unworked_footnote(records))}<br>
-{html.escape(TRUNC_FOOTNOTE)}</p>
+{html.escape(TRUNC_FOOTNOTE)}<br>
+{html.escape(FAILED_CALL_FOOTNOTE)}</p>
 {s5_eff_html}
 {s5c_html}
 {dropped_html}

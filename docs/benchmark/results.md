@@ -1,6 +1,6 @@
 # FactWorld frontier benchmark — results
 
-Generated 2026-07-27 09:51 UTC from `results/benchmark/history.jsonl` (801 latest cells).
+Generated 2026-07-27 21:02 UTC from `results/benchmark/history.jsonl` (807 latest cells).
 
 ## Settings
 
@@ -77,7 +77,7 @@ object-filter floor (<task>): E[1/w] recomputed at render time on the same exact
 
 n/a = facet/cell not run for this model; — = run, but no qualifying value.
 
-⊘ = not measurable at this budget; ≤x† = upper bound, covert reasoning on most calls; neither participates in orderings.
+⊘ = not measurable at this budget, or the cell's calls failed; ≤x† = upper bound, covert reasoning on most calls; neither participates in orderings.
 
 composition gap = state tracking (binding_only @L16) - composed @L16, marks from either input cell propagated. recall|holder is ~1.0 for every roster model (the scaffolded leg), so if composition were free the composed cell would match the binding leg; the gap is the composition deficit.
 
@@ -103,7 +103,7 @@ Notation: `@Ln` = stream length (events, or hops for chain depth d); `@Ntok` = a
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
 | moonshotai/kimi-k3 | 1.00 | 0.80 (trunc 0.16) | 11355 |
 | nvidia/nemotron-3-ultra-550b-a55b | 0.60 (trunc 0.32) | 0.80 (trunc 0.20) | 12250 |
-| z-ai/glm-5.2 | 0.92 (trunc 0.04) | 0.76 (trunc 0.04) | 6282 |
+| z-ai/glm-5.2 | 0.92 (calls failed 0.04) (trunc 0.04) | 0.76 (trunc 0.04) | 6282 |
 
 Thinking columns: n=25 per cell; Wilson intervals ≈ ±0.15–0.19. 2 current-roster thinking cells that take part in orderings were run more than once at identical settings (Repeat runs below) and their run-to-run spreads reach 0.16 — read a difference smaller than that as noise, not an ordering. Marked cells set no part of this bar: their repeat spread is variance in what the mark names, not measurement noise.
 
@@ -116,6 +116,8 @@ The work rate is a property of the model AND of the system prompt the benchmark 
 (ᵘ) unworked answers on a large fraction of calls; the cell measures engagement, not capability. Set when more than 10% of a thinking cell's calls fall below the 512-token working line AND those calls score materially below the cell's worked calls (disjoint Wilson 95% intervals) — the rate alone is not enough, since answering a shallow cell correctly without visible working is a measurement. Like ⊘ >budget and ≤x†, a marked cell takes no part in orderings. Engagement moves between runs: the marked cells repeated at identical settings spread up to 0.32 run to run, against 0.16 across the cells that set the thinking noise bar.
 
 (trunc 0.NN) the cell's truncation rate, where some calls ended finish=length: those calls score 0 whatever the model knew, so the published score is a lower bound. Above 0.50 the cell renders ⊘ >budget instead of a number.
+
+(calls failed 0.NN) the fraction of the cell's calls the API rejected — a billing, rate-limit or provider failure, so the model never saw those prompts. They score 0 like any other empty answer, so the published score is a lower bound. Above 10% the cell renders ⊘ calls failed instead of a number: the calls did not happen, so the cell is not a measurement of the model, and like every ⊘ cell it takes no part in orderings. Failed calls are also out of the per-call diagnostics — the worked-calls split reads the calls that completed, so a billing failure cannot render as the unworked-answers pathology.
 
 ## S5 efficiency ranking
 
@@ -139,7 +141,9 @@ S5 efficiency ranking: models sorted by s5 @L256 score, then by s5@128 mean comp
 
 ## s5_chain ranking (headline)
 
-s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map, L order-sensitive swap/cycle events on the pointer targets, then an 8-hop serial dereference query (`what is a0 of ... of gX? (8 hops)`). Every item is gated so the query path visits 9 distinct agents: answering the queried agent, or any fixed hop, scores exactly 0, and chance is 1/16. Protocol: maximum supported reasoning effort (xhigh), budgets sized so truncation stays a rounding error, n=25 per cell. Sorted by the @L96 score (the full-roster cell), then by the @L128 top-cluster separator, then by mean completion tokens per call on the matched @L64 cell. A cell marked `ᵘ` or `⊘ >budget` takes no part in the ordering: its row sorts last on its name whatever its score, here and in the figure.
+s5_chain is the headline composite stressor: k=16 agents with an a0 pointer map, L order-sensitive swap/cycle events on the pointer targets, then an 8-hop serial dereference query (`what is a0 of ... of gX? (8 hops)`). Every item is gated so the query path visits 9 distinct agents: answering the queried agent, or any fixed hop, scores exactly 0, and chance is 1/16. Protocol: the shared xhigh arm for every model (cross-model fairness over per-vendor ceilings), budgets sized so truncation stays a rounding error, n=25 per cell. Sorted by the @L96 score (the full-roster cell), then by the @L128 top-cluster separator, then by mean completion tokens per call on the matched @L64 cell. A cell marked `ᵘ` or `⊘` takes no part in the ordering: its row sorts last on its name whatever its score, here and in the figure.
+
+History also contains s5_chain cells on s5_chain_v4. The table publishes s5_chain_v3: a replacement version publishes once it covers the ranked cell (@L96, effort=xhigh) for every model the published version covers, so a battery in flight neither empties nor shrinks the table — s5_chain_v4 is missing it for every model in the table. The unpublished version's cells are in the per-cell tables meanwhile.
 
 | Model | s5_chain @L96 | @L128 | worked calls @L96 | event-blind @L96 | s5_chain@64 mean ctok/call |
 |---|---|---|---|---|---|
@@ -220,7 +224,7 @@ Legacy headline columns for the pre-redesign v1-only facets (dose_response, comp
 
 ## Full per-cell results
 
-match is the CANONICAL value (first attempt for escalated cells; the escalated diagnostic is in the note column). ‡ = cap-escape (see headline footnotes). INVALID chain_depth cells are quarantined in the provenance section at the end.
+match is the CANONICAL value (first attempt for escalated cells; the escalated diagnostic is in the note column). ‡ = cap-escape (see headline footnotes). ⊘ calls failed = the API rejected the cell's calls, so it has no score and no interval. INVALID chain_depth cells are quarantined in the provenance section at the end.
 
 | Model | Facet | Task | Length | Arm | n | match [95% CI] | containment (diagnostic) | note |
 |---|---|---|---|---|---|---|---|---|
@@ -388,6 +392,8 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v4 | 32 | sysprompt=04153d7439, effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | truncation 0.08 |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v4 | 128 | sysprompt=04153d7439, effort=xhigh | 25 | ⊘ calls failed | — | calls failed 0.36 |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | truncation 0.04 |
@@ -568,11 +574,11 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 100 | 0.48 [0.38, 0.58] | 0.85 | escalated @512tok diagnostic 0.82; canonical = first attempt @96tok; truncation 0.06 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 100 | 0.48 [0.38, 0.58] | 0.86 | escalated @512tok diagnostic 0.83; canonical = first attempt @96tok; truncation 0.09 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 100 | 0.38 [0.29, 0.48] | 0.97 | escalated @512tok diagnostic 0.96; canonical = first attempt @96tok |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.94 [0.88, 0.97] | — | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 100 | 0.94 [0.88, 0.97] | — | ‡ cap-escape; calls failed 0.02 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 100 | 0.83 [0.74, 0.89] | 0.87 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 100 | 0.98 [0.93, 0.99] | — | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.84 | ‡ cap-escape; truncation 0.01 |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.93 [0.86, 0.97] | 0.95 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 100 | 0.77 [0.68, 0.84] | 0.84 | ‡ cap-escape; calls failed 0.03; truncation 0.01 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 100 | 0.93 [0.86, 0.97] | 0.95 | ‡ cap-escape; calls failed 0.02 |
 | moonshotai/kimi-k3 | chain_instant | chain_v2 | 16 | contract, effort=none | 25 | 0.04 [0.01, 0.20] | 0.04 | — |
 | moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 16 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 32 | effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -614,6 +620,8 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | muse-spark-1.1 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v4 | 32 | sysprompt=04153d7439, effort=xhigh | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v4 | 128 | sysprompt=04153d7439, effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
@@ -889,8 +897,8 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | z-ai/glm-5.2 | chain_nowrap | chain_v1 | 32 | effort=high | 25 | 0.28 [0.14, 0.48] | 0.28 | truncation 0.04 |
 | z-ai/glm-5.2 | chain_nowrap | chain_v1 | 64 | effort=high | 25 | 0.48 [0.30, 0.67] | 0.48 | truncation 0.08 |
 | z-ai/glm-5.2 | chain_nowrap | chain_v1 | 128 | effort=high | 25 | 0.36 [0.20, 0.55] | 0.36 | truncation 0.20 |
-| z-ai/glm-5.2 | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
-| z-ai/glm-5.2 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | truncation 0.04 |
+| z-ai/glm-5.2 | chain_nowrap | chain_v2 | 64 | effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | calls failed 0.04 |
+| z-ai/glm-5.2 | chain_nowrap | chain_v2 | 128 | effort=high | 25 | 0.92 [0.75, 0.98] | 0.92 | calls failed 0.04; truncation 0.04 |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=high | 30 | 0.93 [0.79, 0.98] | 0.97 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=none | 30 | 0.67 [0.49, 0.81] | 0.67 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 64 | effort=high | 30 | 1.00 [0.89, 1.00] | 1.00 | — |
@@ -918,6 +926,8 @@ match is the CANONICAL value (first attempt for escalated cells; the escalated d
 | z-ai/glm-5.2 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | truncation 0.08 |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 25 | 0.92 [0.75, 0.98] | 0.92 | — |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 25 | 0.80 [0.61, 0.91] | 0.80 | truncation 0.04 |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v4 | 32 | sysprompt=04153d7439, effort=xhigh | 25 | ⊘ calls failed | — | calls failed 1.00 |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v4 | 128 | sysprompt=04153d7439, effort=xhigh | 25 | ⊘ calls failed | — | calls failed 1.00 |
 | z-ai/glm-5.2 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 25 | 0.96 [0.80, 0.99] | 0.96 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 25 | 1.00 [0.87, 1.00] | 1.00 | — |
@@ -1111,6 +1121,8 @@ event-blind: the fraction of a cell's predictions equal to the 8-hop dereference
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 426214 | 0.96 (0.96/0.00) | 0.00 | 0.00 | stop:25 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 671848 | 1.00 | 0.00 | 0.00 | stop:25 | — |
 | deepseek/deepseek-v4-pro | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 793155 | 0.96 (1.00/0.00) | 0.00 | 0.00 | stop:25 | — |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v4 | 32 | sysprompt=04153d7439, effort=xhigh | 0.080 | 0 | 0 | 573592 | 1.00 | 0.00 | 0.08 | length:2, stop:23 | truncation 0.08 |
+| deepseek/deepseek-v4-pro | s5_chain | s5_chain_v4 | 128 | sysprompt=04153d7439, effort=xhigh | 0.360 | 9 | 0 | 807383 | 1.00 | 0.00 | 0.00 | stop:16 | calls failed 0.36 |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 35520 | n/a | — | 0.00 | stop:25 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 65442 | n/a | — | 0.00 | stop:25 | — |
 | deepseek/deepseek-v4-pro | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.040 | 0 | 0 | 127456 | n/a | — | 0.04 | length:1, stop:24 | truncation 0.04 |
@@ -1291,11 +1303,11 @@ event-blind: the fraction of a cell's predictions equal to the 8-hop dereference
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | leg=end_to_end, contract, effort=none | 0.040 | 0 | 0 | 52 | — | — | 0.06 | length:6, stop:94 | escalated @512tok diagnostic 0.82; canonical = first attempt @96tok; truncation 0.06 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 16 | contract, effort=none | 0.080 | 0 | 0 | 50 | — | — | 0.09 | length:9, stop:91 | escalated @512tok diagnostic 0.83; canonical = first attempt @96tok; truncation 0.09 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v1 | 64 | contract, effort=none | 0.000 | 0 | 0 | 58 | — | — | 0.00 | stop:100 | escalated @512tok diagnostic 0.96; canonical = first attempt @96tok |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.020 | 0 | 0 | 89 | — | — | 0.00 | stop:98 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=binding_only, contract, effort=none | 0.020 | 0 | 0 | 89 | — | — | 0.00 | stop:98 | ‡ cap-escape; calls failed 0.02 |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=replicate, contract, effort=none | 0.010 | 0 | 0 | 80 | — | — | 0.00 | stop:100 | ‡ cap-escape |
 | moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | leg=scaffolded, contract, effort=none | 0.020 | 0 | 0 | 40 | — | — | 0.00 | stop:100 | — |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.080 | 0 | 0 | 65 | — | — | 0.01 | length:1, stop:92 | ‡ cap-escape; truncation 0.01 |
-| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.030 | 0 | 0 | 81 | — | — | 0.00 | stop:98 | ‡ cap-escape |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 16 | contract, effort=none | 0.080 | 0 | 0 | 65 | — | — | 0.01 | length:1, stop:92 | ‡ cap-escape; calls failed 0.03; truncation 0.01 |
+| moonshotai/kimi-k2.6 | zero_budget | composite_copy_v2 | 64 | contract, effort=none | 0.030 | 0 | 0 | 81 | — | — | 0.00 | stop:98 | ‡ cap-escape; calls failed 0.02 |
 | moonshotai/kimi-k3 | chain_instant | chain_v2 | 16 | contract, effort=none | 0.000 | 0 | 0 | 0 | — | — | 0.00 | stop:25 | — |
 | moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 16 | effort=high | 0.000 | 0 | 0 | 12020 | 0.28 (1.00/1.00) | — | 0.00 | stop:25 | — |
 | moonshotai/kimi-k3 | chain_nowrap | chain_v2 | 32 | effort=high | 0.000 | 0 | 0 | 29367 | 1.00 | — | 0.00 | stop:25 | — |
@@ -1337,6 +1349,8 @@ event-blind: the fraction of a cell's predictions equal to the 8-hop dereference
 | muse-spark-1.1 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.000 | 0 | 0 | 310963 | 1.00 | 0.00 | 0.00 | stop:25 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 448706 | 1.00 | 0.00 | 0.00 | stop:25 | — |
 | muse-spark-1.1 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.000 | 0 | 0 | 560469 | 1.00 | 0.00 | 0.00 | stop:25 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v4 | 32 | sysprompt=04153d7439, effort=xhigh | 0.000 | 0 | 0 | 258234 | 1.00 | 0.00 | 0.00 | stop:25 | — |
+| muse-spark-1.1 | s5_chain | s5_chain_v4 | 128 | sysprompt=04153d7439, effort=xhigh | 0.000 | 0 | 0 | 732690 | 1.00 | 0.00 | 0.00 | stop:25 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 128 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 242298 | 1.00 | — | 0.00 | stop:25 | — |
 | muse-spark-1.1 | s5_concrete | s5 | 256 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 467720 | 1.00 | — | 0.00 | stop:25 | — |
 | nvidia/nemotron-3-ultra-550b-a55b | chain_depth | chain_v1 | 4 | effort=high | 0.000 | 0 | 0 | 5435 | n/a | — | 0.00 | stop:30 | — |
@@ -1612,8 +1626,8 @@ event-blind: the fraction of a cell's predictions equal to the 8-hop dereference
 | z-ai/glm-5.2 | chain_nowrap | chain_v1 | 32 | effort=high | 0.040 | 0 | 0 | 36687 | 0.72 (0.17/0.57) | — | 0.04 | length:1, stop:24 | truncation 0.04 |
 | z-ai/glm-5.2 | chain_nowrap | chain_v1 | 64 | effort=high | 0.080 | 0 | 0 | 65558 | 1.00 | — | 0.08 | length:2, stop:23 | truncation 0.08 |
 | z-ai/glm-5.2 | chain_nowrap | chain_v1 | 128 | effort=high | 0.200 | 0 | 0 | 130971 | 1.00 | — | 0.20 | length:5, stop:20 | truncation 0.20 |
-| z-ai/glm-5.2 | chain_nowrap | chain_v2 | 64 | effort=high | 0.040 | 0 | 0 | 31148 | 0.92 (1.00/0.50) | — | 0.00 | stop:24 | — |
-| z-ai/glm-5.2 | chain_nowrap | chain_v2 | 128 | effort=high | 0.080 | 0 | 0 | 92814 | 0.96 (0.96/0.00) | — | 0.04 | length:1, stop:23 | truncation 0.04 |
+| z-ai/glm-5.2 | chain_nowrap | chain_v2 | 64 | effort=high | 0.040 | 0 | 0 | 31148 | 0.96 (1.00/1.00) | — | 0.00 | stop:24 | calls failed 0.04 |
+| z-ai/glm-5.2 | chain_nowrap | chain_v2 | 128 | effort=high | 0.080 | 0 | 0 | 92814 | 1.00 | — | 0.04 | length:1, stop:23 | calls failed 0.04; truncation 0.04 |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=high | 0.000 | 0 | 0 | 9631 | n/a | — | 0.00 | stop:30 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 16 | effort=none | 0.000 | 0 | 0 | 791 | — | — | 0.00 | stop:30 | — |
 | z-ai/glm-5.2 | composite_length | composite_copy_v1 | 64 | effort=high | 0.000 | 0 | 0 | 12782 | n/a | — | 0.00 | stop:30 | — |
@@ -1641,6 +1655,8 @@ event-blind: the fraction of a cell's predictions equal to the 8-hop dereference
 | z-ai/glm-5.2 | s5_chain | s5_chain_v3 | 64 | effort=xhigh | 0.080 | 0 | 0 | 378767 | 1.00 | 0.00 | 0.08 | length:2, stop:23 | truncation 0.08 |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v3 | 96 | effort=xhigh | 0.000 | 0 | 0 | 306101 | 1.00 | 0.00 | 0.00 | stop:25 | — |
 | z-ai/glm-5.2 | s5_chain | s5_chain_v3 | 128 | effort=xhigh | 0.040 | 0 | 0 | 512645 | 1.00 | 0.00 | 0.04 | length:1, stop:24 | truncation 0.04 |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v4 | 32 | sysprompt=04153d7439, effort=xhigh | 1.000 | 25 | 0 | 0 | n/a | — | — | — | calls failed 1.00 |
+| z-ai/glm-5.2 | s5_chain | s5_chain_v4 | 128 | sysprompt=04153d7439, effort=xhigh | 1.000 | 25 | 0 | 0 | n/a | — | — | — | calls failed 1.00 |
 | z-ai/glm-5.2 | s5_concrete | s5 | 16 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 19329 | n/a | — | 0.00 | stop:25 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 32 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 33990 | n/a | — | 0.00 | stop:25 | — |
 | z-ai/glm-5.2 | s5_concrete | s5 | 64 | rendering=concrete, effort=high | 0.000 | 0 | 0 | 62202 | n/a | — | 0.00 | stop:25 | — |

@@ -18,11 +18,15 @@ exclusion from orderings, the event-blind rate against the initial pointer map,
 the per-cell truncation rate, and repeat runs (spread, published-last-run,
 budget reruns kept separate).
 
-Three rules get their own tests because a published number depends on each:
+Five rules get their own tests because a published number depends on each:
 marked cells rank nothing (their own row or another's) in any table or in
 fig_bench_headline; the event-blind aggregate uses one eligibility rule over the
-current roster's scored cells only; and the work-rate column's system-prompt
-caveat matches the probe data it cites.
+current roster's scored cells only; the work-rate column's system-prompt caveat
+matches the probe data it cites; a cell's canonical system prompt is the one its
+REGIME is defined against (asked of the runner per cell, so an edit to either
+regime's text moves the classification with it), with the newer of an archived
+and a re-measured record publishing; and a surface reads the task version its
+RECORDS carry, switching only once a replacement covers the cell it ranks on.
 
 RB.CURRENT_ROSTER is patched to the fixture roster (the real one is
 factworld.benchmark.MODELS): the headline shows roster models only and
@@ -63,6 +67,14 @@ MODELS = {
 # only in the '## Archived models (dropped from the roster)' section + per-cell tables.
 ARCHIVED_MODEL = "testlab/model-d"
 ALL_MODELS = set(MODELS) | {ARCHIVED_MODEL}
+# The s5_chain task these fixtures build. A fixture names the task it is testing;
+# it does not read factworld.benchmark.FACETS, because a renderer surface publishes
+# the task version its RECORDS carry (RB.published_task) and a test of that surface
+# must not move when the registry's facet pointer does. Fixtures that generate REAL
+# items (the event-blind machinery) additionally need a spec that still generates,
+# which is what pins this to a canonical name — see
+# test_fixture_s5_chain_task_is_generable.
+S5_CHAIN_TASK = "s5_chain_v4"
 
 if HAS_MPL:
     import render_benchmark as RB
@@ -706,15 +718,25 @@ def test_breadth_and_k_fixed_arms():
         assert {r["k_fixed"] for r in rows} == {"", "257"}
 
 
+def _prompt_fps():
+    """(thinking-regime fingerprint, instant-regime fingerprint) taken from the
+    runner's own texts, never spelled as literals here and never inferred from
+    which canonical prompts happen to be sentinel-dropped: the drop set is CLOSED,
+    so an edited or added prompt joins CANONICAL alone and an inference over that
+    set files it under whichever regime it does not belong to."""
+    import run_frontier_benchmark as RF
+    from factworld.benchmark import system_prompt_fingerprint as fp
+    return fp(RF.NEUTRAL_SYSTEM_PROMPT), fp(RF.BASE_SYSTEM_PROMPT)
+
+
 def test_off_protocol_system_prompt_is_its_own_arm():
-    """A cell run under a non-canonical system prompt is a different measurement,
-    so it is a separate arm here as it is in the runner's resume key: it neither
-    replaces the scored cell nor joins its repeat runs, and the per-cell tables
-    name the prompt it ran under. The runner sentinel-drops the key at the
-    canonical prompts, so every scored record keys exactly as before."""
+    """A cell run under a system prompt its regime is not defined against is a
+    different measurement, so it is a separate arm here as it is in the runner's
+    resume key: it neither replaces the scored cell nor joins its repeat runs, and
+    the per-cell tables name the prompt it ran under."""
     if not HAS_MPL:
         return
-    scored = _record("testlab/model-a", "s5_chain", "s5_chain_v3", 64, 25, 0.60,
+    scored = _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 64, 25, 0.60,
                      effort="xhigh", ts="2026-07-24T00:00:00+00:00")
     off = json.loads(json.dumps(scored))
     off["ts"] = "2026-07-27T00:00:00+00:00"      # NEWER, and much higher scoring
@@ -738,6 +760,197 @@ def test_off_protocol_system_prompt_is_its_own_arm():
         assert RB.replicate_str(published) == ""
         assert "sysprompt=deadbeef01" in RB.arm_label(off)
         assert "sysprompt=" not in RB.arm_label(scored)
+
+
+def test_canonical_arm_follows_the_regime_prompt_rule():
+    """The canonical prompt is the one the cell's REGIME is defined against, which
+    is the rule the runner resolves the prompt with: a reasoning-effort arm takes
+    the neutral prompt, an instant arm the base text. The renderer ASKS the runner
+    for that text per cell rather than inferring a set of thinking fingerprints
+    from the canonical prompts, so an edit to either text moves the classification
+    with it instead of blanking the regime that did not change."""
+    if not HAS_MPL:
+        return
+    neutral_fp, base_fp = _prompt_fps()
+    # each regime's prompt, read through the runner's own resolver
+    assert RB.protocol_prompt_fp("s5_chain", S5_CHAIN_TASK, "xhigh",
+                                 None, None) == neutral_fp
+    assert RB.protocol_prompt_fp("zero_budget", "composite_copy_v2", "none",
+                                 "binding_only", None) == base_fp
+
+    def rec(fp, effort, facet="s5_chain", task=S5_CHAIN_TASK, **kw):
+        r = _record("testlab/model-a", facet, task, 64, 25, 0.60, effort=effort, **kw)
+        if fp:
+            r["settings"]["system_prompt_fp"] = fp
+        return r
+
+    # thinking cell under the neutral prompt: the headline arm
+    assert RB.canonical_arm(rec(neutral_fp, "xhigh")) is True
+    # thinking cell that names the base prompt: a different measurement
+    assert RB.canonical_arm(rec(base_fp, "xhigh")) is False
+    # instant cell under the neutral prompt: also a different measurement —
+    # suppressing reasoning is what an instant cell measures
+    instant = rec(neutral_fp, "none", facet="zero_budget", task="composite_copy_v2",
+                  contract=True, max_new_tokens=96)
+    assert RB.canonical_arm(instant) is False
+    # any other prompt is off-protocol in either regime
+    assert RB.canonical_arm(rec("deadbeef01", "xhigh")) is False
+    assert RB.canonical_arm(rec("deadbeef01", "none", facet="zero_budget",
+                                task="composite_copy_v2", contract=True,
+                                max_new_tokens=96)) is False
+    # no fingerprint: one of the prompts the archive was measured under. Canonical
+    # in both regimes — the instant protocol's base text, and the thinking cells
+    # bought before the regimes split, which are the published numbers.
+    assert RB.canonical_arm(rec(None, "xhigh")) is True
+    assert RB.canonical_arm(rec(None, "none", facet="zero_budget",
+                                task="composite_copy_v2", contract=True,
+                                max_new_tokens=96)) is True
+    # The next edit to the INSTANT regime's text: the runner resolves the new text
+    # for instant cells and its fingerprint joins CANONICAL alone, because the drop
+    # set is closed. The cells stamped with it are on protocol and keep their
+    # numbers — a set inferred as "canonical and not sentinel-dropped" would file
+    # the new text as a thinking prompt and blank every instant surface.
+    import factworld.benchmark as FB
+    import run_frontier_benchmark as RF
+    edited = RF.BASE_SYSTEM_PROMPT + " Give the value only."
+    edited_fp = FB.system_prompt_fingerprint(edited)
+    saved = (RF.BASE_SYSTEM_PROMPT, FB.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS)
+    try:
+        RF.BASE_SYSTEM_PROMPT = edited
+        FB.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS = frozenset(saved[1] | {edited_fp})
+        RB.protocol_prompt_fp.cache_clear()
+        assert RB.canonical_arm(rec(edited_fp, "none", facet="zero_budget",
+                                    task="composite_copy_v2", leg="binding_only",
+                                    contract=True, max_new_tokens=96)) is True
+        # ...and the text it replaced is now off-protocol, as the runner's key says
+        assert RB.canonical_arm(rec(base_fp, "none", facet="zero_budget",
+                                    task="composite_copy_v2", leg="binding_only",
+                                    contract=True, max_new_tokens=96)) is False
+    finally:
+        RF.BASE_SYSTEM_PROMPT, FB.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS = saved
+        RB.protocol_prompt_fp.cache_clear()
+
+
+def test_neutral_prompt_rerun_supersedes_the_archived_cell():
+    """Both records of a re-measured cell are canonical, and they key separately
+    (the prompt is part of the arm), so both survive dedup. One published number
+    each: the headline cell and the figures take the NEWER record, and the archived
+    record stays in the per-cell tables labelled with the prompt it ran under."""
+    if not HAS_MPL:
+        return
+    neutral_fp, _base_fp = _prompt_fps()
+    archived = _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 64, 25, 0.60,
+                       effort="xhigh", ts="2026-07-24T00:00:00+00:00")
+    rerun = json.loads(json.dumps(archived))
+    rerun["ts"] = "2026-07-27T00:00:00+00:00"
+    rerun["settings"]["system_prompt_fp"] = neutral_fp
+    rerun["metrics"]["relaxed"] = 0.92
+    assert RB.canonical_arm(archived) and RB.canonical_arm(rerun)
+    assert RB.cell_key(archived) != RB.cell_key(rerun)
+    assert RB.publication_key(archived) == RB.publication_key(rerun)
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "history.jsonl")
+        with open(path, "w", encoding="utf-8") as fh:
+            for r in (archived, rerun):
+                fh.write(json.dumps(r) + "\n")
+        recs = RB.load_latest(path)
+        assert len(recs) == 2                      # both cells stay in the tables
+        published = RB.stress_cell(recs, "s5_chain", "testlab/model-a", 64,
+                                   effort=RB.S5_CHAIN_EFFORT)
+        assert RB.canonical_relaxed(published) == 0.92
+        # set-reading surfaces see one point per cell, not two
+        one = RB.published_cells(recs)
+        assert len(one) == 1 and RB.canonical_relaxed(one[0]) == 0.92
+
+
+def test_fixture_s5_chain_task_is_generable():
+    """The fixtures that build REAL items need a spec that still generates. This
+    fails as one clear assertion when the registry moves, instead of as a KeyError
+    inside every event-blind test."""
+    if not HAS_MPL:
+        return
+    from factworld import tasks as TK
+    spec = TK.spec_for(S5_CHAIN_TASK)
+    assert spec.family == "s5_chain"
+    assert len(TK.generate(spec, "test", n=3, length=32)) == 3
+
+
+def test_surface_publishes_the_task_its_records_carry():
+    """A surface reads the task version its MEASUREMENTS were taken on, not the
+    version the registry currently plans, and it switches only once the
+    replacement covers the cell the surface RANKS on for every model the outgoing
+    version covers.
+
+    The states in between are the ones a battery actually passes through, and each
+    of them holds a replacement record that is not a ranked cell of the published
+    population: an off-protocol effort probe, a cell on an archived model, a cell
+    under an off-protocol system prompt, the first length bought, half the roster
+    measured. Switching on the newest record of any kind empties the table in
+    every one of them, so they are tested individually."""
+    if not HAS_MPL:
+        return
+    old_task, new_task = "s5_chain_vOLD", S5_CHAIN_TASK
+    model_a, model_b = "testlab/model-a", "testlab/model-b"
+    old_ts, new_ts = "2026-07-24T00:00:00+00:00", "2026-07-27T00:00:00+00:00"
+
+    def cells(task, score, ts, model=model_a, lengths=(64, 96, 128), effort="xhigh"):
+        return [_record(model, "s5_chain", task, length, 25, score,
+                        effort=effort, ts=ts) for length in lengths]
+
+    def loaded(runs):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "history.jsonl")
+            with open(path, "w", encoding="utf-8") as fh:
+                for r in runs:
+                    fh.write(json.dumps(r) + "\n")
+            return RB.load_latest(path)
+
+    def rows(runs):
+        return RB.s5_chain_rows(loaded(runs))
+
+    # only the superseded task has been measured: it publishes, no blank table,
+    # and nothing is pending — a history of retired OLDER versions says nothing
+    measured = (cells(old_task, 0.60, old_ts)
+                + cells(old_task, 0.60, old_ts, model=model_b))
+    assert [r[:2] for r in rows(measured)] == [[model_a, "0.60"], [model_b, "0.60"]]
+    assert RB.pending_task_note(loaded(measured), "s5_chain") == ""
+
+    off_prompt = cells(new_task, 0.32, new_ts, lengths=(96,))
+    off_prompt[0]["settings"]["system_prompt_fp"] = "deadbeef01"
+    for name, probe, pending in [
+        # an effort probe: history already carries such cells for every version
+        ("effort probe", cells(new_task, 0.32, new_ts, lengths=(96,), effort="high"),
+         "every model in the table"),
+        # a model dropped from the roster, which no published surface reads
+        ("archived model", cells(new_task, 0.32, new_ts, model=ARCHIVED_MODEL,
+                                 lengths=(96,)), ""),
+        # a cell run under a prompt its regime is not defined against
+        ("off-protocol prompt", off_prompt, ""),
+        # the first battery length bought, below the ranked cell
+        ("first length", cells(new_task, 0.32, new_ts, lengths=(32,)),
+         "every model in the table"),
+        # the ranked cell for half the roster: the table would otherwise SHRINK
+        ("half the roster", cells(new_task, 0.32, new_ts, lengths=(96,)), model_b),
+    ]:
+        runs = measured + probe
+        assert RB.published_task(loaded(runs), "s5_chain") == old_task, name
+        assert [r[:2] for r in rows(runs)] == [[model_a, "0.60"],
+                                               [model_b, "0.60"]], name
+        # the held state is stated, not silent: which version is unpublished and
+        # which ranked cells it still lacks
+        note = RB.pending_task_note(loaded(runs), "s5_chain")
+        assert (pending in note if pending else note == ""), name
+        if pending:
+            assert new_task in note and "@L96" in note, name
+
+    # the replacement covers the ranked cell everywhere the outgoing version does:
+    # the surface switches, the superseded cells stop publishing without being
+    # deleted from history, and nothing is pending again
+    both = (measured + cells(new_task, 0.32, new_ts)
+            + cells(new_task, 0.32, new_ts, model=model_b))
+    assert RB.published_task(loaded(both), "s5_chain") == new_task
+    assert [r[:2] for r in rows(both)] == [[model_a, "0.32"], [model_b, "0.32"]]
+    assert RB.pending_task_note(loaded(both), "s5_chain") == ""
 
 
 def test_object_filter_floor_at_per_rung():
@@ -1197,13 +1410,15 @@ def _ctok_record(model, facet, task, length, ctoks, corrects, **kw):
     return rec
 
 
-def _s5_chain_record(preds, *, task="s5_chain_v3", length=32,
+def _s5_chain_record(preds, *, task=S5_CHAIN_TASK, length=32,
                      model="testlab/model-a", ctok=5000):
     """An s5_chain record over the REAL deterministic items of ``task`` at
     ``length``, with the given predictions (gold answers come from the generator,
-    so event_blind_rate's stream-integrity guard passes)."""
+    so event_blind_rate's stream-integrity guard passes). Resolved through
+    ``spec_for``, the same lookup the renderer's floors use, so a task the registry
+    has moved to RETIRED still generates its frozen items."""
     from factworld import tasks as TK
-    items = list(TK.generate(TK.CANONICAL[task], "test", n=len(preds), length=length))
+    items = list(TK.generate(TK.spec_for(task), "test", n=len(preds), length=length))
     rec = _record(model, "s5_chain", task, length, len(preds), 0.0, effort="xhigh")
     rec["n"] = len(preds)
     rec["examples"] = [{"gold": e.answer, "pred": p,
@@ -1249,7 +1464,7 @@ def test_work_stats_split_and_conditionals():
     if not HAS_MPL:
         return
     # 3 worked calls (all correct), 2 unworked calls (both wrong)
-    rec = _ctok_record("testlab/model-a", "s5_chain", "s5_chain_v3", 96,
+    rec = _ctok_record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96,
                        [5000, 4000, 3000, 200, 150], [1, 1, 1, 0, 0],
                        effort="xhigh")
     st = RB.work_stats(rec)
@@ -1257,12 +1472,12 @@ def test_work_stats_split_and_conditionals():
     assert abs(st["rate"] - 0.6) < 1e-9
     assert st["acc_worked"] == 1.0 and st["acc_unworked"] == 0.0
     assert RB.work_cell_str(rec) == "0.60 (1.00/0.00)"
-    inert = _ctok_record("testlab/model-a", "s5_chain", "s5_chain_v3", 96,
+    inert = _ctok_record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96,
                          [5000] * 5, [1, 1, 1, 1, 0], effort="xhigh")
     assert RB.work_stats(inert)["rate"] == 1.0
     assert RB.work_cell_str(inert) == "1.00"          # inert column for a worker
     # records written before per-example token logging: not-available, never 0
-    old = _record("testlab/model-a", "s5_chain", "s5_chain_v3", 96, 25, 0.5,
+    old = _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96, 25, 0.5,
                   effort="xhigh")
     for e in old["examples"]:
         del e["ctok"]
@@ -1279,7 +1494,7 @@ def test_work_line_sits_in_the_observed_gap():
         return
     assert 257 < RB.WORK_LINE < 1136
     ctoks = [82, 141, 160, 187, 209, 257, 1136, 2366, 3101, 3690]
-    rec = _ctok_record("testlab/model-a", "s5_chain", "s5_chain_v3", 32,
+    rec = _ctok_record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 32,
                        ctoks, [0] * 6 + [1] * 4, effort="xhigh")
     split = RB.work_stats(rec)["worked"]
     for line in (300, 384, 512, 768, 1024):
@@ -1292,7 +1507,7 @@ def test_unworked_bound_needs_rate_and_accuracy_split():
     if not HAS_MPL:
         return
     # sol-shaped: 8 worked calls all correct, 17 unworked calls all wrong
-    marked = _ctok_record("testlab/model-a", "s5_chain", "s5_chain_v3", 32,
+    marked = _ctok_record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 32,
                           [3000] * 8 + [150] * 17, [1] * 8 + [0] * 17,
                           effort="xhigh")
     assert RB.unworked_bound(marked) is True
@@ -1304,7 +1519,7 @@ def test_unworked_bound_needs_rate_and_accuracy_split():
                             [3000] * 8 + [150] * 17, [1] * 25, effort="high")
     assert RB.unworked_bound(accurate) is False
     # unworked on 1 call in 25 (0.04) is under UNWORKED_RATE
-    rare = _ctok_record("testlab/model-a", "s5_chain", "s5_chain_v3", 64,
+    rare = _ctok_record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 64,
                         [3000] * 24 + [2], [1] * 24 + [0], effort="xhigh")
     assert RB.unworked_bound(rare) is False
     assert RB.work_cell_str(rare) == "0.96 (1.00/0.00)"   # still visible
@@ -1319,6 +1534,105 @@ def test_unworked_bound_needs_rate_and_accuracy_split():
                            stop_at=None)
     assert RB.thinking_cell(instant) is False
     assert RB.unworked_bound(instant) is False
+
+
+def _scout_record(*, completed_ctoks=(), completed_correct=(), n_failed=0,
+                  api_errors=None, facet="s5_chain", task=S5_CHAIN_TASK,
+                  length=32, model="testlab/model-a", **kw):
+    """A record shaped like the OpenRouter credit-exhaustion scout cells: some
+    calls completed and carry their per-call tokens, the rest were REJECTED by the
+    API. The runner records a rejection as diagnostics.api_errors plus one
+    zeros/None example row per failed call (``_attach_example_meta`` keeps the rows
+    aligned with the prompts) and scores the missing answer 0, and the aggregate
+    finish_reasons count only the calls that completed — an all-error cell
+    therefore carries finish_reasons {}."""
+    n = len(completed_ctoks) + n_failed
+    rec = _record(model, facet, task, length, n,
+                  sum(completed_correct) / n if n else 0.0, effort="xhigh",
+                  api_errors=n_failed if api_errors is None else api_errors, **kw)
+    rec["n"] = n
+    rec["examples"] = (
+        [{"gold": "g1", "pred": "g1" if c else "g2", "relaxed": int(c),
+          "ctok": t, "rtok": t - 3, "finish": "stop"}
+         for t, c in zip(completed_ctoks, completed_correct)]
+        + [{"gold": "g1", "pred": "", "relaxed": 0, "ctok": 0, "rtok": 0,
+            "finish": None}] * n_failed)
+    rec["diagnostics"]["finish_reasons"] = ({"stop": len(completed_ctoks)}
+                                            if completed_ctoks else {})
+    rec["diagnostics"]["empty_rate"] = n_failed / n if n else 0.0
+    rec["usage"]["completion_tokens"] = sum(completed_ctoks)
+    return rec
+
+
+def test_all_calls_failed_is_censored_not_a_zero():
+    """A cell whose every call the API rejected is NOT a measurement: it renders
+    '⊘ calls failed' — the cause in plain language — and takes no part in any
+    ordering, tiebreak or per-call diagnostic. The truncation censor cannot see it:
+    an all-error cell has finish_reasons {} and so no truncation rate at all."""
+    if not HAS_MPL:
+        return
+    rec = _scout_record(n_failed=25)          # z-ai/glm-5.2 @L32: 25 of 25 rejected
+    assert rec["metrics"]["relaxed"] == 0.0   # the stored score is all-zero
+    assert RB.majority_finish_length(rec) is False   # the predicate that missed it
+    assert RB.failed_call_rate(rec) == 1.0
+    assert RB.calls_failed(rec) is True
+    # never published as a score, on any surface
+    assert RB.stress_value_str(rec) == RB.FAILED_CELL
+    assert RB.zb_value_str(rec) == RB.FAILED_CELL
+    assert RB._profile_score_cell(rec)["status"] == "censored"
+    assert RB._profile_score_cell(rec)["display"] == RB.FAILED_CELL
+    # and out of every ordering, tiebreak and per-call diagnostic
+    assert RB.exclusion_mark(RB.stress_value_str(rec)) == "⊘"
+    assert RB.out_of_ordering(RB.stress_value_str(rec)) is True
+    assert RB.ordering_value(RB.stress_value_str(rec)) is None
+    assert RB.mean_ctok_per_call(rec) is None     # 0 tokens is not efficiency
+    assert RB.work_stats(rec) is None             # no call completed to read
+    assert RB.work_cell_str(rec) == "n/a"
+    assert "calls failed 1.00" in RB.cell_note(rec)
+    # the rate is read off the record the same way whichever half of the evidence
+    # a record carries: the runner's exception count, or the per-example rows
+    count_only = _scout_record(n_failed=25)
+    count_only["examples"] = []
+    assert RB.calls_failed(count_only) is True
+    rows_only = _scout_record(n_failed=25, api_errors=0)
+    assert RB.calls_failed(rows_only) is True
+
+
+def test_failed_calls_are_not_unworked_calls():
+    """The work-rate split reads the calls that COMPLETED. A rejected request never
+    reached the model, so counting it as an unworked call renders a billing failure
+    as the ᵘ engagement pathology on a model that worked on every call it got."""
+    if not HAS_MPL:
+        return
+    # deepseek/deepseek-v4-pro @L128: 16 calls completed, all correct; 9 rejected
+    rec = _scout_record(completed_ctoks=[5000 + 100 * i for i in range(16)],
+                        completed_correct=[1] * 16, n_failed=9, length=128)
+    assert rec["metrics"]["relaxed"] == 0.64
+    st = RB.work_stats(rec)
+    assert st["worked"] == 16 and st["unworked"] == 0 and st["rate"] == 1.0
+    assert st["acc_worked"] == 1.0 and st["acc_unworked"] is None
+    assert RB.work_cell_str(rec) == "1.00"
+    assert RB.unworked_bound(rec) is False
+    assert RB.UNWORKED_MARK not in RB.stress_value_str(rec)
+    # 9 of 25 calls is a coverage problem, so the cell is censored, not scored
+    assert abs(RB.failed_call_rate(rec) - 0.36) < 1e-9
+    assert RB.stress_value_str(rec) == RB.FAILED_CELL
+    assert RB.out_of_ordering(RB.stress_value_str(rec)) is True
+    # under the censor line the cell publishes, with the rate beside it: the failed
+    # calls score 0, so the score is a lower bound (as partial truncation is)
+    light = _scout_record(completed_ctoks=[5000] * 24, completed_correct=[1] * 24,
+                          n_failed=1, length=128)
+    assert abs(RB.failed_call_rate(light) - 0.04) < 1e-9
+    assert RB.calls_failed(light) is False
+    assert RB.stress_value_str(light) == "0.96 (calls failed 0.04)"
+    assert RB.out_of_ordering(RB.stress_value_str(light)) is False
+    assert RB.work_cell_str(light) == "1.00"        # the 24 calls that happened
+    # a clean cell is untouched by any of this
+    clean = _scout_record(completed_ctoks=[5000] * 25, completed_correct=[1] * 25,
+                          length=128)
+    assert RB.failed_call_rate(clean) == 0.0
+    assert RB.stress_value_str(clean) == "1.00"
+    assert RB.mean_ctok_per_call(clean) == 5000
 
 
 def test_marked_cells_leave_the_ordering():
@@ -1382,8 +1696,8 @@ def test_marked_rows_are_not_tiebroken_by_their_own_ctok():
         runs = []
         # The cells the two rankings read: s5_chain @L96/@L128 with the matched
         # @L64 ctok, and s5_concrete @L256 with the matched @L128 ctok.
-        cells = [("s5_chain", "s5_chain_v3", 96), ("s5_chain", "s5_chain_v3", 128),
-                 ("s5_chain", "s5_chain_v3", 64), ("s5_concrete", "s5", 256),
+        cells = [("s5_chain", S5_CHAIN_TASK, 96), ("s5_chain", S5_CHAIN_TASK, 128),
+                 ("s5_chain", S5_CHAIN_TASK, 64), ("s5_concrete", "s5", 256),
                  ("s5_concrete", "s5", 128)]
         # model-a and model-c are both ᵘ-marked at every ranked length, model-b is
         # clean. The marked pair's ctok is inverted against their names: a cheap
@@ -1427,11 +1741,11 @@ def test_bench_headline_figure_plots_marked_rows_unranked():
         runs = []
         for model, score in (("testlab/model-a", 0.60), ("testlab/model-c", 0.92)):
             for length in (96, 128):
-                runs.append(_record(model, "s5_chain", "s5_chain_v3", length, 25,
+                runs.append(_record(model, "s5_chain", S5_CHAIN_TASK, length, 25,
                                     score, effort="xhigh"))
         # a marked model with the BEST score in the table
         for length in (96, 128):
-            runs.append(_ctok_record("testlab/model-b", "s5_chain", "s5_chain_v3",
+            runs.append(_ctok_record("testlab/model-b", "s5_chain", S5_CHAIN_TASK,
                                      length, [4000] * 24 + [120], [1] * 24 + [0],
                                      effort="xhigh"))
         with open(path, "w", encoding="utf-8") as fh:
@@ -1467,7 +1781,7 @@ def test_event_blind_rate_on_real_items():
     the gold answer."""
     if not HAS_MPL:
         return
-    items = RB.event_blind_items("s5_chain_v3", 32, 25)
+    items = RB.event_blind_items(S5_CHAIN_TASK, 32, 25)
     assert len(items) == 25
     eligible = [(b, g) for b, g in items if b.rstrip(".") != g.rstrip(".")]
     assert len(eligible) == 25            # no collisions in this stream at L32
@@ -1500,7 +1814,7 @@ def test_event_blind_answer_is_correct_at_chance():
     if not HAS_MPL:
         return
     for length in (32, 64):
-        items = RB.event_blind_items("s5_chain_v3", length, 250)
+        items = RB.event_blind_items(S5_CHAIN_TASK, length, 250)
         rate = sum(1 for b, g in items if b.rstrip(".") == g.rstrip(".")) / len(items)
         assert 0.0 <= rate <= 0.15, f"L{length} blind-equals-gold rate {rate}"
 
@@ -1512,7 +1826,7 @@ def test_event_blind_aggregate_scope_and_eligibility():
     published number."""
     if not HAS_MPL:
         return
-    items = RB.event_blind_items("s5_chain_v3", 32, 25)
+    items = RB.event_blind_items(S5_CHAIN_TASK, 32, 25)
     blind_preds = [b for b, _g in items]
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, "history.jsonl")
@@ -1621,16 +1935,16 @@ def test_repeat_runs_surface_spread():
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, "history.jsonl")
         runs = [
-            _record("testlab/model-a", "s5_chain", "s5_chain_v3", 96, 25, 0.72,
+            _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96, 25, 0.72,
                     effort="xhigh", ts="2026-07-18T00:00:00+00:00"),
-            _record("testlab/model-a", "s5_chain", "s5_chain_v3", 96, 25, 0.84,
+            _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96, 25, 0.84,
                     effort="xhigh", ts="2026-07-24T00:00:00+00:00"),
-            _record("testlab/model-a", "s5_chain", "s5_chain_v3", 96, 25, 0.60,
+            _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96, 25, 0.60,
                     effort="xhigh", ts="2026-07-24T12:00:00+00:00"),
             # budget rerun of the SAME cell: its own group
-            _record("testlab/model-a", "s5_chain", "s5_chain_v3", 128, 25, 0.20,
+            _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 128, 25, 0.20,
                     effort="xhigh", ts="2026-07-18T00:00:00+00:00"),
-            _record("testlab/model-a", "s5_chain", "s5_chain_v3", 128, 25, 0.96,
+            _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 128, 25, 0.96,
                     effort="xhigh", ts="2026-07-24T00:00:00+00:00"),
         ]
         runs[-1]["settings"]["max_new_tokens"] = 32768
@@ -1661,9 +1975,9 @@ def test_thinking_noise_note_reads_the_repeat_runs():
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, "history.jsonl")
         runs = [
-            _record("testlab/model-a", "s5_chain", "s5_chain_v3", 96, 25, 0.32,
+            _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96, 25, 0.32,
                     effort="xhigh", ts="2026-07-18T00:00:00+00:00"),
-            _record("testlab/model-a", "s5_chain", "s5_chain_v3", 96, 25, 0.64,
+            _record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96, 25, 0.64,
                     effort="xhigh", ts="2026-07-24T00:00:00+00:00"),
             # an instant repeat does not set the thinking noise bar
             _record("testlab/model-a", "zero_budget", "composite_copy_v2", 16, 100,
@@ -1694,7 +2008,7 @@ def test_noise_bar_excludes_marked_and_archived_cells():
         path = os.path.join(tmp, "history.jsonl")
         # a ᵘ-shaped cell (most calls unworked, all of those wrong) with the WIDEST
         # spread in the history, plus a clean cell with a narrower one
-        marked = [_ctok_record("testlab/model-a", "s5_chain", "s5_chain_v3", 96,
+        marked = [_ctok_record("testlab/model-a", "s5_chain", S5_CHAIN_TASK, 96,
                                [4000] * 9 + [120] * 16, [1] * 9 + [0] * 16,
                                effort="xhigh", ts=ts)
                   for ts in ("2026-07-18T00:00:00+00:00", "2026-07-24T00:00:00+00:00")]
@@ -1742,6 +2056,18 @@ def test_readme_compact_keeps_rates_and_marks():
     assert RB._readme_compact("1.00 @32,768tok (raised budget)") == "1.00ʳ"
     assert RB._readme_compact("⊘ >budget") == "⊘"
     assert RB._readme_compact("≤0.62†") == "≤0.62†"
+    # the two ⊘ causes stay apart in the block and in its ONE legend: the
+    # failed-calls censor keeps its cause, and each gloss appears only for the
+    # censor that is actually in the tables
+    assert RB._readme_compact(RB.FAILED_CELL) == RB.FAILED_CELL
+    assert RB._readme_compact("0.96 (calls failed 0.04)") == "0.96 (calls failed 0.04)"
+    legend = "\n".join(RB._readme_mark_legend(["| m | " + RB.FAILED_CELL + " |"], []))
+    assert RB.FAILED_CELL in legend
+    assert "majority of calls finish=length" not in legend
+    assert f"`{RB.FAILED_CELL}`" in legend.split("**Marks**")[1]   # named as excluded
+    budget_legend = "\n".join(RB._readme_mark_legend(["| m | ⊘ |"], []))
+    assert "majority of calls finish=length" in budget_legend
+    assert RB.FAILED_CELL not in budget_legend
 
 
 def test_new_diagnostics_reach_csv_and_markdown():
@@ -1787,6 +2113,10 @@ if __name__ == "__main__":
                test_recency_heuristic, test_recency_heuristic_v2_floor_near_chance,
                test_object_filter_floor, test_zero_budget_task_versioning,
                test_breadth_and_k_fixed_arms, test_off_protocol_system_prompt_is_its_own_arm,
+               test_canonical_arm_follows_the_regime_prompt_rule,
+               test_neutral_prompt_rerun_supersedes_the_archived_cell,
+               test_fixture_s5_chain_task_is_generable,
+               test_surface_publishes_the_task_its_records_carry,
                test_object_filter_floor_at_per_rung,
                test_archived_roster, test_profile_values_and_figure,
                test_pervasive_covert_and_floor_bound_gap,
@@ -1794,6 +2124,8 @@ if __name__ == "__main__":
                test_truncation_rate, test_work_stats_split_and_conditionals,
                test_work_line_sits_in_the_observed_gap,
                test_unworked_bound_needs_rate_and_accuracy_split,
+               test_all_calls_failed_is_censored_not_a_zero,
+               test_failed_calls_are_not_unworked_calls,
                test_marked_cells_leave_the_ordering,
                test_marked_cells_do_not_rank_themselves_or_others,
                test_marked_rows_are_not_tiebroken_by_their_own_ctok,
