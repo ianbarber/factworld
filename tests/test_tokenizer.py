@@ -200,6 +200,27 @@ def test_pointer_map_event_grammar_is_covered():
         assert tk in _TOK.token_to_id, tk
 
 
+def test_state_reference_clause_is_covered_in_both_grammars():
+    """The v4 construct's own vocabulary: the second operand named by the value the RUNNING
+    map holds. An <unk> on any of these words deletes the reference from the model's input
+    and leaves an ordinary swap behind — the task would still train, on a different task.
+
+    Both surfaces are checked because only one of them goes through the renderer: the compact
+    form is emitted by ``tasks._compact_a0_event``, so the vocabulary probe cannot reach it.
+    """
+    from factworld.world import Event  # noqa: PLC0415
+
+    for tk in ("the", "a0", "of", "agent", "whose", "is", "currently"):
+        assert tk in _TOK.token_to_id, tk
+    a, b = _TARGET.agents[0], _TARGET.agents[1]
+    canonical = _R.render_event(Event("swap_a0_ref", (a, b)), step="s3")
+    compact = f"s3 swaps a0: {a} and whose a0 is {b}."
+    assert f"whose a0 is currently {b}." in canonical
+    for s in (canonical, compact):
+        assert _TOK.unk_id not in _TOK.encode(s), s
+        assert _TOK.decode(_TOK.encode(s)) == s, s
+
+
 def test_holder_assertion_object_form_is_covered():
     """``g3 holds o0.`` glues the period to the object (the aux-world trace documents)."""
     s = _R.render_holder(_TARGET.objects[0], _TARGET.agents[0])

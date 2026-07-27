@@ -154,6 +154,29 @@ class TaskSpec:
     # SEPARATE builder, so no existing stream is perturbed.
     typed_values: bool = False
 
+    # s5_chain-only: the fraction of events that name their second operand BY REFERENCE TO
+    # THE RUNNING STATE — "s7 swaps the values of g4's a0 and the a0 of the agent whose a0
+    # is currently g11", i.e. the second slot is f^{-1}(g11) under the map as it stands when
+    # the event fires. The a0 map is a bijection at every step (the initial map is a k-cycle
+    # and every event composes it with a permutation), so that description names exactly one
+    # agent.
+    #
+    # WHAT IT CHANGES. Unconditional swap/cycle events permute the DOMAIN of the map:
+    # a swap of a and b sets f'(a)=f(b) and f'(b)=f(a), i.e. f' = f∘(a b), so after L events
+    # f_L = f_0∘σ_1∘…∘σ_L and f_L(x) = f_0(σ_1(…σ_L(x))). One symbol pushed BACKWARD through
+    # the event list answers the query, carrying log2(k) bits of state and never forming the
+    # map. A referenced operand is unknown until f has been evaluated FORWARD to that event,
+    # and resolving f^{-1}(gX) reads an arbitrary slot, so the forward pass has to carry the
+    # whole map — log2(k!) bits. The backward walk is available to an attention model over
+    # the full context and not to a streaming recurrent model; the forward walk is available
+    # to both, which is what makes one construct measurable in both regimes.
+    #
+    # The referenced operand is drawn exactly as an unconditional swap's is (two distinct
+    # uniform agents), so raising the rate changes the swap:cycle mix and nothing else about
+    # the permutation stream. Appended + defaulted to 0.0: `_rng` does not key on it and the
+    # draw is short-circuited at 0.0, so every existing example stream is untouched.
+    conditional_rate: float = 0.0
+
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
         return replace(self, **knobs)
@@ -344,6 +367,19 @@ def _ex_s5(spec, w, r, oracle, rng, length, idx):
     return Example(prompt, _render_answer(role), length, meta)
 
 
+def _compact_a0_event(e: Event) -> str:
+    """The s5-style compact rendering of one pointer-map event (TaskSpec.compact_events).
+
+    Local-only: ~4-5x fewer tokens per event than the canonical explicit-value sentences.
+    The referenced operand keeps the relative clause ("whose a0 is g11") because that IS
+    the construct — the compact form drops words, never the state reference."""
+    if e.kind == "swap_a0":
+        return f"swaps a0: {e.args[0]} and {e.args[1]}."
+    if e.kind == "swap_a0_ref":
+        return f"swaps a0: {e.args[0]} and whose a0 is {e.args[1]}."
+    return "cycles a0: " + " -> ".join(e.args) + "."
+
+
 def _ex_s5_chain(spec, w, r, rng, length, idx):
     """s5_chain: non-abelian pointer-map state + serial dereference in composition.
 
@@ -353,6 +389,11 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
     agent reached under the FINAL map. The task composes s5-style permutation tracking
     with chain-style serial dereference; depth is kept < k so the cycle never wraps.
     `length` is the number of permutation events; chain depth is a spec knob.
+
+    With ``spec.conditional_rate`` > 0 that fraction of events names its second operand
+    by reference to the running map ("the agent whose a0 is currently g11") instead of
+    by name, which fixes the event's identity only after the map has been evaluated
+    forward to it. See the TaskSpec field for what that changes about the computation.
     """
     depth = spec.chain_depth
     if depth >= spec.k:
@@ -376,7 +417,18 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
         events: list[Event] = []
         maps: list[dict] = []                # per-event map snapshots (trace construction)
         for _ in range(length):
-            if rng.random() < 0.5:
+            # `spec.conditional_rate and ...` short-circuits at the 0.0 default, so a spec
+            # without referenced operands draws exactly the numbers it drew before the knob
+            # existed and its stream stays byte-identical.
+            if spec.conditional_rate and rng.random() < spec.conditional_rate:
+                # The second operand is named by its CURRENT value, f^{-1}(nxt[b]) = b; the
+                # rendered event therefore carries (a, nxt[b]) and only the running map
+                # resolves it back to b. Operands are drawn exactly as the unconditional
+                # swap's are, so the permutation stream's distribution is unchanged.
+                a, b = rng.sample(cyc, 2)
+                events.append(Event("swap_a0_ref", (a, nxt[b])))
+                nxt[a], nxt[b] = nxt[b], nxt[a]
+            elif rng.random() < 0.5:
                 a, b = rng.sample(cyc, 2)
                 events.append(Event("swap_a0", (a, b)))
                 nxt[a], nxt[b] = nxt[b], nxt[a]
@@ -398,10 +450,7 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
     else:
         raise RuntimeError(f"{spec.name}: no length->{depth+1} cycle in 100 event resamples")
     if spec.compact_events:
-        ev_txts = [f"s{i} " + (f"swaps a0: {e.args[0]} and {e.args[1]}."
-                               if e.kind == "swap_a0"
-                               else "cycles a0: " + " -> ".join(e.args) + ".")
-                   for i, e in enumerate(events)]
+        ev_txts = [f"s{i} {_compact_a0_event(e)}" for i, e in enumerate(events)]
     else:
         ev_txts = [r.render_event(e, step=f"s{i}", key=f"h|{i}|{e.kind}|{'|'.join(e.args)}")
                    for i, e in enumerate(events)]
@@ -414,6 +463,10 @@ def _ex_s5_chain(spec, w, r, rng, length, idx):
     gold = path[-1]
     query = "what is " + "a0 of " * depth + f"{start}? ({depth} hops)"
     meta = {"depth": depth, "start": start, "path": path}
+    if spec.conditional_rate:
+        # positions of the state-referencing events: the last one is the point up to which
+        # the map has to be evaluated forward before any backward walk can start.
+        meta["ref_positions"] = tuple(i for i, e in enumerate(events) if e.kind == "swap_a0_ref")
     if spec.start_trace:
         meta["trace"] = " ".join([m[start] for m in maps] + path[:-1])
         # Interleaved variant of the same supervision (the protocol that formed s5): the
@@ -487,6 +540,11 @@ def _ex_s5_chain_typed(spec, w, r, rng, length, idx):
         raise ValueError(
             f"{spec.name}: typed_values is a depth-1 construct (chain_depth={spec.chain_depth}); "
             f"the pointer values are roles, not agents, so a second hop has no defined start.")
+    if spec.conditional_rate:
+        raise ValueError(
+            f"{spec.name}: typed_values and conditional_rate are not combined "
+            f"(conditional_rate={spec.conditional_rate}); the typed arm is the depth-1 "
+            f"key/value ablation and its floors are measured without state references.")
     if spec.k > len(w.roles):
         raise ValueError(f"{spec.name}: k={spec.k} exceeds the {len(w.roles)}-role value pool")
     slots = rng.sample(list(w.agents), spec.k)
@@ -512,10 +570,7 @@ def _ex_s5_chain_typed(spec, w, r, rng, length, idx):
             maps.append(dict(cur))
 
     if spec.compact_events:
-        ev_txts = [f"s{i} " + (f"swaps a0: {e.args[0]} and {e.args[1]}."
-                               if e.kind == "swap_a0"
-                               else "cycles a0: " + " -> ".join(e.args) + ".")
-                   for i, e in enumerate(events)]
+        ev_txts = [f"s{i} {_compact_a0_event(e)}" for i, e in enumerate(events)]
     else:
         ev_txts = [r.render_event(e, step=f"s{i}", key=f"h|{i}|{e.kind}|{'|'.join(e.args)}")
                    for i, e in enumerate(events)]
@@ -883,18 +938,77 @@ CANONICAL = {
     # hop count (e.g. "... of g246? (128 hops)") to remove the depth-counting confound
     # that caused models to miscount 128 nested "a0 of" phrases.
     "chain_v2":         TaskSpec("chain_v2", "chain", version="1.1", k=6, train_lengths=(2, 3), eval_lengths=(4, 5)),
-    # s5_chain: THE composite stressor — order-sensitive swap/cycle events on the a0 pointer
-    # map (non-abelian state tracking), followed by a chain_depth-hop serial dereference query
+    # s5_chain: THE composite stressor — order-sensitive events on the a0 pointer map
+    # (non-abelian state tracking), followed by a chain_depth-hop serial dereference query
     # over the final map. length = number of permutation events; chain_depth = hops (kept < k).
-    # v3 is the single scored spec: distinct_path gates every item so the query path visits
-    # depth+1 distinct agents — echo and fixed-hop heuristics score exactly 0, chance is
-    # 1/k, and item difficulty is uniform (the v1/v2 streams admitted an echo floor of
-    # 0.16-0.32 because final-map cycles whose length divides the depth make the start its
-    # own answer; see RETIRED).
-    "s5_chain_v3":      TaskSpec("s5_chain_v3", "s5_chain", version="2.0", k=16, chain_depth=8,
-                                  distinct_path=True,
+    # v4 is the single scored spec. Two gates make it one computation rather than two:
+    #
+    #   distinct_path — every item's query path visits depth+1 distinct agents, so echo and
+    #   every fixed-hop heuristic score exactly 0 and item difficulty is uniform. (The v1/v2
+    #   streams admitted an echo floor of 0.16-0.32 because final-map cycles whose length
+    #   divides the depth make the start its own answer; see RETIRED.)
+    #
+    #   conditional_rate — a quarter of the events name their second operand by reference to
+    #   the running map, which is what stops the query being answerable by pushing one symbol
+    #   backward through the event list (the v3 defect; see RETIRED). Measured on this
+    #   stream, n=2000 per cell: the last referenced event sits at 0.909 / 0.953 / 0.969 /
+    #   0.977 of the stream at L=32/64/96/128, so essentially the whole map has to be
+    #   evaluated forward before any backward walk can start. Rate 0.5 raises that to
+    #   0.968/0.985/0.990/0.992 — a hundredth of the stream, for twice the reference
+    #   sentences; rate 0.125 leaves the initial-ref adversary at 0.146 (4.7x chance) at L=32,
+    #   where four references in a barely-drifted map mostly resolve correctly.
+    #
+    # Operating point: k=32 with depth 16 against v3's k=16/depth 8. Depth costs nothing in
+    # prompt tokens (46 chars per 8 extra hops at L=96) and breadth costs one fact sentence
+    # per agent (+4.5% at L=96), while L costs a full event sentence per unit — so difficulty
+    # goes on the two cheap axes and the length grid is v3's. The distinct_path gate needs a
+    # final-map cycle longer than the depth, whose acceptance rate depends only on the ratio:
+    # 0.65-0.69 of first draws at depth/k = 1/2 for every k in {16, 24, 32, 48} (about 1.5
+    # event draws per item, against the 100 the builder allows), falling to 0.44 at depth 20
+    # and 0.28 at depth 24. Conditioning on it leaves every prompt-visible statistic alone: gold,
+    # start and event-operand distributions are uniform to within finite-sample bias (KL excess
+    # <= 0.0013 nats against the suite's 0.02 threshold), the event mix is the drawn
+    # 0.25/0.375/0.375, and references are uniform across stream quarters — all identical to
+    # the same sampler with the gate off. Chance is 1/31 = 0.0323, the answer space being the
+    # non-start agents; the operative floor — the max over the registered shallow adversaries
+    # (initial-map chase, initial-ref resolution, echo, and the two chance rows;
+    # validity.S5_CHAIN_ADVERSARIES) — is 0.0398 at L=32 and 0.0323-0.0334 at L=64/96/128 at
+    # n=5000, so no shallow policy reaches 1.25x chance at any scored length, let alone the 2x
+    # the suite gates on. The row supplying L=32 is initial-ref resolution, which four events of
+    # drift is all a reference has to survive.
+    #
+    # LENGTH GRID. L=32 carries the highest floor of the four and stays scored, but not on the
+    # strength of the gap: the initial-map rows are members of a fixed-offset partition whose
+    # k-1 accuracies sum to exactly 1 (validity, the s5_chain adversary block), so comparing a
+    # per-length max across lengths compares selection draws — against the full 31-member family
+    # the L=32 max exceeds the longer lengths' by 0.0020, not by the 0.0068 the registered rows
+    # suggest. What keeps L=32 is the gate margin: its 0.0398 is 1.23x chance against a 2x bound,
+    # so the shortest scored length is as far from being shallow-solvable as the rest of the grid.
+    "s5_chain_v4":      TaskSpec("s5_chain_v4", "s5_chain", version="2.1", k=32, chain_depth=16,
+                                  distinct_path=True, conditional_rate=0.25,
                                   train_lengths=(8, 16), eval_lengths=(32, 64, 96)),
     # Local calibration variants (experimental, never scored as the frontier task).
+    # local_v4: the scored construct at a from-scratch operating point — the same forward
+    # evaluation, at k=8 with a 2-hop dereference and per-EVENT map checkpoints. The rate and
+    # the lengths are set by the floors, not copied from the frontier spec: a reference is
+    # mis-resolvable only once the map has drifted at the referenced slot, so at short
+    # streams the initial-ref adversary is the operative floor (n=2000, chance 0.125: 0.519
+    # at L=8 and 0.245 at L=16 for rate 0.25). At rate 0.5 it falls to 0.101 at L=16 and
+    # 0.110 at L=24, below the initial-map chase, which leaves the operative floor at 0.143
+    # (chance, 1/(k-1)) at L=16 and 0.156 (the chase) at L=24 — the same two rows that supply
+    # it across the local v2 family, so the two families' cells are read against floors of the
+    # same kind.
+    # local_v4_path: same items, path-only trace — the supervision-density contrast arm.
+    "s5_chain_local_v4": TaskSpec("s5_chain_local_v4", "s5_chain", version="2.1", k=8,
+                                   chain_depth=2, distinct_path=True, conditional_rate=0.5,
+                                   event_trace=True, worked_trace=True,
+                                   train_lengths=(8, 16), eval_lengths=(16, 24),
+                                   kind="experimental"),
+    "s5_chain_local_v4_path": TaskSpec("s5_chain_local_v4_path", "s5_chain", version="2.1", k=8,
+                                        chain_depth=2, distinct_path=True, conditional_rate=0.5,
+                                        worked_trace=True,
+                                        train_lengths=(8, 16), eval_lengths=(16, 24),
+                                        kind="experimental"),
     # local_v2: gated items + per-EVENT map checkpoints (event_trace) — the dense per-step
     # supervision that formed s5 locally, which the retired local_v1 lacked (its path-only
     # trace supervised the dereference but not the map tracking through events).
@@ -971,6 +1085,21 @@ RETIRED = {
                                   train_lengths=(8, 16), eval_lengths=(32, 64), kind="retired"),
     "s5_chain_v2":      TaskSpec("s5_chain_v2", "s5_chain", version="1.3", k=16, chain_depth=8,
                                   train_lengths=(8, 16), eval_lengths=(32, 64, 96), kind="retired"),
+    # s5_chain v3 (issue #37, retired 2026-07-27): the events permute the DOMAIN of the
+    # pointer map — a swap of a and b sets f'(a)=f(b) and f'(b)=f(a), i.e. f' = f∘(a b) — so
+    # after L events f_L = f_0∘σ_1∘…∘σ_L and f_L(x) = f_0(σ_1(…σ_L(x))). Pushing ONE symbol
+    # backward through the event list and then applying the stated initial map answers the
+    # query exactly: 1.000 on the v3 test stream at L96 (and on v1/v2/local_v2), carrying
+    # log2(k) = 4 bits per hop rather than the log2(16!) = 44 of an S16 permutation. The
+    # instrument-level defect is what that algorithm needs: the walk runs the event list
+    # backward, which an attention model over the full context can do and a streaming
+    # recurrent model cannot, so the two regimes the task exists to bridge were not running
+    # the same computation. Superseded knob-for-knob by s5_chain_v4, where a fraction of the
+    # events name an operand by reference to the running map, no event's identity is fixed
+    # until the map has been evaluated forward to it, and both regimes run the forward pass.
+    "s5_chain_v3":      TaskSpec("s5_chain_v3", "s5_chain", version="2.0", k=16, chain_depth=8,
+                                  distinct_path=True, kind="retired",
+                                  train_lengths=(8, 16), eval_lengths=(32, 64, 96)),
     # Ungated local pilot with path-only traces; superseded by s5_chain_local_v2[/_path].
     "s5_chain_local_v1": TaskSpec("s5_chain_local_v1", "s5_chain", version="1.3", k=8, chain_depth=2,
                                    train_lengths=(2, 4), eval_lengths=(4, 8), worked_trace=True,

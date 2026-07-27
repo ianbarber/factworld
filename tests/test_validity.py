@@ -53,6 +53,136 @@ def test_answer_kl_zero_on_uniform_high_on_skew():
     assert answer_kl(["v0"] * 900 + ["v1"] * 100, space) > 0.5
 
 
+def test_a0_event_reader_covers_both_grammars_in_stream_order():
+    """The pointer-map adversaries read the rendered events, so the reader has to return
+    every event, in the order it was rendered, in the canonical AND the compact grammar."""
+    from factworld.render import Renderer
+    from factworld.tasks import CANONICAL, generate
+    from factworld.validity import a0_events
+    from factworld.world import Event
+
+    spec = CANONICAL["s5_chain_v4"]
+    for ex in generate(spec, "test", n=5, length=32):
+        events = a0_events(ex.prompt)
+        assert len(events) == 32
+        assert [i for i, (k, _) in enumerate(events) if k == "ref"] == \
+            list(ex.meta["ref_positions"])
+    r = Renderer()
+    trio = [Event("swap_a0", ("g1", "g2")), Event("swap_a0_ref", ("g3", "g4")),
+            Event("cycle_a0", ("g5", "g6", "g7"))]
+    canonical = " ".join(r.render_event(e, step=f"s{i}") for i, e in enumerate(trio))
+    compact = ("s0 swaps a0: g1 and g2. s1 swaps a0: g3 and whose a0 is g4. "
+               "s2 cycles a0: g5 -> g6 -> g7.")
+    want = [("swap", ("g1", "g2")), ("ref", ("g3", "g4")), ("cycle", ("g5", "g6", "g7"))]
+    assert a0_events(canonical) == want
+    assert a0_events(compact) == want
+
+
+def test_initial_ref_adversary_is_exact_where_the_map_has_not_moved():
+    """It is a real policy, not a random guess: resolving references against the initial map
+    is CORRECT while the map still agrees with the facts, which is why it has to be measured
+    on the scored stream rather than assumed to sit at chance."""
+    from factworld.tasks import CANONICAL, generate
+    from factworld.validity import s5_chain_ref_pred
+
+    spec = CANONICAL["s5_chain_v4"].scaled(name="ref_probe_L1", eval_lengths=(1,),
+                                           conditional_rate=1.0, chain_depth=1)
+    exs = generate(spec, "test", n=200, length=1)
+    assert all(s5_chain_ref_pred(e.prompt) == e.answer for e in exs)
+
+
+def test_backward_hop_reads_the_stated_map_and_nothing_else():
+    """f_0^{-1}(start) is recovered from the fact block alone, so it is defined on a prompt
+    with no events at all and is unchanged by the event grammar the stream is rendered in.
+    (Reported as a diagnostic; it is not a registered adversary — see the test below.)"""
+    from factworld.tasks import CANONICAL, generate
+    from factworld.validity import _A0_FACT_RE, s5_chain_shallow_preds
+
+    spec = CANONICAL["s5_chain_v4"]
+    plain = generate(spec, "test", n=20, length=32)
+    compact = generate(spec.scaled(compact_events=True), "test", n=20, length=32)
+    for exs in (plain, compact):
+        for ex in exs:
+            inv0 = {v: a for a, v in _A0_FACT_RE.findall(ex.prompt)}
+            assert s5_chain_shallow_preds(ex.prompt)["initial_map_backhop"] == \
+                f"{inv0[ex.meta['start']]}."
+    assert [s5_chain_shallow_preds(e.prompt)["initial_map_backhop"] for e in plain] == \
+        [s5_chain_shallow_preds(e.prompt)["initial_map_backhop"] for e in compact]
+
+
+def test_no_backhop_row_where_there_is_no_event_stream():
+    """With no events the stated map IS the final map, so one reverse lookup is the ORACLE
+    exactly when the depth is k-1 — chain_v2's longer eval length. That is the cheap-direction
+    property the chain staircase prices at k=2d+1, not a floor, so the row is dropped for the
+    same reason the chase row is."""
+    from factworld.tasks import CANONICAL, generate
+    from factworld.validity import s5_chain_floors, s5_chain_shallow_preds
+
+    chain = CANONICAL["chain_v2"]
+    at_depth = {}
+    for d in chain.eval_lengths:
+        exs = generate(chain, "test", n=50, length=d)
+        at_depth[d] = sum(
+            s5_chain_shallow_preds(e.prompt)["initial_map_backhop"] == e.answer
+            for e in exs) / len(exs)
+        f = s5_chain_floors(exs, chain.k, has_events=False)
+        assert "initial_map_backhop" not in f and "initial_map_chase" not in f
+    assert at_depth == {4: 0.0, 5: 1.0}                  # k=6: exact at depth k-1, never else
+
+
+def test_backhop_is_reported_but_not_registered_as_an_adversary():
+    """The fixed-offset policies f_0^j(start) partition the answer, so every member's null is
+    uniform-over-non-start and a max over a registered subset of them measures selection. The
+    backhop is one such member and is named by nothing in the task, so it is measured and
+    reported while ``operative_floor`` ignores it however large it reads. The chase stays
+    registered because the query names it: it is the query's own computation against the
+    stated map."""
+    from factworld.validity import (
+        S5_CHAIN_ADVERSARIES,
+        S5_CHAIN_CHANCE_ROWS,
+        S5_CHAIN_OFFSET_ROWS,
+        S5_CHAIN_ROWS,
+        operative_floor,
+    )
+
+    assert "initial_map_backhop" in S5_CHAIN_ROWS
+    assert "initial_map_backhop" not in S5_CHAIN_ADVERSARIES
+    assert "initial_map_chase" in S5_CHAIN_ADVERSARIES
+    assert set(S5_CHAIN_ADVERSARIES) < set(S5_CHAIN_ROWS)
+    assert set(S5_CHAIN_OFFSET_ROWS) <= set(S5_CHAIN_ROWS)
+    assert set(S5_CHAIN_CHANCE_ROWS) <= set(S5_CHAIN_ADVERSARIES)
+    # uniform_non_start is always registered, so the floor can never fall below the family's
+    # common expectation — and an unregistered member never raises it
+    floors = {"initial_map_chase": 0.10, "initial_map_backhop": 0.99, "echo": 0.0,
+              "uniform_non_start": 0.20, "uniform": 1 / 6}
+    assert operative_floor(floors) == 0.20
+
+
+def test_every_registered_shortcut_reaches_the_suite_gate_column():
+    """The drift the hardcoded tuple allowed: a row registered in factworld.validity never
+    reached scripts/validate_suite.py's shallow-adversary column. The column is now derived,
+    so registering one is enough."""
+    sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
+    import validate_suite  # noqa: E402
+
+    from factworld.tasks import CANONICAL, generate
+    from factworld.validity import (
+        S5_CHAIN_ADVERSARIES,
+        S5_CHAIN_CHANCE_ROWS,
+        s5_chain_floors,
+    )
+
+    spec = CANONICAL["s5_chain_v4"]
+    rows = s5_chain_floors(generate(spec, "test", n=50, length=32), spec.k)
+    registered = {n for n in rows
+                  if n in S5_CHAIN_ADVERSARIES and n not in S5_CHAIN_CHANCE_ROWS}
+    assert registered <= set(validate_suite.S5_CHAIN_SHORTCUTS)
+    assert set(validate_suite.S5_CHAIN_SHORTCUTS) <= set(S5_CHAIN_ADVERSARIES)
+    assert not set(validate_suite.S5_CHAIN_SHORTCUTS) & set(S5_CHAIN_CHANCE_ROWS)
+    assert "initial_map_backhop" not in validate_suite.S5_CHAIN_SHORTCUTS
+
+
 def _run() -> int:
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

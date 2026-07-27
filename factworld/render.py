@@ -7,6 +7,12 @@ type (no paraphrase variety) so the model sees a uniform grammar — this is the
 single canonical format; the earlier space-separated "atomic-token" v1 format
 lives in git history.
 
+One statement type names an operand by STATE rather than by name: ``s7 swaps the
+values of g4's a0 and the a0 of the agent whose a0 is currently g11.`` Such a
+sentence encodes (named slot, referenced value); which slot the value belongs to
+is a property of the map at that point in the stream, so parsing recovers the
+pair and not the resolution.
+
 Content tokens are still atomic IDs (``e17 a3 v42 o2 loc1 g4 r0 s5``); the step
 label ``sN`` is the event subject. The render <-> parse round-trip is a contract
 (the ground-truth re-parse check — every rendered document must parse back to the
@@ -56,6 +62,13 @@ class Renderer:
     _SWAP = ("swaps {a} and {b}.",)
     _CYCLE = ("cycles roles: {flows}.",)
     _SWAP_A0 = ("swaps the values of {a}'s a0 and {b}'s a0.",)
+    # The second operand is named by its CURRENT value rather than by name: {v} is a value
+    # the a0 map holds when the event fires, and the map is a bijection, so exactly one agent
+    # answers to the description. "currently" is what separates it from the stated initial
+    # facts — the referenced agent is the one whose a0 is {v} after every preceding event,
+    # not the one the fact block gives {v} to.
+    _SWAP_A0_REF = ("swaps the values of {a}'s a0 and the a0 of the agent "
+                    "whose a0 is currently {v}.",)
     # The three assignments are SIMULTANEOUS: "{c}'s a0 takes {a}'s old a0" reads against
     # a's pre-event value, not the value a was just assigned. The pre-2026-07-18 wording
     # ("{a}'s a0 becomes {b}'s a0, ...") admitted a sequential-assignment misreading in
@@ -95,6 +108,8 @@ class Renderer:
             s = self._pick(self._CYCLE, k).format(flows=self._CYCLE_ARROW.join(event.args))
         elif event.kind == "swap_a0":
             s = self._pick(self._SWAP_A0, k).format(a=event.args[0], b=event.args[1])
+        elif event.kind == "swap_a0_ref":
+            s = self._pick(self._SWAP_A0_REF, k).format(a=event.args[0], v=event.args[1])
         elif event.kind == "cycle_a0":
             s = self._pick(self._CYCLE_A0, k).format(a=event.args[0], b=event.args[1], c=event.args[2])
         elif event.kind == "turn_dial":
@@ -205,6 +220,12 @@ class Renderer:
             return {"type": "query", "family": "recall",
                     "entity": f"the holder of {obj}" if obj else None,
                     "attribute": typed["a"][0] if typed["a"] else None, "object": obj}
+        if "whose" in toks:
+            # a0 swap with a state-REFERENCED operand. The record the sentence encodes is
+            # (named slot, referenced value): the second slot is f^{-1}(value) under the map
+            # as it stands at this event, which no parse of the sentence alone can resolve.
+            return {"type": "event", "event": Event("swap_a0_ref", (typed["g"][0], typed["g"][1])),
+                    "step": step}
         if "swap" in toks or "swaps" in toks:
             return {"type": "event", "event": Event("swap_role", tuple(typed["g"])), "step": step}
         if "cycle" in toks or "cycles" in toks:

@@ -12,8 +12,18 @@ For every canonical task, certify that no shallow baseline clears floor on the h
     GATED (must stay near floor). The recency-defective v1 family — where this heuristic scored
     ~0.34@L16 on composite_copy_v1 / ~0.4 on binding_v1 — is RETIRED (tasks.RETIRED, issue #11):
     excluded from the suite run here; its known-shortcut annotation lives on the RETIRED dict.
+  - SHALLOW-ADVERSARY floor (chain / s5_chain): the largest of the registered pointer-map
+    adversaries — initial-map chase, initial-ref resolution, echo (factworld.validity), i.e. the
+    cell's operative floor with the two chance rows removed, since chance is not a shortcut.
+    The initial-map backhop is measured by s5_chain_floors but is not registered and so is not
+    in this column: it is an unnamed member of a fixed-offset family whose accuracies sum to 1,
+    so its null is uniform-over-non-start and a max over it measures selection.
 A task PASSES if majority, recency, first-position and (where defined) strong-recency accuracy are
-all well below 0.5 (near the 1/#answers floor).
+all well below 0.5 (near the 1/#answers floor). The pointer-map families answer over a much larger
+space than 2, so their column is gated against their own chance level instead: no shallow policy
+may reach twice 1/#answers. That gate reads the registered spec at its longest eval length; a
+rescaled cell (the local sweep runs k=4..8 at L=4..8) carries its own floor rows, and a score
+there is read against that cell's operative floor rather than against chance.
 
   .venv/bin/python scripts/validate_suite.py
 """
@@ -26,7 +36,13 @@ sys.path.insert(0, REPO)
 
 from factworld import tasks as TK          # noqa: E402
 from factworld.render import Renderer, classify  # noqa: E402  (atomic-token type by prefix: g/v/r/o/...)
-from factworld.validity import comm_shallow_accuracy, strong_recency_accuracy  # noqa: E402
+from factworld.validity import (  # noqa: E402
+    S5_CHAIN_ADVERSARIES,
+    S5_CHAIN_CHANCE_ROWS,
+    comm_shallow_accuracy,
+    s5_chain_floors,
+    strong_recency_accuracy,
+)
 
 N = 500
 
@@ -37,6 +53,14 @@ STRONG_REC_FAMILIES = ("binding", "composite")
 # entity-blind-sum / count-mod-k, factworld.validity.comm_shallow_accuracy); the MAX of the four
 # fills the strongrec-style column and folds into the verdict.
 COMM_FAMILIES = ("commutative",)
+
+# The pointer-map families get theirs (factworld.validity.s5_chain_floors); the MAX fills the
+# same column. DERIVED, not restated: the registered adversaries minus the chance rows, since
+# uniform and uniform-over-non-start are what a shortcut has to BEAT, not shortcuts. Registering
+# a new adversary in factworld.validity therefore reaches this column with no edit here, and a
+# row that cannot set a floor cannot enter the gate either.
+S5_CHAIN_FAMILIES = ("s5_chain", "chain")
+S5_CHAIN_SHORTCUTS = tuple(n for n in S5_CHAIN_ADVERSARIES if n not in S5_CHAIN_CHANCE_ROWS)
 
 
 def positional_pred(prompt: str, ans_type: str, which: str):
@@ -82,6 +106,14 @@ def main():
             # commutative rung: the strongest of the four dial-fold shallow adversaries.
             strongrec = max(comm_shallow_accuracy(test, spec.k_positions).values())
             ok &= strongrec < 0.5
+            srec_col = f"{strongrec:>10.3f}"
+        elif spec.family in S5_CHAIN_FAMILIES:
+            # pointer-map rung: the strongest registered shallow policy, gated against this
+            # task's own chance level. Rows the stream cannot support are absent, not zero
+            # (no events -> no chase, no references -> no ref resolution).
+            fl = s5_chain_floors(test, spec.k, has_events=(spec.family == "s5_chain"))
+            strongrec = max([fl[n] for n in S5_CHAIN_SHORTCUTS if n in fl], default=0.0)
+            ok &= strongrec < 2.0 * floor
             srec_col = f"{strongrec:>10.3f}"
         else:
             srec_col = f"{'—':>10}"

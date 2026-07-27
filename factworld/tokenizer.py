@@ -30,13 +30,14 @@ The vocabulary is the union of:
 (d) Structural / function tokens. These are derived *robustly* by rendering a
     probe of every statement type the renderer supports (``render_fact``;
     ``render_history`` with ``with_steps`` False AND True over an easy and a hard
-    chain; the pointer-map events ``swap_a0``/``cycle_a0``; the dial event and
-    assertion; ``render_query`` for families ``recall``/``state_easy``/
-    ``state_hard``/``state_comm`` with ``t=None`` AND ``t`` set) and collecting
-    every token that is NOT a content/step token. A fixed seed set of structural
-    words used by the corpus's role/holder assertion lines is additionally unioned
-    in so the vocab does not depend on which paraphrase slots a given seed happens
-    to select.
+    chain; the pointer-map events ``swap_a0``/``swap_a0_ref``/``cycle_a0``; the
+    dial event and assertion; ``render_query`` for families ``recall``/
+    ``state_easy``/``state_hard``/``state_comm`` with ``t=None`` AND ``t`` set) and
+    collecting every token that is NOT a content/step token. A fixed seed set of
+    structural words is additionally unioned in: it covers the paraphrase slots a
+    single probe may not select, and the compact event grammar, which
+    ``tasks._compact_a0_event`` emits without going through the renderer at all and
+    which the probe therefore cannot reach.
 
 Coverage: vocabulary, not encode-time normalisation
 ---------------------------------------------------
@@ -105,6 +106,12 @@ _STRUCTURAL_SEED = {
     # Amounts are bare digit tokens (1..k_positions-1); digits 0-9 cover k_positions <= 10.
     "turn", "turns", "dial", "dial?", "position", "click", "clicks", "click.", "clicks.",
     *(str(d) for d in range(10)),
+    # state-referencing pointer-map event (Renderer._SWAP_A0_REF, s5_chain conditional_rate):
+    # "s3 swaps the values of g4's a0 and the a0 of the agent whose a0 is currently g11."
+    # The renderer probe covers all three words, but the COMPACT grammar is emitted by
+    # tasks._compact_a0_event rather than by the renderer ("s3 swaps a0: g4 and whose a0 is
+    # g11."), and the probe cannot reach it; "whose" is the token the two forms share.
+    "agent", "whose", "currently",
 }
 
 
@@ -255,9 +262,14 @@ class Tokenizer:
         # cycle_a0 three. These carry the only tokens in the suite that glue punctuation
         # to the attribute name ("old a0," / "old a0.") plus "values"/"simultaneously:"/
         # "takes"/"old", none of which appear in any other statement type.
+        # swap_a0_ref is the state-referencing form (TaskSpec.conditional_rate): its second
+        # operand is a VALUE the running map holds, so the sentence carries a relative clause
+        # ("the agent whose a0 is currently g11") and with it the only occurrences of
+        # "agent"/"whose"/"currently" in the suite.
         if len(world.agents) >= 2:
             a, b = world.agents[0], world.agents[1]
             yield renderer.render_event(Event("swap_a0", (a, b)), step="s0")
+            yield renderer.render_event(Event("swap_a0_ref", (a, b)), step="s0")
         if len(world.agents) >= 3:
             a, b, c = world.agents[0], world.agents[1], world.agents[2]
             yield renderer.render_event(Event("cycle_a0", (a, b, c)), step="s0")
