@@ -10,7 +10,8 @@ breadth mirror; sections 16–23 log the issue-#11 v2 re-measures and the commut
 calibration (2026-07-10 → 07-11); sections 24–27 log the close-out cycle (2026-07-11 →
 07-12) — raised completion budgets for ⊘ cells, the qwen contract-phrasing diagnosis, the
 commutative roster adjudication, and the statistical-power checks; section 28 logs issue #11's
-last item, the MOPD binding re-pin (2026-07-12).
+last item, the MOPD binding re-pin (2026-07-12); section 29 logs the system-prompt probe behind
+the benchmark's engagement mark (2026-07-27).
 
 ## 1. Dense-vs-sparse state supervision (the s5 deficit) — `experiment_dense_supervision.py`
 
@@ -749,3 +750,42 @@ teacher effect on binding (norm 1.01–1.14 every seed) holds against 150-step t
 flattens to parity (0.97/0.99) against 300-step teachers — teacher-strength-dependent. Data:
 `results/mopd_v2/` (stage logs, tables, pipeline log);
 `experiments/mopd/{hf_teachers,hf_mopd,hf_evaluate,hf_seeds,bench_qwen}.md`.
+
+## 29. Harness system prompt vs reasoning engagement — `probe_sol_system_prompt_20260727.py`
+
+gpt-5.6-sol's published `s5_chain` row is its engagement rate rather than its accuracy: per-call
+completion spend is bimodal with a literal gap (no call between 294 and 1,136 tokens across the
+300 archived `s5_chain_v3` calls), match conditional on working is 191/191, and 42/42 of its
+wrong answers are the 8-hop dereference of the INITIAL pointer map — it answers the `chain` task
+and skips the event stream. Whether that gate belongs to the model or to the harness is testable:
+every scored thinking cell carries `run_frontier_benchmark.BASE_SYSTEM_PROMPT`, two of whose
+clauses ("a short test", "no explanation") read as instructions to spend less effort. Three arms
+on the identical deterministic items (`s5_chain_v3` @L64, n=25, effort xhigh, Responses endpoint,
+49,152-token budget) differ only in that prompt; engaged = ctok ≥ 500, which sits in an empty
+region (disengaged calls run 86–258 tokens, engaged calls start at 2,078).
+
+| arm | system prompt | match | containment | engaged | match \| engaged | initial-map | ctok/call |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| canonical | `BASE_SYSTEM_PROMPT` verbatim | 0.68 | 0.68 | 0.68 | 1.00 | 0.36 | 3128 |
+| none | (no system prompt) | 0.84 | 0.88 | 0.96 | 0.88 | 0.08 | 5942 |
+| neutral | same answer contract, two clauses dropped | **0.96** | 0.96 | 0.96 | 1.00 | 0.08 | 4086 |
+
+The pre-registered rule was that engagement rising by ≥ ~0.2 on `none`/`neutral` makes the scored
+thinking regime a measurement under an anti-thinking instruction, and flat engagement makes the
+gate endogenous to the model. Engagement rose 0.68 → 0.96. Per item, 8 of 25 were disengaged
+under the canonical prompt and 7 of those 8 were worked under the neutral prompt; disengaged
+accuracy is 0 in every arm. The `none` arm engages as often as `neutral` and all 24 of its
+engaged calls carry the gold value, but three commit it in LaTeX (`**Answer: \(g15\)**`,
+`\boxed{g0}`) that `committed_answer` does not read — the answer contract is what makes the
+emission parseable, and the two clauses are what suppress the work. The canonical arm's 0.68
+sits inside the run-to-run spread of the three archived L64 batches (0.60/0.64/0.84), so the
+arms are read against a reproduction of the published cell.
+
+**Finding:** the engagement gate is elicited by the instrument, not only by the model — dropping
+"a short test" and "no explanation" while holding the answer-format contract fixed moves the same
+25 items from 0.68 to 0.96 and the initial-map rate from 0.36 to 0.08. Scope is one model, one
+length, n=25, and the probe measures nothing about the other twelve roster models. One consequence
+does reach the rest of the benchmark: every scored thinking cell carries this system prompt, so
+the completion-token columns price spend under an instruction to answer without explanation. The
+arms are off-protocol (a different system prompt is a different measurement) and are therefore not
+in `history.jsonl`. Data: `results/probes/sol_system_prompt_20260727.json` ($9.87 completion spend).
