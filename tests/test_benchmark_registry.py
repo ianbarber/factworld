@@ -6,6 +6,10 @@ s5_concrete mid-band, chain_nowrap staircase, sanity), stable settings_hash
 Runner: FunctionBackend-driven mini-runs of ``execute_cell`` writing C3-conformant
 records (per-example ctok/rtok/finish, contract diagnostics, finish=length
 escalation) to a tmp history file (no API), plus the resume-key round trip.
+Provenance: the resolved system prompt is fingerprinted into the resume key
+(sentinel-dropped at the canonical texts, so no already-run cell is invalidated),
+and the resolved vendor request — effort string, endpoint, base URL, model name —
+is recorded per cell without being keyed.
 
 Run directly:  .venv-api/bin/python tests/test_benchmark_registry.py
 Run with pytest: .venv-api/bin/python -m pytest tests/test_benchmark_registry.py
@@ -254,6 +258,120 @@ def test_settings_hash_breadth_and_k_fixed_sentinels():
     assert B.settings_hash({"settings": {**chain["settings"], "k_fixed": 257}}) != hc
 
 
+def test_canonical_system_prompt_fingerprints_pin_the_live_prompts():
+    """The frozen sentinel set must be exactly the prompts the planned cells
+    resolve to.
+
+    This is the tripwire for the system-prompt axis. The prompt is a measured
+    protocol parameter — on identical s5_chain_v3 L64 items, dropping the "short
+    test"/"no explanation" clauses moved gpt-5.6-sol from 0.68 to 0.96 match — so
+    an edit to any scored prompt is a re-measurement. If this test fails because a
+    prompt text changed, do NOT add the new fingerprint to
+    CANONICAL_SYSTEM_PROMPT_FINGERPRINTS: leaving it out is exactly what gives the
+    affected cells fresh resume keys instead of resuming against measurements taken
+    under the old text. Only a genuinely new prompt for a new facet (no history to
+    protect) is added."""
+    live = {}
+    for slug in B.MODELS:
+        for cell in B.arms_for(slug):
+            sp = RFB.system_prompt_for(cell)
+            live.setdefault(B.system_prompt_fingerprint(sp), sp)
+    assert set(live) == set(B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS), (
+        "the planned cells' system prompts no longer match the frozen sentinel set; "
+        "an edited prompt is a different measurement regime — see the docstring")
+    # the three texts, pinned by content so a silent rewording cannot pass
+    assert live["60766724c1"] == RFB.BASE_SYSTEM_PROMPT
+    assert live["8b02734258"].startswith(RFB.BASE_SYSTEM_PROMPT)
+    assert "g3 v9" in live["8b02734258"]          # composite two-token format leg
+    assert "Driver" in live["27d71cb774"]         # s5_concrete "concrete" framing
+    # the probe's canonical arm is the prompt every scored thinking cell carries
+    s5_chain = next(c for c in B.arms_for("openai/gpt-5.6-sol")
+                    if c["facet"] == "s5_chain")
+    assert RFB.system_prompt_for(s5_chain) == RFB.BASE_SYSTEM_PROMPT
+
+
+def test_settings_hash_system_prompt_sentinel():
+    """The resolved system prompt is SENTINEL-DROPPED at the canonical texts:
+    canonical-prompt cells hash exactly like the pre-stamp history (both with the
+    key absent and with a canonical fingerprint explicitly recorded), while any
+    other prompt hashes distinctly — including after a JSON round trip through
+    history.jsonl."""
+    cell = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "s5_chain")
+    h = B.settings_hash(cell)
+    assert "system_prompt_fp" not in cell["settings"]
+
+    # direction 1: canonical prompt -> key omitted, hash unchanged
+    canonical = B.with_system_prompt(cell["settings"], RFB.BASE_SYSTEM_PROMPT)
+    assert canonical == cell["settings"]
+    assert B.settings_hash({"settings": canonical}) == h
+    # a record that explicitly carries a canonical fingerprint still hashes the same
+    for fp in B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS:
+        assert B.settings_hash(
+            {"settings": {**cell["settings"], "system_prompt_fp": fp}}) == h
+    assert B.settings_hash(
+        {"settings": {**cell["settings"], "system_prompt_fp": None}}) == h
+
+    # direction 2: the probe's neutral prompt (same answer contract, the two
+    # effort-suppressing clauses removed) is a different regime -> distinct hash
+    neutral = ("Answer the question with only the requested value or values. "
+               "Use the same spelling as in the question.")
+    fp = B.system_prompt_fingerprint(neutral)
+    assert fp not in B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS
+    edited = B.with_system_prompt(cell["settings"], neutral)
+    assert edited["system_prompt_fp"] == fp
+    h2 = B.settings_hash({"settings": edited})
+    assert h2 != h
+    # ...and the empty prompt is a third regime again
+    assert B.settings_hash({"settings": B.with_system_prompt(cell["settings"], "")}) \
+        not in (h, h2)
+    # JSON round trip (how history_keys recomputes the hash) preserves both
+    assert B.settings_hash({"settings": json.loads(json.dumps(edited))}) == h2
+    assert B.settings_hash({"settings": json.loads(json.dumps(canonical))}) == h
+    # stamping is idempotent: re-resolving to a canonical prompt clears a stale key
+    assert "system_prompt_fp" not in B.with_system_prompt(edited, RFB.BASE_SYSTEM_PROMPT)
+
+
+def test_build_plan_stamps_the_resolved_system_prompt():
+    """The runner stamps every cell with the fingerprint of the prompt it resolves
+    to. Under the canonical prompts the settings and resume keys are byte-identical
+    to arms_for (no paid cell is invalidated); under an edited prompt every cell
+    gets a fresh key, so canonical history no longer satisfies resume."""
+    from unittest import mock
+    model = "z-ai/glm-5.2"
+    planned = RFB.build_plan([model], None, 1.0)[model]
+    raw = B.arms_for(model)
+    assert len(planned) == len(raw)
+    for p, r in zip(planned, raw):
+        assert set(p["settings"]) == SETTINGS_KEYS  # no key at canonical prompts
+        assert p["settings"] == r["settings"]
+        assert RFB.cell_key(model, p) == RFB.cell_key(model, r)
+
+    neutral = ("Answer the question with only the requested value or values. "
+               "Use the same spelling as in the question.")
+    with mock.patch.object(RFB, "BASE_SYSTEM_PROMPT", neutral):
+        edited = RFB.build_plan([model], ["s5_chain"], 1.0)[model]
+    fp = B.system_prompt_fingerprint(neutral)
+    assert edited and all(c["settings"]["system_prompt_fp"] == fp for c in edited)
+    canonical_chain = [c for c in planned if c["facet"] == "s5_chain"]
+    assert {RFB.cell_key(model, c) for c in edited}.isdisjoint(
+        {RFB.cell_key(model, c) for c in canonical_chain})
+
+    # the resume consequence: a canonical record does NOT satisfy an edited cell
+    with tempfile.TemporaryDirectory() as tmp:
+        history = os.path.join(tmp, "history.jsonl")
+        rec = RFB.execute_cell(
+            FunctionBackend(lambda ps, m, s: ["g3 ."] * len(ps), name="f"),
+            model, {**canonical_chain[0], "n": 5}, n=5, run_id="t", git_commit="d")
+        assert "system_prompt_fp" not in rec["settings"]
+        RFB.append_record(history, rec)
+        done = RFB.history_keys(history)
+        assert RFB.should_skip(model, {**canonical_chain[0], "n": 5}, done,
+                               force=False, canary=False)
+        edited_cell = {**edited[0], "n": 5}
+        assert edited_cell["length"] == canonical_chain[0]["length"]
+        assert not RFB.should_skip(model, edited_cell, done, force=False, canary=False)
+
+
 def test_plan_has_no_rung_keys_and_facet_breadths_expand():
     """No current facet sets breadths/k_fixed, so every planned cell's settings
     are exactly the pre-breadth C3 keys (the --dry-run 0-cells acceptance rests
@@ -400,6 +518,165 @@ def test_build_backend_direct_endpoint():
     assert be2.extra_body["provider"]["quantizations"] == ["fp8", "bf16", "fp16"]
 
 
+def test_resolved_request_params_records_what_was_sent():
+    """settings.effort is the PROTOCOL arm; the registry maps it to a vendor value,
+    and that mapping has changed under a fixed arm name (gpt-5.6-sol's archived
+    s5_chain_v3 batches all record "xhigh" but ran chat completions at xhigh, the
+    Responses endpoint at max, and the Responses endpoint at xhigh). The resolution
+    is recorded per cell; it is NOT part of the resume key."""
+    from unittest import mock
+    sol_cell = next(c for c in B.arms_for("openai/gpt-5.6-sol")
+                    if c["facet"] == "s5_chain")
+    req = RFB.resolved_request_params("openai/gpt-5.6-sol", sol_cell)
+    assert req == {
+        "endpoint": "responses",
+        "base_url": "https://api.openai.com/v1",
+        "model_name": "gpt-5.6-sol",          # the literal string sent, no prefix
+        "effort_arm": "xhigh",
+        "reasoning_effort": "xhigh",          # the vendor value
+        "reasoning_extra_body": None,         # this endpoint rejects the block
+    }
+
+    # the exact drift the archive cannot resolve: same protocol arm, "max" sent
+    sol_max = {**B.MODELS["openai/gpt-5.6-sol"],
+               "reasoning_effort_values": {"low": "low", "medium": "medium",
+                                           "high": "high", "xhigh": "max",
+                                           "max": "max"}}
+    key_before = RFB.cell_key("openai/gpt-5.6-sol", sol_cell)
+    with mock.patch.dict(B.MODELS, {"openai/gpt-5.6-sol": sol_max}):
+        drifted = RFB.resolved_request_params("openai/gpt-5.6-sol", sol_cell)
+        # captured UNDER the patched mapping: the key must not read the resolution
+        key_under_new_mapping = RFB.cell_key("openai/gpt-5.6-sol", sol_cell)
+    assert drifted["reasoning_effort"] == "max"
+    assert drifted != req
+    # the resolution is diagnostics, not settings — the resume key is the protocol
+    # cell, so the mapping change does not re-buy the roster.
+    assert key_under_new_mapping == key_before
+    assert "reasoning_effort" not in sol_cell["settings"]
+
+    # OpenRouter models carry the effort in the extra body, not the top-level param
+    glm_cell = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "s5_chain")
+    glm = RFB.resolved_request_params("z-ai/glm-5.2", glm_cell)
+    assert glm["endpoint"] == "chat_completions"
+    assert glm["base_url"] == B.DEFAULT_BASE_URL
+    assert glm["model_name"] == "z-ai/glm-5.2"      # no model_name override
+    assert glm["reasoning_extra_body"] == {"effort": "xhigh"}
+    assert glm["reasoning_effort"] is None
+    # a --base-url mirror is recorded as the endpoint actually used
+    assert RFB.resolved_request_params(
+        "z-ai/glm-5.2", glm_cell, default_base_url="http://mirror:8080/v1"
+    )["base_url"] == "http://mirror:8080/v1"
+
+    # gemini's substituted off-arm is recorded as the value actually sent
+    gem = next(c for c in B.arms_for("google/gemini-3.6-flash")
+               if c["facet"] == "sanity")
+    assert RFB.resolved_request_params("google/gemini-3.6-flash", gem)[
+        "reasoning_extra_body"] == {"effort": "minimal"}
+    # muse-spark: direct Meta endpoint, Responses API
+    muse = next(c for c in B.arms_for("muse-spark-1.1") if c["facet"] == "s5_chain")
+    mreq = RFB.resolved_request_params("muse-spark-1.1", muse)
+    assert (mreq["endpoint"], mreq["base_url"]) == ("responses",
+                                                    "https://api.meta.ai/v1")
+
+
+def test_build_backend_matches_resolved_request_params():
+    """build_backend builds FROM resolved_request_params and carries it on the
+    backend, so what is recorded is what was sent."""
+    from unittest import mock
+    glm_cell = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "s5_chain")
+    be = RFB.build_backend("z-ai/glm-5.2", glm_cell, api_key="or-key",
+                           base_url=B.DEFAULT_BASE_URL, max_workers=2)
+    req = RFB.resolved_request_params("z-ai/glm-5.2", glm_cell)
+    assert be.request_params == req
+    assert be.extra_body["reasoning"] == req["reasoning_extra_body"]
+    assert be.reasoning_effort == req["reasoning_effort"]
+    assert be.model_name == req["model_name"]
+    assert str(be.client.base_url).rstrip("/") == req["base_url"]
+
+    sol_cell = next(c for c in B.arms_for("openai/gpt-5.6-sol")
+                    if c["facet"] == "s5_chain")
+    with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        be2 = RFB.build_backend("openai/gpt-5.6-sol", sol_cell, api_key="or-key",
+                                base_url=B.DEFAULT_BASE_URL, max_workers=2)
+    req2 = RFB.resolved_request_params("openai/gpt-5.6-sol", sol_cell)
+    assert isinstance(be2, RFB.ResponsesBackend)
+    assert be2.request_params == req2
+    assert be2.reasoning_effort == "xhigh"
+    assert be2.model_name == "gpt-5.6-sol"
+    assert "reasoning" not in (be2.extra_body or {})
+
+
+def test_execute_cell_records_request_diagnostics():
+    """The record carries the resolution under diagnostics.request (a copy, once
+    per cell), and history_request_params/request_drift surface a resume hit whose
+    LATEST record was made under a different resolution than the run would send
+    now — superseded resolutions are history, not a live mismatch."""
+    model = "openai/gpt-5.6-sol"
+    cell = next(c for c in B.arms_for(model) if c["facet"] == "s5_chain")
+    cell["n"] = 5
+    backend = _MetaBackend([{"finish": "stop", "ctok": 20, "rtok": 8, "text": "g3 ."}])
+    # the archived regime: same protocol arm, the Responses endpoint at "max"
+    backend.request_params = {**RFB.resolved_request_params(model, cell),
+                              "reasoning_effort": "max"}
+    rec = RFB.execute_cell(backend, model, cell, n=5, run_id="t", git_commit="d")
+    assert rec["diagnostics"]["request"]["reasoning_effort"] == "max"
+    assert rec["diagnostics"]["request"]["endpoint"] == "responses"
+    assert rec["diagnostics"]["request"]["model_name"] == "gpt-5.6-sol"
+    assert rec["settings"]["effort"] == "xhigh"   # the PROTOCOL arm, as recorded
+    _validate_c3(rec, cell, model)
+    # a copy, not the backend's dict
+    backend.request_params["reasoning_effort"] = "mutated"
+    assert rec["diagnostics"]["request"]["reasoning_effort"] == "max"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        history = os.path.join(tmp, "history.jsonl")
+        RFB.append_record(history, rec)
+        done = RFB.history_keys(history)
+        recorded = RFB.history_request_params(history)
+        # the record still satisfies resume (the resume key is the protocol cell)...
+        assert RFB.should_skip(model, cell, done, force=False, canary=False)
+        # ...but the mixing is not silent: the live registry resolves xhigh -> xhigh
+        drift = RFB.request_drift(model, cell, recorded, B.DEFAULT_BASE_URL)
+        assert drift["reasoning_effort"] == "max"
+
+        # a LATER record made under the current resolution supersedes it: the
+        # renderer publishes the latest, so the warning clears instead of firing
+        # forever on a resolution the archive has already moved past.
+        backend2 = _MetaBackend([{"finish": "stop", "ctok": 20, "rtok": 8,
+                                  "text": "g3 ."}])
+        backend2.request_params = RFB.resolved_request_params(model, cell)
+        rec2 = RFB.execute_cell(backend2, model, cell, n=5, run_id="t2",
+                                git_commit="d")
+        assert rec2["ts"] > rec["ts"]
+        RFB.append_record(history, rec2)
+        recorded2 = RFB.history_request_params(history)
+        assert recorded2[RFB.cell_key(model, cell)] == backend2.request_params
+        assert RFB.request_drift(model, cell, recorded2, B.DEFAULT_BASE_URL) is None
+
+        # latest is by ts, not by file position: an OLDER drifted record appended
+        # last does not resurrect the warning
+        stale = {**rec, "run_id": "t0", "ts": "2000-01-01T00:00:00+00:00"}
+        RFB.append_record(history, stale)
+        assert RFB.request_drift(model, cell,
+                                 RFB.history_request_params(history),
+                                 B.DEFAULT_BASE_URL) is None
+        # ...while a NEWER drifted record does
+        fresh = {**rec, "run_id": "t3", "ts": "2099-01-01T00:00:00+00:00"}
+        RFB.append_record(history, fresh)
+        assert RFB.request_drift(model, cell,
+                                 RFB.history_request_params(history),
+                                 B.DEFAULT_BASE_URL)["reasoning_effort"] == "max"
+
+    # backends that resolve no vendor request (the FunctionBackend path) omit it
+    plain = RFB.execute_cell(
+        FunctionBackend(lambda ps, m, s: ["g3 ."] * len(ps), name="f"),
+        model, cell, n=5, run_id="t", git_commit="d")
+    assert "request" not in plain["diagnostics"]
+    _validate_c3(plain, cell, model)
+    assert RFB.history_request_params(os.path.join(tempfile.gettempdir(),
+                                                   "factworld-no-such-history")) == {}
+
+
 def test_cost_estimate_sane():
     glm_cells = [_runnable(c) for c in B.arms_for("z-ai/glm-5.2")]
     est = B.cost_estimate("z-ai/glm-5.2", glm_cells)
@@ -458,6 +735,11 @@ def _validate_c3(rec, cell, model):
     assert rec["metrics"]["relaxed"] is not None  # relaxed is ALWAYS present
     diag_keys = {"empty_rate", "truncated_rate", "api_errors", "finish_errors",
                  "finish_reasons", "cost_aborted"}
+    if "request" in rec["diagnostics"]:
+        # what was actually sent (vendor effort, endpoint, base URL, model name):
+        # present whenever the backend came from build_backend, absent on the
+        # FunctionBackend test path, which resolves no vendor request at all.
+        diag_keys |= {"request"}
     if rec["diagnostics"]["cost_aborted"]:
         diag_keys |= {"calls_completed", "cost_abort_reason"}
     if rec["settings"]["contract"]:
@@ -1217,10 +1499,17 @@ if __name__ == "__main__":
                test_gemini_off_arm_is_minimal, test_settings_hash_stable,
                test_settings_hash_contract_flag_compat,
                test_settings_hash_breadth_and_k_fixed_sentinels,
+               test_canonical_system_prompt_fingerprints_pin_the_live_prompts,
+               test_settings_hash_system_prompt_sentinel,
+               test_build_plan_stamps_the_resolved_system_prompt,
                test_plan_has_no_rung_keys_and_facet_breadths_expand,
                test_prompt_tokens_est_breadth_and_k_fixed,
                test_cell_dollar_cap, test_endpoint_for_defaults_and_direct_entry,
-               test_build_backend_direct_endpoint, test_cost_estimate_sane,
+               test_build_backend_direct_endpoint,
+               test_resolved_request_params_records_what_was_sent,
+               test_build_backend_matches_resolved_request_params,
+               test_execute_cell_records_request_diagnostics,
+               test_cost_estimate_sane,
                test_extract_contract_answer, test_execute_cell_end_to_end,
                test_zero_budget_contract_scoring, test_binding_leg_rejects_holder_dump,
                test_escalation_on_length_cutoff, test_escalation_iterates_to_2048,

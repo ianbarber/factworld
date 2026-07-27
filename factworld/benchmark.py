@@ -13,6 +13,10 @@ This module is the single source of truth for WHAT the recurring benchmark runs:
     is built against — per-model direct endpoints (the muse-spark slot),
     defaulting to OpenRouter + OPENROUTER_API_KEY.
   - ``settings_hash(cell)``: stable resume key for a cell's settings.
+  - ``with_system_prompt(settings, text)``: stamp a cell's RESOLVED system prompt
+    into its settings as a fingerprint, sentinel-dropped at the canonical prompts
+    (the system prompt is part of what a cell measures — see
+    CANONICAL_SYSTEM_PROMPT_FINGERPRINTS).
   - ``cost_estimate(model_slug, cells)``: price a cell plan before running it.
   - ``spec_for_cell(task, length, breadth, k_fixed)``: the TaskSpec a cell runs —
     the v3 working-set-breadth rungs (settings["breadth"]: scaled(k=2*B,
@@ -66,6 +70,41 @@ COVERT_COT_CTOK_THRESHOLD = 350
 # the key is SENTINEL-DROPPED at B=16 (omitted from settings, ignored by
 # settings_hash) so every pre-breadth history record's resume key is unchanged.
 CANONICAL_BREADTH = 16
+# System-prompt axis. The system prompt is not a knob the plan chooses — the runner
+# derives it per cell from the facet/task/leg (run_frontier_benchmark.
+# system_prompt_for) off a small set of fixed texts. It is nonetheless part of what
+# a cell measures: on identical s5_chain_v3 L64 items (n=25, effort xhigh, same
+# endpoint and budget), removing two clauses of the base prompt that read as
+# instructions to spend less effort — "You are taking a short test" and "no
+# explanation" — while keeping the identical answer-format contract moved
+# gpt-5.6-sol from 0.68 to 0.96 match, and dropped the rate of answers that
+# dereference the initial map while ignoring the event stream from 0.33 to 0.04
+# (results/probes/sol_system_prompt_20260727.json). That measurement is one model,
+# one length, n=25 — it bounds nothing about the rest of the roster.
+#
+# An edit to a scored system prompt is therefore a change of measurement regime,
+# and the resume key tracks it. The runner stamps each cell with
+# settings["system_prompt_fp"] = the fingerprint of the RESOLVED prompt; the key is
+# SENTINEL-DROPPED at the fingerprints below (both from the settings dict and from
+# settings_hash) exactly like ``breadth`` at CANONICAL_BREADTH, so every cell
+# already in history keeps a byte-identical resume key and no paid cell is
+# invalidated, while any other prompt hashes distinctly and re-runs.
+#
+# The set is the three texts the instrument is defined against; every planned cell
+# resolves to one of them:
+#   60766724c1  the base test prompt — s5_chain, chain_nowrap, commutative,
+#               recall_load, chain_instant, sanity, and the holder-only binding legs
+#   8b02734258  the base prompt + the composite two-token format instruction
+#   27d71cb774  the s5_concrete "concrete" framing prompt
+# These are LITERALS on purpose: deriving them from the live text would move the
+# sentinel with any edit and defeat the check. tests/test_benchmark_registry.py
+# pins the live resolved prompts to them, so an edit fails loudly. An edited
+# version of an existing prompt must NOT be added here — leaving it out is what
+# gives the re-measured cells fresh resume keys. Only a genuinely new prompt for a
+# new facet (which has no history to protect) is added, with a comment.
+CANONICAL_SYSTEM_PROMPT_FINGERPRINTS = frozenset({
+    "60766724c1", "8b02734258", "27d71cb774",
+})
 # Per-cell DOLLAR cap (in addition to the token-based CostGuard): the token guard
 # alone permits CELL_BUDGET_FACTOR (3x) a cell's nominal completion budget, which
 # on a frontier thinking cell (e.g. 32768 tokens x n=25 x 3 on opus) is ~$61. For
@@ -552,6 +591,28 @@ def arms_for(model_slug: str) -> list[dict]:
     return cells
 
 
+def system_prompt_fingerprint(text: str) -> str:
+    """10-hex-char fingerprint of a resolved system prompt (same digest shape as
+    ``settings_hash``)."""
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:10]
+
+
+def with_system_prompt(settings: dict, system_prompt: str) -> dict:
+    """``settings`` carrying the fingerprint of the cell's RESOLVED system prompt.
+
+    SENTINEL-DROPPED at the canonical prompts: when the resolved text is one of
+    CANONICAL_SYSTEM_PROMPT_FINGERPRINTS the key is omitted entirely, so a
+    canonical run's settings — and the history record built from them — stay
+    byte-identical to every cell already in history and the resume key is
+    unchanged. Any other prompt carries ``system_prompt_fp``, which
+    ``settings_hash`` keys on, so the re-measured cells get fresh keys and run.
+    """
+    fp = system_prompt_fingerprint(system_prompt)
+    if fp in CANONICAL_SYSTEM_PROMPT_FINGERPRINTS:
+        return {k: v for k, v in settings.items() if k != "system_prompt_fp"}
+    return {**settings, "system_prompt_fp": fp}
+
+
 def settings_hash(cell: dict) -> str:
     """Stable 10-hex-char hash of a cell's settings (the resume key component).
 
@@ -572,11 +633,16 @@ def settings_hash(cell: dict) -> str:
         drop would not cover it, hence the explicit sentinel.
       - a falsy ``k_fixed``: staircase chain cells (k=2d+1) keep their keys; a
         fixed-k chain cell (``k_fixed: 257``) hashes distinctly.
+      - ``system_prompt_fp`` at one of CANONICAL_SYSTEM_PROMPT_FINGERPRINTS: the
+        system prompt materially changes what a cell measures, so an edited prompt
+        must produce a fresh key — but every cell in history was measured under a
+        canonical prompt, so those fingerprints drop out and their keys stand.
     """
     _drop = {
         "contract": lambda v: not v,
         "breadth": lambda v: not v or v == CANONICAL_BREADTH,
         "k_fixed": lambda v: not v,
+        "system_prompt_fp": lambda v: not v or v in CANONICAL_SYSTEM_PROMPT_FINGERPRINTS,
     }
     settings = {k: v for k, v in cell["settings"].items()
                 if k not in _drop or not _drop[k](v)}

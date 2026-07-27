@@ -63,6 +63,17 @@ Protocol rules:
   - finish_reason=="error" calls are counted into diagnostics.finish_errors
     (distinct from api_errors, the exception-path count — review F8 found 12
     finish=error calls invisible at api_errors=0) and warned about loudly.
+  - The system prompt is a MEASURED protocol parameter, not scaffolding (see
+    BASE_SYSTEM_PROMPT): every cell is stamped with the fingerprint of the prompt
+    it resolves to, sentinel-dropped at the canonical texts, so editing a prompt
+    gives its cells fresh resume keys instead of silently mixing regimes.
+  - Each record carries diagnostics.request — the vendor effort string actually
+    sent, the endpoint kind, the base URL and the literal model name. settings.
+    effort is the PROTOCOL arm ("xhigh"), and the registry mapping it resolves to
+    has changed under that fixed name. Not part of the resume key (see
+    resolved_request_params); a resume hit whose LATEST record was made under a
+    different resolution than the current one is warned about before the run
+    proceeds.
 
 Examples:
     set -a; source .env; set +a
@@ -102,6 +113,7 @@ from factworld.benchmark import (
     CELL_BUDGET_FACTOR,
     COVERT_COT_CTOK_THRESHOLD,
     DEFAULT_API_KEY_ENV,
+    DEFAULT_BASE_URL,
     FACETS,
     MODELS,
     REASONING_EFFORTS,
@@ -111,6 +123,7 @@ from factworld.benchmark import (
     endpoint_for,
     settings_hash,
     spec_for_cell,
+    with_system_prompt,
 )
 from factworld.render import Renderer
 from factworld.runner import evaluate_task
@@ -129,6 +142,20 @@ from experiment_autoregressive import binding_prompt, scaffold_prompt  # noqa: E
 # holder-name instruction folded into it, which leaks the two-token answer format into
 # single-answer tasks (models then answer 'g5 v37' on recall/conflict and score 0 on the
 # canonical relaxed prefix match).
+#
+# This text is a MEASURED protocol parameter, not neutral scaffolding: on identical
+# s5_chain_v3 L64 items (n=25, effort xhigh, same endpoint and 49,152-token budget),
+# an arm that keeps this answer-format contract but drops "You are taking a short
+# test" and "no explanation" scored gpt-5.6-sol 0.96 against 0.68 here, with the
+# event-blind rate falling from 0.36 to 0.08 (results/probes/
+# sol_system_prompt_20260727.json; one model, one length, n=25). Every scored
+# thinking cell carries this text, or the s5_concrete framing prompt that opens
+# with the same two clauses, so the benchmark's completion-token column is
+# measured under an instruction to be brief.
+# Editing it is a re-measurement: benchmark.with_system_prompt fingerprints the
+# resolved prompt into each cell's settings and the fingerprint is sentinel-dropped
+# only at benchmark.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS, so an edit gives every
+# cell a fresh resume key rather than silently mixing regimes in one table.
 BASE_SYSTEM_PROMPT = (
     "You are taking a short test. Answer each question with only the requested "
     "value or values, no explanation. Use the same spelling as in the question."
@@ -346,6 +373,61 @@ def history_keys(history_path: str) -> set[tuple]:
     return keys
 
 
+def history_request_params(history_path: str) -> dict[tuple, dict]:
+    """{cell key -> the ``diagnostics.request`` block of the LATEST record at it}.
+
+    A resume key identifies the PROTOCOL cell, not the vendor mapping, so one key
+    can carry records made under different resolutions: gpt-5.6-sol's archived
+    s5_chain_v3 batches all record effort "xhigh" but ran chat completions at
+    xhigh, then the Responses endpoint at max, then the Responses endpoint at
+    xhigh. The renderer publishes the latest record per cell, so the latest is the
+    one ``main`` compares the resolution a run would use now against; a superseded
+    resolution is history, not a live mismatch. Latest is by ``ts`` (every record
+    stamps UTC ISO-8601, so string order is chronological), ties going to the later
+    line. Records written before diagnostics.request existed contribute nothing —
+    their resolution is not recoverable — so a key whose newest records lack the
+    block resolves to the newest one that carries it.
+    """
+    if not os.path.exists(history_path):
+        return {}
+    latest: dict[tuple, tuple[str, dict]] = {}
+    with open(history_path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue  # tolerate a torn tail line from a crashed run
+            req = (rec.get("diagnostics") or {}).get("request")
+            if not req:
+                continue
+            key = (rec.get("model"), rec.get("facet"), rec.get("task"),
+                   rec.get("length"), rec.get("n"),
+                   settings_hash({"settings": rec.get("settings") or {}}),
+                   rec.get("stream_version") or rec.get("suite_version"))
+            ts = rec.get("ts") or ""
+            prev = latest.get(key)
+            if prev is None or ts >= prev[0]:
+                latest[key] = (ts, req)
+    return {k: req for k, (_ts, req) in latest.items()}
+
+
+def request_drift(model: str, cell: dict, recorded: dict[tuple, dict],
+                  base_url: str) -> dict | None:
+    """The resolution of the LATEST record at this cell's resume key when it differs
+    from the one a run would send now (None when history carries none, or it matches).
+
+    The comparison is against the latest record, not every recorded resolution: the
+    renderer publishes the latest, so a re-measurement under the current mapping
+    clears the warning that the batch it superseded raised.
+    """
+    now = resolved_request_params(model, cell, default_base_url=base_url)
+    was = recorded.get(cell_key(model, cell))
+    return was if was is not None and was != now else None
+
+
 def should_skip(model: str, cell: dict, done: set[tuple], force: bool, canary: bool) -> bool:
     if force:
         return False
@@ -397,6 +479,14 @@ def build_plan(models: list[str], facets: list[str] | None, n_scale: float,
     s5_chain high-vs-xhigh check). Effort is part of the settings hash, so
     overridden cells get fresh resume keys, and renderer surfaces that pin
     their facet's canonical arm never read them.
+
+    Every cell is stamped with the fingerprint of the system prompt it RESOLVES
+    to (``system_prompt_for`` -> ``benchmark.with_system_prompt``). Under the
+    canonical prompts the key is sentinel-dropped, so the settings and the resume
+    key are byte-identical to the pre-stamp plan; an edited prompt carries the
+    fingerprint into the settings hash, so the cells re-run instead of resuming
+    against measurements taken under the old text. This is the plan-time stamp,
+    and the record copies ``cell["settings"]`` verbatim, so plan and record agree.
     """
     plan = {}
     for model in models:
@@ -411,14 +501,73 @@ def build_plan(models: list[str], facets: list[str] | None, n_scale: float,
                     c["settings"]["max_new_tokens"] = override
             if effort_override and c["settings"].get("effort") in REASONING_EFFORTS:
                 c["settings"]["effort"] = effort_override
+            c["settings"] = with_system_prompt(c["settings"], system_prompt_for(c))
         plan[model] = cells
     return plan
 
 
 # --- backend construction -----------------------------------------------------------
 
+def resolved_request_params(model: str, cell: dict,
+                            default_base_url: str = DEFAULT_BASE_URL) -> dict:
+    """What this cell actually sends to the vendor, resolved from the registry.
+
+    ``settings["effort"]`` is the PROTOCOL arm ("xhigh"), not the vendor value the
+    registry maps it to, and that mapping has changed under a fixed arm name:
+    gpt-5.6-sol's three archived s5_chain_v3 batches all record effort "xhigh" but
+    ran against different endpoints and different resolved efforts (its L64 cells
+    read 0.60 / 0.64 / 0.84). The records' ``git_commit`` is the committed HEAD at
+    run start, not the working tree, so it does not disambiguate them.
+
+    This returns the resolution — the vendor effort string, which parameter carried
+    it, the endpoint kind, the base URL and the literal model name — and is the
+    single source of truth ``build_backend`` builds from, so what is recorded is
+    what was sent.
+
+    The resolution is diagnostics, not settings: the resume key answers "has this
+    PROTOCOL cell been measured?", these fields answer "what did the vendor
+    receive?" — provenance of a measurement, not its identity. Recording it makes
+    batches taken under different resolutions distinguishable in the archive, and
+    ``main`` warns when a resume hit's LATEST record — the one the renderer
+    publishes — carries a resolution other than the one the run would send.
+
+    What this does NOT cover: a re-measurement at a changed vendor resolution
+    carries the SAME resume key as the batch before it. It resumes (after that
+    warning), or under --force appends to the same published cell, where the
+    renderer's latest-ts dedup shows the newer record in place of the older one.
+    Separating them into two cells would take a settings key — one sentinel-dropped
+    at the current resolution, as ``breadth`` and ``system_prompt_fp`` are, which
+    leaves every archived key standing and gives fresh keys only after a later
+    mapping change.
+    """
+    reg = MODELS[model]
+    base_url, _key_env = endpoint_for(model, default_base_url=default_base_url)
+    effort = cell["settings"]["effort"]
+    reasoning_extra_body = None   # OpenRouter-style {"reasoning": {"effort": ...}}
+    reasoning_effort = None       # top-level vendor parameter (direct endpoints)
+    if effort is not None:
+        if reg.get("supports_reasoning_effort", True):
+            reasoning_extra_body = {"effort": effort}
+        rev = reg.get("reasoning_effort_values")
+        if rev:
+            reasoning_effort = rev.get(effort)
+    return {
+        "endpoint": "responses" if reg.get("responses_endpoint") else "chat_completions",
+        "base_url": base_url,
+        "model_name": reg.get("model_name") or model,
+        "effort_arm": effort,
+        "reasoning_effort": reasoning_effort,
+        "reasoning_extra_body": reasoning_extra_body,
+    }
+
+
 def system_prompt_for(cell: dict) -> str:
-    """The per-cell system prompt (constant across a cell's examples)."""
+    """The per-cell system prompt (constant across a cell's examples).
+
+    A MEASURED protocol parameter — see BASE_SYSTEM_PROMPT. ``build_plan``
+    fingerprints whatever this returns into the cell's settings, so the resume key
+    tracks the text.
+    """
     if cell["facet"] in S5_FACETS:
         # The framing-specific system prompt from the single source of truth
         # (identical for every example/length of a framing).
@@ -431,13 +580,13 @@ def system_prompt_for(cell: dict) -> str:
 
 
 def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_workers: int) -> APIBackend:
-    settings = cell["settings"]
     reg = MODELS[model]
     # Per-model direct endpoint (muse-spark readiness): a registry entry may
     # carry {"base_url", "api_key_env"}; endpoint_for resolves them against the
     # CLI --base-url + OPENROUTER_API_KEY defaults. A direct-endpoint model
     # reads its key from its own env var — a missing key fails loudly HERE
     # (once, before any call) instead of 401-ing n times inside the backend.
+    req = resolved_request_params(model, cell, default_base_url=base_url)
     base_url, key_env = endpoint_for(model, default_base_url=base_url)
     if key_env != DEFAULT_API_KEY_ENV:
         api_key = os.environ.get(key_env)
@@ -446,14 +595,11 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
     extra_body: dict = {}
     # OpenRouter-style endpoints accept a reasoning-effort block; direct vendor
     # endpoints (e.g. OpenAI chat completions for gpt-5.6-sol) reject it and
-    # use a top-level reasoning_effort parameter instead.
-    reasoning_effort: str | None = None
-    if settings["effort"] is not None:
-        if reg.get("supports_reasoning_effort", True):
-            extra_body["reasoning"] = {"effort": settings["effort"]}
-        rev = reg.get("reasoning_effort_values")
-        if rev:
-            reasoning_effort = rev.get(settings["effort"])
+    # use a top-level reasoning_effort parameter instead. Both channels are
+    # resolved by resolved_request_params, so the record matches the request.
+    if req["reasoning_extra_body"] is not None:
+        extra_body["reasoning"] = dict(req["reasoning_extra_body"])
+    reasoning_effort: str | None = req["reasoning_effort"]
     if (reg["open_weights"] and reg.get("quantization_filter", True)
             and not reg.get("base_url")):
         # Quantization filter is only meaningful for open-weight models (C4);
@@ -464,7 +610,7 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
         extra_body["provider"] = {"require_parameters": False,
                                   "quantizations": ["fp8", "bf16", "fp16"]}
     backend_cls = ResponsesBackend if reg.get("responses_endpoint") else APIBackend
-    return backend_cls(
+    backend = backend_cls(
         model=model,
         api_key=api_key,
         base_url=base_url,
@@ -486,6 +632,11 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
         # generation once per retry (v2 pilot 2026-07-08).
         timeout=1800.0,
     )
+    # Provenance: the resolution this backend was built from, carried to the
+    # record by execute_cell (diagnostics.request). Backends built elsewhere
+    # (the FunctionBackend test path) simply carry no attribute.
+    backend.request_params = req
+    return backend
 
 
 # --- cell execution ------------------------------------------------------------------
@@ -783,6 +934,10 @@ def execute_cell(backend, model: str, cell: dict, *, n: int, run_id: str,
     attempt's, marked escalated=true so the renderer treats them as the
     diagnostic view, and usage/cost cover ALL attempts. The record's
     ``settings`` stay the planned ones so the resume key is unchanged.
+
+    When ``backend`` carries the ``request_params`` attribute ``build_backend``
+    attaches, the resolution it was built from is recorded once at
+    ``diagnostics.request`` (constant across attempts).
     """
     t0 = time.time()
     attempt = _run_attempt(backend, cell, n, model=model)
@@ -833,6 +988,15 @@ def execute_cell(backend, model: str, cell: dict, *, n: int, run_id: str,
     meta = attempt["meta"]
     reg = MODELS.get(model, {})
     usage = meta["usage"]
+    # Provenance of the request, recorded once per cell (it is constant across
+    # attempts): the vendor effort string actually sent, the endpoint kind, the
+    # base URL and the literal model name — settings.effort alone is the PROTOCOL
+    # arm, and its registry mapping has changed under a fixed arm name. Not part
+    # of the resume key; see resolved_request_params for why.
+    diagnostics = dict(attempt["diagnostics"])
+    request_params = getattr(backend, "request_params", None)
+    if request_params is not None:
+        diagnostics["request"] = dict(request_params)
     cost = (usage["prompt_tokens"] / 1e6 * reg.get("prompt_price_per_M", 0.0)
             + usage["completion_tokens"] / 1e6 * reg.get("completion_price_per_M", 0.0))
     record = {
@@ -854,7 +1018,7 @@ def execute_cell(backend, model: str, cell: dict, *, n: int, run_id: str,
         # keep matching this cell on the next run.
         "settings": dict(cell["settings"]),
         "metrics": attempt["metrics"],
-        "diagnostics": attempt["diagnostics"],
+        "diagnostics": diagnostics,
         "usage": {**usage, "cost_usd_est": round(cost, 4)},
         "elapsed_s": round(elapsed, 2),
         "escalated": escalation is not None,
@@ -889,6 +1053,8 @@ def _arm_label(cell: dict) -> str:
         parts.append(f"B={s['breadth']}")
     if s.get("k_fixed"):  # fixed-breadth chain (vs the k=2d+1 staircase)
         parts.append(f"k_fixed={s['k_fixed']}")
+    if s.get("system_prompt_fp"):  # off-protocol system prompt (sentinel-dropped otherwise)
+        parts.append(f"sysprompt={s['system_prompt_fp']}")
     return " ".join(parts)
 
 
@@ -984,6 +1150,41 @@ def main():
                  if should_skip(m, c, done, a.force, a.canary))
     print(f"run_id={run_id} history={a.history} "
           f"({len(done)} keys in history; {n_done} planned cells already present)")
+
+    # The system prompt is a measured protocol parameter (see BASE_SYSTEM_PROMPT):
+    # a plan resolving to anything outside CANONICAL_SYSTEM_PROMPT_FINGERPRINTS is
+    # a different measurement regime from the whole published table, and its cells
+    # carry a fresh resume key rather than resuming against the old text.
+    off_protocol = {c["settings"]["system_prompt_fp"] for cells in plan.values()
+                    for c in cells if c["settings"].get("system_prompt_fp")}
+    if off_protocol:
+        n_off = sum(1 for cells in plan.values() for c in cells
+                    if c["settings"].get("system_prompt_fp"))
+        print(f"\n!!! WARNING: {n_off} planned cells resolve to a system prompt "
+              f"outside the canonical set (fingerprints {sorted(off_protocol)}). "
+              f"Those cells measure a different regime from every cell already in "
+              f"history; they carry the fingerprint in their resume key and will "
+              f"run fresh rather than resume.")
+
+    # Resume hits whose LATEST recorded resolution differs from what this run would
+    # send (registry endpoint/effort mappings change under a fixed protocol arm
+    # name; the resume key is the protocol cell, so those records still satisfy it).
+    recorded = history_request_params(a.history)
+    drift = [(m, c, d) for m, cells in plan.items() for c in cells
+             if should_skip(m, c, done, a.force, a.canary)
+             for d in (request_drift(m, c, recorded, a.base_url),) if d]
+    if drift:
+        print(f"\n!!! WARNING: {len(drift)} cells resume against a record made under "
+              f"a DIFFERENT resolved request. settings.effort is the protocol arm, "
+              f"not the vendor value; --force re-measures them.")
+        for m, c, d in drift[:20]:
+            now = resolved_request_params(m, c, default_base_url=a.base_url)
+            print(f"  {m} {c['facet']}/{c['task']}@L{c['length']}: now "
+                  f"{now['endpoint']}/{now['reasoning_effort'] or now['effort_arm']} "
+                  f"vs recorded "
+                  f"{d['endpoint']}/{d['reasoning_effort'] or d['effort_arm']}")
+        if len(drift) > 20:
+            print(f"  ... and {len(drift) - 20} more")
 
     if a.dry_run:
         print_plan(plan, done, a.assumed_output_tokens, a.force, a.canary)
