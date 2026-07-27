@@ -248,13 +248,15 @@ The serving stack constrains the measurement. gpt-5.6-sol's Chat Completions shi
 Sol's \code{s5\_chain} cells measure engagement rather than capability, which is why they
 carry \marku{}. Its per-call completion spend is bimodal with a literal gap: across the 300
 archived \code{s5\_chain\_v3} calls, none spends between 294 and 1{,}136 completion tokens.
-In the low mode it emits about 130 tokens whatever the prompt size, and 42 of its 42 wrong
-answers are the 8-hop dereference of the \emph{initial} pointer map --- it answers the
-pointer chase and skips the event stream, an answer the rest of the roster gives on under
-1\% of calls. Conditional on entering the high mode it is 191 for 191 across the archived
-records. The low mode takes 68\%, 40\%, 44\%, and 24\% of calls at L32, L64, L96, and L128,
-so its score rises with prompt length because it disengages less often, not because it works
-harder.
+In the low mode it emits about 150 tokens whatever the prompt size (per-length means 131 to
+162), and all 109 low-mode calls answer with the 8-hop dereference of the \emph{initial}
+pointer map --- it answers the pointer chase and skips the event stream, an answer the rest
+of the roster gives on under 1\% of its calls. That covers every one of sol's 101 wrong
+answers; the 8 low-mode calls that score are the items where the initial-map answer is also
+the gold one. Conditional on entering the high mode it is 191 for 191 across the same
+records. In the scored cells the low mode takes 68\%, 40\%, 44\%, and 24\% of calls at L32,
+L64, L96, and L128, so its score rises with prompt length because it disengages less often,
+not because it works harder.
 
 \paragraph{The instrument's system prompt elicits the low mode.} Every thinking cell in this
 report runs under one system prompt: ``You are taking a short test. Answer each question with
@@ -281,20 +283,22 @@ the three arms, which differ only in the system prompt. \emph{worked} is the fra
 calls above 500 completion tokens --- low-mode calls run 86 to 258 tokens and worked calls
 start at 2{,}078, so the line's position inside that gap does not matter.
 \emph{initial-map} is the fraction of answers that dereference the initial pointer map
-instead of the final one, over the 24 of 25 items where that answer is not also the gold
-one.}
+instead of the final one, counted under the eligibility rule every event-blind number in
+this report uses: an item counts only where the initial-map answer differs from the gold
+answer, which drops 1 of the 25 items from numerator and denominator alike.}
 \label{tab:sysprompt}
 \end{table}
 
 Eight of the 25 items fell into the low mode under the canonical prompt; seven of those eight
 were worked under the neutral prompt, and no low-mode call in any arm is correct. The
 no-prompt arm's lower match is output format rather than composition: it works on 24 of 25
-calls and all 24 carry the gold value, but three commit it in a \LaTeX{} form the
-committed-answer rule does not read. Keeping the answer contract and dropping the two clauses
-gives both, at 0.96 worked and 0.96 match on the same items.
+calls and all 24 reach the gold value, but three wrap it in math markup instead of committing
+it as text, which the committed-answer rule does not read; two of those three defeat the
+containment tokenizer as well, which is the 0.88 in the table. Keeping the answer contract and
+dropping the two clauses gives both, at 0.96 worked and 0.96 match on the same items.
 
 The canonical arm's 0.68 reproduces the two archived L64 batches measured at the same effort
-(0.60 and 0.64, at 2{,}443 and 2{,}321 completion tokens per call); the third archived batch
+(0.60 and 0.64, at 2{,}444 and 2{,}322 completion tokens per call); the third archived batch
 reads 0.84 at 4{,}966, twice the spend, and was measured at the vendor's higher level, so it
 is not a replicate of the other two. The low mode is therefore not a property of the model
 alone: dropping two clauses while holding the answer contract fixed moves the same items

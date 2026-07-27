@@ -10,8 +10,10 @@ breadth mirror; sections 16–23 log the issue-#11 v2 re-measures and the commut
 calibration (2026-07-10 → 07-11); sections 24–27 log the close-out cycle (2026-07-11 →
 07-12) — raised completion budgets for ⊘ cells, the qwen contract-phrasing diagnosis, the
 commutative roster adjudication, and the statistical-power checks; section 28 logs issue #11's
-last item, the MOPD binding re-pin (2026-07-12); section 29 logs the system-prompt probe behind
-the benchmark's engagement mark (2026-07-27).
+last item, the MOPD binding re-pin (2026-07-12); sections 29–32 log the s5_chain arc and the
+validation of the benchmark built on it (2026-07-17 → 07-27) — the system-prompt probe behind
+the engagement mark, the echo defect and distinct-path gate that produced the scored task, the
+local battery and its audit, and what the frontier ranking does and does not resolve.
 
 ## 1. Dense-vs-sparse state supervision (the s5 deficit) — `experiment_dense_supervision.py`
 
@@ -789,3 +791,140 @@ does reach the rest of the benchmark: every scored thinking cell carries this sy
 the completion-token columns price spend under an instruction to answer without explanation. The
 arms are off-protocol (a different system prompt is a different measurement) and are therefore not
 in `history.jsonl`. Data: `results/probes/sol_system_prompt_20260727.json` ($9.87 completion spend).
+
+## 30. s5_chain: the echo defect, the distinct-path gate, and the frontier battery — `run_frontier_benchmark.py` (facet `s5_chain`)
+
+`s5_chain` composes non-abelian pointer-map state tracking with serial dereference: k agents
+each hold an `a0` pointer to another agent, L swap/cycle events permute the map, and the query
+dereferences the FINAL map `chain_depth` times. The battery below ran on `s5_chain_v3`
+(k=16, depth 8), which supersedes `s5_chain_v1` and `s5_chain_v2`; all three are in
+`tasks.RETIRED`, each with its defect annotated there. Floors are recomputed from the exact
+deterministic test items (`factworld.validity.s5_chain_floors`, n=500 per length, ranges over
+L32–L128):
+
+| stream | cycle-event rendering | echo | initial-map chase | operative floor | degenerate query paths |
+| --- | --- | --- | --- | --- | --- |
+| v1 (retired) | arrow list, `swaps the a0 of X and the a0 of Y` | 0.214–0.234 | 0.036–0.064 | 0.214–0.234 | 0.470–0.504 |
+| v2 (retired) | per-agent value updates | 0.228–0.244 | 0.038–0.058 | 0.228–0.244 | 0.472–0.502 |
+| v3 (retired) | simultaneity-explicit, `takes X's old a0` | **0.000** | 0.056–0.086 | 0.067–0.086 | **0.000** |
+
+Without the `distinct_path` gate the final permutation has cycles whose length divides
+chain_depth=8, so the queried agent is its own answer on 0.21–0.24 of items and roughly half
+the items have a query path visiting fewer than 9 distinct agents. The v3 gate requires the start
+to sit on a final-map cycle of length ≥ 9: echo and every fixed-hop heuristic score exactly 0,
+chance is 1/16, and item difficulty is uniform. The v1→v2 change is rendering only, at matched
+budget (L64, effort high, 16,384 tokens, n=25, same four models):
+
+| model | v1 | v2 |
+| --- | --- | --- |
+| openai/gpt-5.5 | 0.12 | 1.00 |
+| anthropic/claude-opus-4.8 | 0.20 | 0.80 |
+| google/gemini-3.5-flash | 0.12 | 0.60 |
+| qwen/qwen3.7-max | 0.16 | 0.72 |
+
+The v3 battery is 13 models × L∈{32, 64, 96, 128}, n=25, effort xhigh, per-length budgets
+32,768 / 49,152 / 65,536 / 98,304 sized so truncation stays a rounding error.
+
+**Finding:** no v1 cell scored above the echo floor recomputed from the 25 items it was scored
+on: match 0.08–0.24 against echo floors of 0.280 at L16, 0.360 at L32 and 0.200 at L64, with the
+highest cell (opus at L64, 0.20) exactly at its floor and the floor itself carrying sd 0.08–0.10
+at n=25. The arrow rendering left the events unreadable and the ungated stream left a degenerate
+strategy worth more than the measurements. The rendering fix alone moves the same four models to
+0.60–1.00 at matched budget, and the gate is what makes a sub-0.4 score interpretable at all:
+under v1/v2 a model scoring 0.24 is indistinguishable from one answering the queried agent. On
+v3 the shallow adversaries are held at 0.000 (echo, any fixed hop) and 0.056–0.086 (chase the
+initial map, ignore the events), so the measured range sits an order of magnitude above the
+floor. What the gate does not reach is the direction of the computation: v3's events permute
+the map's DOMAIN, so pushing one symbol backward through the event list and applying the stated
+initial map answers the query exactly, at 4 bits of carried state per hop — available to an
+attention model over the full context and not to a streaming recurrent one, which is why v3 is
+retired in favour of `s5_chain_v4` (`factworld/tasks.py` carries the derivation).
+Spend: v1 $38.02, v2 $174.16, v3 $259.30. Data: `results/benchmark/history.jsonl` (runs
+`bench_20260717_071141`, `bench_20260717_113626`, `bench_20260717_131813`,
+`bench_20260718_012918`, `bench_s5v3_scout`, `bench_roster_20260724`); retired specs and their
+defect annotations in `factworld/tasks.py`.
+
+## 31. Local s5_chain battery and its audit — `sweep.py`, `scripts/run_s5_chain_*.sh`
+
+141 training runs across 22 sweep files (`results/local_s5_chain_*.jsonl`): gdp_hybrid, fprm and
+transformer at k∈{4,5,6,8} and chain_depth∈{1,2}, d_model 320×4 and 768×8, 8,000 documents ×
+8,000 steps × batch 32, eval_n 200, across appended worked traces, per-event map checkpoints,
+s5-shaped single-slot checkpoints, interleaved supervision, and a compact-grammar rendering
+ablation. Every arm read at or below its floor. The 2026-07-27 audit of that battery:
+
+| what was measured | value |
+| --- | --- |
+| tokenizer coverage on s5_chain training documents (pre-extension vocabulary, n=2,000 docs per spec) | `<unk>` rate **0.171–0.261**; out-of-vocabulary types `takes`, `old`, `values`, `simultaneously:`, `a0,`, `a0.`, `(N`, `hops)` |
+| the same measurement on every other scored family | chain_v2 0.057 (its redundant hop annotation); binding_v2 / composite_copy_v2 / commutative_v1 / recall_copy_v1 / conflict_v1 / s5_v1 all 0.000 |
+| the same measurement after the vocabulary extension, on the specs this battery trained (`s5_chain_local_v2`, `s5_chain_local_v2_path`; plain, trace and path-trace surfaces) | `<unk>` rate **0.000** |
+| interleaved cells at chain_depth 1 (k=4, 6, 8; 18 runs) | gold answer equals the token immediately preceding `what` in 2,000 of 2,000 training documents (P=1.000); the free-running eval prompt deletes that token |
+| k=6 / depth=2 event_trace, gdp_hybrid @L4, per seed | 0.155 / **0.815** / 0.170 against the 0.200 operative floor; published as `0.38±0.31 (0%)` |
+| floors in the run scripts | annotated 1/(k−depth), which is the accuracy of no policy; the operative floor is max(initial-map chase, uniform over non-start), 0.200–0.335 across the registered local cells |
+| trace-mode generation budget | len(trace)+6 — five tokens of slack, so one spurious checkpoint row truncates a correct answer to 0 at k ≥ 6 |
+| eval path | a stub backend emitting the gold continuation scores 1.000 on every arm |
+| budget | 0.26M documents seen per arm (32 epochs); the composite that converges locally saw 3.2M plus a staged curriculum, and s5_chain appears in no curriculum script |
+
+**Finding:** the battery measured a corrupted input. The one task family that never formed
+locally is the only one whose training documents lost a sixth to a quarter of their tokens to a
+single `<unk>`, and the lost types are the ones carrying the pointer-update semantics — a cycle
+event reached the model as `s0 cycles a0 <unk> g0's a0 <unk> g4's <unk> <unk> ...`. Three further
+defects are independent of that one: the depth-1 interleaved cells score a copy rule against a
+prompt with the source token deleted, a formed seed (0.815 against a 0.200 floor) was averaged
+into a null by a p_converge rule the repo applies to bimodal emergence elsewhere, and no cell was
+ever read against the accuracy of a shallow policy. The frontier cells are untouched by all of
+it: items come from `tasks.generate`, which never consults the tokenizer, so every frontier
+score and every floor computed from those items stands. Local s5_chain and chain_v2 numbers
+produced under the pre-extension vocabulary are not comparable to results from the extended one
+and do not belong in one table with them. Data: `results/local_s5_chain_*.jsonl`; floors in
+`factworld/validity.py`; the round-trip contract over every CANONICAL and RETIRED spec in
+`tests/test_tokenizer.py`.
+
+## 32. FactWorldBench validation: engagement, event-blindness, and what n=25 resolves — `render_benchmark.py` (facet `s5_chain`)
+
+Three diagnostics recomputed from the stored per-call completion tokens, reasoning tokens, finish
+reasons and predictions in `history.jsonl`, over the 52-cell `s5_chain_v3` battery of §30.
+
+**Work rate** is the fraction of a cell's calls above 512 completion tokens, with accuracy read
+conditional on working. Eleven of the thirteen roster models have 25/25 working calls on every
+`s5_chain` cell and deepseek-v4-pro has 24/25 on two, so the column is inert for them.
+gpt-5.6-sol is bimodal with a literal gap: across its 300 archived `s5_chain_v3` calls no call
+spends between 294 and 1,136 completion tokens.
+
+| gpt-5.6-sol cell | L32 | L64 | L96 | L128 |
+| --- | --- | --- | --- | --- |
+| working calls (of 25) | 8 | 15 | 14 | 19 |
+| match | 0.32 | 0.60 | 0.60 | 0.80 |
+
+Over all 300 archived calls it is correct on 191 of 191 working calls and 8 of 109 others,
+against 1/16 chance.
+
+**Event-blind rate** is the fraction of predictions equal to the 8-hop dereference of the INITIAL
+pointer map — the answer a model gives if it reads the fact block and skips the whole event
+stream. Items where that answer coincides with gold are dropped: 39 of the 1,300 scored items —
+none at L32, one of the 25 items at each of L64, L96 and L128. Across the roster's 52 scored
+`s5_chain` cells the blind answer is given on 46 of the 1,261 eligible items, 42 of them by
+gpt-5.6-sol; over the other twelve models it is 4 of 1,164 (0.003). The same coincidence measured
+over the n=500 stream rather than the scored items is §30's initial-map-chase floor, 0.056–0.086.
+
+**Resolution at n=25.** Per-item outcomes at L96, two-sided Fisher exact on every pair, and
+Cochran's Q over the eleven models above qwen and sol:
+
+| statistic | value |
+| --- | --- |
+| separating pairs, all 13 models (78 pairs, p < 0.05) | 18 — every one of them involves qwen or sol |
+| separating pairs inside the top eleven (55 pairs) | **0** (smallest p = 0.49) |
+| Cochran's Q over those eleven, 25 shared items | Q = 6.44, df = 10, **p = 0.777** |
+| roster mean match at L32 / L64 / L96 / L128 | 0.90 / 0.89 / 0.91 / 0.90 |
+| completion tokens per call at L64, the nine models scoring ≥ 0.92 | 5,014 (fable-5) to 17,982 (glm-5.2), a 3.6× range |
+
+**Finding:** at n=25 the score resolves the tail and nothing else — eleven of thirteen models are
+one undifferentiated band at L96, and length moves individual models (qwen 0.72 → 0.44 from L96
+to L128) rather than the roster, whose mean is flat across all four lengths. Token spend
+separates what the score does not: a 3.6× range inside a single score band. gpt-5.6-sol's
+separation is engagement, not capability: it is perfect when it works, its wrong answers are the
+initial-map dereference — it answers the `chain` task and skips the events — and its score rises
+with prompt length because it disengages less often. Its cells therefore carry the unworked mark
+and take no part in any ordering; that also removes them from the thinking-noise bar, which reads
+0.16 over unmarked cells against the 0.32 spread of the marked ones. Data:
+`results/benchmark/history.jsonl`; rendered feed `docs/benchmark/results.md` (work-rate,
+event-blind and truncation columns) and `docs/benchmark/results.csv`.

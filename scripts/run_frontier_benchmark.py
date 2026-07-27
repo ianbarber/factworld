@@ -63,10 +63,13 @@ Protocol rules:
   - finish_reason=="error" calls are counted into diagnostics.finish_errors
     (distinct from api_errors, the exception-path count — review F8 found 12
     finish=error calls invisible at api_errors=0) and warned about loudly.
-  - The system prompt is a MEASURED protocol parameter, not scaffolding (see
-    BASE_SYSTEM_PROMPT): every cell is stamped with the fingerprint of the prompt
-    it resolves to, sentinel-dropped at the canonical texts, so editing a prompt
-    gives its cells fresh resume keys instead of silently mixing regimes.
+  - The system prompt is a MEASURED protocol parameter, not scaffolding, and is
+    scoped to the cell's regime (see system_prompt_for): thinking cells carry
+    NEUTRAL_SYSTEM_PROMPT, instant cells BASE_SYSTEM_PROMPT, whose two
+    effort-suppressing clauses are what the off arm is there to measure. Every
+    cell is stamped with the fingerprint of the prompt it resolves to,
+    sentinel-dropped at a frozen set of three texts that never grows, so any other
+    prompt gives its cells fresh resume keys instead of silently mixing regimes.
   - Each record carries diagnostics.request — the vendor effort string actually
     sent, the endpoint kind, the base URL and the literal model name. settings.
     effort is the PROTOCOL arm ("xhigh"), and the registry mapping it resolves to
@@ -110,6 +113,7 @@ from factworld import tasks as TK
 from factworld.backends import APIBackend, ResponsesBackend
 from factworld.benchmark import (
     CANARY_MODEL,
+    CANONICAL_SYSTEM_PROMPT_FINGERPRINTS,
     CELL_BUDGET_FACTOR,
     COVERT_COT_CTOK_THRESHOLD,
     DEFAULT_API_KEY_ENV,
@@ -146,19 +150,35 @@ from experiment_autoregressive import binding_prompt, scaffold_prompt  # noqa: E
 # This text is a MEASURED protocol parameter, not neutral scaffolding: on identical
 # s5_chain_v3 L64 items (n=25, effort xhigh, same endpoint and 49,152-token budget),
 # an arm that keeps this answer-format contract but drops "You are taking a short
-# test" and "no explanation" scored gpt-5.6-sol 0.96 against 0.68 here, with the
+# test" and "no explanation" scored gpt-5.6-sol 0.96 against 0.68, with the
 # event-blind rate falling from 0.36 to 0.08 (results/probes/
-# sol_system_prompt_20260727.json; one model, one length, n=25). Every scored
-# thinking cell carries this text, or the s5_concrete framing prompt that opens
-# with the same two clauses, so the benchmark's completion-token column is
-# measured under an instruction to be brief.
-# Editing it is a re-measurement: benchmark.with_system_prompt fingerprints the
-# resolved prompt into each cell's settings and the fingerprint is sentinel-dropped
-# only at benchmark.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS, so an edit gives every
-# cell a fresh resume key rather than silently mixing regimes in one table.
+# sol_system_prompt_20260727.json; one model, one length, n=25).
+#
+# It is the INSTANT regime's prompt: those cells pair it with effort none/minimal, a
+# hard one-line answer contract and a 96-token cap, and suppressing reasoning is
+# what they measure — "what the weights alone compute" is defined by that pairing,
+# so the two effort-suppressing clauses belong there. Thinking cells take
+# NEUTRAL_SYSTEM_PROMPT instead (see system_prompt_for).
+# Editing either text is a re-measurement: benchmark.with_system_prompt fingerprints
+# the resolved prompt into each cell's settings and the fingerprint is
+# sentinel-dropped only at the frozen
+# benchmark.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS, so an edit gives every
+# affected cell a fresh resume key rather than silently mixing regimes in one table.
 BASE_SYSTEM_PROMPT = (
     "You are taking a short test. Answer each question with only the requested "
     "value or values, no explanation. Use the same spelling as in the question."
+)
+
+# The THINKING regime's prompt: the same answer-format contract with the two
+# effort-suppressing clauses removed. A thinking cell's score is meant to be what
+# the model computes given the effort it chooses to spend, so the instruction it
+# runs under does not ask for less of it; the format contract stays, because it is
+# what makes the committed answer parseable (the probe's no-system-prompt arm
+# engaged as often as this one but emitted three of its answers in LaTeX that
+# committed_answer does not read).
+NEUTRAL_SYSTEM_PROMPT = (
+    "Answer the question with only the requested value or values. "
+    "Use the same spelling as in the question."
 )
 
 # Grid mechanics: --composite_format appends the two-token format instruction for
@@ -562,21 +582,39 @@ def resolved_request_params(model: str, cell: dict,
 
 
 def system_prompt_for(cell: dict) -> str:
-    """The per-cell system prompt (constant across a cell's examples).
+    """The per-cell system prompt (constant across a cell's examples), scoped to the
+    cell's REGIME.
 
     A MEASURED protocol parameter — see BASE_SYSTEM_PROMPT. ``build_plan``
     fingerprints whatever this returns into the cell's settings, so the resume key
     tracks the text.
+
+      thinking cells (effort in REASONING_EFFORTS) -> NEUTRAL_SYSTEM_PROMPT.
+        The answer-format contract without the two clauses that read as
+        instructions to spend less effort: a thinking score should be what the
+        model computes, not how much work the instruction elicited.
+      instant cells (effort none / a vendor's closest off arm) -> BASE_SYSTEM_PROMPT.
+        Unchanged, because there the suppression IS the measurement: the
+        answer-contract battery pairs it with the off arm and a 96-token cap to
+        read what the weights alone compute.
+
+    s5_concrete keeps its framing prompt in both regimes. That text is generated by
+    factworld.s5_concrete with the job/role vocabulary and the answer-format example
+    inline, so it is the task's own contract rather than the shared base text; it
+    opens with the same two clauses, and its thinking cells are therefore measured
+    under them.
     """
     if cell["facet"] in S5_FACETS:
         # The framing-specific system prompt from the single source of truth
         # (identical for every example/length of a framing).
         return S5.gen_examples(4, 1, framing=cell["settings"]["rendering"])[0][0]
+    base = (NEUTRAL_SYSTEM_PROMPT if cell["settings"].get("effort") in REASONING_EFFORTS
+            else BASE_SYSTEM_PROMPT)
     if cell["settings"]["leg"] == "binding_only":
         # Holder-only leg: the composite two-token format instruction ("g3 v9")
-        # would contradict the one-token contract line, so use the bare base prompt.
-        return BASE_SYSTEM_PROMPT
-    return _build_system_prompt(BASE_SYSTEM_PROMPT, cell["task"], TASK_PROMPTS)
+        # would contradict the one-token contract line, so use the bare prompt.
+        return base
+    return _build_system_prompt(base, cell["task"], TASK_PROMPTS)
 
 
 def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_workers: int) -> APIBackend:
@@ -1151,20 +1189,41 @@ def main():
     print(f"run_id={run_id} history={a.history} "
           f"({len(done)} keys in history; {n_done} planned cells already present)")
 
-    # The system prompt is a measured protocol parameter (see BASE_SYSTEM_PROMPT):
-    # a plan resolving to anything outside CANONICAL_SYSTEM_PROMPT_FINGERPRINTS is
-    # a different measurement regime from the whole published table, and its cells
-    # carry a fresh resume key rather than resuming against the old text.
-    off_protocol = {c["settings"]["system_prompt_fp"] for cells in plan.values()
-                    for c in cells if c["settings"].get("system_prompt_fp")}
-    if off_protocol:
-        n_off = sum(1 for cells in plan.values() for c in cells
-                    if c["settings"].get("system_prompt_fp"))
-        print(f"\n!!! WARNING: {n_off} planned cells resolve to a system prompt "
-              f"outside the canonical set (fingerprints {sorted(off_protocol)}). "
-              f"Those cells measure a different regime from every cell already in "
-              f"history; they carry the fingerprint in their resume key and will "
-              f"run fresh rather than resume.")
+    # The system prompt is a measured protocol parameter (see system_prompt_for): a
+    # cell whose resolved text is outside the frozen sentinel drop set carries the
+    # fingerprint in its resume key and runs fresh instead of resuming against a
+    # different regime. For the thinking regime that is the steady state rather
+    # than an anomaly — the neutral prompt can never join the drop set, since that
+    # would strike the fingerprint from those cells' keys and collapse them onto
+    # the base-prompt records — so those cells report their fingerprint on every
+    # future run, as INFORMATION. The warning channel is reserved for a fingerprint
+    # outside CANONICAL_SYSTEM_PROMPT_FINGERPRINTS, which is the shape an
+    # unintended edit to a scored prompt takes; that report is only legible if the
+    # expected case does not fire on it.
+    stamped = [(m, c) for m, cells in plan.items() for c in cells
+               if c["settings"].get("system_prompt_fp")]
+    expected = [(m, c) for m, c in stamped
+                if c["settings"]["system_prompt_fp"] in CANONICAL_SYSTEM_PROMPT_FINGERPRINTS]
+    off_roster = [(m, c) for m, c in stamped
+                  if c["settings"]["system_prompt_fp"] not in CANONICAL_SYSTEM_PROMPT_FINGERPRINTS]
+    if expected:
+        fps = sorted({c["settings"]["system_prompt_fp"] for _, c in expected})
+        facets = sorted({c["facet"] for _, c in expected})
+        print(f"\nnote: {len(expected)} planned cells carry their regime's system-prompt "
+              f"fingerprint {fps} in the resume key ({', '.join(facets)}). Those texts "
+              f"sit outside the frozen drop set by design, so the cells run fresh rather "
+              f"than resume against records taken under another prompt.")
+    if off_roster:
+        fps = sorted({c["settings"]["system_prompt_fp"] for _, c in off_roster})
+        print(f"\n!!! WARNING: {len(off_roster)} planned cells resolve to a system prompt "
+              f"that is NOT one of the instrument's canonical texts (fingerprints {fps}) "
+              f"— an unintended edit to a scored prompt looks exactly like this. They "
+              f"will run fresh under whatever text they resolved to.")
+        for m, c in off_roster[:10]:
+            print(f"  {m} {c['facet']}/{c['task']}@L{c['length']} -> "
+                  f"{c['settings']['system_prompt_fp']}")
+        if len(off_roster) > 10:
+            print(f"  ... and {len(off_roster) - 10} more")
 
     # Resume hits whose LATEST recorded resolution differs from what this run would
     # send (registry endpoint/effort mappings change under a fixed protocol arm

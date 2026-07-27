@@ -6,10 +6,11 @@ s5_concrete mid-band, chain_nowrap staircase, sanity), stable settings_hash
 Runner: FunctionBackend-driven mini-runs of ``execute_cell`` writing C3-conformant
 records (per-example ctok/rtok/finish, contract diagnostics, finish=length
 escalation) to a tmp history file (no API), plus the resume-key round trip.
-Provenance: the resolved system prompt is fingerprinted into the resume key
-(sentinel-dropped at the canonical texts, so no already-run cell is invalidated),
-and the resolved vendor request — effort string, endpoint, base URL, model name —
-is recorded per cell without being keyed.
+Provenance: the resolved system prompt is scoped to the cell's regime (thinking
+cells neutral, instant cells the base test prompt) and fingerprinted into the
+resume key (sentinel-dropped at a frozen, closed set of three texts, so no
+already-run cell is invalidated), and the resolved vendor request — effort string, endpoint,
+base URL, model name — is recorded per cell without being keyed.
 
 Run directly:  .venv-api/bin/python tests/test_benchmark_registry.py
 Run with pytest: .venv-api/bin/python -m pytest tests/test_benchmark_registry.py
@@ -259,64 +260,108 @@ def test_settings_hash_breadth_and_k_fixed_sentinels():
 
 
 def test_canonical_system_prompt_fingerprints_pin_the_live_prompts():
-    """The frozen sentinel set must be exactly the prompts the planned cells
-    resolve to.
+    """The CANONICAL set must be exactly the prompts the planned cells resolve to.
 
     This is the tripwire for the system-prompt axis. The prompt is a measured
     protocol parameter — on identical s5_chain_v3 L64 items, dropping the "short
     test"/"no explanation" clauses moved gpt-5.6-sol from 0.68 to 0.96 match — so
     an edit to any scored prompt is a re-measurement. If this test fails because a
-    prompt text changed, do NOT add the new fingerprint to
-    CANONICAL_SYSTEM_PROMPT_FINGERPRINTS: leaving it out is exactly what gives the
-    affected cells fresh resume keys instead of resuming against measurements taken
-    under the old text. Only a genuinely new prompt for a new facet (no history to
-    protect) is added."""
+    prompt text changed, add the new fingerprint to CANONICAL and nowhere else:
+    keeping it out of the sentinel drop set is exactly what gives the affected
+    cells fresh resume keys instead of resuming against measurements taken under
+    the old text."""
     live = {}
     for slug in B.MODELS:
         for cell in B.arms_for(slug):
             sp = RFB.system_prompt_for(cell)
             live.setdefault(B.system_prompt_fingerprint(sp), sp)
     assert set(live) == set(B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS), (
-        "the planned cells' system prompts no longer match the frozen sentinel set; "
+        "the planned cells' system prompts no longer match the canonical set; "
         "an edited prompt is a different measurement regime — see the docstring")
-    # the three texts, pinned by content so a silent rewording cannot pass
+    # the four texts, pinned by content so a silent rewording cannot pass
     assert live["60766724c1"] == RFB.BASE_SYSTEM_PROMPT
     assert live["8b02734258"].startswith(RFB.BASE_SYSTEM_PROMPT)
     assert "g3 v9" in live["8b02734258"]          # composite two-token format leg
     assert "Driver" in live["27d71cb774"]         # s5_concrete "concrete" framing
-    # the probe's canonical arm is the prompt every scored thinking cell carries
+    assert live["04153d7439"] == RFB.NEUTRAL_SYSTEM_PROMPT
+    # the neutral text is the base text minus exactly the two suppressing clauses
+    for clause in ("short test", "no explanation"):
+        assert clause in RFB.BASE_SYSTEM_PROMPT
+        assert clause not in RFB.NEUTRAL_SYSTEM_PROMPT
+    assert "the same spelling as in the question" in RFB.NEUTRAL_SYSTEM_PROMPT
+
+    # regime scoping: thinking cells neutral, instant cells the base test prompt
+    for slug in B.MODELS:
+        for cell in B.arms_for(slug):
+            if cell["facet"] in RFB.S5_FACETS:
+                continue
+            sp = RFB.system_prompt_for(cell)
+            if cell["settings"]["effort"] in B.REASONING_EFFORTS:
+                assert sp.startswith(RFB.NEUTRAL_SYSTEM_PROMPT), (slug, cell["facet"])
+            else:
+                assert sp.startswith(RFB.BASE_SYSTEM_PROMPT), (slug, cell["facet"])
     s5_chain = next(c for c in B.arms_for("openai/gpt-5.6-sol")
                     if c["facet"] == "s5_chain")
-    assert RFB.system_prompt_for(s5_chain) == RFB.BASE_SYSTEM_PROMPT
+    assert RFB.system_prompt_for(s5_chain) == RFB.NEUTRAL_SYSTEM_PROMPT
+
+
+def test_sentinel_drop_set_is_frozen_and_closed():
+    """The sentinel drop set is pinned to its three literals and never grows.
+
+    It is defined by what it does — omit these fingerprints from the resume key, so
+    the cells measured before it was frozen keep the keys they were written with —
+    and NOT as "the prompts history.jsonl contains". Those two definitions agree
+    today and diverge the moment a neutral-prompt battery is bought: history then
+    holds that text too, and a set maintained against history would take the
+    neutral fingerprint in, strike it from those cells' keys, and resume them
+    against the base-prompt records the split exists to keep apart. The second half
+    of this test states that consequence executably."""
+    assert B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS == frozenset({
+        "60766724c1", "8b02734258", "27d71cb774"}), (
+        "the drop set is frozen at the pre-2026-07-27 texts and closed to "
+        "additions; a new or edited prompt goes into CANONICAL alone")
+    neutral_fp = B.system_prompt_fingerprint(RFB.NEUTRAL_SYSTEM_PROMPT)
+    assert neutral_fp not in B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS
+
+    cell = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "s5_chain")
+    base = {"settings": B.with_system_prompt(cell["settings"], RFB.BASE_SYSTEM_PROMPT)}
+    neutral = {"settings": {**cell["settings"], "system_prompt_fp": neutral_fp}}
+    assert B.settings_hash(neutral) != B.settings_hash(base)
+    frozen = B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS
+    try:  # with the neutral fingerprint added, the two regimes share one key
+        B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS = frozen | {neutral_fp}
+        assert B.settings_hash(neutral) == B.settings_hash(base)
+    finally:
+        B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS = frozen
 
 
 def test_settings_hash_system_prompt_sentinel():
-    """The resolved system prompt is SENTINEL-DROPPED at the canonical texts:
-    canonical-prompt cells hash exactly like the pre-stamp history (both with the
-    key absent and with a canonical fingerprint explicitly recorded), while any
+    """The resolved system prompt is SENTINEL-DROPPED at the frozen drop set:
+    cells under those three texts hash exactly like the pre-stamp history (both
+    with the key absent and with such a fingerprint explicitly recorded), while any
     other prompt hashes distinctly — including after a JSON round trip through
     history.jsonl."""
     cell = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "s5_chain")
     h = B.settings_hash(cell)
     assert "system_prompt_fp" not in cell["settings"]
 
-    # direction 1: canonical prompt -> key omitted, hash unchanged
+    # direction 1: a drop-set prompt -> key omitted, hash unchanged
     canonical = B.with_system_prompt(cell["settings"], RFB.BASE_SYSTEM_PROMPT)
     assert canonical == cell["settings"]
     assert B.settings_hash({"settings": canonical}) == h
-    # a record that explicitly carries a canonical fingerprint still hashes the same
-    for fp in B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS:
+    # a record that explicitly carries such a fingerprint still hashes the same
+    for fp in B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS:
         assert B.settings_hash(
             {"settings": {**cell["settings"], "system_prompt_fp": fp}}) == h
     assert B.settings_hash(
         {"settings": {**cell["settings"], "system_prompt_fp": None}}) == h
 
-    # direction 2: the probe's neutral prompt (same answer contract, the two
+    # direction 2: the neutral thinking prompt (same answer contract, the two
     # effort-suppressing clauses removed) is a different regime -> distinct hash
-    neutral = ("Answer the question with only the requested value or values. "
-               "Use the same spelling as in the question.")
+    neutral = RFB.NEUTRAL_SYSTEM_PROMPT
     fp = B.system_prompt_fingerprint(neutral)
-    assert fp not in B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS
+    assert fp in B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS
+    assert fp not in B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS
     edited = B.with_system_prompt(cell["settings"], neutral)
     assert edited["system_prompt_fp"] == fp
     h2 = B.settings_hash({"settings": edited})
@@ -333,43 +378,55 @@ def test_settings_hash_system_prompt_sentinel():
 
 def test_build_plan_stamps_the_resolved_system_prompt():
     """The runner stamps every cell with the fingerprint of the prompt it resolves
-    to. Under the canonical prompts the settings and resume keys are byte-identical
-    to arms_for (no paid cell is invalidated); under an edited prompt every cell
-    gets a fresh key, so canonical history no longer satisfies resume."""
-    from unittest import mock
+    to, and the regime split lands in the resume keys: instant cells (and
+    s5_concrete, which keeps its framing prompt) are byte-identical to arms_for, so
+    no paid cell is invalidated; thinking cells carry the neutral fingerprint and
+    key distinctly from the same cell measured under the base prompt."""
     model = "z-ai/glm-5.2"
     planned = RFB.build_plan([model], None, 1.0)[model]
     raw = B.arms_for(model)
+    neutral_fp = B.system_prompt_fingerprint(RFB.NEUTRAL_SYSTEM_PROMPT)
     assert len(planned) == len(raw)
+    n_thinking = 0
     for p, r in zip(planned, raw):
-        assert set(p["settings"]) == SETTINGS_KEYS  # no key at canonical prompts
-        assert p["settings"] == r["settings"]
-        assert RFB.cell_key(model, p) == RFB.cell_key(model, r)
+        thinking = (p["settings"]["effort"] in B.REASONING_EFFORTS
+                    and p["facet"] not in RFB.S5_FACETS)
+        if thinking:
+            n_thinking += 1
+            assert p["settings"]["system_prompt_fp"] == neutral_fp
+            assert RFB.cell_key(model, p) != RFB.cell_key(model, r)
+        else:
+            assert set(p["settings"]) == SETTINGS_KEYS  # no key at measured prompts
+            assert p["settings"] == r["settings"]
+            assert RFB.cell_key(model, p) == RFB.cell_key(model, r)
+    # chain_nowrap (4) + commutative (1) + s5_chain (4); s5_concrete keeps its own
+    assert n_thinking == 9
+    assert {p["facet"] for p, r in zip(planned, raw)
+            if p["settings"].get("system_prompt_fp")} == {
+        "chain_nowrap", "commutative", "s5_chain"}
 
-    neutral = ("Answer the question with only the requested value or values. "
-               "Use the same spelling as in the question.")
-    with mock.patch.object(RFB, "BASE_SYSTEM_PROMPT", neutral):
-        edited = RFB.build_plan([model], ["s5_chain"], 1.0)[model]
-    fp = B.system_prompt_fingerprint(neutral)
-    assert edited and all(c["settings"]["system_prompt_fp"] == fp for c in edited)
-    canonical_chain = [c for c in planned if c["facet"] == "s5_chain"]
-    assert {RFB.cell_key(model, c) for c in edited}.isdisjoint(
-        {RFB.cell_key(model, c) for c in canonical_chain})
-
-    # the resume consequence: a canonical record does NOT satisfy an edited cell
+    # the resume consequence, both directions, against records written the way
+    # history holds them (settings verbatim, no fingerprint under the base prompt)
     with tempfile.TemporaryDirectory() as tmp:
         history = os.path.join(tmp, "history.jsonl")
-        rec = RFB.execute_cell(
-            FunctionBackend(lambda ps, m, s: ["g3 ."] * len(ps), name="f"),
-            model, {**canonical_chain[0], "n": 5}, n=5, run_id="t", git_commit="d")
-        assert "system_prompt_fp" not in rec["settings"]
-        RFB.append_record(history, rec)
+        archived = [c for c in raw if c["facet"] in ("s5_chain", "zero_budget")]
+        for cell in archived:
+            rec = RFB.execute_cell(
+                FunctionBackend(lambda ps, m, s: ["g3 ."] * len(ps), name="f"),
+                model, {**cell, "n": 5}, n=5, run_id="t", git_commit="d")
+            assert "system_prompt_fp" not in rec["settings"]
+            RFB.append_record(history, rec)
         done = RFB.history_keys(history)
-        assert RFB.should_skip(model, {**canonical_chain[0], "n": 5}, done,
-                               force=False, canary=False)
-        edited_cell = {**edited[0], "n": 5}
-        assert edited_cell["length"] == canonical_chain[0]["length"]
-        assert not RFB.should_skip(model, edited_cell, done, force=False, canary=False)
+        for cell in archived:
+            assert RFB.should_skip(model, {**cell, "n": 5}, done,
+                                   force=False, canary=False)
+        for cell in planned:
+            if cell["facet"] not in ("s5_chain", "zero_budget"):
+                continue
+            skip = RFB.should_skip(model, {**cell, "n": 5}, done,
+                                   force=False, canary=False)
+            # instant zero_budget cells resume; thinking s5_chain cells re-plan
+            assert skip == (cell["facet"] == "zero_budget"), cell["facet"]
 
 
 def test_plan_has_no_rung_keys_and_facet_breadths_expand():
