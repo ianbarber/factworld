@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
+from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
@@ -23,8 +24,10 @@ from factworld.tasks import CANONICAL, generate  # noqa: E402
 from factworld.tokenizer import Tokenizer  # noqa: E402
 from factworld.tasks import build_world  # noqa: E402
 from factworld.validity import (  # noqa: E402
+    S5_CHAIN_ADVERSARIES,
     operative_floor,
     s5_chain_floors,
+    s5_chain_offset_accuracies,
     s5_chain_shallow_preds,
 )
 
@@ -45,48 +48,90 @@ def test_registered_adversaries_are_well_formed_on_every_local_cell():
             assert f["uniform"] == 1.0 / k
             assert abs(f["uniform_non_start"] - 1.0 / (k - 1)) < 1e-9
             assert 0.0 <= f["initial_map_chase"] <= 1.0
+            assert 0.0 <= f["initial_map_backhop"] <= 1.0
 
 
 def test_operative_floor_is_the_max_over_the_registered_adversaries():
-    """The floor of a cell is that max, and NO single adversary supplies it everywhere.
+    """The floor of a cell is that max, taken over the REGISTERED rows only, and no single
+    adversary supplies it everywhere.
 
-    The initial-map chase is the biggest one on some cells and not on others: over the
-    registered local grid, uniform-over-non-start wins 7 of the 16 cells, and on two of them
-    the chase falls below even plain 1/k. Reading a score against one named row understates
-    the floor wherever that row is not the largest.
+    Over the registered local grid the initial-map chase is the largest registered row on 9
+    of the 16 cells and uniform-over-non-start on 7; on two cells the chase falls below even
+    plain 1/k. Reading a score against one named row understates the floor wherever that row
+    is not the largest — and reading it against the unregistered backhop OVERstates it, which
+    is what the exclusion below is for.
     """
-    chase_wins = other_wins = 0
+    wins: Counter = Counter()
     below_uniform = []
+    backhop_over_floor = []
     for k, depth in _GRID:
         spec = _LOCAL.scaled(k=k, chain_depth=depth)
         for L in spec.eval_lengths:
             f = s5_chain_floors(generate(spec, "test", n=200, length=L), k)
-            assert operative_floor(f) == max(f.values())
+            reg = {n: v for n, v in f.items() if n in S5_CHAIN_ADVERSARIES}
+            assert "initial_map_backhop" not in reg      # measured, never a floor
+            assert operative_floor(f) == max(reg.values())
             assert operative_floor(f) >= f["initial_map_chase"]
-            if f["initial_map_chase"] == max(f.values()):
-                chase_wins += 1
-            else:
-                other_wins += 1
+            assert operative_floor(f) >= f["uniform_non_start"]
+            wins[next(n for n, v in reg.items() if v == max(reg.values()))] += 1
             if f["initial_map_chase"] < f["uniform"]:
                 below_uniform.append((k, depth, L))
-    assert chase_wins == 9 and other_wins == 7
+            if f["initial_map_backhop"] > operative_floor(f):
+                backhop_over_floor.append((k, depth, L))
+    assert wins == Counter({"initial_map_chase": 9, "uniform_non_start": 7})
     assert below_uniform == [(5, 2, 4), (6, 2, 8)]
+    # the five cells whose floor a registered backhop would have raised, by 0.020 to 0.050
+    # (0.333->0.355, 0.250->0.300, 0.200->0.220, 0.200->0.230, 0.200->0.230)
+    assert backhop_over_floor == [(4, 2, 4), (5, 2, 8), (6, 1, 8), (6, 2, 4), (6, 2, 8)]
 
 
-def test_k6_depth2_floor_is_uniform_non_start_at_both_lengths():
-    """The cell that already produced a formed seed. Its floor is 0.200 at L4 AND L8 — the
-    non-start guesser — while the initial-map chase is 0.195 and 0.160; two of its three
-    published seeds sat below it, which the run's own table did not show."""
+def test_fixed_offsets_partition_the_answer_on_every_local_cell():
+    """The structural fact the initial-map rows have to be read against: the stated map is a
+    single k-cycle and distinct_path forces gold != start, so the k-1 fixed offsets hit each
+    non-start agent exactly once. Their accuracies therefore sum to exactly 1, every member's
+    null is 1/(k-1) = uniform_non_start, and a max over any subset of them is selection."""
+    for k, depth in _GRID:
+        spec = _LOCAL.scaled(k=k, chain_depth=depth)
+        for L in spec.eval_lengths:
+            ex = generate(spec, "test", n=200, length=L)
+            off = s5_chain_offset_accuracies(ex, k)
+            f = s5_chain_floors(ex, k)
+            assert set(off) == set(range(1, k))
+            assert abs(sum(off.values()) - 1.0) < 1e-9, (k, depth, L)
+            assert abs(f["uniform_non_start"] - sum(off.values()) / (k - 1)) < 1e-9
+            # the two named rows are just two of those offsets
+            assert abs(off[depth] - f["initial_map_chase"]) < 1e-9
+            assert abs(off[k - 1] - f["initial_map_backhop"]) < 1e-9
+
+
+def test_k6_depth2_floor_is_chance_and_the_backhop_is_a_draw_from_the_partition():
+    """The cell that already produced a formed seed. Its operative floor is 0.200 at L4 AND
+    L8 — uniform over the non-start agents — against an initial-map chase of 0.195 and 0.160.
+
+    The backhop measures 0.230 on those 200 items at both lengths, which is a true statement
+    about that item set and not a floor: the five offsets at L4 are
+    {+1 0.230, +2 (chase) 0.195, +3 0.205, +4 0.140, +5 (backhop) 0.230}, sum 1.000, common
+    expectation 0.200, SE 0.0283. The backhop is +1.06 SE and ties the unregistered +1; at L8
+    the largest offset is the unregistered +4 at 0.235, above the backhop's 0.230. Two of the
+    cell's three published seeds sit below the floor and the formed one clears it by 4.1x.
+    """
     spec = _LOCAL.scaled(k=6, chain_depth=2)
-    f4 = s5_chain_floors(generate(spec, "test", n=200, length=4), 6)
-    f8 = s5_chain_floors(generate(spec, "test", n=200, length=8), 6)
+    ex4 = generate(spec, "test", n=200, length=4)
+    ex8 = generate(spec, "test", n=200, length=8)
+    f4, f8 = s5_chain_floors(ex4, 6), s5_chain_floors(ex8, 6)
     assert abs(f4["initial_map_chase"] - 0.195) < 1e-9
     assert abs(f8["initial_map_chase"] - 0.160) < 1e-9
+    # measured on THESE 200 items, and labelled as a partition member, not a floor
+    assert abs(f4["initial_map_backhop"] - 0.230) < 1e-9
+    assert abs(f8["initial_map_backhop"] - 0.230) < 1e-9
+    o4, o8 = s5_chain_offset_accuracies(ex4, 6), s5_chain_offset_accuracies(ex8, 6)
+    assert [round(o4[j], 3) for j in range(1, 6)] == [0.230, 0.195, 0.205, 0.140, 0.230]
+    assert max(o8.values()) == o8[4] == 0.235 > o8[5]      # largest offset is unregistered
     assert abs(operative_floor(f4) - 0.200) < 1e-9
     assert abs(operative_floor(f8) - 0.200) < 1e-9
     published = [0.155, 0.815, 0.170]                       # gdp_hybrid seeds 0/1/2 @L4
     assert sum(1 for x in published if x < operative_floor(f4)) == 2
-    assert max(published) > 4 * operative_floor(f4)
+    assert 4 * operative_floor(f4) < max(published) < 4.5 * operative_floor(f4)
 
 
 def test_no_chase_row_where_there_is_no_event_stream():
@@ -97,6 +142,7 @@ def test_no_chase_row_where_there_is_no_event_stream():
     assert s5_chain_floors(ex, chain.k)["initial_map_chase"] == 1.0
     floors = sweep.cell_floors(chain, 4, 50)
     assert "initial_map_chase" not in floors
+    assert "initial_map_backhop" not in floors      # same reason: it reads the true map here
     assert abs(operative_floor(floors) - 1.0 / (chain.k - 1)) < 1e-9
 
 

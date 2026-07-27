@@ -1,4 +1,4 @@
-"""M3 part 2 invariants: role/holder assertions round-trip, the aux operator-worlds carry the
+"""M3 part 2 invariants: role/holder/dial assertions round-trip, the aux operator-worlds carry the
 oracle's worked traces / final answers over disjoint symbols, and `build_corpus` assembles the
 operator-learning split (target histories-without-finals + aux supervision) — and the M4
 tokenizer round-trips the whole assembled corpus.
@@ -27,7 +27,16 @@ def _aux(seed=0, ns="aux0_"):
     return w, Oracle(w), Renderer()
 
 
-def test_role_and_holder_assertions_roundtrip():
+def _content(text: str) -> list[str]:
+    """Whitespace tokens of a rendered document in canonical form. Documents render with
+    attached punctuation ("r3.", "g9's"), which `classify` — matching atomic IDs only —
+    reads as non-content, so a check over the raw split silently skips every
+    sentence-final token."""
+    return Renderer.normalize(text).split()
+
+
+def test_assertion_lines_roundtrip():
+    """`parse` is the exact inverse of the three assertion renders, stepped and unstepped."""
     r = Renderer()
     for step in (None, "s4"):
         assert r.parse(r.render_role("g1", "r3", step=step)) == {
@@ -36,6 +45,8 @@ def test_role_and_holder_assertions_roundtrip():
             "type": "holder", "object": "o2", "holder": "loc5", "step": step}
         assert r.parse(r.render_holder("o2", "g4", step=step)) == {
             "type": "holder", "object": "o2", "holder": "g4", "step": step}
+        assert r.parse(r.render_dial("g3", "p2", step=step)) == {
+            "type": "dial", "agent": "g3", "position": "p2", "step": step}
 
 
 def test_aux_hard_doc_is_the_oracle_worked_trace():
@@ -72,7 +83,7 @@ def test_aux_symbols_are_namespaced_and_disjoint():
     doc = aux_operator_documents(w, o, r, [ep])[0]
     target = World(WorldConfig(seed=0))
     tgt_syms = set(target.agents) | set(target.roles) | set(target.objects) | set(target.locations)
-    content = [tok for tok in doc.text.split() if classify(tok)]
+    content = [tok for tok in _content(doc.text) if classify(tok)]
     assert content and all(tok.startswith("aux0_") or tok.startswith("s") for tok in content)
     assert not (set(content) & tgt_syms)
 
@@ -88,9 +99,9 @@ def test_build_corpus_assembles_operator_learning_split():
     # target hard histories leak no finals (no role tokens); aux traces DO carry roles
     for d in c.documents:
         if d.kind == "history_only" and d.meta["ns"] == "" and d.meta["family"] == "state_hard":
-            assert all(classify(tok) != "r" for tok in d.text.split())
+            assert all(classify(tok) != "r" for tok in _content(d.text))
         if d.kind == "aux_trace":
-            assert any(classify(tok) == "r" for tok in d.text.split())
+            assert any(classify(tok) == "r" for tok in _content(d.text))
 
 
 def test_tokenizer_roundtrips_the_whole_corpus():

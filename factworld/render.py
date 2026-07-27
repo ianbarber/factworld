@@ -134,15 +134,23 @@ class Renderer:
         to a fixed width for clean positional reading."""
         return "scn " + " ".join(f"#{c}" for c in str(idx).zfill(width))
 
+    # The three assertion renderers take ``step`` and prefix it exactly as ``render_event`` does.
+    # They previously accepted the argument and discarded it, so a stepped assertion parsed back
+    # with step=None and the render/parse round-trip contract failed on every aux corpus document
+    # (issue #38). The scored task streams are unaffected: tasks.py calls render_role and
+    # render_dial without a step, and factworld.corpus is the only caller that passes one.
     def render_role(self, agent: str, role: str, step: str | None = None, key: str | None = None) -> str:
-        return self._pick(self._ROLE, key or f"role|{agent}").format(g=agent, r=role)
+        s = self._pick(self._ROLE, key or f"role|{agent}").format(g=agent, r=role)
+        return f"{step} {s}" if step is not None else s
 
     def render_holder(self, obj: str, holder: str, step: str | None = None, key: str | None = None) -> str:
-        return self._pick(self._HOLDER, key or f"holder|{obj}").format(o=obj, h=holder)
+        s = self._pick(self._HOLDER, key or f"holder|{obj}").format(o=obj, h=holder)
+        return f"{step} {s}" if step is not None else s
 
     def render_dial(self, agent: str, position: str, step: str | None = None, key: str | None = None) -> str:
         """Commutative-state initial-condition line: ``g3's dial is at p2.``"""
-        return self._pick(self._DIAL, key or f"dial|{agent}").format(g=agent, p=position)
+        s = self._pick(self._DIAL, key or f"dial|{agent}").format(g=agent, p=position)
+        return f"{step} {s}" if step is not None else s
 
     def render_query(self, family: str, *, entity=None, attribute=None, target=None, t=None) -> str:
         # as-of-t references the (t-1)-th event label; t=None means the final state
