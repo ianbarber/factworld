@@ -75,8 +75,11 @@ instant regime shows what survives in weights.
   diagnostic. Stored record keys keep their historical names (metrics.relaxed/exact/contains/
   last_n) — a presentation convention, never a history rewrite.
 - Symmetric contamination policy: ⊘ = not measurable at this budget; ≤x† = upper bound, covert
-  reasoning on most calls (rtok on > 50% of the canonical attempt's calls); neither participates
-  in orderings — not in figure sorts, not in cross-model ordering prose.
+  reasoning on most calls (rtok on > 50% of the canonical attempt's calls); ᵘ = unworked answers
+  on a large fraction of calls, so the cell measures engagement, not capability. None of the
+  three participates in orderings — not in figure sorts, not in cross-model ordering prose, not
+  as a sort tiebreak, and not in a statistic derived from cells (the published thinking noise
+  bar reads unmarked cells only).
 - Floors are first-class rows (recency heuristic; object-filter E[1/w]); scores are read against
   them, and both are recomputed at render time from the exact deterministic items, so they are
   independently checkable. Marks are plain-language (†, *, ‡, ⊘ "not measurable at this budget",

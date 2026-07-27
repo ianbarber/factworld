@@ -144,21 +144,29 @@ intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.
 <!-- FRONTIER_TABLE_START -->
 **s5_chain**
 
-| Model | s5_chain @L96 | @L128 | ctok/call @L64 |
-|---|---|---|---|
-| anthropic/claude-fable-5 | 1.00 | 1.00 | 5014 |
-| openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
-| x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
-| anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
-| moonshotai/kimi-k3 | 0.96 | 0.96 | 10941 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.96ʳ | 0.96 | 17071 |
-| muse-spark-1.1 | 0.96 | 0.92 | 12484 |
-| google/gemini-3.6-flash | 0.92 | 0.96 | 8166 |
-| anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
-| deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
-| z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
-| openai/gpt-5.6-sol | 0.60 | 0.80 | 2444 |
+| Model | s5_chain @L96 | @L128 | worked calls @L96 | event-blind @L96 | mean ctok/call @L64 |
+|---|---|---|---|---|---|
+| anthropic/claude-fable-5 | 1.00 | 1.00 | 1.00 | 0.00 | 5014 |
+| openai/gpt-5.5 | 1.00 | 1.00 | 1.00 | 0.00 | 9343 |
+| x-ai/grok-4.5 | 1.00 | 0.96 | 1.00 | 0.00 | 7711 |
+| anthropic/claude-opus-4.8 | 0.96 | 0.96 | 1.00 | 0.00 | 9702 |
+| moonshotai/kimi-k3 | 0.96 | 0.96 | 1.00 | 0.00 | 10941 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.96ʳ | 0.96 | 1.00 | 0.00 | 17071 |
+| muse-spark-1.1 | 0.96 | 0.92 | 1.00 | 0.00 | 12484 |
+| google/gemini-3.6-flash | 0.92 | 0.96 | 1.00 | 0.00 | 8166 |
+| anthropic/claude-sonnet-5 | 0.92 | 0.96 | 1.00 | 0.00 | 12729 |
+| deepseek/deepseek-v4-pro | 0.92 | 0.96 | 1.00 | 0.00 | 17052 |
+| z-ai/glm-5.2 | 0.92 | 0.80 (trunc 0.04) | 1.00 | 0.00 | 17982 |
+| qwen/qwen3.7-max | 0.72 | 0.44 | 1.00 | 0.00 | 12588 |
+| openai/gpt-5.6-sol | 0.60ᵘ | 0.80ᵘ | 0.56 (1.00/0.09) | 0.42 | 2444 |
+
+worked calls: the fraction of a cell's calls whose completion exceeds 512 completion tokens, with (match | worked / match | unworked) beside it where the cell has calls of both kinds. The signal is completion tokens, not reasoning tokens: reasoning-token accounting is not comparable across providers (on this history the median ctok-minus-rtok is 5184 for sonnet-5, 4184 for opus and 1675 for fable, but 2-17 for every other model, and glm reports rtok=0 on correct 8k-token answers). Cells run before per-example token logging report n/a.
+
+The work rate is a property of the model AND of the system prompt the benchmark sends, not of the model alone. Three arms over the identical deterministic items (openai/gpt-5.6-sol, s5_chain_v3 @L64, n=25, top effort, 49,152-token budget) differ only in that prompt. Under the scored protocol prompt ("You are taking a short test... no explanation") the model matches 0.68, works 0.68 of its calls and answers event-blind on 0.33; with the two clauses that read as instructions to spend less effort removed and the identical answer-format contract kept, it matches 0.96, works 0.96 and answers event-blind on 0.04 — 7 of the 8 calls the scored prompt left unworked are worked under the neutral one. The third arm sends no system prompt at all: it works 0.96 and matches 0.84, and that 0.84 is a format reading rather than a composition one — all 24 of its worked calls carry the gold value, three of them committed in LaTeX (`**Answer: \(g15\)**`, `\boxed{g0}`) that the committed-answer rule does not read. The event-blind rates run through the published column's eligibility rule, so they read against it. Every scored thinking cell carries the scored prompt, so the completion-token columns are token spend under an instruction to be brief. One model, one length, n=25: `results/probes/sol_system_prompt_20260727.json`.
+
+event-blind: the fraction of a cell's predictions equal to the 8-hop dereference of the INITIAL pointer map — the answer a model gives if it reads the fact block and skips the whole event stream. Items where that answer coincides with the gold answer are dropped (it coincides at chance, 0.063-0.078 across lengths against 1/16), so the rate names which cheaper task the model substituted rather than crediting luck. Across the roster's 52 scored s5_chain cells the blind answer is given on 46 of 1,261 eligible items, 42 of them by openai/gpt-5.6-sol; over the other 12 models the rate is 4 of 1,164 (0.003), against 0.063 for a uniform guess.
+
+Repeat runs at identical settings, the table publishing the last run: openai/gpt-5.6-sol @L96 0.72/0.84/0.60; openai/gpt-5.6-sol @L128 0.68/0.80/0.80; openai/gpt-5.6-sol @L64 0.64/0.84/0.60.
 
 **Component: instant composition (reasoning off, answer contract)**
 
@@ -179,7 +187,7 @@ intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.
 
 **Components: thinking state stress (reasoning on)**
 
-| Model | chain d128 | s5 @L256 | s5@128 ctok |
+| Model | chain d128 | s5 @L256 | s5@128 mean ctok/call |
 |---|---|---|---|
 | anthropic/claude-fable-5 | 1.00 | 1.00 | 6405 |
 | openai/gpt-5.5 | 1.00 | 1.00 | 6989 |
@@ -191,24 +199,27 @@ intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.
 | openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
 | x-ai/grok-4.5 | 1.00 | 0.88 | 8069 |
 | qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| moonshotai/kimi-k3 | 1.00 | 0.80 | 11355 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | 0.80 | 12250 |
-| z-ai/glm-5.2 | 0.92 | 0.76 | 6282 |
+| moonshotai/kimi-k3 | 1.00 | 0.80 (trunc 0.16) | 11355 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.60 (trunc 0.32) | 0.80 (trunc 0.20) | 12250 |
+| z-ai/glm-5.2 | 0.92 (trunc 0.04) | 0.76 (trunc 0.04) | 6282 |
+
+**Marks**
+
+- `†` visible working or covert reasoning on the canonical attempt.
+- `ᵘ` unworked answers on a large fraction of calls; the cell measures engagement, not capability.
+- `(trunc 0.NN)` the fraction of the cell's calls that ran out of budget before an answer; those calls score 0, so the cell's score is a lower bound.
+- `*` off-arm ran effort=minimal (the endpoint cannot disable reasoning).
+- `ʳ` single rerun at a raised token budget (98,304 tokens).
+- `—ᶠ` gap not interpretable: the binding input sits at the object-filter floor.
+- `—` not applicable to this row.
+
+A cell marked `ᵘ` is not a capability measurement: it is published, but takes no part in any ordering — not in these tables' sorts, not in the figures.
 <!-- FRONTIER_TABLE_END -->
 
 ![s5_chain scores with Wilson 95% intervals](docs/benchmark/fig_bench_headline.svg)
 
-n=25 per cell; bars are Wilson 95% intervals.
-
-Marks:
-- `†` visible working or covert reasoning on the canonical attempt.
-- `≤x†` an explicit upper bound (covert reasoning on most calls); neither `⊘` nor `≤x†` participates in orderings.
-- `*` off-arm ran effort=minimal (cannot disable reasoning).
-- `ʳ` single rerun at a raised 32,768-token budget.
-- `‡` provider ignored the token cap.
-- `⊘` not measurable at this budget (majority finish=length).
-- `—ᶠ` gap not interpretable (binding at the object-filter floor).
-- `n/a` cell not run; `—` not applicable to a floor row.
+n=25 per cell; bars are Wilson 95% intervals. Marked cells are plotted below the rule and are
+not ranked.
 
 Reading the component tables: **gap** = binding minus composed @L16, the accuracy lost when
 the model must chain the recall step onto the state it just tracked. The two floor rows are
