@@ -1,0 +1,347 @@
+{
+ "model": "deepseek/deepseek-v4-pro",
+ "task": "s5_chain_v4",
+ "effort": "xhigh",
+ "system_prompt": "Answer the question with only the requested value or values. Use the same spelling as in the question.",
+ "n": 20,
+ "ts": "2026-07-29T06:05:12.288346+00:00",
+ "usd_total": 2.17213074,
+ "rungs": [
+  {
+   "k": 128,
+   "depth": 16,
+   "length": 256,
+   "budget": 262144,
+   "n": 20,
+   "writes_per_slot": 5.0,
+   "match": 0.65,
+   "match_clean": 0.8125,
+   "n_clean": 16,
+   "truncated": 0,
+   "errors": 4,
+   "mean_ctok": 72775.9,
+   "floor": 0.007874015748031492,
+   "chance": 0.0078125,
+   "floors": {
+    "initial_map_chase": 0.0,
+    "initial_map_backhop": 0.0,
+    "initial_ref_resolution": 0.0,
+    "echo": 0.0,
+    "uniform_non_start": 0.007874015748031492,
+    "uniform": 0.0078125
+   },
+   "usd": 1.26630066,
+   "aborted": false,
+   "rows": [
+    {
+     "gold": "g25.",
+     "pred": "",
+     "match": 0,
+     "ctok": 44250,
+     "finish": "error"
+    },
+    {
+     "gold": "g87.",
+     "pred": "g87",
+     "match": 1,
+     "ctok": 98284,
+     "finish": "stop"
+    },
+    {
+     "gold": "g80.",
+     "pred": "g80",
+     "match": 1,
+     "ctok": 78118,
+     "finish": "stop"
+    },
+    {
+     "gold": "g3.",
+     "pred": "g46",
+     "match": 0,
+     "ctok": 92075,
+     "finish": "stop"
+    },
+    {
+     "gold": "g96.",
+     "pred": "g96",
+     "match": 1,
+     "ctok": 99859,
+     "finish": "stop"
+    },
+    {
+     "gold": "g9.",
+     "pred": "g9",
+     "match": 1,
+     "ctok": 60052,
+     "finish": "stop"
+    },
+    {
+     "gold": "g95.",
+     "pred": "",
+     "match": 0,
+     "ctok": 31906,
+     "finish": "error"
+    },
+    {
+     "gold": "g109.",
+     "pred": "g109",
+     "match": 1,
+     "ctok": 77267,
+     "finish": "stop"
+    },
+    {
+     "gold": "g29.",
+     "pred": "g29",
+     "match": 1,
+     "ctok": 51476,
+     "finish": "stop"
+    },
+    {
+     "gold": "g74.",
+     "pred": "g0",
+     "match": 0,
+     "ctok": 96690,
+     "finish": "stop"
+    },
+    {
+     "gold": "g59.",
+     "pred": "",
+     "match": 0,
+     "ctok": 34916,
+     "finish": "error"
+    },
+    {
+     "gold": "g33.",
+     "pred": "g33",
+     "match": 1,
+     "ctok": 53490,
+     "finish": "stop"
+    },
+    {
+     "gold": "g25.",
+     "pred": "g25",
+     "match": 1,
+     "ctok": 124510,
+     "finish": "stop"
+    },
+    {
+     "gold": "g36.",
+     "pred": "g36",
+     "match": 1,
+     "ctok": 82389,
+     "finish": "stop"
+    },
+    {
+     "gold": "g53.",
+     "pred": "g53",
+     "match": 1,
+     "ctok": 79944,
+     "finish": "stop"
+    },
+    {
+     "gold": "g15.",
+     "pred": "g54",
+     "match": 0,
+     "ctok": 3224,
+     "finish": "stop"
+    },
+    {
+     "gold": "g77.",
+     "pred": "",
+     "match": 0,
+     "ctok": 19360,
+     "finish": "error"
+    },
+    {
+     "gold": "g79.",
+     "pred": "g79",
+     "match": 1,
+     "ctok": 113242,
+     "finish": "stop"
+    },
+    {
+     "gold": "g18.",
+     "pred": "g18",
+     "match": 1,
+     "ctok": 98401,
+     "finish": "stop"
+    },
+    {
+     "gold": "g78.",
+     "pred": "g78",
+     "match": 1,
+     "ctok": 116065,
+     "finish": "stop"
+    }
+   ]
+  },
+  {
+   "k": 64,
+   "depth": 32,
+   "length": 128,
+   "budget": 196608,
+   "n": 20,
+   "writes_per_slot": 5.0,
+   "match": 0.75,
+   "match_clean": 0.8333333333333334,
+   "n_clean": 18,
+   "truncated": 1,
+   "errors": 1,
+   "mean_ctok": 52059.2,
+   "floor": 0.015873015873015872,
+   "chance": 0.015625,
+   "floors": {
+    "initial_map_chase": 0.0,
+    "initial_map_backhop": 0.0,
+    "initial_ref_resolution": 0.0,
+    "echo": 0.0,
+    "uniform_non_start": 0.015873015873015872,
+    "uniform": 0.015625
+   },
+   "usd": 0.9058300800000001,
+   "aborted": false,
+   "rows": [
+    {
+     "gold": "g56.",
+     "pred": "g56",
+     "match": 1,
+     "ctok": 69141,
+     "finish": "stop"
+    },
+    {
+     "gold": "g15.",
+     "pred": "g15",
+     "match": 1,
+     "ctok": 99353,
+     "finish": "stop"
+    },
+    {
+     "gold": "g27.",
+     "pred": "g27",
+     "match": 1,
+     "ctok": 48145,
+     "finish": "stop"
+    },
+    {
+     "gold": "g28.",
+     "pred": "g28",
+     "match": 1,
+     "ctok": 46269,
+     "finish": "stop"
+    },
+    {
+     "gold": "g56.",
+     "pred": "g56",
+     "match": 1,
+     "ctok": 40327,
+     "finish": "stop"
+    },
+    {
+     "gold": "g2.",
+     "pred": "g2",
+     "match": 1,
+     "ctok": 62839,
+     "finish": "stop"
+    },
+    {
+     "gold": "g1.",
+     "pred": "g1",
+     "match": 1,
+     "ctok": 37242,
+     "finish": "stop"
+    },
+    {
+     "gold": "g10.",
+     "pred": "g10",
+     "match": 1,
+     "ctok": 57196,
+     "finish": "stop"
+    },
+    {
+     "gold": "g37.",
+     "pred": "g37",
+     "match": 1,
+     "ctok": 63319,
+     "finish": "stop"
+    },
+    {
+     "gold": "g30.",
+     "pred": "g30",
+     "match": 1,
+     "ctok": 41223,
+     "finish": "stop"
+    },
+    {
+     "gold": "g60.",
+     "pred": "",
+     "match": 0,
+     "ctok": 32768,
+     "finish": "length"
+    },
+    {
+     "gold": "g8.",
+     "pred": "g14",
+     "match": 0,
+     "ctok": 54013,
+     "finish": "stop"
+    },
+    {
+     "gold": "g6.",
+     "pred": "g6",
+     "match": 1,
+     "ctok": 55105,
+     "finish": "stop"
+    },
+    {
+     "gold": "g41.",
+     "pred": "g12",
+     "match": 0,
+     "ctok": 49318,
+     "finish": "stop"
+    },
+    {
+     "gold": "g8.",
+     "pred": "",
+     "match": 0,
+     "ctok": 26636,
+     "finish": "error"
+    },
+    {
+     "gold": "g49.",
+     "pred": "g49",
+     "match": 1,
+     "ctok": 47087,
+     "finish": "stop"
+    },
+    {
+     "gold": "g15.",
+     "pred": "g15",
+     "match": 1,
+     "ctok": 54816,
+     "finish": "stop"
+    },
+    {
+     "gold": "g43.",
+     "pred": "g58",
+     "match": 0,
+     "ctok": 39899,
+     "finish": "stop"
+    },
+    {
+     "gold": "g12.",
+     "pred": "g12",
+     "match": 1,
+     "ctok": 58568,
+     "finish": "stop"
+    },
+    {
+     "gold": "g10.",
+     "pred": "g10",
+     "match": 1,
+     "ctok": 57920,
+     "finish": "stop"
+    }
+   ]
+  }
+ ]
+}

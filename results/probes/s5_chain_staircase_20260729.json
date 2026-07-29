@@ -1,0 +1,683 @@
+{
+ "model": "deepseek/deepseek-v4-pro",
+ "task": "s5_chain_v4",
+ "effort": "xhigh",
+ "system_prompt": "Answer the question with only the requested value or values. Use the same spelling as in the question.",
+ "n": 20,
+ "ts": "2026-07-29T01:39:42.931678+00:00",
+ "usd_total": 4.22971641,
+ "rungs": [
+  {
+   "k": 32,
+   "depth": 16,
+   "length": 64,
+   "budget": 49152,
+   "n": 20,
+   "writes_per_slot": 5.0,
+   "match": 0.9,
+   "match_clean": 0.9473684210526315,
+   "n_clean": 19,
+   "truncated": 1,
+   "errors": 0,
+   "mean_ctok": 36105.65,
+   "floor": 0.05,
+   "chance": 0.03125,
+   "floors": {
+    "initial_map_chase": 0.0,
+    "initial_map_backhop": 0.05,
+    "initial_ref_resolution": 0.05,
+    "echo": 0.0,
+    "uniform_non_start": 0.03225806451612902,
+    "uniform": 0.03125
+   },
+   "usd": 0.62823831,
+   "aborted": false,
+   "rows": [
+    {
+     "gold": "g19.",
+     "pred": "g19",
+     "match": 1,
+     "ctok": 45672,
+     "finish": "stop"
+    },
+    {
+     "gold": "g5.",
+     "pred": "g5",
+     "match": 1,
+     "ctok": 36510,
+     "finish": "stop"
+    },
+    {
+     "gold": "g31.",
+     "pred": "g31",
+     "match": 1,
+     "ctok": 38918,
+     "finish": "stop"
+    },
+    {
+     "gold": "g28.",
+     "pred": "g28",
+     "match": 1,
+     "ctok": 28948,
+     "finish": "stop"
+    },
+    {
+     "gold": "g30.",
+     "pred": "g30",
+     "match": 1,
+     "ctok": 28700,
+     "finish": "stop"
+    },
+    {
+     "gold": "g17.",
+     "pred": "g17",
+     "match": 1,
+     "ctok": 49015,
+     "finish": "stop"
+    },
+    {
+     "gold": "g24.",
+     "pred": "g24",
+     "match": 1,
+     "ctok": 26837,
+     "finish": "stop"
+    },
+    {
+     "gold": "g23.",
+     "pred": "g23",
+     "match": 1,
+     "ctok": 38656,
+     "finish": "stop"
+    },
+    {
+     "gold": "g14.",
+     "pred": "g14",
+     "match": 1,
+     "ctok": 27743,
+     "finish": "stop"
+    },
+    {
+     "gold": "g20.",
+     "pred": "g20",
+     "match": 1,
+     "ctok": 30292,
+     "finish": "stop"
+    },
+    {
+     "gold": "g13.",
+     "pred": "g13",
+     "match": 1,
+     "ctok": 36070,
+     "finish": "stop"
+    },
+    {
+     "gold": "g5.",
+     "pred": "g26",
+     "match": 0,
+     "ctok": 37318,
+     "finish": "stop"
+    },
+    {
+     "gold": "g22.",
+     "pred": "g22",
+     "match": 1,
+     "ctok": 43506,
+     "finish": "stop"
+    },
+    {
+     "gold": "g18.",
+     "pred": "g18",
+     "match": 1,
+     "ctok": 38282,
+     "finish": "stop"
+    },
+    {
+     "gold": "g30.",
+     "pred": "g30",
+     "match": 1,
+     "ctok": 28352,
+     "finish": "stop"
+    },
+    {
+     "gold": "g30.",
+     "pred": "g30",
+     "match": 1,
+     "ctok": 34678,
+     "finish": "stop"
+    },
+    {
+     "gold": "g7.",
+     "pred": "g7",
+     "match": 1,
+     "ctok": 25075,
+     "finish": "stop"
+    },
+    {
+     "gold": "g23.",
+     "pred": "g23",
+     "match": 1,
+     "ctok": 29929,
+     "finish": "stop"
+    },
+    {
+     "gold": "g2.",
+     "pred": "",
+     "match": 0,
+     "ctok": 49152,
+     "finish": "length"
+    },
+    {
+     "gold": "g27.",
+     "pred": "g27",
+     "match": 1,
+     "ctok": 48460,
+     "finish": "stop"
+    }
+   ]
+  },
+  {
+   "k": 64,
+   "depth": 16,
+   "length": 128,
+   "budget": 98304,
+   "n": 20,
+   "writes_per_slot": 5.0,
+   "match": 1.0,
+   "match_clean": 1.0,
+   "n_clean": 20,
+   "truncated": 0,
+   "errors": 0,
+   "mean_ctok": 54633.35,
+   "floor": 0.015873015873015872,
+   "chance": 0.015625,
+   "floors": {
+    "initial_map_chase": 0.0,
+    "initial_map_backhop": 0.0,
+    "initial_ref_resolution": 0.0,
+    "echo": 0.0,
+    "uniform_non_start": 0.015873015873015872,
+    "uniform": 0.015625
+   },
+   "usd": 0.95062029,
+   "aborted": false,
+   "rows": [
+    {
+     "gold": "g55.",
+     "pred": "g55",
+     "match": 1,
+     "ctok": 60071,
+     "finish": "stop"
+    },
+    {
+     "gold": "g55.",
+     "pred": "g55",
+     "match": 1,
+     "ctok": 54027,
+     "finish": "stop"
+    },
+    {
+     "gold": "g7.",
+     "pred": "g7",
+     "match": 1,
+     "ctok": 42814,
+     "finish": "stop"
+    },
+    {
+     "gold": "g5.",
+     "pred": "g5",
+     "match": 1,
+     "ctok": 72698,
+     "finish": "stop"
+    },
+    {
+     "gold": "g4.",
+     "pred": "g4",
+     "match": 1,
+     "ctok": 43297,
+     "finish": "stop"
+    },
+    {
+     "gold": "g33.",
+     "pred": "g33",
+     "match": 1,
+     "ctok": 35143,
+     "finish": "stop"
+    },
+    {
+     "gold": "g24.",
+     "pred": "g24",
+     "match": 1,
+     "ctok": 52837,
+     "finish": "stop"
+    },
+    {
+     "gold": "g50.",
+     "pred": "g50",
+     "match": 1,
+     "ctok": 81335,
+     "finish": "stop"
+    },
+    {
+     "gold": "g7.",
+     "pred": "g7",
+     "match": 1,
+     "ctok": 45091,
+     "finish": "stop"
+    },
+    {
+     "gold": "g34.",
+     "pred": "g34",
+     "match": 1,
+     "ctok": 76650,
+     "finish": "stop"
+    },
+    {
+     "gold": "g26.",
+     "pred": "g26",
+     "match": 1,
+     "ctok": 65321,
+     "finish": "stop"
+    },
+    {
+     "gold": "g41.",
+     "pred": "g41",
+     "match": 1,
+     "ctok": 58340,
+     "finish": "stop"
+    },
+    {
+     "gold": "g20.",
+     "pred": "g20",
+     "match": 1,
+     "ctok": 32505,
+     "finish": "stop"
+    },
+    {
+     "gold": "g54.",
+     "pred": "g54",
+     "match": 1,
+     "ctok": 47470,
+     "finish": "stop"
+    },
+    {
+     "gold": "g23.",
+     "pred": "g23",
+     "match": 1,
+     "ctok": 42667,
+     "finish": "stop"
+    },
+    {
+     "gold": "g31.",
+     "pred": "g31",
+     "match": 1,
+     "ctok": 47662,
+     "finish": "stop"
+    },
+    {
+     "gold": "g40.",
+     "pred": "g40",
+     "match": 1,
+     "ctok": 60217,
+     "finish": "stop"
+    },
+    {
+     "gold": "g51.",
+     "pred": "g51",
+     "match": 1,
+     "ctok": 76691,
+     "finish": "stop"
+    },
+    {
+     "gold": "g44.",
+     "pred": "g44",
+     "match": 1,
+     "ctok": 48240,
+     "finish": "stop"
+    },
+    {
+     "gold": "g16.",
+     "pred": "g16",
+     "match": 1,
+     "ctok": 49591,
+     "finish": "stop"
+    }
+   ]
+  },
+  {
+   "k": 128,
+   "depth": 16,
+   "length": 256,
+   "budget": 131072,
+   "n": 20,
+   "writes_per_slot": 5.0,
+   "match": 0.65,
+   "match_clean": 0.8125,
+   "n_clean": 16,
+   "truncated": 3,
+   "errors": 1,
+   "mean_ctok": 92103.85,
+   "floor": 0.007874015748031492,
+   "chance": 0.0078125,
+   "floors": {
+    "initial_map_chase": 0.0,
+    "initial_map_backhop": 0.0,
+    "initial_ref_resolution": 0.0,
+    "echo": 0.0,
+    "uniform_non_start": 0.007874015748031492,
+    "uniform": 0.0078125
+   },
+   "usd": 1.60260699,
+   "aborted": false,
+   "rows": [
+    {
+     "gold": "g25.",
+     "pred": "g25",
+     "match": 1,
+     "ctok": 84604,
+     "finish": "stop"
+    },
+    {
+     "gold": "g87.",
+     "pred": "",
+     "match": 0,
+     "ctok": 131072,
+     "finish": "length"
+    },
+    {
+     "gold": "g80.",
+     "pred": "g80",
+     "match": 1,
+     "ctok": 93476,
+     "finish": "stop"
+    },
+    {
+     "gold": "g3.",
+     "pred": "g3",
+     "match": 1,
+     "ctok": 116171,
+     "finish": "stop"
+    },
+    {
+     "gold": "g96.",
+     "pred": "g96",
+     "match": 1,
+     "ctok": 51042,
+     "finish": "stop"
+    },
+    {
+     "gold": "g9.",
+     "pred": "g9",
+     "match": 1,
+     "ctok": 102924,
+     "finish": "stop"
+    },
+    {
+     "gold": "g95.",
+     "pred": "g95",
+     "match": 1,
+     "ctok": 102254,
+     "finish": "stop"
+    },
+    {
+     "gold": "g109.",
+     "pred": "g109",
+     "match": 1,
+     "ctok": 78212,
+     "finish": "stop"
+    },
+    {
+     "gold": "g29.",
+     "pred": "g54",
+     "match": 0,
+     "ctok": 89974,
+     "finish": "stop"
+    },
+    {
+     "gold": "g74.",
+     "pred": "g56",
+     "match": 0,
+     "ctok": 51442,
+     "finish": "stop"
+    },
+    {
+     "gold": "g59.",
+     "pred": "g59",
+     "match": 1,
+     "ctok": 112862,
+     "finish": "stop"
+    },
+    {
+     "gold": "g33.",
+     "pred": "",
+     "match": 0,
+     "ctok": 29612,
+     "finish": "error"
+    },
+    {
+     "gold": "g25.",
+     "pred": "g25",
+     "match": 1,
+     "ctok": 93891,
+     "finish": "stop"
+    },
+    {
+     "gold": "g36.",
+     "pred": "",
+     "match": 0,
+     "ctok": 131072,
+     "finish": "length"
+    },
+    {
+     "gold": "g53.",
+     "pred": "g53",
+     "match": 1,
+     "ctok": 100369,
+     "finish": "stop"
+    },
+    {
+     "gold": "g15.",
+     "pred": "g15",
+     "match": 1,
+     "ctok": 79826,
+     "finish": "stop"
+    },
+    {
+     "gold": "g77.",
+     "pred": "g69",
+     "match": 0,
+     "ctok": 61649,
+     "finish": "stop"
+    },
+    {
+     "gold": "g79.",
+     "pred": "",
+     "match": 0,
+     "ctok": 131072,
+     "finish": "length"
+    },
+    {
+     "gold": "g18.",
+     "pred": "g18",
+     "match": 1,
+     "ctok": 104493,
+     "finish": "stop"
+    },
+    {
+     "gold": "g78.",
+     "pred": "g78",
+     "match": 1,
+     "ctok": 96060,
+     "finish": "stop"
+    }
+   ]
+  },
+  {
+   "k": 64,
+   "depth": 32,
+   "length": 128,
+   "budget": 98304,
+   "n": 20,
+   "writes_per_slot": 5.0,
+   "match": 0.8,
+   "match_clean": 0.8888888888888888,
+   "n_clean": 18,
+   "truncated": 2,
+   "errors": 0,
+   "mean_ctok": 60244.3,
+   "floor": 0.015873015873015872,
+   "chance": 0.015625,
+   "floors": {
+    "initial_map_chase": 0.0,
+    "initial_map_backhop": 0.0,
+    "initial_ref_resolution": 0.0,
+    "echo": 0.0,
+    "uniform_non_start": 0.015873015873015872,
+    "uniform": 0.015625
+   },
+   "usd": 1.0482508199999998,
+   "aborted": false,
+   "rows": [
+    {
+     "gold": "g56.",
+     "pred": "g56",
+     "match": 1,
+     "ctok": 77330,
+     "finish": "stop"
+    },
+    {
+     "gold": "g15.",
+     "pred": "g15",
+     "match": 1,
+     "ctok": 67952,
+     "finish": "stop"
+    },
+    {
+     "gold": "g27.",
+     "pred": "g27",
+     "match": 1,
+     "ctok": 82946,
+     "finish": "stop"
+    },
+    {
+     "gold": "g28.",
+     "pred": "g28",
+     "match": 1,
+     "ctok": 64953,
+     "finish": "stop"
+    },
+    {
+     "gold": "g56.",
+     "pred": "g56",
+     "match": 1,
+     "ctok": 70496,
+     "finish": "stop"
+    },
+    {
+     "gold": "g2.",
+     "pred": "g2",
+     "match": 1,
+     "ctok": 90881,
+     "finish": "stop"
+    },
+    {
+     "gold": "g1.",
+     "pred": "g1",
+     "match": 1,
+     "ctok": 57856,
+     "finish": "stop"
+    },
+    {
+     "gold": "g10.",
+     "pred": "",
+     "match": 0,
+     "ctok": 98304,
+     "finish": "length"
+    },
+    {
+     "gold": "g37.",
+     "pred": "",
+     "match": 0,
+     "ctok": 32768,
+     "finish": "length"
+    },
+    {
+     "gold": "g30.",
+     "pred": "g30",
+     "match": 1,
+     "ctok": 65342,
+     "finish": "stop"
+    },
+    {
+     "gold": "g60.",
+     "pred": "g2",
+     "match": 0,
+     "ctok": 26611,
+     "finish": "stop"
+    },
+    {
+     "gold": "g8.",
+     "pred": "g8",
+     "match": 1,
+     "ctok": 67560,
+     "finish": "stop"
+    },
+    {
+     "gold": "g6.",
+     "pred": "g6",
+     "match": 1,
+     "ctok": 58947,
+     "finish": "stop"
+    },
+    {
+     "gold": "g41.",
+     "pred": "g41",
+     "match": 1,
+     "ctok": 42624,
+     "finish": "stop"
+    },
+    {
+     "gold": "g8.",
+     "pred": "g8",
+     "match": 1,
+     "ctok": 46257,
+     "finish": "stop"
+    },
+    {
+     "gold": "g49.",
+     "pred": "g52",
+     "match": 0,
+     "ctok": 56072,
+     "finish": "stop"
+    },
+    {
+     "gold": "g15.",
+     "pred": "g15",
+     "match": 1,
+     "ctok": 43463,
+     "finish": "stop"
+    },
+    {
+     "gold": "g43.",
+     "pred": "g43",
+     "match": 1,
+     "ctok": 40575,
+     "finish": "stop"
+    },
+    {
+     "gold": "g12.",
+     "pred": "g12",
+     "match": 1,
+     "ctok": 33363,
+     "finish": "stop"
+    },
+    {
+     "gold": "g10.",
+     "pred": "g10",
+     "match": 1,
+     "ctok": 80586,
+     "finish": "stop"
+    }
+   ]
+  }
+ ]
+}
