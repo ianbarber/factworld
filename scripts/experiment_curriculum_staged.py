@@ -248,9 +248,27 @@ def eval_task(backend, spec, *, eval_n: int, length: int, scaffolded: bool = Fal
     return {"scaffolded_value": value_hits / max(1, n_two)}
 
 
-def eval_grid(backend, specs: dict[str, TK.TaskSpec], *, eval_n: int, use_trace: bool = False):
-    """Independent per-task eval."""
+def eval_grid(backend, specs: dict[str, TK.TaskSpec], *, eval_n: int, use_trace: bool = False,
+              extrap_lengths: tuple[int, ...] = ()):
+    """Independent per-task eval.
+
+    ``extrap_lengths`` adds held-out LENGTH cells for the composed task and for the binding leg
+    it is read against. composite_copy_v2 trains on (4, 8, 16) and its spec declares held-out
+    lengths (16, 32, 64), but this grid only ever ran L16 — so the one architecture that composes
+    locally has never been asked whether it still composes out of distribution. The composed cell
+    is paired with binding at the SAME length, because a composed score that falls with L is only
+    interpretable against a component measured at that L rather than at L16.
+
+    This is the form of the composition question that survives a scratchpad. A model that may emit
+    L intermediate tokens has the sequential depth to run an L-step algorithm, so no fixed-size
+    construct stays hard; a length-specific shortcut, by construction, does not survive 2x and 4x.
+    """
     g = {}
+    for L in extrap_lengths:
+        g[f"composite_p16_L{L}"] = eval_task(backend, specs["composite_p16"], eval_n=eval_n,
+                                             length=L, use_trace=use_trace)
+        g[f"binding_L{L}"] = eval_task(backend, specs["binding"], eval_n=eval_n, length=L,
+                                       use_trace=use_trace)
     g["binding_L16"] = eval_task(backend, specs["binding"], eval_n=eval_n, length=16,
                                   use_trace=use_trace)
     g["recall_easy_L4"] = eval_task(backend, specs["recall_easy"], eval_n=eval_n, length=4,
@@ -272,7 +290,8 @@ def eval_grid(backend, specs: dict[str, TK.TaskSpec], *, eval_n: int, use_trace:
 
 def train_stages(arch: str, seed: int, schedule, tok, specs, *, d_model, n_layers, n_heads,
                  batch, train_n, eval_n, device, loss_log_interval, lr=1e-3, wandb_project=None,
-                 wandb_log_every=1, use_trace: bool = False, dense_format: str = "trace"):
+                 wandb_log_every=1, use_trace: bool = False, dense_format: str = "trace",
+                 extrap_lengths: tuple[int, ...] = ()):
     """Train one model through all curriculum stages, continuing from the previous model."""
     import torch
 
@@ -301,7 +320,8 @@ def train_stages(arch: str, seed: int, schedule, tok, specs, *, d_model, n_layer
         )
         model = run["model"]
         backend = LocalBackend([w], arch=arch, model=model, tokenizer=tok, device=device)
-        evals = eval_grid(backend, specs, eval_n=eval_n, use_trace=use_trace)
+        evals = eval_grid(backend, specs, eval_n=eval_n, use_trace=use_trace,
+                          extrap_lengths=tuple(extrap_lengths or ()))
         stage_records.append({
             "phase": phase_idx,
             "weights": weights,
@@ -338,10 +358,18 @@ def aggregate(runs):
             by_arch[r["arch"]][k].append(v)
     summary = {}
     for arch, metrics in by_arch.items():
-        summary[arch] = {
-            m: {"mean": statistics.mean(v), "std": statistics.pstdev(v) if len(v) > 1 else 0.0, "n": len(v)}
-            for m, v in metrics.items()
-        }
+        out = {}
+        for m, v in metrics.items():
+            # A leg that does not exist for a task reports None, not 0.0 — a single-token family
+            # has no value leg, and printing 0.00 for it reads as a failed recall leg that was
+            # never scored (the same convention prefix_decomp uses). Aggregating those crashed
+            # statistics.mean once the binding leg was added at the extrapolation lengths.
+            vals = [x for x in v if x is not None]
+            out[m] = ({"mean": None, "std": None, "n": 0} if not vals else
+                      {"mean": statistics.mean(vals),
+                       "std": statistics.pstdev(vals) if len(vals) > 1 else 0.0,
+                       "n": len(vals)})
+        summary[arch] = out
     return summary
 
 
@@ -434,6 +462,9 @@ def main():
     ap.add_argument("--dense_format", default="trace", choices=["trace", "interleaved", "marker"],
                     help="How to format dense supervision. 'trace' = holder sequence; "
                          "'interleaved' = explicit per-step Q&A; 'marker' = holder sequence + marker + value.")
+    ap.add_argument("--extrap_lengths", type=int, nargs="*", default=[],
+                    help="held-out LENGTH cells for the composed task and its binding leg "
+                         "(composite_copy_v2 declares 16/32/64 but this grid only ran 16)")
     ap.add_argument("--out_prefix", default=None)
     a = ap.parse_args()
 
@@ -490,6 +521,7 @@ def main():
                     device=a.device, loss_log_interval=a.loss_log_interval,
                     wandb_project=a.wandb_project, wandb_log_every=a.wandb_log_every,
                     use_trace=a.use_trace, dense_format=a.dense_format,
+                    extrap_lengths=tuple(a.extrap_lengths or ()),
                 )
             except Exception as e:  # noqa: BLE001
                 import traceback

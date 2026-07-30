@@ -1,0 +1,4397 @@
+{
+ "model": "qwen3.6-35b-a3b-local",
+ "n": 100,
+ "budget": 30000,
+ "system_prompt": "Answer the question with only the requested value or values. Use the same spelling as in the question.",
+ "ts": "2026-07-30T02:41:17.467571+00:00",
+ "points": [
+  {
+   "k": 16,
+   "depth": 4,
+   "length": 32,
+   "arms": {
+    "A_state": {
+     "label": "A_state",
+     "task": "s5_chain_v4",
+     "k": 16,
+     "depth": 2,
+     "length": 32,
+     "n": 100,
+     "budget": 30000,
+     "match": 0.78,
+     "contains": 0.78,
+     "contains_minus_match": 0.0,
+     "match_clean": 0.78,
+     "n_clean": 100,
+     "truncated": 0,
+     "errors": 0,
+     "floor": 0.13,
+     "chance": 0.0625,
+     "mean_ctok": 12436.54,
+     "elapsed_s": 1119.3,
+     "rows": [
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 13420,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 9786,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 13975,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 8733,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 12260,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 15099,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 11795,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 8870,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "15",
+       "match": 0,
+       "ctok": 13119,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 17208,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "4",
+       "match": 0,
+       "ctok": 10835,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 25037,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "15",
+       "match": 0,
+       "ctok": 13099,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 10999,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 12649,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 10760,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "7",
+       "match": 0,
+       "ctok": 12431,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 7355,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 11963,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 9751,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 10915,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 10473,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 11195,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 13043,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g15",
+       "match": 0,
+       "ctok": 10277,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "13",
+       "match": 0,
+       "ctok": 9443,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 19106,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "6",
+       "match": 0,
+       "ctok": 11096,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 12763,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 13535,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 16518,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 13179,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 16598,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "14",
+       "match": 0,
+       "ctok": 12735,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 19045,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 16002,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 11592,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 9495,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "9",
+       "match": 0,
+       "ctok": 16376,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 12027,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 12033,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 13775,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 13981,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "3",
+       "match": 0,
+       "ctok": 14861,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 8280,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 10762,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 10119,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 11747,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 15584,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 16206,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 9559,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 11271,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 13371,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 11273,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g3",
+       "match": 0,
+       "ctok": 17610,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 12681,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "12",
+       "match": 0,
+       "ctok": 10456,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 11751,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 16452,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 8618,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 14618,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 12934,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 11979,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 9646,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g13",
+       "match": 0,
+       "ctok": 9550,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 10950,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "15",
+       "match": 0,
+       "ctok": 13532,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 15565,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "13",
+       "match": 0,
+       "ctok": 12321,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 9246,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 10587,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 10395,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g9",
+       "match": 0,
+       "ctok": 11278,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 9742,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 10122,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 11518,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 9587,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "13",
+       "match": 0,
+       "ctok": 12044,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 7197,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 18644,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g8",
+       "match": 0,
+       "ctok": 14266,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 15295,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 10720,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 14600,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 11561,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 11197,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 11888,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 14007,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "11",
+       "match": 0,
+       "ctok": 12558,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "13",
+       "match": 0,
+       "ctok": 11729,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 13351,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 10169,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 11287,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 11970,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 8186,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 12120,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "12",
+       "match": 0,
+       "ctok": 10041,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 10100,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "1",
+       "match": 0,
+       "ctok": 21033,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 11174,
+       "finish": "stop"
+      }
+     ],
+     "replicate_match_clean": [
+      0.78,
+      0.78
+     ],
+     "replicate_spread": 0.0
+    },
+    "B_deref": {
+     "label": "B_deref",
+     "task": "chain_v2",
+     "k": 16,
+     "depth": 8,
+     "length": 4,
+     "n": 100,
+     "budget": 30000,
+     "match": 1.0,
+     "contains": 1.0,
+     "contains_minus_match": 0.0,
+     "match_clean": 1.0,
+     "n_clean": 100,
+     "truncated": 0,
+     "errors": 0,
+     "floor": 0.06666666666666662,
+     "chance": 0.0625,
+     "mean_ctok": 1130.24,
+     "elapsed_s": 90.3,
+     "rows": [
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 1352,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1106,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1358,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 947,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1174,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1316,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1121,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 914,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 321,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1484,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 918,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1057,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1205,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 865,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 412,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 963,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1185,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1140,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1040,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 1158,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1702,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1247,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1174,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1495,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 1315,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 402,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1100,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1373,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 1121,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1284,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 428,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 1275,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 1142,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 946,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1087,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1396,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 1292,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1388,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 541,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 1083,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1151,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1660,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 980,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1201,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 1385,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1054,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1155,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1305,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 1105,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 1145,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 1264,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1362,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1137,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1033,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1297,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1427,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 944,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 552,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1218,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1047,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1636,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1033,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1385,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1033,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1042,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 1181,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 1305,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 513,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 482,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 667,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 942,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 908,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1238,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1362,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1069,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 895,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1192,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 1246,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 535,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1220,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1214,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1487,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1668,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 790,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1048,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1474,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1275,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1278,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1029,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1166,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1238,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1023,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1720,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 1111,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 1186,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1654,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 1210,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 1585,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 689,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1046,
+       "finish": "stop"
+      }
+     ],
+     "replicate_match_clean": [
+      1.0
+     ],
+     "replicate_spread": null
+    },
+    "C_composed": {
+     "label": "C_composed",
+     "task": "s5_chain_v4",
+     "k": 16,
+     "depth": 4,
+     "length": 32,
+     "n": 100,
+     "budget": 30000,
+     "match": 0.75,
+     "contains": 0.75,
+     "contains_minus_match": 0.0,
+     "match_clean": 0.7575757575757576,
+     "n_clean": 99,
+     "truncated": 1,
+     "errors": 0,
+     "floor": 0.08,
+     "chance": 0.0625,
+     "mean_ctok": 13053.44,
+     "elapsed_s": 1202.3,
+     "rows": [
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 11705,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 17953,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 17403,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 15521,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 9663,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g3",
+       "match": 0,
+       "ctok": 20887,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 9910,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 15707,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 10551,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g11",
+       "match": 0,
+       "ctok": 14152,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 14510,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 14949,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 15487,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 11698,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "6",
+       "match": 0,
+       "ctok": 12086,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 18634,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "14",
+       "match": 0,
+       "ctok": 11045,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 10064,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 9043,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 9952,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "11",
+       "match": 0,
+       "ctok": 11732,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 12252,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 12506,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 13396,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 10515,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 7982,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 10548,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g9",
+       "match": 0,
+       "ctok": 19327,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 12105,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "15",
+       "match": 0,
+       "ctok": 9605,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 12756,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g15",
+       "match": 0,
+       "ctok": 12874,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 14518,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 13723,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g5",
+       "match": 0,
+       "ctok": 12363,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 11926,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 11919,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 9001,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 15221,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 9693,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 14024,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 11426,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g6",
+       "match": 0,
+       "ctok": 17268,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 16390,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 14351,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g11",
+       "match": 0,
+       "ctok": 17519,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 9698,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 7367,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 12155,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "13",
+       "match": 0,
+       "ctok": 9815,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 14911,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 16782,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 10035,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 11145,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "A[0]=4.\nMatches.\n\nCheck s2",
+       "match": 0,
+       "ctok": 30000,
+       "finish": "length"
+      },
+      {
+       "gold": "g0.",
+       "pred": "6",
+       "match": 0,
+       "ctok": 9905,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g14",
+       "match": 0,
+       "ctok": 19039,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 16080,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 11066,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 8754,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 10705,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 14240,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 13247,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 11653,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 10719,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "4",
+       "match": 0,
+       "ctok": 15827,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 9076,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 10754,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "0",
+       "match": 0,
+       "ctok": 12068,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g7",
+       "match": 0,
+       "ctok": 9328,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 10847,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 9030,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 9976,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 10045,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 19857,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 17879,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 13174,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 9508,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 13884,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "8",
+       "match": 0,
+       "ctok": 14738,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "11",
+       "match": 0,
+       "ctok": 11218,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "4",
+       "match": 0,
+       "ctok": 9640,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 13443,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 10262,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 14937,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g1",
+       "match": 0,
+       "ctok": 14571,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 11438,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 19691,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 12930,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "12",
+       "match": 0,
+       "ctok": 11811,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g14",
+       "match": 0,
+       "ctok": 19581,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 13284,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 12141,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 10334,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g15",
+       "match": 0,
+       "ctok": 9805,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 9726,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 12178,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 13423,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 11973,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 23791,
+       "finish": "stop"
+      }
+     ],
+     "replicate_match_clean": [
+      0.7575757575757576,
+      0.7755102040816326
+     ],
+     "replicate_spread": 0.017934446505875057
+    }
+   },
+   "composed_minus_min_component": -0.022424242424242458,
+   "composed_minus_min_component_raw": -0.030000000000000027,
+   "truncations": {
+    "A_state": 0,
+    "B_deref": 0,
+    "C_composed": 1
+   }
+  },
+  {
+   "k": 16,
+   "depth": 8,
+   "length": 32,
+   "arms": {
+    "A_state": {
+     "label": "A_state",
+     "task": "s5_chain_v4",
+     "k": 16,
+     "depth": 2,
+     "length": 32,
+     "n": 100,
+     "budget": 30000,
+     "match": 0.78,
+     "contains": 0.78,
+     "contains_minus_match": 0.0,
+     "match_clean": 0.78,
+     "n_clean": 100,
+     "truncated": 0,
+     "errors": 0,
+     "floor": 0.13,
+     "chance": 0.0625,
+     "mean_ctok": 12576.01,
+     "elapsed_s": 1100.9,
+     "rows": [
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 11950,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 12845,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "9",
+       "match": 0,
+       "ctok": 9058,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 14061,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "10",
+       "match": 0,
+       "ctok": 10859,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "13",
+       "match": 0,
+       "ctok": 17084,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 12020,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g9",
+       "match": 0,
+       "ctok": 17143,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 10807,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 12473,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "4",
+       "match": 0,
+       "ctok": 12945,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 11937,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 11926,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 7684,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 13802,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 12838,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "7",
+       "match": 0,
+       "ctok": 10856,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 9428,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 14577,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 11956,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 19642,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "8",
+       "match": 0,
+       "ctok": 10987,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 11108,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 11866,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "15",
+       "match": 0,
+       "ctok": 11470,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 7092,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g3",
+       "match": 0,
+       "ctok": 12470,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 11031,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 19685,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g11",
+       "match": 0,
+       "ctok": 18360,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 9894,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 8951,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 11117,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 9993,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 7881,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 8719,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 6702,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 9879,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 22152,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 12620,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 11027,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 12580,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 10082,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 12961,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 15332,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "7",
+       "match": 0,
+       "ctok": 22032,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 10131,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 10712,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 12093,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 11312,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 13040,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 11881,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 8731,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 18376,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 11691,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 12681,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g2",
+       "match": 0,
+       "ctok": 17973,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 9003,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 9491,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 7486,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 9464,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 15030,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 16857,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 13342,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 12962,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g7",
+       "match": 0,
+       "ctok": 10325,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 10932,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "13",
+       "match": 0,
+       "ctok": 14742,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 19004,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 14600,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 9872,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 14863,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 9562,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 17646,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g7",
+       "match": 0,
+       "ctok": 17345,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 9528,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 10115,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "13",
+       "match": 0,
+       "ctok": 13585,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g5",
+       "match": 0,
+       "ctok": 7354,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 12468,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g8",
+       "match": 0,
+       "ctok": 16373,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 15035,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g0",
+       "match": 0,
+       "ctok": 14022,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 15175,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 13395,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 11880,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 10663,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "8",
+       "match": 0,
+       "ctok": 13722,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 11692,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 10492,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 10212,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 19664,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 13678,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 12041,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 7710,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 16660,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g14",
+       "match": 0,
+       "ctok": 12022,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g3",
+       "match": 0,
+       "ctok": 15275,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 11006,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 10805,
+       "finish": "stop"
+      }
+     ],
+     "replicate_match_clean": [
+      0.78,
+      0.66
+     ],
+     "replicate_spread": 0.12
+    },
+    "B_deref": {
+     "label": "B_deref",
+     "task": "chain_v2",
+     "k": 16,
+     "depth": 8,
+     "length": 8,
+     "n": 100,
+     "budget": 30000,
+     "match": 1.0,
+     "contains": 1.0,
+     "contains_minus_match": 0.0,
+     "match_clean": 1.0,
+     "n_clean": 100,
+     "truncated": 0,
+     "errors": 0,
+     "floor": 0.06666666666666662,
+     "chance": 0.0625,
+     "mean_ctok": 1432.51,
+     "elapsed_s": 113.6,
+     "rows": [
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1462,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1344,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1307,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1516,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1839,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1612,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1777,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1472,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 877,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1204,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1385,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1615,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1976,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 910,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 1443,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 927,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1587,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 809,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1715,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1650,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 748,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 1544,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1903,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1724,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1665,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1826,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 978,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1774,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1699,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 1554,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 597,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 846,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 720,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1498,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 1707,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 2276,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1420,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1752,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1416,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1780,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1546,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1307,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1788,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 841,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 880,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1428,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 729,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 1396,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1916,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 1777,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 1744,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1894,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 1452,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1349,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 845,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 797,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1865,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1663,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1253,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 1466,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1269,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 1255,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1577,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1511,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 944,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1604,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 1538,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1395,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 1124,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 409,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 2001,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 1148,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1869,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 1847,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1414,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 1495,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 1685,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1557,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1977,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 1341,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 2399,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1512,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 1429,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 756,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1658,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 2583,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 642,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1700,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1298,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 1853,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 1801,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 467,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 465,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 1739,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1548,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 1307,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 631,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 1392,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 1703,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 1618,
+       "finish": "stop"
+      }
+     ],
+     "replicate_match_clean": [
+      1.0
+     ],
+     "replicate_spread": null
+    },
+    "C_composed": {
+     "label": "C_composed",
+     "task": "s5_chain_v4",
+     "k": 16,
+     "depth": 8,
+     "length": 32,
+     "n": 100,
+     "budget": 30000,
+     "match": 0.76,
+     "contains": 0.76,
+     "contains_minus_match": 0.0,
+     "match_clean": 0.76,
+     "n_clean": 100,
+     "truncated": 0,
+     "errors": 0,
+     "floor": 0.06666666666666662,
+     "chance": 0.0625,
+     "mean_ctok": 12919.5,
+     "elapsed_s": 1186.9,
+     "rows": [
+      {
+       "gold": "g5.",
+       "pred": "g10",
+       "match": 0,
+       "ctok": 11989,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g0",
+       "match": 0,
+       "ctok": 14099,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 10938,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 10910,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 12480,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 16080,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 10814,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 14382,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 9836,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "10",
+       "match": 0,
+       "ctok": 9822,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 9679,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 14865,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 14344,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 9585,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 13476,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 14019,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 6733,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g3",
+       "match": 0,
+       "ctok": 7244,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 10242,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 15585,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g7",
+       "match": 0,
+       "ctok": 16059,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 9343,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g6",
+       "match": 1,
+       "ctok": 11975,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g6",
+       "match": 0,
+       "ctok": 10270,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 9976,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g7",
+       "match": 0,
+       "ctok": 24693,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 14679,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 11030,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g1",
+       "match": 1,
+       "ctok": 11925,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 12952,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 14500,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g5",
+       "match": 0,
+       "ctok": 13109,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 14697,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 15199,
+       "finish": "stop"
+      },
+      {
+       "gold": "g6.",
+       "pred": "g5",
+       "match": 0,
+       "ctok": 11298,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g15",
+       "match": 0,
+       "ctok": 18581,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 14426,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 12798,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 12255,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 11275,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 18488,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g4",
+       "match": 0,
+       "ctok": 1723,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 11658,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 9566,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 10965,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g6",
+       "match": 0,
+       "ctok": 18649,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 11063,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g4",
+       "match": 0,
+       "ctok": 14284,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g14",
+       "match": 0,
+       "ctok": 7286,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g5",
+       "match": 0,
+       "ctok": 21387,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 13741,
+       "finish": "stop"
+      },
+      {
+       "gold": "g1.",
+       "pred": "g4",
+       "match": 0,
+       "ctok": 19508,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 11463,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 14935,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 13808,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 15198,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 10148,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 10496,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 11185,
+       "finish": "stop"
+      },
+      {
+       "gold": "g0.",
+       "pred": "g0",
+       "match": 1,
+       "ctok": 15351,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 9432,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g7",
+       "match": 0,
+       "ctok": 9327,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 13471,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 8081,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g11",
+       "match": 0,
+       "ctok": 15576,
+       "finish": "stop"
+      },
+      {
+       "gold": "g11.",
+       "pred": "g11",
+       "match": 1,
+       "ctok": 10535,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 11706,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 11612,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 14429,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g15",
+       "match": 1,
+       "ctok": 12261,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 10307,
+       "finish": "stop"
+      },
+      {
+       "gold": "g15.",
+       "pred": "g13",
+       "match": 0,
+       "ctok": 26294,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 12984,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 9333,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 10213,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g12",
+       "match": 1,
+       "ctok": 10576,
+       "finish": "stop"
+      },
+      {
+       "gold": "g12.",
+       "pred": "g3",
+       "match": 0,
+       "ctok": 11050,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 16045,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g5",
+       "match": 0,
+       "ctok": 22788,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 13128,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 8841,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g10",
+       "match": 1,
+       "ctok": 13769,
+       "finish": "stop"
+      },
+      {
+       "gold": "g9.",
+       "pred": "g9",
+       "match": 1,
+       "ctok": 10778,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 9150,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 13091,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g15",
+       "match": 0,
+       "ctok": 8893,
+       "finish": "stop"
+      },
+      {
+       "gold": "g14.",
+       "pred": "g14",
+       "match": 1,
+       "ctok": 17976,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g8",
+       "match": 0,
+       "ctok": 11101,
+       "finish": "stop"
+      },
+      {
+       "gold": "g3.",
+       "pred": "g3",
+       "match": 1,
+       "ctok": 12817,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 16727,
+       "finish": "stop"
+      },
+      {
+       "gold": "g10.",
+       "pred": "g2",
+       "match": 0,
+       "ctok": 8190,
+       "finish": "stop"
+      },
+      {
+       "gold": "g4.",
+       "pred": "g4",
+       "match": 1,
+       "ctok": 18724,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 16185,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 8047,
+       "finish": "stop"
+      },
+      {
+       "gold": "g8.",
+       "pred": "g8",
+       "match": 1,
+       "ctok": 11986,
+       "finish": "stop"
+      },
+      {
+       "gold": "g5.",
+       "pred": "g5",
+       "match": 1,
+       "ctok": 18251,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 13464,
+       "finish": "stop"
+      },
+      {
+       "gold": "g13.",
+       "pred": "g13",
+       "match": 1,
+       "ctok": 14526,
+       "finish": "stop"
+      },
+      {
+       "gold": "g7.",
+       "pred": "g7",
+       "match": 1,
+       "ctok": 13131,
+       "finish": "stop"
+      },
+      {
+       "gold": "g2.",
+       "pred": "g2",
+       "match": 1,
+       "ctok": 18091,
+       "finish": "stop"
+      }
+     ],
+     "replicate_match_clean": [
+      0.76,
+      0.65
+     ],
+     "replicate_spread": 0.10999999999999999
+    }
+   },
+   "composed_minus_min_component": -0.020000000000000018,
+   "composed_minus_min_component_raw": -0.020000000000000018,
+   "truncations": {
+    "A_state": 0,
+    "B_deref": 0,
+    "C_composed": 0
+   }
+  }
+ ]
+}

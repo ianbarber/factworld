@@ -139,8 +139,12 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=24)
     ap.add_argument("--budget", type=int, default=49152,
                     help="16384 truncated 5 of 24 composed calls at k=16/depth 4")
-    ap.add_argument("--max-workers", type=int, default=12,
-                    help="KV cache bounds real concurrency for long generations, not max_num_seqs")
+    ap.add_argument("--max-workers", type=int, default=20,
+                    help="Measured on this server: at 12 concurrent the scheduler reported "
+                         "Running 12 / Waiting 0, KV cache 45-53%, zero preemptions and "
+                         "~1170 tok/s — i.e. the CLIENT was the bottleneck, not vLLM. 20 uses "
+                         "the headroom; much above that the cache fills and vLLM preempts, "
+                         "which costs throughput through recompute.")
     ap.add_argument("--state-depth", type=int, default=2,
                     help="depth of the tracking control; 1 is format-fragile (see cells())")
     ap.add_argument("--reps", type=int, default=2,
