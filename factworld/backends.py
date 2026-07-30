@@ -525,9 +525,18 @@ class APIBackend(ModelBackend):
                 # Transient upstream faults: malformed/non-JSON response bodies (JSONDecodeError
                 # is a ValueError), gateway 5xx, connection drops. Retry with backoff rather
                 # than crashing the whole eval grid on a single bad cell.
-                if attempt == max_retries - 1:
-                    # exhausted retries -> empty prediction (scored as wrong),
-                    # but the failure is recorded in call meta rather than silent.
+                #
+                # A 4xx other than 429 is NOT transient: the request is malformed and the same
+                # request will be rejected identically every time. Retrying one costs five
+                # sleeps and hides the cause — a cell asking max_tokens=49152 of a server whose
+                # max_model_len is 32768 ground through ~1,000 rejected calls over 51 minutes
+                # and reported empty predictions, when the first response said exactly what was
+                # wrong. Fail fast and keep the message.
+                status = getattr(exc, "status_code", None)
+                fatal = isinstance(status, int) and 400 <= status < 500 and status != 429
+                if fatal or attempt == max_retries - 1:
+                    # exhausted retries (or a request that cannot succeed) -> empty prediction
+                    # (scored as wrong), but the failure is recorded in call meta, not silent.
                     rec = self._record_call(None, error=f"{type(exc).__name__}: {exc}")
                     return "", self._example_meta_from(rec)
                 time.sleep(2 ** attempt)
