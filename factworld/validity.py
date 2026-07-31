@@ -612,44 +612,42 @@ def s5_chain_floors(examples, k: int, has_events: bool = True) -> dict[str, floa
 #
 # TRUNCATION (window_50/75/90 and prefix_50/75/90): simulate the task EXACTLY, honouring every
 # temporal phrase, over T = f*L of its L events — the LAST T (window, the stated maps carried in
-# at L-T) or the FIRST T (prefix, the true maps read out at T). These are bounded-HORIZON
-# policies rather than bounded-state ones, and both halves are registered at the SAME budgets
-# because a truncation policy is defined by what it pays, not by which end it drops: at f=0.9
-# both read 0.9L events and carry both maps across them, so registering one half and not the
-# other prices the same purchase differently at the two ends of the stream. Three properties fix
-# how the family may be read:
-#   - REGISTERING THE TWO HALVES DOES NOT CLOSE THE FAMILY, and the claim that once stood here —
-#     that each half is monotone in f, so the max over a registered subset is its largest member
-#     and not a selection statistic — is FALSE. window and prefix are the two endpoints of a
-#     family parameterised by where the dropped block sits, and accuracy peaks in the INTERIOR:
-#     dropping [0.85L, 0.95L) and playing everything else reads 0.247 / 0.164 / 0.127 at k=12,
-#     L=128/192/256 against operative floors of 0.111 / 0.099 / 0.103, and 0.315 / 0.303 at k=6,
-#     L=48/64 against 0.223 / 0.231 (n=1500). Accuracy is not monotone in f either: at k=6/L=48
-#     prefix_50 (0.166) > prefix_75 (0.165) > prefix_90 (0.108). The family is continuous in
-#     (position, width) and every member costs ~0.9x the task, so the max over a finite subset
-#     of it IS a selection statistic over an effectively exchangeable set.
-#   - the closure cannot be registration, and it cannot be another gate at another cut: q_tail
-#     moved the peak, it did not remove it. A block-drop is wrong only when it drops an event on
-#     the queried agent's dependency chain, which holds ~2L/k of the L events. Either the chain
-#     is made dense in time (bounded gaps, so every block of width >= w hits it) or the family is
-#     excluded on a resource separation rather than a step threshold — a row that maintains both
-#     maps across 0.9L events is in the TASK's complexity class, not below it.
-#   - the smaller cuts are registered too and are what make the rows informative: the gap between
-#     f=0.5 and f=0.9 is how much of the stream is load-bearing, at each end separately.
-#   - the two halves probe different gates. A window is beaten by making the stream's HEAD
-#     load-bearing (the queried object's resolving write is gated away from the first decile, and
-#     the queried agent's carrier chain reaches back through it); a prefix is beaten by making
-#     its TAIL load-bearing, which is what TaskSpec.q_tail gates on the queried agent's last
-#     carrier event. Before that gate existed prefix_90 read 0.45/0.37/0.29 at k=12/L=128/192/256
-#     against a 0.098-0.117 operative floor — the whole suffix half at chance while the mirror
-#     policy sat 4x above it.
+# at L-T) or the FIRST T (prefix, the true maps read out at T). They are two positions of ONE
+# family — drop a block of width (1-f)L at position p, play everything else — which is
+# continuous in (position, width), non-monotone in both, and whose accuracy peaks in the
+# INTERIOR and at the NARROW end, which is where none of the six registered budgets sits.
+# Scanned over 19 positions x 8 widths at n=1500 on the un-gated stream, the best member reads
+# 4.73 / 3.15 / 2.36x the informed chance at k=12, L=128/192/256 (operative floors 0.097 /
+# 0.099 / 0.096), 2.74 / 2.19x at k=6, L=48/64, and 5.08 / 3.95x at k=16 — in every cell a
+# width-0.05L block at position 0.85-0.90, while the registered endpoints sat within 1.2x of
+# chance. A max over a finite subset of an exchangeable continuum is a selection statistic, so
+# no set of registered members could ever have defined this family's floor, and three rounds of
+# trying it each lost to a neighbour of the member registered.
 #
-# NOT EVERY CELL CAN CARRY BOTH HALVES. The bind query's resolving write is gated INTO
-# [0.1L, 0.75L] so that the final-map policy is wrong, which is exactly the statement that the
-# last quarter of the stream is not load-bearing for it: on a COUPLED bind rendering prefix_90
-# reproduces the oracle and the operative floor is 1.000, i.e. that cell is not scoreable and
-# says so. The registered bind arm is decoupled, where the truncation family is not a shortcut at
-# all (see s5_bind_operative_floor) and the question does not arise.
+# THEY ARE NOT FLOOR ROWS. Every member carries both maps across its budget, so W = 2k + m and
+# the row sits in the TASK's own resource class — see S5_BIND_MAP_CARRYING_ROWS. They stay
+# measured and printed: the gap between f=0.5 and f=0.9 is how much of the stream is
+# load-bearing, at each end separately, and the two ends answer different gates. A window is
+# beaten by making the stream's HEAD load-bearing (the queried object's resolving write is gated
+# away from the first decile); a prefix by making its TAIL load-bearing, which is what
+# TaskSpec.q_tail gates on the queried agent's last carrier event, and before that gate existed
+# prefix_90 read 0.45/0.37/0.29 at k=12/L=128/192/256 against a 0.098-0.117 operative floor.
+#
+# WHAT KILLS THEM, rather than merely declassifying them, is TaskSpec.chain_max_gap: from the
+# chain's first event on, the stream is gated to have no off-chain run as long as w_min, so
+# every block of width >= w_min drops an event that can change the answer. All six registered
+# budgets drop at least 0.1L and w_min is 0.05L (k=12) or 0.1L (k=6), so all six are dead as
+# well as declassified, and so is every unregistered member at those widths: over the same
+# 19 x 8 scan the best member at any width >= w_min reads 1.00-1.33x chance on every scored
+# cell. Narrower blocks are excluded by class alone and their residual is reported, not folded
+# in — see TaskSpec.chain_max_gap.
+#
+# ON A DECOUPLED RENDERING they are not shortcuts at all: the state component costs a sparse
+# backward walk over one live symbol and the retrieval component costs three retrievals, so a
+# truncated pass is an order of magnitude MORE expensive than the task. On the decoupled bind
+# arm both halves read ~1.000 by doing the work. The class rule reaches that case for free — a
+# map-carrying row is excluded on both renderings — which is why it replaced the earlier
+# per-rendering exemption.
 #
 # ONE-HOP AND STATED:
 #   initial_only      — answer the stated initial role / holder (the no-op policy).
@@ -702,16 +700,65 @@ S5_BIND_ROWS = ("stale_resolution", "one_leg_B", "one_leg_P", "final_state_resol
                 "prefix_90", "prefix_75", "prefix_50",
                 "initial_only", "last_swap_1hop",
                 "uniform_non_initial", "uniform_anti_pin", "uniform")
-# The rows that may SET a cell's floor. The non-truncation rows are each a named policy rather
-# than a member of an exchangeable family, so the max over them is not a selection statistic.
-# THE TRUNCATION ROWS ARE NOT: they are six samples of a family continuous in (position, width)
-# whose accuracy peaks between them (see above), so their max understates the family by 1.2-2.2x
-# and this set does not yet define an honest floor for a coupled s5_bind cell.
-S5_BIND_ADVERSARIES = S5_BIND_ROWS
+# ---------------------------------------------------------------------------
+# THE RESOURCE CLASS. Which rows may set a floor is decided by what a row COSTS, not by how
+# accurate it is and not by a per-item step threshold, which the block-drop family defeats: its
+# members cost ~0.9x the task, so any threshold that admits one admits a continuum.
+#
+# On the step-counted register machine the family is measured on (content-addressed retrieval of
+# a stated fact or an event record: one step; resolving an operand against a carried map: one
+# step; each entry written to a carried map: one step), write W for the number of symbol
+# registers a policy holds simultaneously and S for its steps. The composed cell's cheapest
+# correct algorithm is a forward pass carrying P, its inverse and B: W = 2k + m and S = Theta(L).
+#
+#   A ROW MAY SET A FLOOR IFF W = O(1) IN k — it carries NO structure-sized state.
+#
+# That is the separation the construct claims: the coupled rendering forces a pass carrying both
+# maps, so a policy that carries neither is a genuine shortcut however many events it reads,
+# and a policy that carries both is doing the task's own work at a constant-factor discount.
+# Classifying on W and not on S is what makes the rule survive the family: every block-drop, at
+# every (position, width) with width < L, has W = 2k + m, so the whole continuum is excluded by
+# one rule rather than member by member.
+#
+# WHAT THIS EXCLUDES, AND WHAT PAYS FOR THE EXCLUSION. It excludes near-oracle policies — play
+# 0.99L events, carry both maps — which is right: they are the task, discounted. It must not
+# become a licence to ignore a cheap policy that happens to be expensive to describe, so the
+# exclusion is not left to stand on the cost argument alone. TaskSpec.chain_max_gap gates the
+# stream so that every block of width >= w_min = chain_max_gap * L drops an event on the queried
+# agent's dependency chain, which puts the whole width >= w_min half of the family at chance by
+# construction. On the registered cells the truncation rows are therefore excluded by class AND
+# dead: they are printed, and a suite check asserts they sit at chance. Blocks NARROWER than
+# w_min are excluded by class alone; scripts/probe_s5bind_block_drop_20260730.py measures that
+# residual, and it is reported rather than folded into the floor.
+#
+# The rows that carry a map. final_state_resolution needs the true final maps before it can
+# start, so it costs MORE than the task and could never have been a floor; the truncation rows
+# each carry both maps across their budget. Both stay measured and printed, as diagnostics: the
+# first is how a model that forms one state and applies it everywhere fails, and the gap between
+# the truncation budgets is how much of the stream is load-bearing at each end.
+S5_BIND_MAP_CARRYING_ROWS = ("final_state_resolution",) + tuple(
+    r for r in S5_BIND_ROWS if r.startswith(("window_", "prefix_")))
+# Live slots per row, as a function of k and m — the classification above, made checkable.
+# The admitted rows walk one carrier (plus a scratch register) or do a bounded number of
+# retrievals; nothing in them grows with k.
+S5_BIND_ROW_SLOTS = {
+    "stale_resolution": 2,        # backward carrier walk; both operands are stated facts
+    "one_leg_B": 2,               # ditto, B read by content from the last give to the object
+    "one_leg_P": 2,               # ditto, the mirror
+    "pin_chain": 3,               # two surface retrievals for state, three for bind
+    "initial_only": 1,
+    "last_swap_1hop": 2,
+    "uniform_non_initial": 1, "uniform_anti_pin": 2, "uniform": 1,
+}
+# The rows that may SET a cell's floor: every row that carries no map. Each is a named policy
+# rather than a member of an exchangeable family, so the max over them is not a selection
+# statistic — which is the second thing a floor row has to be.
+S5_BIND_ADVERSARIES = tuple(r for r in S5_BIND_ROWS if r not in S5_BIND_MAP_CARRYING_ROWS)
 S5_BIND_CHANCE_ROWS = ("uniform_non_initial", "uniform_anti_pin", "uniform")
-# The truncation family: both halves at matched budgets. Derived from the row names so that
-# registering a further cut, at either end, reaches every consumer (the operative floor's
-# cost rule, the suite's gate column) without an edit there.
+# The two named positions of the block-drop family, at matched budgets. Derived from the row
+# names so that measuring a further cut, at either end, reaches every consumer without an edit
+# there — and every one of them lands in S5_BIND_MAP_CARRYING_ROWS by the same derivation, so a
+# new cut is a diagnostic on arrival and cannot become a floor by being added.
 S5_BIND_TRUNCATION_ROWS = tuple(r for r in S5_BIND_ROWS
                                 if r.startswith(("window_", "prefix_")))
 # Rows defined only where some event is rendered "at this point". Under a fully decoupled
@@ -763,12 +810,14 @@ def s5_bind_read(prompt: str) -> dict | None:
 
 
 def _sb_run(read: dict, mode: str = "surface", start: int = 0, end: int | None = None,
-            final=None):
+            final=None, drop: tuple[int, int] | None = None):
     """Play ``events[start:end]`` from the stated maps and return the resulting (P, B).
 
     ``start`` drops a PREFIX of the stream (the window policies, which carry the stated maps in
     at the cut); ``end`` drops a SUFFIX (the prefix policies, which are exact up to the cut and
-    read the true maps out there). Both cost the events they play.
+    read the true maps out there). Both cost the events they play. ``drop=(lo, hi)`` skips an
+    INTERIOR block instead and plays everything else, which is the general member of the family
+    those two are the endpoints of.
 
     mode 'surface' honours each event's rendered temporal phrase (the exact semantics);
     'stale' resolves every reference against the stated maps; 'B_only' feeds B into P but not
@@ -779,7 +828,9 @@ def _sb_run(read: dict, mode: str = "surface", start: int = 0, end: int | None =
     P, B = dict(P0), dict(B0)
     P0inv = {v: k for k, v in P0.items()}
     Pinv = dict(P0inv)
-    for kind, x, y, dyn in read["events"][start:end]:
+    for i, (kind, x, y, dyn) in enumerate(read["events"][start:end], start):
+        if drop is not None and drop[0] <= i < drop[1]:
+            continue
         if kind == "swap":
             if mode == "stale" or (mode == "P_only") or not dyn:
                 b = B0.get(y)
@@ -942,6 +993,81 @@ def _sb_anti_pin_chance(examples, k: int) -> float | None:
     return sum(c / d for d, c in sorted(hits.items())) / n if n else None
 
 
+def s5_bind_block_drop(examples, width: float, pos: float) -> float:
+    """Accuracy of ONE member of the block-drop family: skip the ``width * L`` events starting
+    at ``pos * (L - width * L)`` and play the rest exactly.
+
+    window_f is the member at pos 0 with width 1-f, prefix_f the member at pos 1. The family is
+    continuous in both arguments and every member carries both maps, so no member is a floor row
+    (see S5_BIND_MAP_CARRYING_ROWS); this exists to CHECK that TaskSpec.chain_max_gap has killed
+    the half of it that the class rule would otherwise be excluding on cost alone.
+    """
+    hits = n = 0
+    for e in examples:
+        read = s5_bind_read(e.prompt)
+        if read is None:
+            continue
+        L = len(read["events"])
+        w = max(1, int(round(width * L)))
+        lo = int(round(pos * (L - w)))
+        n += 1
+        hits += int(_sb_answer(read, _sb_run(read, "surface", drop=(lo, lo + w))) == e.answer)
+    return hits / n if n else 0.0
+
+
+def s5_bind_chain(read: dict) -> list[int] | None:
+    """The queried agent's dependency chain, off one rendered prompt: the indices of the events
+    that MOVE the answer's role under the rendering's own semantics.
+
+    At a swap both operands are on it — the role moves from one to the other — and the second
+    operand is itself resolved through B, so the chain is what closes over both structures. It is
+    a SUBSET of the events whose removal can change the answer (dropping the give that last wrote
+    a referenced object changes the operand of a chain swap, and so on), which is the direction
+    that makes it safe to gate on: bounding the gaps in this set bounds them in every superset.
+    None where the prompt is not a single-slot state query.
+    """
+    if read is None or read["query"][0] != "state":
+        return None
+    P0, B0 = read["P0"], read["B0"]
+    P, B = dict(P0), dict(B0)
+    P0inv = {v: k for k, v in P0.items()}
+    Pinv = dict(P0inv)
+    chain: dict[str, list[int]] = {r: [] for r in P0.values()}
+    for i, (kind, x, y, dyn) in enumerate(read["events"]):
+        if kind == "swap":
+            b = (B if dyn else B0).get(y)
+            if b is None or b == x or x not in P or b not in P:
+                continue
+            chain[P[x]].append(i)
+            chain[P[b]].append(i)
+            P[x], P[b] = P[b], P[x]
+            Pinv = {v: k for k, v in P.items()}
+        else:
+            h = (Pinv if dyn else P0inv).get(y)
+            if h is not None:
+                B[x] = h
+    return chain.get(P.get(read["query"][1]))
+
+
+def s5_bind_runs(read: dict) -> tuple[int, int] | None:
+    """``(leading run, longest run after it)`` over the events OFF the queried agent's
+    dependency chain — the two ends of the stream, which are not symmetric.
+
+    A block of width w misses the chain iff it fits inside one of these runs, so every width-w
+    block that starts at or after the chain's first event hits it iff the SECOND number is < w.
+    That is the quantity TaskSpec.chain_max_gap bounds at sampling time; the first is left free
+    and reported, because bounding it is what hands a zero-state policy the answer.
+    """
+    idx = s5_bind_chain(read)
+    if idx is None:
+        return None
+    L = len(read["events"])
+    if not idx:
+        return L, 0
+    return idx[0], max([L - 1 - idx[-1]]
+                       + [idx[j + 1] - idx[j] - 1 for j in range(len(idx) - 1)])
+
+
 def s5_bind_pin_density(examples) -> float:
     """The fraction of dynamic swaps that ride a LIVE PIN, over a list of s5_bind Examples.
 
@@ -986,21 +1112,14 @@ def s5_bind_operative_floor(floors: dict[str, float], coupled: bool = True) -> f
     ``uniform``, so a caller who forgets to pass the registered set gets chance rather than the
     floor (see ``registered_for``).
 
-    ``coupled=False`` drops the TRUNCATION rows — both halves, by the same argument and at the
-    same budgets. A floor row has to be CHEAPER than the task, and a truncated pass still
-    maintains both maps over 0.9L events: on the coupled rendering that is cheaper than the
-    cell's own forward pass and the row is a shortcut, but on a decoupled rendering the state
-    component costs a sparse backward walk (90 steps at k=12, L=192) and the retrieval component
-    costs three, so a truncated pass is an order of magnitude MORE expensive than the task and
-    its accuracy is work, not a shortcut. On the decoupled retrieval arm both halves read ~1.000
-    for exactly that reason, and reporting that as the number a score is read against would make
-    the component arm unreadable. The rows stay registered and printed on both renderings; they
-    enter this max only where they are shortcuts, which is the same rule
-    scripts/validate_suite.py gates on.
+    The max runs over the rows that carry no map (``S5_BIND_ADVERSARIES``), which is the same
+    set on both renderings: a map-carrying policy is in the task's own resource class on a
+    coupled cell and an order of magnitude more expensive than the task on a decoupled one, and
+    neither is a floor. ``coupled`` is kept because callers pass it and because the suite prints
+    the class-excluded rows differently on the two renderings, but it no longer changes this max.
     """
-    registered = S5_BIND_ADVERSARIES if coupled else tuple(
-        r for r in S5_BIND_ADVERSARIES if r not in S5_BIND_TRUNCATION_ROWS)
-    return operative_floor(floors, registered)
+    del coupled                                  # the class rule is rendering-independent
+    return operative_floor(floors, S5_BIND_ADVERSARIES)
 
 
 def s5_bind_floors(examples, k: int, windows=S5_BIND_WINDOWS) -> dict[str, float]:

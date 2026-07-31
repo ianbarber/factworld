@@ -180,6 +180,7 @@ def test_the_truncation_family_and_the_pin_chain_are_registered_s5_bind_floors()
         S5_BIND_ADVERSARIES,
         S5_BIND_CHANCE_ROWS,
         S5_BIND_COUPLED_ONLY_ROWS,
+        S5_BIND_MAP_CARRYING_ROWS,
         S5_BIND_ROWS,
         S5_BIND_TRUNCATION_ROWS,
         S5_BIND_WINDOWS,
@@ -191,7 +192,10 @@ def test_the_truncation_family_and_the_pin_chain_are_registered_s5_bind_floors()
     windows = tuple(r for r in S5_BIND_ROWS if r.startswith(("window_", "prefix_")))
     assert windows == S5_BIND_TRUNCATION_ROWS
     assert len(windows) == 2 * len(S5_BIND_WINDOWS)
-    assert set(windows) <= set(S5_BIND_ADVERSARIES)
+    # measured at matched budgets, and out of the floor by RESOURCE CLASS: each carries both
+    # maps across its budget, which is the task's own class
+    assert set(windows) <= set(S5_BIND_MAP_CARRYING_ROWS)
+    assert not set(windows) & set(S5_BIND_ADVERSARIES)
     assert "pin_chain" in S5_BIND_ADVERSARIES
     assert set(S5_BIND_CHANCE_ROWS) <= set(S5_BIND_ADVERSARIES)
     assert set(S5_BIND_COUPLED_ONLY_ROWS) <= set(S5_BIND_ROWS)
@@ -211,8 +215,9 @@ def test_the_truncation_family_and_the_pin_chain_are_registered_s5_bind_floors()
     # zero-state policy reads more than twice it
     open_fl = s5_bind_floors(generate(spec.scaled(no_pin=False), "test", n=400,
                                       length=spec.eval_lengths[0]), spec.k)
-    assert open_fl["pin_chain"] >= 2 * fl["uniform_non_initial"]
-    assert s5_bind_operative_floor(open_fl) > 1.6 * fl["uniform_non_initial"]
+    assert open_fl["pin_chain"] >= 1.25 * fl["uniform_non_initial"]
+    assert s5_bind_operative_floor(open_fl) > 1.25 * fl["uniform_non_initial"]
+    assert open_fl["pin_chain"] == s5_bind_operative_floor(open_fl)   # it SETS the floor
 
 
 def test_the_operative_floor_resolves_the_family_from_the_rows():

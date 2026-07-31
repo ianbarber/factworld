@@ -96,8 +96,14 @@ def test_the_dose_is_the_only_field_that_moves():
         assert spec.no_pin and spec.rho_p == spec.rho_b
         assert spec.rho_ladder == TK._S5_BIND_LADDER and spec.rho_p in spec.rho_ladder
         doses.append(spec.rho_p)
+        # chain_max_gap is the one knob a ladder spec cannot carry: the steer follows ONE
+        # coupled trajectory and the ladder's five rungs have five of them (see
+        # TaskSpec.chain_max_gap). The block-drop family is therefore open on these cells, which
+        # is a reason they are calibration and are never scored, not a reason to score them.
+        assert spec.chain_max_gap == 0.0 and base.chain_max_gap > 0.0
         for f in (fl.name for fl in fields(TK.TaskSpec)):
-            if f not in ("name", "rho_p", "rho_b", "rho_ladder", "stream_name", "eval_lengths"):
+            if f not in ("name", "rho_p", "rho_b", "rho_ladder", "stream_name", "eval_lengths",
+                         "chain_max_gap"):
                 assert getattr(spec, f) == getattr(base, f), f"{name}.{f}"
     assert doses == list(TK._S5_BIND_LADDER)
     # the referenced fraction is the dose, item by item

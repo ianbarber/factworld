@@ -19,18 +19,19 @@ For every canonical task, certify that no shallow baseline clears floor on the h
     in this column: it is an unnamed member of a fixed-offset family whose accuracies sum to 1,
     so its null is uniform-over-non-start and a max over it measures selection.
   - SHALLOW-ADVERSARY floor (s5_bind): the largest registered mutual-reference policy
-    (factworld.validity.S5_BIND_ADVERSARIES) — the coupling-blind rows, the wrong-time row, the
-    zero-state pin chain, the stated/one-hop rows, and the truncation family at matched budgets
-    (window_f keeps the last f*L events, prefix_f the first f*L). The truncation rows enter the
-    GATE, and the operative floor, only on a coupled rendering: a truncated policy still
-    maintains both maps, so it is cheaper than the task exactly where the task's own cheapest
-    correct algorithm reads the whole stream, which is the coupled arm. On a decoupled arm the
-    retrieval component is one content-addressed lookup, a truncated policy is more expensive
-    than the task rather than a shortcut, and the rows read ~1.000 by doing the work —
-    measured, printed, and neither gated nor counted. Every row is printed for every cell in the
-    s5_bind floor block below the table, next to the operative floor and its ratio to the
-    informed chance 1/(k-1): with TaskSpec.no_pin closing the state-free reset channel that
-    ratio is ~1 on every scored cell, and a cell that drifts off it has an open shortcut.
+    (factworld.validity.S5_BIND_ADVERSARIES) — the coupling-blind rows, the zero-state pin
+    chain, and the stated/one-hop rows. Registration is decided by RESOURCE CLASS: a row may set
+    a floor only if it carries no structure-sized state (W = O(1) live slots), because the task's
+    own cheapest correct algorithm carries P, its inverse and B. That rule is what excludes the
+    block-drop family — window_f keeps the last f*L events, prefix_f the first f*L, and both are
+    positions of one continuum whose members all carry both maps. Those rows are measured and
+    printed as diagnostics, marked '†', and are separately CHECKED to sit at chance on a coupled
+    cell: TaskSpec.chain_max_gap gates the stream so that every block of width >= chain_max_gap*L
+    drops an event that can change the answer, so the class exclusion is not carrying a live
+    policy. Every row is printed for every cell in the s5_bind floor block below the table, next
+    to the operative floor and its ratio to the informed chance 1/(k-1): with TaskSpec.no_pin
+    closing the state-free reset channel that ratio is ~1 on every scored cell, and a cell that
+    drifts off it has an open shortcut.
 A task PASSES if majority, recency, first-position and (where defined) strong-recency accuracy are
 all well below 0.5 (near the 1/#answers floor). The pointer-map families answer over a much larger
 space than 2, so their column is gated against their own chance level instead: no shallow policy
@@ -52,6 +53,7 @@ from factworld.render import Renderer, classify  # noqa: E402  (atomic-token typ
 from factworld.validity import (  # noqa: E402
     S5_BIND_ADVERSARIES,
     S5_BIND_CHANCE_ROWS,
+    S5_BIND_MAP_CARRYING_ROWS,
     S5_BIND_ROWS,
     S5_BIND_TRUNCATION_ROWS,
     S5_CHAIN_ADVERSARIES,
@@ -85,9 +87,12 @@ S5_CHAIN_SHORTCUTS = tuple(n for n in S5_CHAIN_ADVERSARIES if n not in S5_CHAIN_
 # enough to put it in this column, and a row that cannot set a floor cannot enter the gate.
 S5_BIND_FAMILIES = ("s5_bind",)
 S5_BIND_SHORTCUTS = tuple(n for n in S5_BIND_ADVERSARIES if n not in S5_BIND_CHANCE_ROWS)
-# The truncation rows — both halves of the family — gate only where the task's own cheapest
-# correct algorithm reads the whole stream, i.e. the coupled rendering. See the module docstring.
-S5_BIND_WINDOW_ROWS = S5_BIND_TRUNCATION_ROWS
+# The map-carrying rows are out of the floor by class, so they are checked instead of gated: on a
+# COUPLED cell with the chain gate on, TaskSpec.chain_max_gap makes every block of width >=
+# chain_max_gap*L drop an event on the queried agent's dependency chain, so each of them has to
+# sit at chance. A cell where one does not has a live policy the class rule would be hiding.
+S5_BIND_DIAGNOSTIC_ROWS = S5_BIND_TRUNCATION_ROWS
+S5_BIND_DIAGNOSTIC_MAX = 2.0                     # multiples of the informed chance 1/(k-1)
 
 
 def positional_pred(prompt: str, ans_type: str, which: str):
@@ -146,11 +151,15 @@ def main():
         elif spec.family in S5_BIND_FAMILIES:
             # mutual-reference rung: every registered policy, recomputed from these exact items.
             fl = s5_bind_floors(test, spec.k)
-            gated = [n for n in S5_BIND_SHORTCUTS if n in fl
-                     and (spec.coupled or n not in S5_BIND_WINDOW_ROWS)]
+            gated = [n for n in S5_BIND_SHORTCUTS if n in fl]
             strongrec = max([fl[n] for n in gated], default=0.0)
             ok &= strongrec < 0.5
             srec_col = f"{strongrec:>10.3f}"
+            # the class-excluded rows are not a floor, but on a gated coupled cell they must be
+            # dead: the chain gate is what earns the exclusion.
+            if spec.coupled and spec.chain_max_gap:
+                lim = S5_BIND_DIAGNOSTIC_MAX / max(1, spec.k - 1)
+                ok &= all(fl[n] < lim for n in S5_BIND_DIAGNOSTIC_ROWS if n in fl)
             bind_rows[name] = (fl, s5_bind_operative_floor(fl, coupled=spec.coupled), gated,
                                spec.eval_lengths[-1], spec.k)
         else:
@@ -162,13 +171,16 @@ def main():
         # operative floor (the max over all registered rows) is what a score is read against,
         # while the gate reads only the rows marked '*' — see the module docstring.
         print(f"\n  s5_bind registered floors (n={N} at eval_lengths[-1]; "
-              f"'*' = enters the gate, 'op' = the number a score is read against, "
+              f"'*' = enters the gate, '†' = carries a map, so it is a diagnostic and not a "
+              f"floor, 'op' = the number a score is read against, "
               f"'op/ch' = op over the informed chance 1/(k-1))")
         print("    " + f"{'task':<24}{'L':>5}" + "".join(f"{r[:10]:>11}" for r in S5_BIND_ROWS)
               + f"{'op':>9}{'op/ch':>8}")
         for name, (fl, op, gated, L, k) in bind_rows.items():
             cells = "".join(
-                (f"{fl[r]:>10.3f}{'*' if r in gated else ' '}" if r in fl else f"{'—':>11}")
+                (f"{fl[r]:>10.3f}"
+                 f"{'*' if r in gated else '†' if r in S5_BIND_MAP_CARRYING_ROWS else ' '}"
+                 if r in fl else f"{'—':>11}")
                 for r in S5_BIND_ROWS)
             ratio = op / fl["uniform_non_initial"] if "uniform_non_initial" in fl else None
             print(f"    {name:<24}{L:>5}" + cells + f"{op:>9.3f}"

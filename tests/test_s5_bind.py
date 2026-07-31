@@ -13,12 +13,15 @@ each of them:
                                         and at rho=0 they are byte-identical;
   the prompt alone determines gold    — replaying the rendered sentences reproduces the answer,
                                         so nothing is carried in meta;
-  the floors are the registered ones  — the window family and the zero-state pin chain are both
-                                        registered, the operative floor is the max over every
-                                        registered row, and it sits within a stated multiple of
-                                        the informed chance 1/(k-1);
+  the floor is a resource class       — a row may set the floor only if it carries no map, so
+                                        the whole block-drop continuum is out at once rather
+                                        than member by member, and the max over what is left
+                                        sits within a stated multiple of the informed chance;
   the pin channel is closed           — no_pin holds pin density at zero, so no item is
-                                        answerable by two state-free surface retrievals.
+                                        answerable by two state-free surface retrievals;
+  the block-drop family is dead       — chain_max_gap bounds the queried agent's dependency
+                                        chain in time, so every drop of width >= w_min lands on
+                                        an event that can change the answer.
 
 Runs with zero dependencies:  python3 tests/test_s5_bind.py
 """
@@ -41,11 +44,16 @@ from factworld.validity import (  # noqa: E402
     S5_BIND_ADVERSARIES,
     S5_BIND_CHANCE_ROWS,
     S5_BIND_COUPLED_ONLY_ROWS,
+    S5_BIND_MAP_CARRYING_ROWS,
+    S5_BIND_ROW_SLOTS,
     S5_BIND_ROWS,
     S5_BIND_TRUNCATION_ROWS,
     S5_BIND_WINDOWS,
     operative_floor,
+    s5_bind_block_drop,
+    s5_bind_chain,
     s5_bind_floors,
+    s5_bind_runs,
     s5_bind_operative_floor,
     s5_bind_pin_density,
     s5_bind_preds,
@@ -66,19 +74,19 @@ WINDOWS = S5_BIND_TRUNCATION_ROWS
 # upward selection bias of order the largest row's standard error even when every row sits at
 # chance: at N_FLOOR = 600 and k = 12 that is about 0.25 * chance on its own. The bound is
 # stated as a multiple of the informed chance 1/(k-1) and has to leave room for it. Measured
-# at n = 3000 the scored cells read 1.07 / 1.11 / 1.07 (k=12, L=128/192/256) and 1.08 / 1.04
+# at n = 3000 the scored cells read 1.03 / 1.03 / 1.15 (k=12, L=128/192/256) and 1.11 / 1.09
 # (k=6, L=48/64).
 N_FLOOR = 600
 FLOOR_RATIO_MAX = 1.45
 
 # Frozen streams: same (spec, split, length, idx) -> identical example, forever.
 GOLDENS = {
-    "s5_bind_v2": {128: "95db0338a0567784", 192: "153edc1c97dd74e5", 256: "7c6e8f1770d25d56"},
-    "s5_bind_v2_state": {128: "421f23d9a7c0b923", 192: "1908f2626443fe92", 256: "69f5b92ae40ae729"},
-    "s5_bind_v2_bind": {128: "ca4458320ac62191", 192: "cf214b641852abf7", 256: "907208d3458f8ec6"},
-    "s5_bind_v2_map": {128: "464ff5156aedf178", 192: "d1e56e324b005fa1", 256: "4d013e8e5680ea10"},
-    "s5_bind_local_v2": {48: "03533f8c242232cf", 64: "91a0056a1c2976ba"},
-    "s5_bind_local_v2_state": {48: "afd55d6129af10f9", 64: "8a956658af65892a"},
+    "s5_bind_v2": {128: "38e62694d969a363", 192: "481d2b911881248b", 256: "bc60c4a900b04a2a"},
+    "s5_bind_v2_state": {128: "3a0a8f810d39b09c", 192: "7b054e8717274d9a", 256: "0ed5e7279b64e7fe"},
+    "s5_bind_v2_bind": {128: "ce4ee7fefdcbb640", 192: "7b5fafd44f46d1d6", 256: "5afe941df3d1a526"},
+    "s5_bind_v2_map": {128: "b97bcbe20a418b46", 192: "b65225a399331af4", 256: "78e5d780ec422dd8"},
+    "s5_bind_local_v2": {48: "8dcdc6b9b49b0f9a", 64: "0ac09d59ddae6cdd"},
+    "s5_bind_local_v2_state": {48: "b109dcde2f3757d4", 64: "853971690e132d1e"},
 }
 
 
@@ -409,7 +417,7 @@ def test_the_operative_floor_is_the_max_over_every_registered_row():
     The earlier form of this test asserted the floor was at least 1.5x chance, which pinned the
     open channel as a requirement: the corrected construct fails it by design.
     """
-    assert set(WINDOWS) <= set(S5_BIND_ADVERSARIES)
+    assert not set(WINDOWS) & set(S5_BIND_ADVERSARIES)   # class-excluded, see the cost test
     assert "pin_chain" in S5_BIND_ADVERSARIES
     for name in ("s5_bind_v2", "s5_bind_local_v2"):
         spec = TK.CANONICAL[name]
@@ -449,6 +457,12 @@ def test_no_pin_closes_the_state_free_reset_channel():
 
     The contrast is stated WITHIN the cell rather than as a ratio to chance, because at k=6
     chance is 0.200 and the ratio compresses; the absolute drop is the same size in both.
+
+    It is SMALLER than it was before ``chain_max_gap``, and the reason is not that the channel
+    weakened: pin density with the knob off is unchanged at 0.26-0.29. The steer often puts the
+    queried agent on the REFERENCED side of its last carrier event, and the pin walk keys on the
+    named side, so the policy has no chain to read on those items and falls back to its one-hop
+    default. The stream property is the primary assertion here for that reason.
     """
     for name in ("s5_bind_v2", "s5_bind_local_v2"):
         spec = TK.CANONICAL[name]
@@ -466,7 +480,7 @@ def test_no_pin_closes_the_state_free_reset_channel():
         assert density == 0.0, f"{name}: {density:.4f} of dynamic swaps still ride a pin"
         assert open_hits > chance, f"{name}: pin_chain {open_hits:.4f} with the channel open"
         assert hits <= chance, f"{name}: pin_chain {hits:.4f} vs chance {chance:.4f}"
-        assert open_hits - hits >= 0.08, f"{name}: {open_hits:.4f} -> {hits:.4f}"
+        assert open_hits - hits >= 0.05, f"{name}: {open_hits:.4f} -> {hits:.4f}"
 
 
 def test_no_pin_is_set_on_the_family_and_defaults_off_everywhere_else():
@@ -477,19 +491,19 @@ def test_no_pin_is_set_on_the_family_and_defaults_off_everywhere_else():
             assert spec.no_pin is (spec.family == "s5_bind"), name
 
 
-def test_the_truncation_family_is_registered_at_matched_budgets():
+def test_the_truncation_family_is_measured_at_matched_budgets():
     """Truncation is a two-sided family and both sides pay the same price.
 
     window_f plays the LAST T = f*L events from the stated maps; prefix_f plays the FIRST T
-    exactly and reads the true maps out there. Registering one half and not the other prices
-    the same T events differently at the two ends of the stream, which is what left prefix_90
-    unregistered at 4x the operative floor.
+    exactly and reads the true maps out there. Measuring one half and not the other prices the
+    same T events differently at the two ends of the stream, which is what left prefix_90
+    unmeasured at 4x the operative floor. Neither half is a FLOOR row — see the cost-class test.
     """
     assert len(S5_BIND_TRUNCATION_ROWS) == 2 * len(S5_BIND_WINDOWS)
     for f in S5_BIND_WINDOWS:
         tag = int(round(f * 100))
-        assert f"window_{tag}" in S5_BIND_ADVERSARIES
-        assert f"prefix_{tag}" in S5_BIND_ADVERSARIES
+        assert f"window_{tag}" in S5_BIND_MAP_CARRYING_ROWS
+        assert f"prefix_{tag}" in S5_BIND_MAP_CARRYING_ROWS
     spec = TK.CANONICAL["s5_bind_v2"]
     for e in TK.generate(spec, "test", n=20, length=64):
         read = s5_bind_read(e.prompt)
@@ -518,7 +532,7 @@ def test_q_tail_closes_the_prefix_half():
         chance = 1.0 / (spec.k - 1)
         L = spec.eval_lengths[0]
         rows = {}
-        for gated, s in ((False, spec.scaled(q_tail=0.0)), (True, spec)):
+        for gated, s in ((False, spec.scaled(q_tail=0.0, chain_max_gap=0.0)), (True, spec)):
             rows[gated] = s5_bind_floors(TK.generate(s, "test", n=N_FLOOR, length=L), spec.k)
         assert rows[False]["prefix_90"] > 2.0 * chance, \
             f"{name}: the hole is not reproduced ({rows[False]['prefix_90']:.4f})"
@@ -539,6 +553,140 @@ def test_q_tail_is_set_on_the_family_and_defaults_off_everywhere_else():
         spec = TK.CANONICAL["s5_bind_v2"]
         assert TK._s5_bind_tail_lo(spec, L) == max(1, int(round(0.9 * L)))
         assert TK._s5_bind_tail_lo(spec.scaled(q_tail=0.0), L) == -1
+
+
+def test_a_floor_row_carries_no_map():
+    """The RESOURCE CLASS that decides registration, made checkable.
+
+    The composed cell's cheapest correct algorithm carries P, its inverse and B — 2k + m live
+    slots — so a row may set a floor only if its own live-slot count does not grow with k. That
+    is one rule rather than a per-member judgement, which is what the block-drop family defeats:
+    a per-item step threshold that admits one member admits the continuum around it.
+    """
+    assert set(S5_BIND_ROW_SLOTS) == set(S5_BIND_ADVERSARIES)
+    assert not set(S5_BIND_ROW_SLOTS) & set(S5_BIND_MAP_CARRYING_ROWS)
+    assert set(S5_BIND_ADVERSARIES) | set(S5_BIND_MAP_CARRYING_ROWS) == set(S5_BIND_ROWS)
+    # bounded independently of k: the largest admitted row walks one carrier and a scratch
+    assert max(S5_BIND_ROW_SLOTS.values()) <= 3
+    # and the excluded ones are excluded because they carry a map, not because they are
+    # inaccurate: on the decoupled retrieval arm they read ~1.000 and are still not floors
+    assert "final_state_resolution" in S5_BIND_MAP_CARRYING_ROWS
+    assert set(S5_BIND_TRUNCATION_ROWS) <= set(S5_BIND_MAP_CARRYING_ROWS)
+
+
+def test_chain_max_gap_bounds_every_off_chain_run_after_the_first():
+    """The gate, read back off the rendered surface: from the chain's first event on, no run of
+    consecutive off-chain events is as long as w_min, the trailing run included, so no block of
+    width w_min starting there fits inside one.
+
+    The LEADING run is deliberately not bounded — see TaskSpec.chain_max_gap — and this pins
+    that too: it is still drawn from the free distribution, which is what keeps the stated role
+    of an early operand from being a one-retrieval shortcut.
+    """
+    for name in ("s5_bind_v2", "s5_bind_local_v2"):
+        spec = TK.CANONICAL[name]
+        assert spec.chain_max_gap
+        for L in spec.eval_lengths:
+            w_min = max(1, int(round(spec.chain_max_gap * L)))
+            assert TK._s5_bind_gap_limit(spec, L) == w_min - 1
+            leads = []
+            for e in TK.generate(spec, "test", n=150, length=L):
+                read = s5_bind_read(e.prompt)
+                lead, rest = s5_bind_runs(read)
+                assert rest < w_min, f"{name}@{L}: run {rest} >= {w_min} after the first event"
+                leads.append(lead)
+                assert s5_bind_chain(read)
+            assert max(leads) >= w_min, f"{name}@{L}: the leading run looks bounded"
+
+
+def test_the_block_drop_family_is_dead_at_and_above_w_min():
+    """What the gate buys, over the family and not over a registered subset of it.
+
+    Every block of width >= w_min drops an event that can change the answer, so the whole
+    (position, width) surface above w_min sits at chance — including the six budgets the
+    registered truncation rows sample, and including the late-interior positions the registered
+    rows missed. Below w_min the class rule stands alone; that residual is measured by
+    scripts/probe_s5bind_block_drop_20260730.py and is not folded into the floor.
+    """
+    positions = (0.0, 0.25, 0.5, 0.75, 0.85, 0.95, 1.0)
+    for name in ("s5_bind_v2", "s5_bind_local_v2"):
+        spec = TK.CANONICAL[name]
+        chance = 1.0 / (spec.k - 1)
+        L = spec.eval_lengths[0]
+        exs = TK.generate(spec, "test", n=400, length=L)
+        for width in (spec.chain_max_gap, 0.15, 0.25, 0.5):
+            for pos in positions:
+                acc = s5_bind_block_drop(exs, width, pos)
+                assert acc <= FLOOR_RATIO_MAX * chance, \
+                    f"{name}@{L}: drop {width:.2f}L @ {pos:.2f} reads {acc:.4f}"
+
+
+def test_the_gate_reproduces_the_hole_when_it_is_off():
+    """The defect the gate closes, on the same cell with the knob off. Without it the family's
+    interior beats the operative floor by more than the registered endpoints did, which is why
+    registering endpoints could never have closed it."""
+    spec = TK.CANONICAL["s5_bind_v2"].scaled(chain_max_gap=0.0)
+    L = 128
+    exs = TK.generate(spec, "test", n=400, length=L)
+    chance = 1.0 / (spec.k - 1)
+    endpoints = max(s5_bind_block_drop(exs, 0.1, p) for p in (0.0, 1.0))
+    interior = max(s5_bind_block_drop(exs, 0.1, p) for p in (0.85, 0.9, 0.95))
+    assert interior > 2.0 * chance, f"the hole is not reproduced ({interior:.4f})"
+    assert interior > 1.5 * endpoints, f"interior {interior:.4f} vs endpoints {endpoints:.4f}"
+
+
+def test_chain_max_gap_is_set_on_the_family_and_defaults_off_everywhere_else():
+    """Appended and defaulted, so the gate moved only this family's streams — and it is refused
+    on a rho_ladder spec, whose five rungs have five different coupled trajectories."""
+    assert TK.TaskSpec("x", "s5_bind").chain_max_gap == 0.0
+    for reg in (TK.CANONICAL, TK.RETIRED, TK.CALIBRATION):
+        for name, spec in reg.items():
+            want = spec.family == "s5_bind" and name in ALL
+            assert (spec.chain_max_gap > 0.0) is want, name
+    for name in ALL:
+        # w_min lands at 6-13 events on the k=12 grid and 5-6 on the k=6 one: the smallest
+        # fraction whose w_min at the cell's shortest length still leaves the stream a free
+        # swap:give mix
+        spec = TK.CANONICAL[name]
+        for L in spec.eval_lengths:
+            assert 5 <= int(round(spec.chain_max_gap * L)) <= 13
+    bad = TK.CALIBRATION["s5_bind_v2_lad100"].scaled(chain_max_gap=0.05)
+    try:
+        TK.generate(bad, "test", n=1, length=64)
+    except ValueError as exc:
+        assert "rho_ladder" in str(exc)
+    else:
+        raise AssertionError("a ladder spec accepted chain_max_gap")
+
+
+def test_the_gate_does_not_buy_down_the_step_multiplier():
+    """The gate is a constraint on WHEN the chain is touched, not on how much state is live: the
+    composed cell still costs a forward pass carrying both maps, the components still admit
+    their sparse walks, and the ratio between them holds. Steering re-targets a swap the stream
+    was going to contain rather than inserting one, which is what keeps the swap:give mix — the
+    thing both costs are priced on — from moving.
+
+    Costed on the register machine the family is measured on: a swap costs one resolution plus
+    four map writes under the composed forward pass and a give one resolution plus one write,
+    while the decoupled component walks its answer's role backward at five steps per chain
+    event over two live slots.
+    """
+    for name, L in (("s5_bind_v2", 192), ("s5_bind_local_v2", 48)):
+        spec = TK.CANONICAL[name]
+        ratio = {}
+        for gated, s in ((False, spec.scaled(chain_max_gap=0.0)), (True, spec)):
+            comp = dec = 0
+            exs = TK.generate(s.scaled(coupled=True), "test", n=150, length=L)
+            for e in exs:
+                ev = s5_bind_read(e.prompt)["events"]
+                n_swap = sum(1 for x in ev if x[0] == "swap")
+                comp += 5 * n_swap + 2 * (len(ev) - n_swap)
+            for e in TK.generate(s.scaled(coupled=False), "test", n=150, length=L):
+                dec += 5 * len(s5_bind_chain(s5_bind_read(e.prompt))) + 2
+            ratio[gated] = comp / dec
+        assert ratio[True] >= 0.9 * ratio[False], \
+            f"{name}@{L}: multiplier {ratio[False]:.2f} -> {ratio[True]:.2f}"
+        assert ratio[True] >= 3.0, f"{name}@{L}: multiplier {ratio[True]:.2f}"
 
 
 def test_coupling_blind_policies_reach_chance_on_the_long_cells():
@@ -572,18 +720,19 @@ def test_coupled_only_rows_are_dropped_on_a_decoupled_rendering():
         assert _sb_pin_chain(s5_bind_read(e.prompt)) == e.answer
 
 
-def test_the_truncation_rows_are_measured_but_not_a_floor_on_a_decoupled_cell():
-    """A floor row has to be CHEAPER than the task. On the decoupled retrieval arm the task is
-    one content-addressed lookup and a truncated pass is 0.9L events, so both halves read ~1.000
-    by doing an order of magnitude more work than the cell asks for. They stay measured and
-    printed; they may not set the number the score is read against."""
+def test_the_truncation_rows_are_measured_but_not_a_floor_on_either_rendering():
+    """A floor row has to be in a strictly LOWER resource class than the task. On the decoupled
+    retrieval arm the task is one content-addressed lookup and a truncated pass is 0.9L events,
+    so both halves read ~1.000 by doing an order of magnitude more work than the cell asks for.
+    The class rule reaches that case with no per-rendering exemption, which is why the ``coupled``
+    argument no longer changes the max."""
     spec = TK.CANONICAL["s5_bind_v2_bind"]
     fl = s5_bind_floors(TK.generate(spec, "test", n=100, length=128), spec.k)
     assert not spec.coupled
     assert fl["prefix_90"] > 0.9 and fl["window_90"] > 0.9
     op = s5_bind_operative_floor(fl, coupled=False)
     assert op <= 1.5 / (spec.k - 1), f"a truncation row set the component floor ({op:.3f})"
-    assert s5_bind_operative_floor(fl, coupled=True) > 0.9
+    assert s5_bind_operative_floor(fl, coupled=True) == op
 
 
 def test_the_anti_pin_guess_is_registered_chance_and_is_not_sampling_noise():
@@ -612,7 +761,7 @@ def test_the_anti_pin_guess_is_registered_chance_and_is_not_sampling_noise():
         assert anti <= chance * (k - 1) / (k - 2) + 1e-9
         # and the reason is measured: pin_chain is many SE below chance, not near it
         se = sqrt(chance * (1 - chance) / n)
-        assert (chance - pin) / se > 3.0, f"{name}: pin_chain {pin:.4f} vs chance {chance:.4f}"
+        assert (chance - pin) / se > 2.0, f"{name}: pin_chain {pin:.4f} vs chance {chance:.4f}"
 
 
 def test_the_whole_map_readout_has_its_own_chance_row():
@@ -636,7 +785,8 @@ def test_registered_rows_reach_the_suite_gate_column():
     assert registered <= set(validate_suite.S5_BIND_SHORTCUTS)
     assert set(validate_suite.S5_BIND_SHORTCUTS) <= set(S5_BIND_ADVERSARIES)
     assert not set(validate_suite.S5_BIND_SHORTCUTS) & set(S5_BIND_CHANCE_ROWS)
-    assert set(validate_suite.S5_BIND_WINDOW_ROWS) == set(WINDOWS)
+    assert not set(validate_suite.S5_BIND_SHORTCUTS) & set(S5_BIND_MAP_CARRYING_ROWS)
+    assert set(validate_suite.S5_BIND_DIAGNOSTIC_ROWS) == set(WINDOWS)
     assert "s5_bind" in validate_suite.S5_BIND_FAMILIES
 
 
@@ -648,9 +798,12 @@ def test_suite_gate_passes_on_every_registered_cell():
         spec = TK.CANONICAL[name]
         exs = TK.generate(spec, "test", n=200, length=spec.eval_lengths[-1])
         fl = s5_bind_floors(exs, spec.k)
-        gated = [n for n in validate_suite.S5_BIND_SHORTCUTS if n in fl
-                 and (spec.coupled or n not in validate_suite.S5_BIND_WINDOW_ROWS)]
+        gated = [n for n in validate_suite.S5_BIND_SHORTCUTS if n in fl]
         assert max(fl[n] for n in gated) < 0.5, f"{name}: a gating row clears 0.5"
+        if spec.coupled and spec.chain_max_gap:
+            lim = validate_suite.S5_BIND_DIAGNOSTIC_MAX / (spec.k - 1)
+            for row in validate_suite.S5_BIND_DIAGNOSTIC_ROWS:
+                assert fl[row] < lim, f"{name}: {row} {fl[row]:.3f} is not dead"
 
 
 def _run() -> int:

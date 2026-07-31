@@ -294,6 +294,77 @@ class TaskSpec:
     # truncation budget (validity.S5_BIND_WINDOWS).
     q_tail: float = 0.0
 
+    # s5_bind-only. The largest RUN of consecutive events allowed OFF the queried agent's
+    # dependency chain, as a fraction of L — the gate that closes the block-drop family.
+    #
+    # THE FAMILY IT CLOSES. window_f (keep the last f*L events) and prefix_f (keep the first
+    # f*L) are the two endpoints of one family: drop a block of width w at position p and play
+    # everything else. The family is continuous in (p, w), non-monotone in both, and every
+    # member costs ~0.9x the task, so the max over any finite registered subset of it is a
+    # selection statistic over an effectively exchangeable set. Registering members cannot close
+    # it; three rounds of registration each lost to a neighbour.
+    #
+    # WHY THE FAMILY WORKED. A block-drop is wrong only when it drops an event on the queried
+    # agent's DEPENDENCY CHAIN — the events that can change the answer. That chain is the
+    # backward carrier walk of the answer's role: at each swap both operands are on it (the
+    # answer's role moves from one to the other), and under the coupled rendering the second
+    # operand is itself resolved through B, so the chain closes over both structures. Under the
+    # free sampler the chain holds ~2 p_swap L / k of the L events, so most blocks miss it: the
+    # longest off-chain run is 43 events at k=12/L=128 and 17 at k=6/L=48, and a width-0.1L
+    # block dropped in the late interior read 2.2x the floor.
+    #
+    # THE CONSTRAINT. With chain_max_gap = f the sampler holds every off-chain run FROM THE
+    # CHAIN'S FIRST EVENT ONWARD to at most w_min - 1 events, w_min = round(f*L), the run after
+    # the last chain event included. Every block of width >= w_min that starts at or after that
+    # first event therefore contains an event that can change the answer. Two mechanisms:
+    #   - STEERING. When the run reaches w_min - 1 the swap the coin has already produced is
+    #     re-targeted onto the answer's current carrier; only if that slot drew a give as well
+    #     is a swap forced into the stream. Re-targeting rather than inserting is what keeps the
+    #     swap:give mix — the quantity both the composed pass and the component walk are priced
+    #     on — from moving, so the step multiplier does not fall (measured: 4% or less, and the
+    #     composed step count RISES). Which operand carries the steer is drawn per event: through
+    #     the referenced one the sentence names an object the carrier holds, through the named
+    #     one it names the carrier.
+    #   - QUERY GATE. The queried agent is drawn from the agents whose final role's chain
+    #     satisfies the bound. In practice that is the steered role, so the bound is a property
+    #     of the item and not a selection over roles.
+    #
+    # THE HEAD IS NOT BOUNDED, AND MAY NOT BE. The run BEFORE the chain's first event is left
+    # exactly as the free sampler draws it. Bounding it looks symmetric and is not: the first
+    # chain event names the agent holding the answer's role AT THE START, whose STATED role is
+    # the answer, so forcing that event into the first w_min events makes "the stated role of an
+    # operand of the j-th swap" — one retrieval, no state — a shortcut. Measured with the head
+    # bounded at k=12/L=128: that policy reads 1.6x chance at the best offset and 2.7x when the
+    # steer also fixed which operand carried it, against 1.03x on the free stream. Widening
+    # w_min does not fix it, because the leak is ~chance / P(the first chain event falls inside
+    # w_min) and only reaches chance at w_min ~ 3k events, by which point the gate no longer
+    # covers the widths the family actually lives at. The tail has no such leak — the last chain
+    # event's other operand is the previous carrier, whose stated role is unrelated to the
+    # answer — which is why q_tail could be bought and head coverage cannot.
+    #
+    # WHAT THAT LEAVES. Blocks lying entirely inside the leading run are not closed by
+    # construction. They are the ones that discard the stream's HEAD, and dropping the head
+    # perturbs P and B for every later resolution, so the answer's trajectory diverges even when
+    # the block misses the chain. Measured over the full (position, width) scan at n=1500 and
+    # widths >= w_min, the position-0 column reads 0.71-1.11x chance on the free stream and
+    # 0.70-1.07x on the gated one, and the drops that DID miss the chain — 0-10% of the
+    # (item, position) pairs at k >= 8 — read 0.7-1.5x chance conditional on missing. That is
+    # measured, not constructed, and it is reported as such.
+    #
+    # Appended and defaulted to 0.0, which disables both mechanisms, so every pre-existing
+    # stream is byte-identical. The CANONICAL specs set 0.05 at k=12 (w_min = 6/10/13 events at
+    # L=128/192/256) and 0.10 at k=6 (w_min = 5/6 at L=48/64) — in both cases the smallest
+    # fraction whose w_min at the cell's shortest length is still around five events. Below that
+    # the sampler has to put a chain event on almost every slot and the stream degenerates into
+    # alternating kinds.
+    #
+    # NOT AVAILABLE ON A rho_ladder SPEC. The steer follows ONE coupled trajectory, and a ladder
+    # spec's whole construction is one skeleton read at five doses whose trajectories differ, so
+    # no single steered event is on the chain at every rung. Setting both raises. The ladder cells
+    # are CALIBRATION and are never scored; their block-drop family stays open and is reported as
+    # the diagnostic it is.
+    chain_max_gap: float = 0.0
+
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
         return replace(self, **knobs)
@@ -733,6 +804,33 @@ def _s5_bind_lanes(spec) -> tuple[float, ...]:
     return tuple(sorted(set(spec.rho_ladder) | {0.0}))
 
 
+def _s5_bind_gap_limit(spec, length: int) -> int:
+    """The largest off-chain run the stream may contain AFTER the chain's first event
+    (TaskSpec.chain_max_gap), in events.
+
+    ``w_min = round(chain_max_gap * length)`` is the smallest block width the gate makes
+    unavoidable, so the run may be at most ``w_min - 1``. -1 disables the gate.
+    """
+    if not spec.chain_max_gap:
+        return -1
+    return max(1, int(round(spec.chain_max_gap * length))) - 1
+
+
+def _s5_bind_runs(idxs, length: int) -> tuple[int, int]:
+    """``(leading run, longest run after it)`` — the runs of consecutive event indices NOT in
+    ``idxs``, split at the first index because the two ends of the stream are not symmetric.
+
+    A block of width w misses ``idxs`` iff it fits inside one of these runs. The gate bounds the
+    SECOND number only; see TaskSpec.chain_max_gap on why bounding the first one hands a
+    zero-state policy the answer.
+    """
+    if not idxs:
+        return length, 0
+    rest = [length - 1 - idxs[-1]]
+    rest += [idxs[j + 1] - idxs[j] - 1 for j in range(len(idxs) - 1)]
+    return idxs[0], max(rest)
+
+
 def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
     """One s5_bind item's world, event stream and queries — the part of the sampler that must
     not consult the rendering.
@@ -745,7 +843,11 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
 
       DEFAULT      each event's coupling coin is drawn inside the rejection loop, and the item
                    is checked for degeneracy under the spec's own dose and under the all-static
-                   reading. Two doses, two lanes.
+                   reading. Two doses, two lanes. This is also the sampler that can carry the
+                   chain gate (``spec.chain_max_gap``): one designated role's carrier is tracked
+                   under the coupled trajectory, and once it has moved once, a swap is steered
+                   onto it whenever the run of events since its last move would otherwise reach
+                   ``w_min``.
       SKELETON-FIRST (rho_ladder set)
                    the coupling variate is drawn once per event SLOT, before the operands, and
                    the item is checked under every dose in the ladder. The draw sequence is then
@@ -753,7 +855,11 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
                    item — see TaskSpec.rho_ladder.
     """
     k, m = spec.k, spec.n_objects_active
+    if spec.chain_max_gap and spec.rho_ladder:
+        raise ValueError(f"{spec.name}: chain_max_gap steers ONE coupled trajectory and a "
+                         f"rho_ladder spec has one per rung; the two cannot both be set.")
     if not spec.rho_ladder:
+        gap_limit = _s5_bind_gap_limit(spec, length)
         for _outer in range(200):
             P0 = dict(zip(agents, rng.sample(roles, k)))
             B0 = dict(zip(objs, rng.sample(agents, m)))
@@ -768,18 +874,60 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
             # o -> the role its last DYNAMIC give named, while that give still stands: the live
             # pin (see TaskSpec.no_pin). A static give leaves no pin, and any give clears it.
             pin: dict[str, str | None] = {}
+            # role -> the indices of the events that MOVE it, under the coupled trajectory: the
+            # dependency chain of whichever agent ends up holding it (TaskSpec.chain_max_gap).
+            chain_c: dict[str, list[int]] = {rl: [] for rl in roles}
+            # the steered role's current holder, the run of events since it last moved, and
+            # whether it has moved at all yet (the leading run is not steered — see below)
+            carrier = rng.choice(agents) if gap_limit >= 0 else None
+            run, started = 0, False
             for _i in range(length):
-                swap = rng.random() < spec.p_swap
+                # STEER the swap that the coin already gave us one slot before the run runs
+                # out, and only FORCE a swap into the stream when the coin gave a give at that
+                # slot too. Steering re-targets an event the stream was going to contain
+                # anyway, so the swap:give mix — which is what both the composed pass and the
+                # component walk are priced on — barely moves.
+                #
+                # NOTHING IS STEERED BEFORE THE FIRST CHAIN EVENT. That event names the agent
+                # holding the answer's role at the start, so its stated role IS the answer; a
+                # steered one would put that agent at a predictable place on the surface and
+                # hand a zero-state policy the answer in two retrievals. Left free it lands
+                # where the free stream puts it, on either operand, and the leading run is
+                # bounded by REJECTION at the query gate instead — which selects items rather
+                # than shaping them.
+                steer = gap_limit >= 0 and started and run >= gap_limit - 1
+                force = gap_limit >= 0 and started and run >= gap_limit
+                swap = True if force else rng.random() < spec.p_swap
                 ok = False
                 for _try in range(200):
                     if swap:
-                        a, o = rng.choice(agents), rng.choice(objs)
-                        dyn = rng.random() < spec.rho_p
+                        if steer:
+                            # WHICH SIDE carries the steer is drawn per try. Through the
+                            # REFERENCED operand the sentence names an object the carrier
+                            # happens to hold; through the NAMED one it names the carrier. A
+                            # fixed side would make the answer's first carrier readable off the
+                            # surface at a fixed place — see chain_max_gap on why the head is
+                            # where that matters — so neither side is fixed, and the naming form
+                            # is also the fallback where the carrier holds nothing or where every
+                            # object it holds is refused by the other constraints (no_pin above
+                            # all), which is what keeps the retry loop from starving.
+                            dyn = rng.random() < spec.rho_p
+                            held = ([x for x in objs if (Bc if dyn else B0)[x] == carrier]
+                                    if rng.random() < 0.5 else [])
+                            if held:
+                                o, a = rng.choice(held), rng.choice(agents)
+                            else:
+                                a, o = carrier, rng.choice(objs)
+                        else:
+                            a, o = rng.choice(agents), rng.choice(objs)
+                            dyn = rng.random() < spec.rho_p
                         bc = Bc[o] if dyn else B0[o]
                         bd = B0[o]
                         if bc != a and bd != a:          # no self-swap under EITHER semantics
                             if spec.no_pin and dyn and pin.get(o) is not None and Pc[bc] == pin[o]:
                                 continue                 # the references would cancel the state
+                            if steer and carrier not in (a, bc):
+                                continue                 # the steered event must move the carrier
                             ok = True
                             break
                     else:
@@ -794,6 +942,8 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
                     break
                 if swap:
                     events.append({"kind": "swap", "a": a, "ref": o, "dyn": dyn})
+                    chain_c[Pc[a]].append(len(events) - 1)
+                    chain_c[Pc[bc]].append(len(events) - 1)
                     Pc[a], Pc[bc] = Pc[bc], Pc[a]
                     Pd[a], Pd[bd] = Pd[bd], Pd[a]
                     Pc_inv = _invert(Pc)
@@ -802,17 +952,28 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
                     touch_d[a] += 1
                     touch_d[bd] += 1
                     last_c[a] = last_c[bc] = last_d[a] = last_d[bd] = len(events) - 1
+                    if carrier in (a, bc):
+                        carrier = bc if carrier == a else a
+                        run, started = 0, True
+                    else:
+                        run += 1
                 else:
                     events.append({"kind": "give", "o": o, "ref": rl, "dyn": dyn})
                     Bc[o], Bd[o] = hc, hd
                     pin[o] = rl if dyn else None
                     writes[o] += 1
+                    run += 1
             if len(events) < length:
                 continue
             tail_lo = _s5_bind_tail_lo(spec, length)
             cand_s = [a for a in agents if touch_c[a] >= 2 and touch_d[a] >= 2
                       and Pc[a] != P0[a] and Pd[a] != P0[a]
                       and last_c[a] >= tail_lo and last_d[a] >= tail_lo]
+            if gap_limit >= 0:
+                # every block of width >= w_min that starts at or after the chain's first event
+                # hits the chain by construction
+                cand_s = [a for a in cand_s
+                          if _s5_bind_runs(chain_c[Pc[a]], length)[1] <= gap_limit]
             last_give = {}
             for j, e in enumerate(events):
                 if e["kind"] == "give":
@@ -967,7 +1128,9 @@ def _ex_s5_bind(spec, w, r, rng, length, idx):
     a shallow one — reads 0.33-0.44 at every L. Without ``q_tail`` the queried agent's carrier
     chain finishes mid-stream, and simulating the task exactly and stopping 10% early reads
     0.45/0.37/0.29 at L=128/192/256 against a 0.10-0.12 floor: the two clauses are the two ends
-    of one family (see TaskSpec.q_tail and validity's window_/prefix_ rows).
+    of one family (see TaskSpec.q_tail and validity's window_/prefix_ rows). The queried agent's
+    chain also has no gap of ``chain_max_gap`` events or more after its first event, which is
+    what makes every block-drop of that width or wider land on it.
 
     NO_PIN. Two dynamic references compose into a state-free reset channel: a give writes
     B[o] <- Pinv[r], pinning o's holder to role r, and a later swap naming o then writes r onto
@@ -977,28 +1140,28 @@ def _ex_s5_bind(spec, w, r, rng, length, idx):
     rejects the second event of such a pair at sampling time; see TaskSpec.no_pin.
 
     FLOORS. The registered shallow policies are in ``factworld.validity.s5_bind_floors``; the
-    operative floor is the max over them (``s5_bind_operative_floor``) and is what a score is
-    read against. Over the REGISTERED rows, with no_pin and q_tail set and L/k >= 8, it lands
-    within 1.06-1.28x the informed chance 1/(k-1) across k=6..16 (n=1500); at shorter L the
-    one-leg and window rows are still 2-8x above it, which is what the length grid in CANONICAL
-    is cut on.
+    operative floor is the max over the rows that carry NO map (``s5_bind_operative_floor``) and
+    is what a score is read against. Registration is by resource class, not by accuracy: the
+    cheapest correct algorithm on a coupled cell carries P, its inverse and B — 2k + m live
+    slots — so a policy that carries a map is doing the task's own work at a constant-factor
+    discount and is reported as a diagnostic instead. With no_pin, q_tail and chain_max_gap set
+    and L/k >= 8, that floor lands within 1.03-1.14x the informed chance 1/(k-1) across k=6..16
+    (n=1500); at shorter L the one-leg rows are still well above it, which is what the length
+    grid in CANONICAL is cut on.
 
-    THAT FLOOR IS NOT YET HONEST, and the cell is not scoreable until it is. The registered
-    truncation rows are the two ENDPOINTS of a family parameterised by where the dropped block
-    sits, and accuracy over that family peaks in the INTERIOR: playing every event except the
-    block [0.85L, 0.95L) reads 0.247 / 0.164 / 0.127 at k=12, L=128/192/256 against registered
-    floors of 0.111 / 0.099 / 0.103, and 0.315 / 0.303 at k=6, L=48/64 against 0.223 / 0.231
-    (n=1500, independent simulator). The position profile is smooth and rises toward the late
-    interior (0.081 -> 0.247 at L=128), so this is structure, not noise.
-
-    Registering more members does not close it. The family is continuous in (position, width),
-    non-monotone in both, and every member costs ~0.9x the task, so the max over any finite
-    registered subset is a selection statistic over an effectively exchangeable set — the thing
-    a floor may never be. The cause is that a block-drop is only wrong when it drops an event on
-    the queried agent's dependency chain, and that chain holds ~2L/k of the L events, so most
-    blocks miss it. Sparsity is also what buys the step multiplier (the components admit sparse
-    backward walks; only the composition forces a dense forward pass), so the closure has to
-    make the chain dense IN TIME without making the state dense.
+    THE BLOCK-DROP FAMILY. window_f and prefix_f are two positions of one continuum — drop a
+    block of width w at position p, play everything else — which is continuous in (p, w) and
+    non-monotone in both, so the max over any finite registered subset of it is a selection
+    statistic and no set of registered members could ever have been its floor. Every member
+    carries both maps, so the class rule excludes the whole continuum at once. The class rule is
+    not left to carry it alone: ``spec.chain_max_gap`` bounds the off-chain runs so that every
+    block of width >= w_min drops an event that can change the answer, and over the full
+    19-position x 8-width scan (n=1500, independent parser and simulator,
+    scripts/probe_s5bind_block_drop_20260730.py) the best member at any width >= w_min reads
+    1.00-1.33x chance on every scored cell, against 1.7-5.1x before the gate. Blocks NARROWER
+    than w_min, and blocks lying inside the stream's un-gated leading run, are excluded by class
+    alone; the residual is measured (see TaskSpec.chain_max_gap) and is not folded into the
+    floor.
     """
     k, m = spec.k, spec.n_objects_active
     if m > k:
@@ -1569,57 +1732,69 @@ CANONICAL = {
     # admitted an iterate-to-a-fixed-point serialisation and its coupling ablation moved
     # prompt length, both of which this rendering excludes by construction.
     #
-    # LENGTH GRID. The operative floor (validity.s5_bind_operative_floor — the max over every
-    # registered policy) is what sets the shortest scored length, and with the pin channel
-    # closed it reaches the informed chance 1/(k-1) = 0.0909 rather than plateauing above it.
-    # Measured on this stream at n=3000, k=12, coupled/state, as a ratio to that chance:
-    # L=64 2.15, L=128 1.09, L=192 1.09, L=256 1.10. The residual at L=64 is not the pin
-    # channel (pin density is 0.000 at every length) but stream length against k: with 12
-    # agents and 12 objects a 64-event stream gives the queried agent a short carrier chain and
-    # each object ~2.7 writes, so a policy reading the last 0.9L events, or feeding B into P
-    # but not P into B, still lands 2.1x chance. From L/k >= 8 both fall to chance, so the grid
-    # starts at 128. The floor per cell is recomputed and printed by scripts/validate_suite.py;
-    # a rescaled cell carries its own.
+    # LENGTH GRID. The operative floor (validity.s5_bind_operative_floor — the max over the
+    # registered policies that carry no map) is what sets the shortest scored length, and with
+    # the pin channel closed and the chain gate on it reaches the informed chance
+    # 1/(k-1) = 0.0909 rather than plateauing above it. Measured on this stream at n=3000,
+    # k=12, coupled/state, as a ratio to that chance: L=64 1.38, L=96 1.06, L=128 1.03,
+    # L=192 1.03, L=256 1.15. The residual at L=64 is not the pin channel (pin density is 0.000
+    # at every length) but stream length against k: with 12 agents and 12 objects a 64-event
+    # stream gives the queried agent a short carrier chain and each object ~2.7 writes, so
+    # feeding B into P but not P into B still lands 1.4x chance. From L/k >= 8 it falls to
+    # chance, so the grid starts at 128. The floor per cell is recomputed and printed by
+    # scripts/validate_suite.py; a rescaled cell carries its own.
+    #
+    # chain_max_gap = 0.05 here: w_min = 6 / 10 / 13 events at L = 128 / 192 / 256, so every
+    # block-drop that wide or wider lands on the queried agent's dependency chain. Over the full
+    # 19-position x 8-width scan at n=1500 the best member reads 1.08-1.20x chance, against
+    # 2.36-4.73x on the un-gated stream (scripts/probe_s5bind_block_drop_20260730.py).
     #
     # kind=experimental until the calibration lands, so none of the four is in REPORTED.
     "s5_bind_v2":       TaskSpec("s5_bind_v2", "s5_bind", kind="experimental",
                                   k=12, n_objects=12, n_objects_active=12,
                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
-                                  no_pin=True, q_tail=0.1,
+                                  no_pin=True, q_tail=0.1, chain_max_gap=0.05,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     "s5_bind_v2_state": TaskSpec("s5_bind_v2_state", "s5_bind", kind="experimental",
                                   k=12, n_objects=12, n_objects_active=12,
                                   coupled=False, query_arm="state", stream_name="s5_bind_v2",
-                                  no_pin=True, q_tail=0.1,
+                                  no_pin=True, q_tail=0.1, chain_max_gap=0.05,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     "s5_bind_v2_bind":  TaskSpec("s5_bind_v2_bind", "s5_bind", kind="experimental",
                                   k=12, n_objects=12, n_objects_active=12,
                                   coupled=False, query_arm="bind", stream_name="s5_bind_v2",
-                                  no_pin=True, q_tail=0.1,
+                                  no_pin=True, q_tail=0.1, chain_max_gap=0.05,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     "s5_bind_v2_map":   TaskSpec("s5_bind_v2_map", "s5_bind", kind="experimental",
                                   k=12, n_objects=12, n_objects_active=12,
                                   coupled=False, query_arm="state_all", stream_name="s5_bind_v2",
-                                  no_pin=True, q_tail=0.1,
+                                  no_pin=True, q_tail=0.1, chain_max_gap=0.05,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     # The from-scratch operating point: k=6, m=6, shorter streams, and per-EVENT state
     # checkpoints (event_trace — the whole state after every event, the supervision density
     # that formed s5 locally). A streaming model has no scratchpad, so its cost model is the
     # forward pass, which is the algorithm this construct forces in both regimes. Paired the
     # same way, on their own stream. Its operative floor reaches the 0.200 informed chance at
-    # the same L/k as the frontier point (measured n=3000, as a ratio to chance: L=32 1.51,
-    # L=48 1.12, L=64 1.13), so the scored lengths start at 48.
+    # the same L/k as the frontier point (measured n=3000, as a ratio to chance: L=32 1.28,
+    # L=48 1.11, L=64 1.09), so the scored lengths start at 48.
+    #
+    # chain_max_gap = 0.1 here, not the 0.05 the k=12 point carries: at L=48 a 0.05 fraction is
+    # a two-event w_min, and holding the chain that dense leaves the sampler no free swap:give
+    # mix — the event kinds start alternating. At 0.1 w_min is 5 / 6 events at L = 48 / 64 and
+    # the best drop that wide, over the whole position scan, reads 1.08x and 1.03x chance;
+    # drops of 2-3 events are not closed, reading 1.97x and 1.53x, and are excluded by resource
+    # class alone.
     "s5_bind_local_v2": TaskSpec("s5_bind_local_v2", "s5_bind", kind="experimental",
                                   k=6, n_objects=6, n_objects_active=6,
                                   coupled=True, query_arm="state",
                                   stream_name="s5_bind_local_v2", event_trace=True,
-                                  no_pin=True, q_tail=0.1,
+                                  no_pin=True, q_tail=0.1, chain_max_gap=0.1,
                                   train_lengths=(16, 32), eval_lengths=(48, 64)),
     "s5_bind_local_v2_state": TaskSpec("s5_bind_local_v2_state", "s5_bind", kind="experimental",
                                         k=6, n_objects=6, n_objects_active=6,
                                         coupled=False, query_arm="state",
                                         stream_name="s5_bind_local_v2", event_trace=True,
-                                        no_pin=True, q_tail=0.1,
+                                        no_pin=True, q_tail=0.1, chain_max_gap=0.1,
                                         train_lengths=(16, 32), eval_lengths=(48, 64)),
 }
 
