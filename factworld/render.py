@@ -13,6 +13,15 @@ sentence encodes (named slot, referenced value); which slot the value belongs to
 is a property of the map at that point in the stream, so parsing recovers the
 pair and not the resolution.
 
+The mutual-reference family carries that further: its events name their second
+operand through the OTHER of the two structures the stream maintains, and a
+temporal phrase says which map resolves the description — ``s0 swaps the roles of
+g4 and the agent who holds o2 at this point.`` against the running holder map,
+``... at the start.`` against the stated one. The phrase is part of the record, so
+the four event kinds ``swap_roles_now`` / ``swap_roles_start`` / ``give_role_now``
+/ ``give_role_start`` round-trip it, and the two readings occupy the same number
+of whitespace tokens.
+
 Content tokens are still atomic IDs (``e17 a3 v42 o2 loc1 g4 r0 s5``); the step
 label ``sN`` is the event subject. The render <-> parse round-trip is a contract
 (the ground-truth re-parse check — every rendered document must parse back to the
@@ -80,6 +89,26 @@ class Renderer:
     _TURN = ("turns {g}'s dial {n} {clicks}.",)
     _DIAL = ("{g}'s dial is at {p}.",)
 
+    # --- the mutual-reference (s5_bind) surfaces --------------------------------------
+    # Two structures run over one event stream — agents->roles, permuted by the swaps, and
+    # objects->agents, rewritten by the gives — and every event names its SECOND operand
+    # through the other structure. A temporal phrase says which map resolves that
+    # description: ``at this point`` reads the map as it stands when the event fires,
+    # ``at the start`` reads the stated initial one. The two phrases are the same number of
+    # whitespace tokens, so the coupled and decoupled renderings of ONE item differ by two
+    # tokens per referenced event and never in length — the coupling can therefore be
+    # ablated without moving prompt length, which is what makes the paired comparison exact.
+    # The four event kinds are the two structural forms x the two temporal readings, so the
+    # reading is part of the record a sentence encodes and the render/parse round-trip
+    # recovers it.
+    AT_POINT = "at this point"
+    AT_START = "at the start"
+    AT_END = "at the end"
+    _ROLE_AT = ("{g} has role {r} {when}.",)
+    _HOLDER_AT = ("{h} holds {o} {when}.",)
+    _SWAP_BY_HOLDER = ("swaps the roles of {a} and the agent who holds {o} {when}.",)
+    _GIVE_BY_ROLE = ("gives {o} to the agent whose role {when} is {r}.",)
+
     # Role-flow arrow in the compact cycle notation: "g0 -> g1 -> g2" means g0's role
     # passes to g1, g1's to g2, and g2's back to g0 (the canonical cycle_roles args).
     _CYCLE_ARROW = " -> "
@@ -112,6 +141,12 @@ class Renderer:
             s = self._pick(self._SWAP_A0_REF, k).format(a=event.args[0], v=event.args[1])
         elif event.kind == "cycle_a0":
             s = self._pick(self._CYCLE_A0, k).format(a=event.args[0], b=event.args[1], c=event.args[2])
+        elif event.kind in ("swap_roles_now", "swap_roles_start"):
+            when = self.AT_POINT if event.kind.endswith("now") else self.AT_START
+            s = self._pick(self._SWAP_BY_HOLDER, k).format(a=event.args[0], o=event.args[1], when=when)
+        elif event.kind in ("give_role_now", "give_role_start"):
+            when = self.AT_POINT if event.kind.endswith("now") else self.AT_START
+            s = self._pick(self._GIVE_BY_ROLE, k).format(o=event.args[0], r=event.args[1], when=when)
         elif event.kind == "turn_dial":
             clicks = "click" if event.args[1] == "1" else "clicks"
             s = self._pick(self._TURN, k).format(g=event.args[0], n=event.args[1], clicks=clicks)
@@ -139,12 +174,25 @@ class Renderer:
     # with step=None and the render/parse round-trip contract failed on every aux corpus document
     # (issue #38). The scored task streams are unaffected: tasks.py calls render_role and
     # render_dial without a step, and factworld.corpus is the only caller that passes one.
-    def render_role(self, agent: str, role: str, step: str | None = None, key: str | None = None) -> str:
-        s = self._pick(self._ROLE, key or f"role|{agent}").format(g=agent, r=role)
+    def render_role(self, agent: str, role: str, step: str | None = None, key: str | None = None,
+                    when: str | None = None) -> str:
+        """``g3 has role r1.`` — or, with ``when``, the temporally-anchored form the
+        mutual-reference family states its initial conditions in (``... r1 at the start.``).
+        Appended keyword defaulting to None, so every existing call renders as before."""
+        if when is None:
+            s = self._pick(self._ROLE, key or f"role|{agent}").format(g=agent, r=role)
+        else:
+            s = self._pick(self._ROLE_AT, key or f"role|{agent}|{when}").format(g=agent, r=role, when=when)
         return f"{step} {s}" if step is not None else s
 
-    def render_holder(self, obj: str, holder: str, step: str | None = None, key: str | None = None) -> str:
-        s = self._pick(self._HOLDER, key or f"holder|{obj}").format(o=obj, h=holder)
+    def render_holder(self, obj: str, holder: str, step: str | None = None, key: str | None = None,
+                      when: str | None = None) -> str:
+        """``g3 holds o0.`` — or, with ``when``, the temporally-anchored form (see
+        ``render_role``)."""
+        if when is None:
+            s = self._pick(self._HOLDER, key or f"holder|{obj}").format(o=obj, h=holder)
+        else:
+            s = self._pick(self._HOLDER_AT, key or f"holder|{obj}|{when}").format(o=obj, h=holder, when=when)
         return f"{step} {s}" if step is not None else s
 
     def render_dial(self, agent: str, position: str, step: str | None = None, key: str | None = None) -> str:
@@ -152,9 +200,20 @@ class Renderer:
         s = self._pick(self._DIAL, key or f"dial|{agent}").format(g=agent, p=position)
         return f"{step} {s}" if step is not None else s
 
-    def render_query(self, family: str, *, entity=None, attribute=None, target=None, t=None) -> str:
+    def render_query(self, family: str, *, entity=None, attribute=None, target=None, t=None,
+                     targets=None) -> str:
         # as-of-t references the (t-1)-th event label; t=None means the final state
         step = None if t is None else f"s{t - 1}"
+        # The mutual-reference queries. All three end "at the end", which is what separates
+        # them from the single-structure families' queries and what the parser routes on;
+        # the whole-map readout names its slots explicitly so the answer's ORDER is stated
+        # in the prompt rather than conventional.
+        if family == "s5bind_state":
+            return f"what role does {target} have {self.AT_END}?"
+        if family == "s5bind_bind":
+            return f"who is the holder of {target} {self.AT_END}?"
+        if family == "s5bind_state_all":
+            return f"what role does each of {', '.join(targets)} have {self.AT_END}?"
         if family == "recall":
             return f"what is {attribute} of {entity}?"
         if family == "state_easy":
@@ -203,11 +262,51 @@ class Renderer:
                 buckets[c].append(tk)
         return buckets, toks
 
+    def _parse_s5_bind(self, toks: list[str], typed: dict, step: str | None) -> dict | None:
+        """The five mutual-reference surfaces, or None when the text is not one of them.
+
+        Tried before every other shape because two of the five would otherwise be swallowed
+        by an earlier branch: the referenced give carries ``whose`` (the pointer-map
+        reference clause) and the referenced swap carries ``swaps`` (the plain role swap).
+        Each shape is recognised by a token combination no other statement type in the suite
+        emits — ``at the end`` for the queries, ``swaps``+``holds`` and ``gives``+``whose``
+        for the two events, and a bare ``at the start`` for the two initial-condition lines
+        (checked last, since both events can also carry it).
+        """
+        if "end" in toks:
+            if "each" in toks:
+                return {"type": "query", "family": "s5bind_state_all",
+                        "targets": tuple(typed["g"]), "step": step}
+            if "holder" in toks:
+                return {"type": "query", "family": "s5bind_bind",
+                        "target": typed["o"][0], "step": step}
+            return {"type": "query", "family": "s5bind_state", "target": typed["g"][0], "step": step}
+        now = "point" in toks
+        if "swaps" in toks and "holds" in toks:
+            kind = "swap_roles_now" if now else "swap_roles_start"
+            return {"type": "event", "event": Event(kind, (typed["g"][0], typed["o"][0])),
+                    "step": step}
+        if "gives" in toks and "whose" in toks:
+            kind = "give_role_now" if now else "give_role_start"
+            return {"type": "event", "event": Event(kind, (typed["o"][0], typed["r"][0])),
+                    "step": step}
+        if "start" in toks:
+            if "holds" in toks:
+                return {"type": "holder", "object": typed["o"][0], "holder": typed["g"][0],
+                        "step": step, "when": self.AT_START}
+            if "role" in toks and typed["r"]:
+                return {"type": "role", "agent": typed["g"][0], "role": typed["r"][0],
+                        "step": step, "when": self.AT_START}
+        return None
+
     def parse(self, text: str) -> dict:
         # Normalize attached punctuation back to canonical whitespace tokens before parsing.
         text = self.normalize(text)
         typed, toks = self._typed(text)
         step = typed["s"][0] if typed["s"] else None
+        rec = self._parse_s5_bind(toks, typed, step)
+        if rec is not None:
+            return rec
         if "?" in toks:
             # state_comm FIRST: the dial query ("what position is g3 's dial ?") contains no
             # where/who/role/e-token and would otherwise fall through to the recall fallback.

@@ -22,6 +22,12 @@ retired specs stay generable — and byte-identical (frozen-spec immutability; r
 tests/goldens_prechange.json) — in the ``RETIRED`` dict for historical reproduction and the
 defect-documentation tests, but are never scored.
 
+The ``s5_bind`` family runs two structures over one interleaved event stream and has every event
+name its second operand through the other one, so the composed query cannot be answered by either
+component's algorithm. Its arms — the composed cell, the two components and the whole-map capacity
+control — share a ``stream_name`` and therefore ONE item stream, so they are exactly paired and
+the coupling ablation is a within-item comparison at identical prompt length (``s5_bind_arms``).
+
   from factworld.tasks import CANONICAL, generate, score_exact
   spec = CANONICAL["composite_copy_v2"]
   train = generate(spec, "train", n=8000)
@@ -57,7 +63,7 @@ CANONICAL_METRIC = "relaxed"
 class TaskSpec:
     """A frozen, reproducible benchmark task. Difficulty knobs are explicit and scalable."""
     name: str
-    family: str                       # 'recall' | 'binding' | 'composite' | 's5' | 'commutative' | 'conflict' | 'chain' | 's5_chain'
+    family: str                       # 'recall' | 'binding' | 'composite' | 's5' | 'commutative' | 'conflict' | 'chain' | 's5_chain' | 's5_bind'
     version: str = _STREAM_V1         # RNG-stream version: frozen at spec introduction (see _STREAM_V1)
     chain_depth: int = 8              # s5_chain: number of a0 hops in the final query
     seed: int = 0
@@ -177,6 +183,67 @@ class TaskSpec:
     # draw is short-circuited at 0.0, so every existing example stream is untouched.
     conditional_rate: float = 0.0
 
+    # s5_bind-only. The family runs TWO structures over ONE interleaved event stream —
+    # P: agents -> roles, a bijection permuted by the swaps (state tracking), and
+    # B: objects -> agents, rewritten by the gives under last-write-wins (retrieval under
+    # overwrite) — and every event names its second operand THROUGH the other structure.
+    #
+    #   p_swap      P(an event is a swap); the rest are gives.
+    #   rho_p       fraction of swaps whose holder reference is rendered "at this point"
+    #   rho_b       fraction of gives whose role reference is rendered "at this point"
+    #   coupled     THE RENDERING TOGGLE. True renders those references "at this point", so
+    #               they resolve against the running maps; False renders every reference
+    #               "at the start", so the same item's events resolve against the stated
+    #               maps and the two structures never touch. The phrases are the same
+    #               length, so the ablation moves two tokens per referenced event and NOT
+    #               the prompt length.
+    #   query_arm   which of the three paired queries is scored: 'state' (the queried
+    #               agent's final role), 'bind' (the queried object's final holder), or
+    #               'state_all' (every agent's final role — the whole-map readout that
+    #               prices capacity separately from composition).
+    #
+    # m, the number of objects, is n_objects_active (reused as this family's working set the
+    # way the commutative rung reuses it for active dials); m <= k is required so the stated
+    # holder map is injective. All four fields are appended and defaulted, `_rng` does not
+    # key on them, and no existing spec is in this family, so no stream moves.
+    p_swap: float = 0.5
+    rho_p: float = 1.0
+    rho_b: float = 1.0
+    coupled: bool = True
+    query_arm: str = "state"
+
+    # The RNG-stream identity, defaulting to `name`. Two specs that share it generate the
+    # SAME items and differ only in what is rendered and asked, which is what makes the
+    # s5_bind arms exactly paired: the composed cell and its components are one item stream
+    # read three ways, so a per-item difference between arms is a within-item comparison and
+    # not a difference of samples. Appended and defaulted to None, and `_rng` resolves
+    # `stream_name or name`, so every existing spec keys exactly as it did.
+    stream_name: str | None = None
+
+    # s5_bind-only. Forbid a swap whose referenced object still carries a LIVE PIN — the
+    # sampler constraint that closes the family's state-free reset channel.
+    #
+    # THE CHANNEL. A dynamic give, "give o to the agent whose role at this point is r", writes
+    # B[o] <- Pinv[r]; from that event until o is written again its holder is pinned, in the
+    # sense that whoever holds o has role r. A later dynamic swap, "swap the roles of a and the
+    # holder of o at this point", then sets P[a] <- r EXACTLY, because selecting an agent by
+    # its role and reading that role back returns the role. The two references cancel the
+    # state, so on such items the answer to a state query is two surface retrievals and no map
+    # is carried. It is not recency: the channel is length-free, so the policy that reads it
+    # (validity's ``pin_chain`` row) does not decay with L, and the recency-window rows were
+    # reading the same plateau — which is why the operative floor stopped falling with length
+    # instead of reaching chance.
+    #
+    # THE CONSTRAINT. With no_pin the sampler rejects a candidate dynamic swap whose referenced
+    # object's live pin still matches its holder's current role, and redraws. Pin density goes
+    # to zero, the pin_chain row and the window family both land at informed chance, and the
+    # cheapest correct algorithm is untouched — the coupled cell still costs a forward pass
+    # carrying both maps, so the step multiplier does not move.
+    #
+    # Appended and defaulted to False, and the rejection is short-circuited at the default, so
+    # every pre-existing stream is byte-identical. The s5_bind specs set it True.
+    no_pin: bool = False
+
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
         return replace(self, **knobs)
@@ -194,7 +261,10 @@ class Example:
 # deterministic RNG: keyed by (spec, split, length, index) so train/test never overlap and are fixed
 # ---------------------------------------------------------------------------
 def _rng(spec: TaskSpec, split: str, length: int, idx: int) -> random.Random:
-    return random.Random(f"factworld|task|{spec.name}|{spec.version}|{spec.seed}|{split}|{length}|{idx}")
+    # `stream_name or name`: specs that share a stream_name draw the SAME items (the s5_bind
+    # arms). It defaults to None everywhere else, so every pre-existing spec keys on its name.
+    return random.Random(
+        f"factworld|task|{spec.stream_name or spec.name}|{spec.version}|{spec.seed}|{split}|{length}|{idx}")
 
 
 def _world(spec: TaskSpec) -> tuple[World, Renderer, Oracle]:
@@ -592,6 +662,212 @@ def _ex_s5_chain_typed(spec, w, r, rng, length, idx):
     return Example(f"{facts} {hist} {query}", _render_answer(gold), length, meta)
 
 
+def _invert(mapping: dict) -> dict:
+    return {v: k for k, v in mapping.items()}
+
+
+def _ex_s5_bind(spec, w, r, rng, length, idx):
+    """s5_bind: two structures over one event stream, each naming its operands through the other.
+
+    WORLD. k agents, k roles, m <= k objects. P maps agents to roles and is a bijection
+    permuted by swap events; B maps objects to agents under last-write-wins. Both initial maps
+    are STATED ("g3 has role r1 at the start." / "g7 holds o2 at the start.") in scrambled
+    order, so nothing about either is conventional.
+
+    STREAM. Each event is a swap with probability ``p_swap``, else a give, and each names its
+    second operand through the OTHER structure:
+      swap — "s0 swaps the roles of g4 and the agent who holds o2 {when}."
+      give — "s1 gives o3 to the agent whose role {when} is r5."
+    ``when`` is "at this point" (resolve against the running map) on a ``rho_p`` / ``rho_b``
+    fraction of swaps / gives when ``spec.coupled``, and "at the start" (resolve against the
+    stated map) otherwise. The decoupled rendering of the same item is the same sentences with
+    that phrase replaced, so the two arms are token-for-token identical in length.
+
+    WHY THE COUPLING IS THE WHOLE CONSTRUCT. Decoupled, the two legs are separable and cheap:
+    the queried agent's role is a SPARSE backward walk over the swaps that name it (one live
+    symbol), and the queried object's holder is one content-addressed retrieval of its last
+    give plus one fact lookup. Coupled, neither is available — a swap's second operand is not
+    known until B has been evaluated forward to that event, and a give's recipient is not known
+    until P has — so the cheapest correct algorithm is a single forward pass carrying P, its
+    inverse and B. Measured on this generator (step-counted register machine with free
+    content-addressed retrieval, cheapest algorithm correct on EVERY item of the cell):
+    at k=12/m=12/L=192 the composed cell costs 674.6 steps and 36 live cells against 90.4/2 for
+    the state component (a sparse backward walk) and 3.0/3 for the retrieval component — a step
+    multiplier of 7.46. Across the scored grid it reads 7.15 / 7.46 / 7.28 at L=128/192/256 and
+    3.45 / 3.60 at k=6/L=48/64. The demand-driven serialisation (resolve only what the query
+    needs, memoizing every event's operand) and the iterate-to-a-fixed-point serialisation are
+    both more expensive, the latter by an order of magnitude, so the multiplier is not an
+    artifact of forbidding a cheaper schedule.
+
+    QUERY GATES, applied identically under both semantics so the arms condition on the same
+    items: the queried agent is moved at least twice and ends on a role other than its stated
+    one, and the queried object is written at least twice, ends with a holder other than its
+    stated one, and its resolving write sits in [0.1L, 0.75L]. Without the last clause the
+    resolving write lands near the stream end, where the map has not moved since, and
+    "resolve every reference against the FINAL map" — a wrong-TIME policy, not a shallow one —
+    reads 0.33-0.44 at every L.
+
+    NO_PIN. Two dynamic references compose into a state-free reset channel: a give writes
+    B[o] <- Pinv[r], pinning o's holder to role r, and a later swap naming o then writes r onto
+    its own agent, because selecting an agent by its role and reading that role back returns
+    the role. On such items a 2-retrieval policy carrying no map answers the state query, and
+    because the channel is length-free that policy does not decay with L. ``spec.no_pin``
+    rejects the second event of such a pair at sampling time; see TaskSpec.no_pin.
+
+    FLOORS. The registered shallow policies are in ``factworld.validity.s5_bind_floors``; the
+    operative floor is the max over them (``s5_bind_operative_floor``) and is what a score is
+    read against. With no_pin set and L/k >= 8 it lands at the informed chance 1/(k-1); at
+    shorter L the recency-window and one-leg rows are still above it, which is what the length
+    grid in CANONICAL is cut on.
+    """
+    k, m = spec.k, spec.n_objects_active
+    if m > k:
+        raise ValueError(f"{spec.name}: m={m} objects > k={k} agents; the stated holder map "
+                         f"must be injective, so n_objects_active <= k.")
+    if m > len(w.objects):
+        raise ValueError(f"{spec.name}: m={m} exceeds the {len(w.objects)}-object pool "
+                         f"(raise n_objects).")
+    if spec.query_arm not in ("state", "bind", "state_all"):
+        raise ValueError(f"{spec.name}: query_arm={spec.query_arm!r} not in "
+                         f"{{'state','bind','state_all'}}")
+    agents, roles = list(w.agents[:k]), list(w.roles[:k])
+    objs = list(w.objects[:m])
+    coupled = spec.coupled
+
+    for _outer in range(200):
+        P0 = dict(zip(agents, rng.sample(roles, k)))
+        B0 = dict(zip(objs, rng.sample(agents, m)))
+        P0inv = _invert(P0)
+        Pc, Bc = dict(P0), dict(B0)          # the coupled ("at this point") trajectory
+        Pd, Bd = dict(P0), dict(B0)          # the decoupled ("at the start") trajectory
+        Pc_inv = _invert(Pc)
+        events, touch_c, touch_d = [], {a: 0 for a in agents}, {a: 0 for a in agents}
+        writes = {o: 0 for o in objs}
+        # o -> the role its last DYNAMIC give named, while that give still stands: the live pin
+        # (see TaskSpec.no_pin). A static give leaves no pin, and any give clears the old one.
+        pin: dict[str, str | None] = {}
+        for _i in range(length):
+            swap = rng.random() < spec.p_swap
+            ok = False
+            for _try in range(200):
+                if swap:
+                    a, o = rng.choice(agents), rng.choice(objs)
+                    dyn = rng.random() < spec.rho_p
+                    bc = Bc[o] if dyn else B0[o]
+                    bd = B0[o]
+                    if bc != a and bd != a:          # no self-swap under EITHER semantics
+                        if spec.no_pin and dyn and pin.get(o) is not None and Pc[bc] == pin[o]:
+                            continue                 # the two references would cancel the state
+                        ok = True
+                        break
+                else:
+                    o, rl = rng.choice(objs), rng.choice(roles)
+                    dyn = rng.random() < spec.rho_b
+                    hc = (Pc_inv if dyn else P0inv)[rl]
+                    hd = P0inv[rl]
+                    if hc != Bc[o] and hd != Bd[o]:  # no no-op write under EITHER semantics
+                        ok = True
+                        break
+            if not ok:
+                break
+            if swap:
+                events.append({"kind": "swap", "a": a, "ref": o, "dyn": dyn})
+                Pc[a], Pc[bc] = Pc[bc], Pc[a]
+                Pd[a], Pd[bd] = Pd[bd], Pd[a]
+                Pc_inv = _invert(Pc)
+                touch_c[a] += 1
+                touch_c[bc] += 1
+                touch_d[a] += 1
+                touch_d[bd] += 1
+            else:
+                events.append({"kind": "give", "o": o, "ref": rl, "dyn": dyn})
+                Bc[o], Bd[o] = hc, hd
+                pin[o] = rl if dyn else None
+                writes[o] += 1
+        if len(events) < length:
+            continue
+
+        cand_s = [a for a in agents if touch_c[a] >= 2 and touch_d[a] >= 2
+                  and Pc[a] != P0[a] and Pd[a] != P0[a]]
+        last_give = {}
+        for j, e in enumerate(events):
+            if e["kind"] == "give":
+                last_give[e["o"]] = j
+        lo, hi = length // 10, int(0.75 * length)
+        cand_b = [o for o in objs if writes[o] >= 2 and Bc[o] != B0[o] and Bd[o] != B0[o]
+                  and lo <= last_give.get(o, -1) <= hi]
+        if not cand_s or not cand_b:
+            continue
+        q_state, q_bind = rng.choice(cand_s), rng.choice(cand_b)
+        fact_roles, fact_holds = agents[:], objs[:]
+        rng.shuffle(fact_roles)
+        rng.shuffle(fact_holds)
+        break
+    else:
+        raise RuntimeError(f"{spec.name}: no admissible item at idx={idx} (k={k}, m={m}, L={length})")
+
+    facts = [r.render_role(a, P0[a], when=Renderer.AT_START) for a in fact_roles]
+    facts += [r.render_holder(o, B0[o], when=Renderer.AT_START) for o in fact_holds]
+    ev_txts = []
+    for i, e in enumerate(events):
+        dyn = e["dyn"] and coupled
+        if e["kind"] == "swap":
+            evt = Event("swap_roles_now" if dyn else "swap_roles_start", (e["a"], e["ref"]))
+        else:
+            evt = Event("give_role_now" if dyn else "give_role_start", (e["o"], e["ref"]))
+        ev_txts.append(r.render_event(evt, step=f"s{i}"))
+
+    P_fin, B_fin = (Pc, Bc) if coupled else (Pd, Bd)
+    if spec.query_arm == "state":
+        query = r.render_query("s5bind_state", target=q_state)
+        gold = P_fin[q_state]
+    elif spec.query_arm == "bind":
+        query = r.render_query("s5bind_bind", target=q_bind)
+        gold = B_fin[q_bind]
+    else:
+        query = r.render_query("s5bind_state_all", targets=agents)
+        gold = " ".join(P_fin[a] for a in agents)
+
+    meta = {"q_state": q_state, "q_bind": q_bind, "coupled": coupled,
+            "n_swap": sum(1 for e in events if e["kind"] == "swap"),
+            "n_ref": sum(1 for e in events if e["dyn"]) if coupled else 0,
+            "touch": touch_c[q_state] if coupled else touch_d[q_state],
+            "writes": writes[q_bind],
+            "last_write_pos": last_give[q_bind]}
+    if spec.event_trace or spec.worked_trace:
+        # Replayed under the ACTIVE semantics: full_map is the s5 recipe (the whole state after
+        # every event, P in agent order then B in object order); resolved is the single-quantity
+        # checkpoint (each event's resolved operand), the shape that did NOT form locally on
+        # s5_chain and so is carried as the supervision-density contrast arm.
+        P, B = dict(P0), dict(B0)
+        Pinv = _invert(P)
+        snaps, resolved = [], []
+        for e in events:
+            dyn = e["dyn"] and coupled
+            if e["kind"] == "swap":
+                b = (B if dyn else B0)[e["ref"]]
+                a = e["a"]
+                P[a], P[b] = P[b], P[a]
+                Pinv = _invert(P)
+                resolved.append(b)
+            else:
+                h = (Pinv if dyn else P0inv)[e["ref"]]
+                B[e["o"]] = h
+                resolved.append(h)
+            snaps.append(" ".join(P[a] for a in agents) + " " + " ".join(B[o] for o in objs))
+        if spec.event_trace:
+            meta["trace"] = " ".join(snaps)
+            # Interleaved variant of the same supervision (the protocol that formed s5): each
+            # checkpoint follows its event INSIDE the stream, so credit assignment is local.
+            # Training docs use this; evaluation is free-running on the plain prompt.
+            meta["interleaved_prompt"] = (
+                " ".join(facts) + " " + " ".join(f"{t} {s}" for t, s in zip(ev_txts, snaps))
+                + f" {query}")
+        else:
+            meta["trace"] = " ".join(resolved)
+    return Example(" ".join(facts + ev_txts + [query]), _render_answer(gold), length, meta)
+
+
 def _ex_conflict(spec, w, r, pmap, rng, length, idx):
     """In-weights ↔ in-context CONFLICT: the prompt states a value for the queried agent that DIFFERS from
     the value the model memorized (`pmap`) during training; the correct answer is the IN-CONTEXT value.
@@ -700,11 +976,35 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
             # rng draws — and therefore every published s5_chain example — is untouched.
             build = _ex_s5_chain_typed if spec.typed_values else _ex_s5_chain
             out.append(build(spec, w, r, rng, L, idx))               # L = permutation events
+        elif spec.family == "s5_bind":
+            out.append(_ex_s5_bind(spec, w, r, rng, L, idx))         # L = interleaved events
         elif spec.family == "chain":
             out.append(_ex_chain(spec, w, r, rng, L, idx))           # L = chain depth
         else:
             raise ValueError(spec.family)
     return out
+
+
+def s5_bind_arms(spec: TaskSpec, split: str = "test", n: int = 200, length: int | None = None,
+                 arms=((True, "state"), (False, "state"), (False, "bind"), (False, "state_all"))
+                 ) -> dict[tuple[bool, str], list[Example]]:
+    """The SAME s5_bind items read under several (coupled, query_arm) settings.
+
+    Item generation does not consult either knob — the sampler rejects self-swaps and no-op
+    writes under BOTH semantics and the query gates hold under both — so index i is one world,
+    one event stream and one pair of queries throughout, and the returned lists are aligned.
+
+    This is what makes the coupling ablation a within-item comparison: the coupled and
+    decoupled renderings of item i are the same sentences with "at this point" replaced by "at
+    the start", identical in whitespace-token count, so a difference between the two arms is
+    not a difference of samples, of prompt lengths, or of query difficulty. A per-step error
+    rate that scales with prompt length is common to both and cancels — which a normalised gap
+    against the whole-map readout does not do: a single error rate fitted on a component
+    predicts a large state_all-to-composed gap with no composition ability present at all.
+    """
+    base = spec if spec.stream_name is not None else replace(spec, stream_name=spec.name)
+    return {(c, q): generate(replace(base, coupled=c, query_arm=q), split, n, length)
+            for c, q in arms}
 
 
 def score_exact(pred: str, gold: str) -> int:
@@ -1031,6 +1331,79 @@ CANONICAL = {
                                    chain_depth=1, typed_values=True,
                                    event_trace=True, worked_trace=True,
                                    train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
+    # ---- s5_bind: the mutual-reference composition (see _ex_s5_bind) --------------------
+    # Four specs, ONE item stream. They share ``stream_name="s5_bind_v2"``, so item i is the
+    # same world, the same events and the same two queries in all four; they differ only in
+    # what is rendered ("at this point" vs "at the start") and what is asked. That is the
+    # pairing the family exists for — the composed cell and its two components are read off
+    # the same items, at identical prompt lengths, so the coupling ablation is within-item.
+    #
+    #   s5_bind_v2        COMPOSED   coupled rendering, single-slot state query
+    #   s5_bind_v2_state  COMPONENT  decoupled, same query — permutation tracking alone
+    #   s5_bind_v2_bind   COMPONENT  decoupled, holder query — retrieval under overwrite alone
+    #   s5_bind_v2_map    CONTROL    decoupled, whole-map readout — capacity, not composition
+    #
+    # The control is registered because the composed cell needs k slots live and the state
+    # component needs one; without a k-slot readout at the same length, a composed-minus-
+    # component gap is not separable from carrying more state at all. It is a CONTROL, not a
+    # null: min(component, control) is a ceiling on the composed cell, never a floor.
+    #
+    # Operating point k=12, m=12: the answer space is the 12 roles and the whole-map readout
+    # is a 12-slot permutation. The name carries the construct version, ``version`` the RNG
+    # stream (frozen at introduction); v1 of the construct never reached the registry — it
+    # admitted an iterate-to-a-fixed-point serialisation and its coupling ablation moved
+    # prompt length, both of which this rendering excludes by construction.
+    #
+    # LENGTH GRID. The operative floor (validity.s5_bind_operative_floor — the max over every
+    # registered policy) is what sets the shortest scored length, and with the pin channel
+    # closed it reaches the informed chance 1/(k-1) = 0.0909 rather than plateauing above it.
+    # Measured on this stream at n=3000, k=12, coupled/state, as a ratio to that chance:
+    # L=64 2.59, L=128 1.07, L=192 1.11, L=256 1.07. The residual at L=64 is not the pin
+    # channel (pin density is 0.000 at every length) but stream length against k: with 12
+    # agents and 12 objects a 64-event stream gives the queried agent a short carrier chain and
+    # each object ~2.7 writes, so a policy reading the last 0.9L events, or feeding B into P
+    # but not P into B, still lands 2.4x chance. From L/k >= 8 both fall to chance, so the grid
+    # starts at 128. The floor per cell is recomputed and printed by scripts/validate_suite.py;
+    # a rescaled cell carries its own.
+    #
+    # kind=experimental until the calibration lands, so none of the four is in REPORTED.
+    "s5_bind_v2":       TaskSpec("s5_bind_v2", "s5_bind", kind="experimental",
+                                  k=12, n_objects=12, n_objects_active=12,
+                                  coupled=True, query_arm="state", stream_name="s5_bind_v2",
+                                  no_pin=True,
+                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+    "s5_bind_v2_state": TaskSpec("s5_bind_v2_state", "s5_bind", kind="experimental",
+                                  k=12, n_objects=12, n_objects_active=12,
+                                  coupled=False, query_arm="state", stream_name="s5_bind_v2",
+                                  no_pin=True,
+                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+    "s5_bind_v2_bind":  TaskSpec("s5_bind_v2_bind", "s5_bind", kind="experimental",
+                                  k=12, n_objects=12, n_objects_active=12,
+                                  coupled=False, query_arm="bind", stream_name="s5_bind_v2",
+                                  no_pin=True,
+                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+    "s5_bind_v2_map":   TaskSpec("s5_bind_v2_map", "s5_bind", kind="experimental",
+                                  k=12, n_objects=12, n_objects_active=12,
+                                  coupled=False, query_arm="state_all", stream_name="s5_bind_v2",
+                                  no_pin=True,
+                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+    # The from-scratch operating point: k=6, m=6, shorter streams, and per-EVENT state
+    # checkpoints (event_trace — the whole state after every event, the supervision density
+    # that formed s5 locally). A streaming model has no scratchpad, so its cost model is the
+    # forward pass, which is the algorithm this construct forces in both regimes. Paired the
+    # same way, on their own stream. Its operative floor reaches the 0.200 informed chance at
+    # the same L/k as the frontier point (measured n=3000, as a ratio to chance: L=32 1.66,
+    # L=48 1.08, L=64 1.04), so the scored lengths start at 48.
+    "s5_bind_local_v2": TaskSpec("s5_bind_local_v2", "s5_bind", kind="experimental",
+                                  k=6, n_objects=6, n_objects_active=6,
+                                  coupled=True, query_arm="state",
+                                  stream_name="s5_bind_local_v2", event_trace=True, no_pin=True,
+                                  train_lengths=(16, 32), eval_lengths=(48, 64)),
+    "s5_bind_local_v2_state": TaskSpec("s5_bind_local_v2_state", "s5_bind", kind="experimental",
+                                        k=6, n_objects=6, n_objects_active=6,
+                                        coupled=False, query_arm="state",
+                                        stream_name="s5_bind_local_v2", event_trace=True, no_pin=True,
+                                        train_lengths=(16, 32), eval_lengths=(48, 64)),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)
@@ -1111,18 +1484,94 @@ RETIRED = {
                                   kind="retired"),
 }
 
+# CALIBRATION specs: cells that measure how a construct behaves rather than how a model scores.
+# They are generable and named like any other task, and they are NOT scored — nothing in
+# REPORTED, nothing in the benchmark roster, and outside the CANONICAL validity gate, which
+# fails a cell whose strongest registered shallow policy reads 0.5 or more (a calibration cell
+# is allowed to be mostly floor; that is often the thing being measured).
+#
+# ---- s5_bind: the coupling-DOSE ladder ---------------------------------------------------
+# rho_p = rho_b in {0, 0.25, 0.5, 0.75, 1} on the composed arm of the k=12 operating point:
+# the fraction of events whose second operand is named "at this point" rather than "at the
+# start". The top rung is s5_bind_v2 itself (every other field equal, same stream_name, so item
+# i is byte-identical), and the bottom rung renders every reference statically, which makes the
+# origin of a dose-response an identity control — at rho=0 the coupled and decoupled readings
+# of an item are the same string — rather than an assumption.
+#
+# Two measured properties fix what the ladder can be read for.
+#
+#   THE FLOOR MOVES WITH THE DOSE, and at the low end it takes most of the cell. Operative
+#   floor (factworld.validity.s5_bind_floors, n=250 test items) against 1/(k-1) = 0.091:
+#       rho        0.0    0.25     0.5    0.75     1.0
+#       L=64     0.556   0.944   0.692   0.496   0.248
+#       L=192    0.236   0.592   0.164   0.108   0.116
+#   The low rungs are set by one_leg_B — feed B into P but never P into B — because when a
+#   quarter of the events are referenced, half the coupling already reproduces the answer.
+#   Lowering the dose walks the cell continuously into its own decoupled reading, so headroom
+#   is a function of the dose. Only L=192 is registered: at L=64 four of the five rungs read
+#   0.496 or more, and a rung with 0.06 of headroom measures its floor.
+#
+#   THE CHEAPEST CORRECT ALGORITHM IS A FUNCTION OF THE DOSE. On a step-counted register
+#   machine with free content-addressed retrieval, k=12/L=64, the composed cell costs
+#   29 / 127 / 178 / 249 / 289 steps at rho = 0 / 0.25 / 0.5 / 0.75 / 1: the all-static reading
+#   is a sparse backward walk over one live symbol, the intermediate doses are cheapest under
+#   demand-driven resolution, and only rho=1 forces the full forward pass. An executor with no
+#   composition-specific failure at all — one per-step slip rate, nothing else — therefore
+#   walks down the ladder: 0.80 / 0.74 / 0.65 / 0.60 at rho = 0.25 / 0.5 / 0.75 / 1, a slope of
+#   0.27 per unit dose, at a slip rate that leaves the decoupled component at 0.95. A slope in
+#   rho measures the cost of the cheapest algorithm; it is not by itself evidence about
+#   composition.
+#
+# The rungs are independent draws from one generator family, not one item stream read five
+# times: the dose is consumed inside the sampler's rejection loop and a rejected item redraws
+# the stated maps, so index i is a different world at each dose (0 of 60 prompts identical at
+# k=12/L=64). Dose comparisons across rungs are between-item.
+#
+# The k=6 operating point has no ladder: its longest scored stream is 48 events, where the five
+# rungs read 0.488 / 0.852 / 0.604 / 0.320 / 0.228 against a 0.200 chance level.
+CALIBRATION = {
+    "s5_bind_v2_rho00":  TaskSpec("s5_bind_v2_rho00", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
+                                   rho_p=0.0, rho_b=0.0,
+                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+                                   train_lengths=(16, 32), eval_lengths=(192,)),
+    "s5_bind_v2_rho25":  TaskSpec("s5_bind_v2_rho25", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
+                                   rho_p=0.25, rho_b=0.25,
+                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+                                   train_lengths=(16, 32), eval_lengths=(192,)),
+    "s5_bind_v2_rho50":  TaskSpec("s5_bind_v2_rho50", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
+                                   rho_p=0.5, rho_b=0.5,
+                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+                                   train_lengths=(16, 32), eval_lengths=(192,)),
+    "s5_bind_v2_rho75":  TaskSpec("s5_bind_v2_rho75", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
+                                   rho_p=0.75, rho_b=0.75,
+                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+                                   train_lengths=(16, 32), eval_lengths=(192,)),
+    "s5_bind_v2_rho100": TaskSpec("s5_bind_v2_rho100", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
+                                   rho_p=1.0, rho_b=1.0,
+                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+                                   train_lengths=(16, 32), eval_lengths=(192,)),
+}
+
 
 def spec_for(name: str) -> TaskSpec:
-    """Resolve a task name against CANONICAL, falling back to RETIRED.
+    """Resolve a task name against CANONICAL, falling back to CALIBRATION and then RETIRED.
 
-    The fallback exists ONLY so historical runs remain reproducible (retired specs generate
-    byte-identically forever); anything reporting a score should stick to CANONICAL names.
+    The RETIRED fallback exists ONLY so historical runs remain reproducible (retired specs
+    generate byte-identically forever); CALIBRATION cells measure a construct and are never
+    scored. Anything reporting a score should stick to CANONICAL names.
     """
     if name in CANONICAL:
         return CANONICAL[name]
+    if name in CALIBRATION:
+        return CALIBRATION[name]
     if name in RETIRED:
         return RETIRED[name]
-    raise KeyError(f"unknown task {name!r} (not in CANONICAL or RETIRED)")
+    raise KeyError(f"unknown task {name!r} (not in CANONICAL, CALIBRATION or RETIRED)")
 
 
 if __name__ == "__main__":  # self-test: every canonical task generates + round-trips through the oracle

@@ -112,6 +112,12 @@ _STRUCTURAL_SEED = {
     # tasks._compact_a0_event rather than by the renderer ("s3 swaps a0: g4 and whose a0 is
     # g11."), and the probe cannot reach it; "whose" is the token the two forms share.
     "agent", "whose", "currently",
+    # mutual-reference family (s5_bind): the temporal phrases that say WHICH map resolves an
+    # event's reference, and the query anchor. "at this point" / "at the start" end a sentence
+    # in the two event forms and the two initial-condition lines, so the glued forms are
+    # emitted too; "at the start"/"at this point" also occur mid-sentence in the give form
+    # ("... whose role at the start is r5."), so the bare words are needed as well.
+    "this", "point", "start", "end", "each", "who", "point.", "start.", "end?",
 }
 
 
@@ -187,7 +193,11 @@ class Tokenizer:
     # (e.g. "v107's", "g5?" when g5 is never queried) and measurably hurts length
     # generalization (binding L64: bloated 0.69 -> minimal 0.81, mean over 3 seeds).
     _NAT_SUFFIX_BY_TYPE = {
-        "g":   ("'s", "?", "."),   # agent: fact-subject ('s), recall entity (?), give-dest / answer (.)
+        # agent: fact-subject ('s), recall entity (?), give-dest / answer (.), and one
+        # slot of the mutual-reference whole-map readout, which enumerates its k slots
+        # ("what role does each of g0, g1, ... have at the end?") so the answer's ORDER is
+        # stated rather than conventional (,)
+        "g":   ("'s", "?", ".", ","),
         "e":   ("'s", "?", "."),   # entity: same slots as agent
         "v":   (".",),              # value: fact value + answer
         "o":   ("?", "."),          # object: query target (?), holder assertion "g3 holds o0." (.)
@@ -273,6 +283,21 @@ class Tokenizer:
         if len(world.agents) >= 3:
             a, b, c = world.agents[0], world.agents[1], world.agents[2]
             yield renderer.render_event(Event("cycle_a0", (a, b, c)), step="s0")
+
+        # mutual-reference (s5_bind) — the two referenced event forms under both temporal
+        # readings, the two temporally-anchored initial-condition lines, and the three
+        # queries. Nothing else in the suite emits "this"/"point"/"start"/"end"/"each", the
+        # glued "point."/"start."/"end?" forms, or the comma-separated slot enumeration.
+        if world.agents and world.objects and world.roles:
+            a, o, rl = world.agents[0], world.objects[0], world.roles[0]
+            for kind, args in (("swap_roles_now", (a, o)), ("swap_roles_start", (a, o)),
+                               ("give_role_now", (o, rl)), ("give_role_start", (o, rl))):
+                yield renderer.render_event(Event(kind, args), step="s0")
+            yield renderer.render_role(a, rl, when=renderer.AT_START)
+            yield renderer.render_holder(o, a, when=renderer.AT_START)
+            yield renderer.render_query("s5bind_state", target=a)
+            yield renderer.render_query("s5bind_bind", target=o)
+            yield renderer.render_query("s5bind_state_all", targets=list(world.agents))
 
         # commutative-state — needs agents and dial positions.
         if world.agents and world.positions:

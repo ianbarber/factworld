@@ -158,6 +158,104 @@ def test_backhop_is_reported_but_not_registered_as_an_adversary():
     assert operative_floor(floors) == 0.20
 
 
+def test_the_recency_window_and_the_pin_chain_are_registered_s5_bind_floors():
+    """Both families that could set the mutual-reference floor are registered.
+
+    The recency windows simulate the task exactly from the stated maps over only the last
+    fraction of the stream; the family is monotone in its cut — cut 1.0 is the oracle by
+    construction — so its max is always the largest cut and never a selection statistic, which
+    is what separates it from the pointer-map fixed-offset family. The pin chain is the
+    zero-state policy that reads the give -> swap reference pair, and it is what the window
+    rows were tracking before ``TaskSpec.no_pin`` closed that channel.
+
+    With the channel open the window rows sat 2-3x the informed chance and did not decay with
+    length; with it closed every registered row lands at chance on the scored grid, which is
+    the property the construct claims.
+    """
+    from factworld.tasks import CANONICAL, generate
+    from factworld.validity import (
+        S5_BIND_ADVERSARIES,
+        S5_BIND_CHANCE_ROWS,
+        S5_BIND_COUPLED_ONLY_ROWS,
+        S5_BIND_ROWS,
+        S5_BIND_WINDOWS,
+        s5_bind_floors,
+        s5_bind_operative_floor,
+        s5_bind_pin_density,
+    )
+
+    windows = tuple(r for r in S5_BIND_ROWS if r.startswith("window_"))
+    assert len(windows) == len(S5_BIND_WINDOWS)
+    assert set(windows) <= set(S5_BIND_ADVERSARIES)
+    assert "pin_chain" in S5_BIND_ADVERSARIES
+    assert set(S5_BIND_CHANCE_ROWS) <= set(S5_BIND_ADVERSARIES)
+    assert set(S5_BIND_COUPLED_ONLY_ROWS) <= set(S5_BIND_ROWS)
+    spec = CANONICAL["s5_bind_v2"]
+    exs = generate(spec, "test", n=400, length=spec.eval_lengths[0])
+    fl = s5_bind_floors(exs, spec.k)
+    op = s5_bind_operative_floor(fl)
+    assert s5_bind_pin_density(exs) == 0.0
+    assert op >= fl["uniform_non_initial"]                # the chance row is registered
+    assert op <= 1.6 * fl["uniform_non_initial"]
+    assert fl["pin_chain"] <= fl["uniform_non_initial"]
+    # the same cell with the channel open: the window rows lift far off chance and the
+    # zero-state policy reads more than twice it
+    open_fl = s5_bind_floors(generate(spec.scaled(no_pin=False), "test", n=400,
+                                      length=spec.eval_lengths[0]), spec.k)
+    assert open_fl["pin_chain"] >= 2 * fl["uniform_non_initial"]
+    assert s5_bind_operative_floor(open_fl) > 1.6 * fl["uniform_non_initial"]
+
+
+def test_the_operative_floor_resolves_the_family_from_the_rows():
+    """The mis-report a fixed default produced: the two adversary families share exactly one
+    row name, so the pointer-map default found ``uniform`` in a mutual-reference floor dict and
+    returned 1/k — a floor BELOW that family's own informed chance 1/(k-1). Dispatch is now on
+    the rows only one family can emit, and an unresolvable dict raises."""
+    from factworld.tasks import CANONICAL, generate
+    from factworld.validity import (
+        S5_BIND_ADVERSARIES,
+        S5_CHAIN_ADVERSARIES,
+        operative_floor,
+        registered_for,
+        s5_bind_floors,
+        s5_bind_operative_floor,
+    )
+
+    spec = CANONICAL["s5_bind_v2"]
+    fl = s5_bind_floors(generate(spec, "test", n=100, length=spec.eval_lengths[0]), spec.k)
+    assert set(S5_CHAIN_ADVERSARIES) & set(fl) == {"uniform"}
+    assert registered_for(fl) is S5_BIND_ADVERSARIES
+    assert operative_floor(fl) == s5_bind_operative_floor(fl) >= fl["uniform_non_initial"]
+    chain = {"initial_map_chase": 0.10, "echo": 0.0, "uniform_non_start": 0.20, "uniform": 1 / 6}
+    assert registered_for(chain) is S5_CHAIN_ADVERSARIES
+    assert operative_floor(chain) == 0.20
+    for ambiguous in ({"uniform": 0.1}, {}, {"echo": 0.0, "pin_chain": 0.1}):
+        try:
+            registered_for(ambiguous)
+        except ValueError:
+            continue
+        raise AssertionError(f"{ambiguous}: resolved a floor dict it cannot tell apart")
+    assert operative_floor({}) is None                   # no cell, no floor — the prior contract
+
+
+def test_s5_bind_reader_sees_only_what_the_prompt_says():
+    """Every mutual-reference policy reads the rendered sentences, so the reader has to
+    recover the two stated maps, the events in rendered order, and each event's temporal
+    phrase — and replaying that reproduces the gold exactly, on both renderings."""
+    from factworld.tasks import CANONICAL, generate
+    from factworld.validity import _sb_answer, _sb_run, s5_bind_read
+
+    for name in ("s5_bind_v2", "s5_bind_v2_state", "s5_bind_v2_bind", "s5_bind_v2_map"):
+        spec = CANONICAL[name]
+        for e in generate(spec, "test", n=10, length=64):
+            read = s5_bind_read(e.prompt)
+            assert len(read["events"]) == 64
+            assert len(read["P0"]) == spec.k and len(read["B0"]) == spec.n_objects_active
+            assert all(d for _k, _x, _y, d in read["events"]) == spec.coupled
+            assert _sb_answer(read, _sb_run(read, "surface")) == e.answer, name
+    assert s5_bind_read("what is a0 of g3? (1 hops)") is None
+
+
 def test_every_registered_shortcut_reaches_the_suite_gate_column():
     """The drift the hardcoded tuple allowed: a row registered in factworld.validity never
     reached scripts/validate_suite.py's shallow-adversary column. The column is now derived,

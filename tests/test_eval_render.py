@@ -94,6 +94,45 @@ def test_composite_recall_query_not_misrouted():
     assert r.parse(q)["family"] == "recall"
 
 
+def test_temporally_anchored_surfaces_roundtrip():
+    """The mutual-reference family's five surfaces. Two of them would be swallowed by an
+    earlier branch — the referenced give carries 'whose' (the pointer-map reference clause)
+    and the referenced swap carries 'swaps' (the plain role swap) — so the round trip is what
+    proves the parser separates them. The temporal phrase is part of the record: it says which
+    map resolves the reference, so an event whose phrase is dropped is a different event."""
+    from factworld.world import Event
+
+    w, o, r = _wo()
+    assert r.parse(r.render_role("g0", "r3", when=Renderer.AT_START)) == \
+        {"type": "role", "agent": "g0", "role": "r3", "step": None, "when": Renderer.AT_START}
+    assert r.parse(r.render_holder("o2", "g1", when=Renderer.AT_START)) == \
+        {"type": "holder", "object": "o2", "holder": "g1", "step": None,
+         "when": Renderer.AT_START}
+    for kind, args in (("swap_roles_now", ("g4", "o2")), ("swap_roles_start", ("g4", "o2")),
+                       ("give_role_now", ("o3", "r5")), ("give_role_start", ("o3", "r5"))):
+        rec = r.parse(r.render_event(Event(kind, args), step="s7"))
+        assert rec == {"type": "event", "event": Event(kind, args), "step": "s7"}
+    for family, kw, want in (("s5bind_state", {"target": "g4"}, {"target": "g4"}),
+                             ("s5bind_bind", {"target": "o2"}, {"target": "o2"}),
+                             ("s5bind_state_all", {"targets": ["g0", "g1"]},
+                              {"targets": ("g0", "g1")})):
+        rec = r.parse(r.render_query(family, **kw))
+        assert rec == {"type": "query", "family": family, "step": None, **want}
+
+
+def test_when_defaults_leave_the_plain_assertions_unchanged():
+    """``when`` is an appended keyword: without it the role/holder assertions render and parse
+    exactly as they did, which is why no existing corpus document moved."""
+    w, o, r = _wo()
+    assert r.render_role("g0", "r3") == "g0 has role r3."
+    assert r.render_holder("o2", "g1") == "g1 holds o2."
+    assert r.parse(r.render_role("g0", "r3")) == \
+        {"type": "role", "agent": "g0", "role": "r3", "step": None}
+    assert r.parse(r.render_holder("o2", "g1")) == \
+        {"type": "holder", "object": "o2", "holder": "g1", "step": None}
+    assert r.render_role("g0", "r3", step="s2") == "s2 g0 has role r3."
+
+
 # --- eval gold == oracle (truth is KB-derived) --------------------------------------------
 
 def test_recall_gold_matches_oracle():

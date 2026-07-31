@@ -11,6 +11,12 @@ Pass conditions (thresholds tunable; existence non-negotiable):
 The KL of an empirical distribution from uniform is biased upward by ~(k-1)/(2n) even when the
 true distribution IS uniform; we subtract that bias and gate on the excess.
 
+Each task family's shallow adversaries live here too, one block per family, all in the same
+idiom: regexes over the canonical rendered grammar, scored against the oracle gold, recomputed
+from the exact items a cell scores. A cell's OPERATIVE floor is the max over the family's
+registered rows (``operative_floor``, ``s5_bind_operative_floor``) and is the only number a
+score may be read against — never 1/k, and never one named row.
+
 This module also hosts the STRONG recency baseline for the task suite (``strong_recency_pred`` /
 ``strong_recency_accuracy``, consumed by scripts/validate_suite.py): predict the LAST give-event's
 recipient (binding), plus that holder's stated a0 fact (composite). This is the adversary that
@@ -448,20 +454,49 @@ S5_CHAIN_CHANCE_ROWS = ("uniform_non_start", "uniform")
 S5_CHAIN_OFFSET_ROWS = ("initial_map_chase", "initial_map_backhop")
 
 
-def operative_floor(floors: dict[str, float]) -> float | None:
+def registered_for(floors: dict[str, float]):
+    """The registered adversary set belonging to the family whose rows these are.
+
+    Dispatch is on the rows only the family can emit, never on the shared ones: the two
+    families both emit ``uniform``, so a set-containment test would call a one-row dict either
+    family's. A dict whose rows name no family, or both, raises rather than resolving — the
+    failure this replaces returned a number.
+    """
+    rows = set(floors)
+    bind = rows & (set(S5_BIND_ROWS) - set(S5_CHAIN_ROWS))
+    chain = rows & (set(S5_CHAIN_ROWS) - set(S5_BIND_ROWS))
+    if bind and not chain:
+        return S5_BIND_ADVERSARIES
+    if chain and not bind:
+        return S5_CHAIN_ADVERSARIES
+    raise ValueError(
+        f"cannot tell which family these floor rows belong to: {sorted(rows)}. Pass the "
+        f"family's registered set explicitly (S5_CHAIN_ADVERSARIES / S5_BIND_ADVERSARIES).")
+
+
+def operative_floor(floors: dict[str, float], registered=None) -> float | None:
     """The number a cell has to clear: the max over whichever adversaries are registered.
 
     Reading a score against one named row understates the floor wherever that row is not the
     largest, which is most of the low-k end of the local grid.
 
-    ``uniform_non_start`` is always among the registered rows, so this max can never fall below
-    the fixed-offset partition's common expectation 1/(k-1). A member of that partition
-    therefore sets the floor only where it beats uniform_non_start, and where it does not it
-    contributes nothing — which is what keeps the floor from tracking the family's selection
-    noise. Rows outside S5_CHAIN_ADVERSARIES (currently ``initial_map_backhop``) are reported
-    for inspection and are ignored here.
+    Every family's chance row is registered, so this max can never fall below the family's own
+    chance level — 1/(k-1) over the fixed-offset partition for the pointer-map family, and the
+    same quantity as informed chance for the mutual-reference one. A row that does not beat
+    chance therefore contributes nothing, which is what keeps the floor from tracking a
+    family's selection noise. Rows outside the registered set (currently
+    ``initial_map_backhop``) are reported for inspection and are ignored here.
+
+    ``registered`` selects the family's registered set. It defaults to None, which resolves the
+    family from the rows (``registered_for``): the two families share the row name ``uniform``
+    and nothing else, so a fixed default silently reported CHANCE — a floor below the family's
+    own informed chance — for every mutual-reference cell handed to it.
     """
-    vals = [v for name, v in floors.items() if name in S5_CHAIN_ADVERSARIES and v is not None]
+    if not floors:
+        return None                                      # no cell, no floor — as before
+    if registered is None:
+        registered = registered_for(floors)
+    vals = [v for name, v in floors.items() if name in registered and v is not None]
     return max(vals) if vals else None
 
 
@@ -534,6 +569,381 @@ def s5_chain_floors(examples, k: int, has_events: bool = True) -> dict[str, floa
     if not has_refs:
         del out["initial_ref_resolution"]
     return out
+
+
+# ---------------------------------------------------------------------------
+# s5_bind shallow adversaries (the mutual-reference family), in the strong_recency_pred idiom:
+# regexes over the canonical rendered grammar, scored against the oracle gold. Every policy
+# below sees exactly what a model sees — the two stated maps, the event sentences in order, and
+# each event's temporal phrase — and nothing from meta.
+#
+# WHAT THE FAMILY IS FOR. The construct's claim is that the coupled rendering forces a forward
+# pass carrying both maps. Each registered row is a named way of NOT doing that, so the max over
+# them is the number a score has to clear.
+#
+# COUPLING-BLIND (defined only where some event is rendered "at this point"; under a fully
+# decoupled rendering each of these IS the oracle, so the row is dropped rather than printed as
+# a floor):
+#   stale_resolution  — resolve every reference against the STATED maps. This is the decoupled
+#                       algorithm run on a coupled item, i.e. the best policy available to a
+#                       model that tracks neither structure into the other, and 1 minus its
+#                       accuracy is how often the coupling changes the answer at all. If it is
+#                       high the composed cell is secretly the component cell.
+#   one_leg_B         — feed B into P but never P into B (swap references read the running
+#                       holder map; give recipients are resolved statically). Half the coupling.
+#   one_leg_P         — the mirror: feed P into B but never B into P.
+#   final_state_resolution — compute the true final maps, then replay the stream resolving every
+#                       reference against THEM. A wrong-TIME policy, not a shallow one: it is
+#                       what a model that forms one state and applies it everywhere would do.
+#   pin_chain         — the state-free RESET channel the two reference forms compose into. A
+#                       dynamic give, "give o to the agent whose role at this point is r",
+#                       writes B[o] <- Pinv[r], so from that event until o is written again its
+#                       holder is PINNED: whoever holds o has role r. A later dynamic swap,
+#                       "swap the roles of a and the holder of o at this point", then sets
+#                       P[a] <- r exactly, because selecting an agent by its role and reading
+#                       that role back returns the role. The two references cancel the state,
+#                       so the answer to a state query is two retrievals from the surface — the
+#                       last swap naming the queried agent, then the last dynamic give to the
+#                       object that swap names — and no map is carried at all. The bind query
+#                       has the mirror form at three retrievals. Registering it is what makes
+#                       the floor honest: a zero-state policy reading well above chance means
+#                       the cell is not measuring composition on those items, and the row does
+#                       not decay with length because the channel is length-free.
+#
+# RECENCY WINDOW (window_50 / window_75 / window_90): simulate the task EXACTLY, honouring every
+# temporal phrase, but from the stated maps over only the last T = f*L events. This is a
+# bounded-HORIZON policy rather than a bounded-state one, and it is registered because it is the
+# largest floor the construct has: at k=12/L=64 it reads 0.294 / 0.235 / 0.180 for f =
+# 0.9/0.75/0.5 against 0.143 for one_leg_B and 0.0909 for uniform-over-non-initial, and it does
+# not decay with length (0.294/0.215/0.203/0.199 at L=64/128/192/256 for f=0.9). Two properties
+# fix how it may be read:
+#   - the family is MONOTONE in f, not exchangeable: f=1 is the oracle by construction, so the
+#     max over any registered set is always its largest member and is not a selection statistic.
+#     What that costs is that the registered cut is a design choice — 0.9 is registered, and a
+#     policy that reads 90% of the stream is doing 90% of the work, so the resulting floor is
+#     deliberately conservative.
+#   - the smaller cuts are registered too and are what make the row informative: f=0.5 at 0.180
+#     is what a genuinely truncated reader gets, and the gap between f=0.5 and f=0.9 is how much
+#     of the stream is load-bearing.
+#
+# ONE-HOP AND STATED:
+#   initial_only      — answer the stated initial role / holder (the no-op policy).
+#   last_swap_1hop    — the stated role of the other operand of the last swap naming the queried
+#                       agent, resolved off the stated holder map (state query only).
+#
+# CHANCE, not shortcuts: uniform_non_initial = 1/(k-1), since the query gates force the answer
+# to differ from the stated one, and uniform = 1/k. For the whole-map readout the answer is a
+# permutation of the k roles, so its chance row is 1/k! and there is no non-initial variant.
+#
+# min(component, control) IS A CEILING, NOT A NULL: none of these rows is a component score, and
+# a component or capacity-control accuracy never belongs in this max.
+# ---------------------------------------------------------------------------
+_SB_ROLE_RE = re.compile(r"\b(g\d+) has role (r\d+) at the start\.")
+_SB_HOLD_RE = re.compile(r"\b(g\d+) holds (o\d+) at the start\.")
+_SB_SWAP_RE = re.compile(r"\bs\d+ swaps the roles of (g\d+) and the agent who holds (o\d+) "
+                         r"at (this point|the start)\.")
+_SB_GIVE_RE = re.compile(r"\bs\d+ gives (o\d+) to the agent whose role at (this point|the start) "
+                         r"is (r\d+)\.")
+_SB_Q_STATE_RE = re.compile(r"what role does (g\d+) have at the end\?")
+_SB_Q_BIND_RE = re.compile(r"who is the holder of (o\d+) at the end\?")
+_SB_Q_ALL_RE = re.compile(r"what role does each of ((?:g\d+, )+g\d+) have at the end\?")
+
+# Every row ``s5_bind_floors`` can emit, in report order.
+S5_BIND_ROWS = ("stale_resolution", "one_leg_B", "one_leg_P", "final_state_resolution",
+                "pin_chain", "window_90", "window_75", "window_50",
+                "initial_only", "last_swap_1hop", "uniform_non_initial", "uniform")
+# The rows that may SET a cell's floor. All of them: each is a named policy rather than a member
+# of an exchangeable family, and the window rows are monotone in their cut (see above), so the
+# max is never a selection statistic.
+S5_BIND_ADVERSARIES = S5_BIND_ROWS
+S5_BIND_CHANCE_ROWS = ("uniform_non_initial", "uniform")
+# Rows defined only where some event is rendered "at this point". Under a fully decoupled
+# rendering each of them reproduces the oracle on the query it is defined for — the first four
+# by resolving against the stated maps, which IS the decoupled semantics, and pin_chain because
+# a static give's recipient is the stated holder of the named role, i.e. exactly the retrieval
+# component's answer. Printing 1.000 as a floor would be a correctness check wearing a floor's
+# clothes, so they are dropped rather than reported.
+S5_BIND_COUPLED_ONLY_ROWS = ("stale_resolution", "one_leg_B", "one_leg_P",
+                             "final_state_resolution", "pin_chain")
+# The registered recency-window cuts, as fractions of the stream length.
+S5_BIND_WINDOWS = (0.9, 0.75, 0.5)
+
+
+def s5_bind_read(prompt: str) -> dict | None:
+    """The stated maps, the event stream in rendered order, and the query — read off one
+    rendered prompt exactly as a model sees it.
+
+    Returns None when the prompt is not a mutual-reference item. Each event is
+    ``("swap", agent, obj, dynamic)`` or ``("give", obj, role, dynamic)``, where ``dynamic``
+    is whether the sentence said "at this point" (resolve against the running map) rather than
+    "at the start" (resolve against the stated one).
+    """
+    P0 = dict(_SB_ROLE_RE.findall(prompt))
+    B0 = {o: g for g, o in _SB_HOLD_RE.findall(prompt)}
+    if not P0 or not B0:
+        return None
+    found = []
+    for m in _SB_SWAP_RE.finditer(prompt):
+        found.append((m.start(), ("swap", m.group(1), m.group(2), m.group(3) == "this point")))
+    for m in _SB_GIVE_RE.finditer(prompt):
+        found.append((m.start(), ("give", m.group(1), m.group(3), m.group(2) == "this point")))
+    found.sort()
+    events = [e for _pos, e in found]
+    m_all = _SB_Q_ALL_RE.search(prompt)
+    if m_all is not None:
+        query = ("state_all", tuple(m_all.group(1).split(", ")))
+    else:
+        m_state = _SB_Q_STATE_RE.search(prompt)
+        m_bind = _SB_Q_BIND_RE.search(prompt)
+        if m_state is not None:
+            query = ("state", m_state.group(1))
+        elif m_bind is not None:
+            query = ("bind", m_bind.group(1))
+        else:
+            return None
+    return {"P0": P0, "B0": B0, "events": events, "query": query}
+
+
+def _sb_run(read: dict, mode: str = "surface", start: int = 0, final=None):
+    """Play ``events[start:]`` from the stated maps and return the resulting (P, B).
+
+    mode 'surface' honours each event's rendered temporal phrase (the exact semantics);
+    'stale' resolves every reference against the stated maps; 'B_only' feeds B into P but not
+    P into B; 'P_only' the mirror; 'final' resolves dynamic references against ``final``, the
+    true final maps.
+    """
+    P0, B0 = read["P0"], read["B0"]
+    P, B = dict(P0), dict(B0)
+    P0inv = {v: k for k, v in P0.items()}
+    Pinv = dict(P0inv)
+    for kind, x, y, dyn in read["events"][start:]:
+        if kind == "swap":
+            if mode == "stale" or (mode == "P_only") or not dyn:
+                b = B0.get(y)
+            elif mode == "final":
+                b = final[1].get(y)
+            else:                                    # 'surface' / 'B_only'
+                b = B.get(y)
+            if b is None or x not in P or b not in P:
+                return None
+            P[x], P[b] = P[b], P[x]
+            Pinv = {v: k for k, v in P.items()}
+        else:
+            if mode == "stale" or (mode == "B_only") or not dyn:
+                h = P0inv.get(y)
+            elif mode == "final":
+                h = final[0].get(y)
+            else:                                    # 'surface' / 'P_only'
+                h = Pinv.get(y)
+            if h is None:
+                return None
+            B[x] = h
+    return P, B
+
+
+def _sb_answer(read: dict, maps) -> str | None:
+    """The rendered answer a policy's final maps imply for this item's query."""
+    if maps is None:
+        return None
+    P, B = maps
+    kind, target = read["query"]
+    if kind == "state":
+        return None if target not in P else f"{P[target]}."
+    if kind == "bind":
+        return None if target not in B else f"{B[target]}."
+    if any(a not in P for a in target):
+        return None
+    return " ".join(P[a] for a in target) + "."
+
+
+def _sb_pin_chain(read: dict) -> str | None:
+    """The zero-state PIN-CHAIN answer for this item's query, or None where it has none.
+
+    Two surface retrievals for a state query, three for a bind query, and no map is carried:
+    the give -> swap reference pair cancels the state (see the module comment). Both walks fall
+    back to the one-hop stated read where the chain is absent, which is what a policy that
+    looked for the channel and did not find it would answer.
+    """
+    events, P0, B0 = read["events"], read["P0"], read["B0"]
+    kind, target = read["query"]
+    if kind == "state":
+        j = next((i for i in range(len(events) - 1, -1, -1)
+                  if events[i][0] == "swap" and events[i][1] == target), None)
+        if j is None:
+            return None
+        o, dyn = events[j][2], events[j][3]
+        if dyn:
+            for i in range(j - 1, -1, -1):
+                if events[i][0] == "give" and events[i][1] == o:
+                    # a dynamic give pins o's holder to the role it names; a static one names
+                    # the role that holder had at the start. Both reads answer with that role.
+                    return f"{events[i][2]}."
+        h = B0.get(o)                                    # no pin: the stated holder's role
+        return None if h is None or h not in P0 else f"{P0[h]}."
+    if kind == "bind":
+        P0inv = {v: kk for kk, v in P0.items()}
+        g = next((i for i in range(len(events) - 1, -1, -1)
+                  if events[i][0] == "give" and events[i][1] == target), None)
+        if g is None:
+            h = B0.get(target)
+            return None if h is None else f"{h}."
+        r, dyn = events[g][2], events[g][3]
+        if dyn:
+            # the last dynamic swap before the give whose referenced object was pinned to r:
+            # that swap put its named agent on role r, so the give hands the object to it
+            for i in range(g - 1, -1, -1):
+                if events[i][0] != "swap" or not events[i][3]:
+                    continue
+                o2 = events[i][2]
+                for jj in range(i - 1, -1, -1):
+                    if events[jj][0] == "give" and events[jj][1] == o2:
+                        if events[jj][3] and events[jj][2] == r:
+                            return f"{events[i][1]}."
+                        break
+        h = P0inv.get(r)
+        return None if h is None else f"{h}."
+    return None                                          # the whole-map readout has no such row
+
+
+def s5_bind_preds(prompt: str, windows=S5_BIND_WINDOWS) -> dict[str, str | None]:
+    """Every s5_bind shallow policy's answer for one rendered prompt, in canonical rendered
+    form (attached trailing period), or None where the prompt does not support the row."""
+    read = s5_bind_read(prompt)
+    names = [n for n in S5_BIND_ROWS if n not in S5_BIND_CHANCE_ROWS]
+    if read is None:
+        return {n: None for n in names}
+    events = read["events"]
+    L = len(events)
+    out: dict[str, str | None] = {
+        "stale_resolution": _sb_answer(read, _sb_run(read, "stale")),
+        "one_leg_B": _sb_answer(read, _sb_run(read, "B_only")),
+        "one_leg_P": _sb_answer(read, _sb_run(read, "P_only")),
+        "initial_only": _sb_answer(read, ({**read["P0"]}, {**read["B0"]})),
+        "pin_chain": _sb_pin_chain(read),
+    }
+    exact = _sb_run(read, "surface")
+    out["final_state_resolution"] = (
+        None if exact is None else
+        _sb_answer(read, _sb_run(read, "final",
+                                 final=({v: k for k, v in exact[0].items()}, exact[1]))))
+    for f in windows:
+        T = max(1, int(round(f * L)))
+        out[f"window_{int(round(f * 100))}"] = _sb_answer(read, _sb_run(read, "surface",
+                                                                        start=max(0, L - T)))
+    out["last_swap_1hop"] = None
+    if read["query"][0] == "state":
+        for kind, x, y, _dyn in reversed(events):
+            if kind == "swap" and x == read["query"][1]:
+                partner = read["B0"].get(y)
+                if partner is not None and partner in read["P0"]:
+                    out["last_swap_1hop"] = f"{read['P0'][partner]}."
+                break
+    return {n: out.get(n) for n in names}
+
+
+def s5_bind_pin_density(examples) -> float:
+    """The fraction of dynamic swaps that ride a LIVE PIN, over a list of s5_bind Examples.
+
+    A STREAM property rather than a policy accuracy, so it is not a floor row: it is the direct
+    count of the events that make the ``pin_chain`` row work, read back off the rendered
+    prompts. ``TaskSpec.no_pin`` holds it at exactly zero; without it, roughly a quarter to a
+    third of dynamic swaps carry the channel and the floor does not decay with length.
+    """
+    pinned = dyn_swaps = 0
+    for e in examples:
+        read = s5_bind_read(e.prompt)
+        if read is None:
+            continue
+        P, B = dict(read["P0"]), dict(read["B0"])
+        P0inv = {v: k for k, v in read["P0"].items()}
+        Pinv = dict(P0inv)
+        pin: dict[str, str | None] = {}
+        for kind, x, y, dyn in read["events"]:
+            if kind == "swap":
+                b = (B if dyn else read["B0"]).get(y)
+                if b is None or x not in P or b not in P:
+                    break
+                if dyn:
+                    dyn_swaps += 1
+                    pinned += int(pin.get(y) is not None and P[b] == pin[y])
+                P[x], P[b] = P[b], P[x]
+                Pinv = {v: k for k, v in P.items()}
+            else:
+                h = (Pinv if dyn else P0inv).get(y)
+                if h is None:
+                    break
+                B[x] = h
+                pin[x] = y if dyn else None
+    return pinned / dyn_swaps if dyn_swaps else 0.0
+
+
+def s5_bind_operative_floor(floors: dict[str, float], coupled: bool = True) -> float | None:
+    """The number an s5_bind cell has to clear: ``operative_floor`` over this family's
+    registered rows.
+
+    Named rather than left to the caller because the two adversary families share the row name
+    ``uniform``, so a caller who forgets to pass the registered set gets chance rather than the
+    floor (see ``registered_for``).
+
+    ``coupled=False`` drops the recency-window rows. A floor row has to be CHEAPER than the
+    task, and a windowed policy still maintains both maps over 0.9L events: on the coupled
+    rendering that is cheaper than the cell's own forward pass and the row is a shortcut, but on
+    a decoupled rendering the state component costs a sparse backward walk (90 steps at k=12,
+    L=192) and the retrieval component costs three, so a windowed pass is an order of magnitude
+    MORE expensive than the task and its accuracy is work, not a shortcut. On the decoupled
+    retrieval arm it reads 1.000 for exactly that reason, and reporting that as the number a
+    score is read against would make the component arm unreadable. The rows stay registered and
+    printed on both renderings; they enter this max only where they are shortcuts, which is the
+    same rule scripts/validate_suite.py gates on.
+    """
+    registered = S5_BIND_ADVERSARIES if coupled else tuple(
+        r for r in S5_BIND_ADVERSARIES if not r.startswith("window_"))
+    return operative_floor(floors, registered)
+
+
+def s5_bind_floors(examples, k: int, windows=S5_BIND_WINDOWS) -> dict[str, float]:
+    """Shallow-adversary floors for a list of s5_bind ``tasks.Example``.
+
+    Recomputed from the exact deterministic items a cell scores, so every row is a property of
+    that cell. Take the max over the registered rows —
+    ``operative_floor(floors, S5_BIND_ADVERSARIES)`` — which is the only number a score may be
+    read against; which row is largest varies with k, L and the coupling rates.
+
+    The coupled-only rows (S5_BIND_COUPLED_ONLY_ROWS) are DROPPED where no event is rendered
+    "at this point": with a fully decoupled stream each of them reproduces the oracle exactly,
+    and printing 1.000 as a floor would be a correctness check wearing a floor's clothes. The
+    window and stated rows are defined on both renderings.
+    """
+    from math import factorial
+
+    n = len(examples)
+    if not n:
+        return {}
+    names = [nm for nm in S5_BIND_ROWS if nm not in S5_BIND_CHANCE_ROWS]
+    hits: Counter = Counter()
+    defined: Counter = Counter()
+    has_dyn = False
+    is_all = False
+    for e in examples:
+        read = s5_bind_read(e.prompt)
+        if read is not None:
+            has_dyn |= any(d for _kind, _x, _y, d in read["events"])
+            is_all |= read["query"][0] == "state_all"
+        preds = s5_bind_preds(e.prompt, windows=windows)
+        for nm in names:
+            if preds[nm] is not None:
+                defined[nm] += 1
+                hits[nm] += int(preds[nm] == e.answer)
+    out = {nm: hits[nm] / n for nm in names if defined[nm]}
+    if not has_dyn:
+        for nm in S5_BIND_COUPLED_ONLY_ROWS:
+            out.pop(nm, None)
+    if is_all:
+        out["uniform"] = 1.0 / factorial(k)
+    else:
+        out["uniform_non_initial"] = 1.0 / max(1, k - 1)
+        out["uniform"] = 1.0 / k
+    return {nm: out[nm] for nm in S5_BIND_ROWS if nm in out}
 
 
 def _fmt(report: dict) -> str:

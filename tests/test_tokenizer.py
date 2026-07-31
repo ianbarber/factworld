@@ -221,6 +221,31 @@ def test_state_reference_clause_is_covered_in_both_grammars():
         assert _TOK.decode(_TOK.encode(s)) == s, s
 
 
+def test_mutual_reference_grammar_is_covered():
+    """The s5_bind surfaces: the temporal phrase that decides WHICH map resolves an event's
+    reference, and the whole-map readout's comma-separated slot enumeration. An <unk> on
+    "point."/"start." would delete the coupling from the model's input and leave an ordinary
+    two-structure stream behind — the task would still train, on a different task."""
+    from factworld.world import Event  # noqa: PLC0415
+
+    for tk in ("this", "point", "start", "end", "each", "who", "point.", "start.", "end?"):
+        assert tk in _TOK.token_to_id, tk
+    a, o, rl = _TARGET.agents[0], _TARGET.objects[0], _TARGET.roles[0]
+    docs = [_R.render_event(Event("swap_roles_now", (a, o)), step="s0"),
+            _R.render_event(Event("swap_roles_start", (a, o)), step="s0"),
+            _R.render_event(Event("give_role_now", (o, rl)), step="s1"),
+            _R.render_event(Event("give_role_start", (o, rl)), step="s1"),
+            _R.render_role(a, rl, when=Renderer.AT_START),
+            _R.render_holder(o, a, when=Renderer.AT_START),
+            _R.render_query("s5bind_state", target=a),
+            _R.render_query("s5bind_bind", target=o),
+            _R.render_query("s5bind_state_all", targets=list(_TARGET.agents))]
+    for s in docs:
+        assert _TOK.unk_id not in _TOK.encode(s), s
+        assert _TOK.decode(_TOK.encode(s)) == s, s
+    assert f"{_TARGET.agents[0]}," in _TOK.token_to_id      # the slot enumeration's separator
+
+
 def test_holder_assertion_object_form_is_covered():
     """``g3 holds o0.`` glues the period to the object (the aux-world trace documents)."""
     s = _R.render_holder(_TARGET.objects[0], _TARGET.agents[0])

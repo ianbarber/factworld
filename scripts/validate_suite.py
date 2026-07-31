@@ -18,6 +18,18 @@ For every canonical task, certify that no shallow baseline clears floor on the h
     The initial-map backhop is measured by s5_chain_floors but is not registered and so is not
     in this column: it is an unnamed member of a fixed-offset family whose accuracies sum to 1,
     so its null is uniform-over-non-start and a max over it measures selection.
+  - SHALLOW-ADVERSARY floor (s5_bind): the largest registered mutual-reference policy
+    (factworld.validity.S5_BIND_ADVERSARIES) — the coupling-blind rows, the wrong-time row, the
+    zero-state pin chain, the stated/one-hop rows, and the recency-window family. The window
+    rows enter the GATE, and the operative floor, only on a coupled rendering: a windowed policy
+    still maintains both maps, so it is cheaper than the task exactly where the task's own
+    cheapest correct algorithm reads the whole stream, which is the coupled arm. On a decoupled
+    arm the retrieval component is one content-addressed lookup, a windowed policy is more
+    expensive than the task rather than a shortcut, and the row reads 1.000 by doing the work —
+    measured, printed, and neither gated nor counted. Every row is printed for every cell in the
+    s5_bind floor block below the table, next to the operative floor and its ratio to the
+    informed chance 1/(k-1): with TaskSpec.no_pin closing the state-free reset channel that
+    ratio is ~1 on every scored cell, and a cell that drifts off it has an open shortcut.
 A task PASSES if majority, recency, first-position and (where defined) strong-recency accuracy are
 all well below 0.5 (near the 1/#answers floor). The pointer-map families answer over a much larger
 space than 2, so their column is gated against their own chance level instead: no shallow policy
@@ -37,9 +49,14 @@ sys.path.insert(0, REPO)
 from factworld import tasks as TK          # noqa: E402
 from factworld.render import Renderer, classify  # noqa: E402  (atomic-token type by prefix: g/v/r/o/...)
 from factworld.validity import (  # noqa: E402
+    S5_BIND_ADVERSARIES,
+    S5_BIND_CHANCE_ROWS,
+    S5_BIND_ROWS,
     S5_CHAIN_ADVERSARIES,
     S5_CHAIN_CHANCE_ROWS,
     comm_shallow_accuracy,
+    s5_bind_floors,
+    s5_bind_operative_floor,
     s5_chain_floors,
     strong_recency_accuracy,
 )
@@ -62,6 +79,14 @@ COMM_FAMILIES = ("commutative",)
 S5_CHAIN_FAMILIES = ("s5_chain", "chain")
 S5_CHAIN_SHORTCUTS = tuple(n for n in S5_CHAIN_ADVERSARIES if n not in S5_CHAIN_CHANCE_ROWS)
 
+# The mutual-reference family, derived the same way: registering a row in factworld.validity is
+# enough to put it in this column, and a row that cannot set a floor cannot enter the gate.
+S5_BIND_FAMILIES = ("s5_bind",)
+S5_BIND_SHORTCUTS = tuple(n for n in S5_BIND_ADVERSARIES if n not in S5_BIND_CHANCE_ROWS)
+# The recency-window rows gate only where the task's own cheapest correct algorithm reads the
+# whole stream — the coupled rendering. See the module docstring.
+S5_BIND_WINDOW_ROWS = tuple(n for n in S5_BIND_ROWS if n.startswith("window_"))
+
 
 def positional_pred(prompt: str, ans_type: str, which: str):
     """The first/last token in the prompt whose type matches the answer's type — a fixed-POSITION shortcut.
@@ -81,6 +106,7 @@ def main():
           f"RETIRED specs excluded — see tasks.RETIRED)\n")
     print(f"  {'task':<22} {'#ans':>5} {'floor':>6} {'majority':>9} {'recency':>8} {'firstpos':>9} {'strongrec':>10}   verdict")
     all_ok = True
+    bind_rows = {}
     for name, spec in TK.CANONICAL.items():
         test = TK.generate(spec, "test", n=N, length=spec.eval_lengths[-1])
         # normalize answers so the check is format-agnostic (attached `.` -> ` .`)
@@ -115,10 +141,36 @@ def main():
             strongrec = max([fl[n] for n in S5_CHAIN_SHORTCUTS if n in fl], default=0.0)
             ok &= strongrec < 2.0 * floor
             srec_col = f"{strongrec:>10.3f}"
+        elif spec.family in S5_BIND_FAMILIES:
+            # mutual-reference rung: every registered policy, recomputed from these exact items.
+            fl = s5_bind_floors(test, spec.k)
+            gated = [n for n in S5_BIND_SHORTCUTS if n in fl
+                     and (spec.coupled or n not in S5_BIND_WINDOW_ROWS)]
+            strongrec = max([fl[n] for n in gated], default=0.0)
+            ok &= strongrec < 0.5
+            srec_col = f"{strongrec:>10.3f}"
+            bind_rows[name] = (fl, s5_bind_operative_floor(fl, coupled=spec.coupled), gated,
+                               spec.eval_lengths[-1], spec.k)
         else:
             srec_col = f"{'—':>10}"
         all_ok &= ok
         print(f"  {name:<22} {distinct:>5} {floor:>6.3f} {majority:>9.3f} {recency:>8.3f} {firstpos:>9.3f} {srec_col}   {'PASS' if ok else 'FLAG'}")
+    if bind_rows:
+        # The mutual-reference floors sit far above chance, so every row is printed: the
+        # operative floor (the max over all registered rows) is what a score is read against,
+        # while the gate reads only the rows marked '*' — see the module docstring.
+        print(f"\n  s5_bind registered floors (n={N} at eval_lengths[-1]; "
+              f"'*' = enters the gate, 'op' = the number a score is read against, "
+              f"'op/ch' = op over the informed chance 1/(k-1))")
+        print("    " + f"{'task':<24}{'L':>5}" + "".join(f"{r[:10]:>12}" for r in S5_BIND_ROWS)
+              + f"{'op':>9}{'op/ch':>8}")
+        for name, (fl, op, gated, L, k) in bind_rows.items():
+            cells = "".join(
+                (f"{fl[r]:>11.3f}{'*' if r in gated else ' '}" if r in fl else f"{'—':>12}")
+                for r in S5_BIND_ROWS)
+            ratio = op / fl["uniform_non_initial"] if "uniform_non_initial" in fl else None
+            print(f"    {name:<24}{L:>5}" + cells + f"{op:>9.3f}"
+                  + (f"{ratio:>8.2f}" if ratio is not None else f"{'—':>8}"))
     print(f"\nSUITE VALIDITY: {'PASS — no shallow/recency/position shortcut clears floor on any canonical task' if all_ok else 'FLAG — investigate'}")
     return all_ok
 
