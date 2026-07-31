@@ -244,6 +244,56 @@ class TaskSpec:
     # every pre-existing stream is byte-identical. The s5_bind specs set it True.
     no_pin: bool = False
 
+    # s5_bind-only. The set of doses ONE skeleton must be simultaneously admissible under —
+    # the field that makes a dose ladder item-paired instead of five independent samples.
+    #
+    # THE DEFECT IT FIXES. In the default sampler the per-event coupling coin is drawn INSIDE
+    # the rejection loop, so a rejected candidate consumes it and the RNG stream diverges: two
+    # specs differing only in rho draw different worlds, different events and different queries
+    # at the same index. Dose comparisons are then between-item (0 of 60 prompts match at
+    # k=12/L=64), so a dose response confounds the dose with the sample.
+    #
+    # THE SKELETON-FIRST SAMPLER. With rho_ladder set, the coupling variate u_i is drawn ONCE
+    # per event SLOT, before the operands, and a candidate event is admitted only if it is
+    # non-degenerate under EVERY dose in the ladder (no self-swap, no no-op write, and with
+    # no_pin no live-pin cancellation); the query gates likewise hold under every dose. Nothing
+    # in the draw sequence depends on the spec's own rho, so every rung of the ladder builds
+    # the SAME world, the SAME event list and the SAME two queries, and the renderings differ
+    # only in which events carry "at this point" — identical whitespace-token counts, and gold
+    # is the one thing that moves. Event i is dynamic at dose d iff u_i < d, so the doses are
+    # nested: the referenced set at 0.25 is a subset of the set at 0.5, and dose 0.0 IS the
+    # all-static reading.
+    #
+    # Appended and defaulted to (), which selects the original sampler, so every pre-existing
+    # stream is byte-identical. A spec that sets it must have rho_p == rho_b (the ladder is
+    # one-dimensional) and that value must be one of its rungs.
+    rho_ladder: tuple[float, ...] = ()
+
+    # s5_bind-only. The queried agent's LAST carrier event must sit in the final ``q_tail``
+    # fraction of the stream — the query gate that makes the stream's TAIL load-bearing, and the
+    # mirror of the band the queried object's resolving write already sits in.
+    #
+    # THE HOLE IT CLOSES. Truncation is a two-sided family: a policy may drop the last T events
+    # or the first T, and at matched T both pay the same price. Only the suffix half was gated.
+    # The state gate asked that the queried agent MOVE (touched twice, final role different from
+    # its stated one) but never said WHEN, so its carrier chain typically finished mid-stream and
+    # a policy that simulated the task exactly and then stopped 10% early — validity's
+    # ``prefix_90`` — was simply right: 0.4527 / 0.3747 / 0.2920 at k=12, L=128/192/256 against
+    # an operative floor of 0.098-0.117. Nothing about it is shallow, which is the point: the
+    # last decile of the stream carried no information about the answer, so the events were
+    # priced into the prompt without being priced into the task.
+    #
+    # THE CONSTRAINT. With q_tail = f the sampler keeps only agents whose last carrier event
+    # (as the named agent OR as the referenced holder) has index >= L - round(f*L) under EVERY
+    # simulated dose, which is exactly the set of events a prefix_(1-f) policy discards. It is a
+    # gate on the QUERY, not on the stream: no event distribution moves, the cheapest correct
+    # algorithm is untouched, and it costs items only where no agent qualifies.
+    #
+    # Appended and defaulted to 0.0, which disables the gate, so every pre-existing stream is
+    # byte-identical. The s5_bind specs set it to 0.1, matching the tightest registered
+    # truncation budget (validity.S5_BIND_WINDOWS).
+    q_tail: float = 0.0
+
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
         return replace(self, **knobs)
@@ -666,6 +716,214 @@ def _invert(mapping: dict) -> dict:
     return {v: k for k, v in mapping.items()}
 
 
+def _s5_bind_tail_lo(spec, length: int) -> int:
+    """The first event index the queried agent's last carrier event may have (TaskSpec.q_tail).
+
+    ``L - round(f*L)`` is the first index a prefix policy on budget 1-f discards, so an agent
+    that clears this gate is one whose answer that policy cannot have. -1 disables the gate.
+    """
+    if not spec.q_tail:
+        return -1
+    return length - max(1, int(round(spec.q_tail * length)))
+
+
+def _s5_bind_lanes(spec) -> tuple[float, ...]:
+    """The doses one skeleton has to be simultaneously admissible under. 0.0 is always a lane:
+    it is the all-static reading, which every arm of the family is also read under."""
+    return tuple(sorted(set(spec.rho_ladder) | {0.0}))
+
+
+def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
+    """One s5_bind item's world, event stream and queries — the part of the sampler that must
+    not consult the rendering.
+
+    Returns ``(P0, B0, events, writes, last_give, q_state, q_bind, fact_roles, fact_holds,
+    finals)``, where ``finals`` maps each simulated dose (and ``None``, the all-static reading)
+    to that dose's ``(P, B, touch)``. Events carry ``dyn`` under the spec's OWN dose.
+
+    Two samplers, selected by ``spec.rho_ladder``:
+
+      DEFAULT      each event's coupling coin is drawn inside the rejection loop, and the item
+                   is checked for degeneracy under the spec's own dose and under the all-static
+                   reading. Two doses, two lanes.
+      SKELETON-FIRST (rho_ladder set)
+                   the coupling variate is drawn once per event SLOT, before the operands, and
+                   the item is checked under every dose in the ladder. The draw sequence is then
+                   independent of the spec's own dose, so every rung of the ladder is the same
+                   item — see TaskSpec.rho_ladder.
+    """
+    k, m = spec.k, spec.n_objects_active
+    if not spec.rho_ladder:
+        for _outer in range(200):
+            P0 = dict(zip(agents, rng.sample(roles, k)))
+            B0 = dict(zip(objs, rng.sample(agents, m)))
+            P0inv = _invert(P0)
+            Pc, Bc = dict(P0), dict(B0)          # the coupled ("at this point") trajectory
+            Pd, Bd = dict(P0), dict(B0)          # the decoupled ("at the start") trajectory
+            Pc_inv = _invert(Pc)
+            events, touch_c, touch_d = [], {a: 0 for a in agents}, {a: 0 for a in agents}
+            # a -> the index of the last event that MOVED a, per trajectory (TaskSpec.q_tail)
+            last_c, last_d = {a: -1 for a in agents}, {a: -1 for a in agents}
+            writes = {o: 0 for o in objs}
+            # o -> the role its last DYNAMIC give named, while that give still stands: the live
+            # pin (see TaskSpec.no_pin). A static give leaves no pin, and any give clears it.
+            pin: dict[str, str | None] = {}
+            for _i in range(length):
+                swap = rng.random() < spec.p_swap
+                ok = False
+                for _try in range(200):
+                    if swap:
+                        a, o = rng.choice(agents), rng.choice(objs)
+                        dyn = rng.random() < spec.rho_p
+                        bc = Bc[o] if dyn else B0[o]
+                        bd = B0[o]
+                        if bc != a and bd != a:          # no self-swap under EITHER semantics
+                            if spec.no_pin and dyn and pin.get(o) is not None and Pc[bc] == pin[o]:
+                                continue                 # the references would cancel the state
+                            ok = True
+                            break
+                    else:
+                        o, rl = rng.choice(objs), rng.choice(roles)
+                        dyn = rng.random() < spec.rho_b
+                        hc = (Pc_inv if dyn else P0inv)[rl]
+                        hd = P0inv[rl]
+                        if hc != Bc[o] and hd != Bd[o]:  # no no-op write under EITHER semantics
+                            ok = True
+                            break
+                if not ok:
+                    break
+                if swap:
+                    events.append({"kind": "swap", "a": a, "ref": o, "dyn": dyn})
+                    Pc[a], Pc[bc] = Pc[bc], Pc[a]
+                    Pd[a], Pd[bd] = Pd[bd], Pd[a]
+                    Pc_inv = _invert(Pc)
+                    touch_c[a] += 1
+                    touch_c[bc] += 1
+                    touch_d[a] += 1
+                    touch_d[bd] += 1
+                    last_c[a] = last_c[bc] = last_d[a] = last_d[bd] = len(events) - 1
+                else:
+                    events.append({"kind": "give", "o": o, "ref": rl, "dyn": dyn})
+                    Bc[o], Bd[o] = hc, hd
+                    pin[o] = rl if dyn else None
+                    writes[o] += 1
+            if len(events) < length:
+                continue
+            tail_lo = _s5_bind_tail_lo(spec, length)
+            cand_s = [a for a in agents if touch_c[a] >= 2 and touch_d[a] >= 2
+                      and Pc[a] != P0[a] and Pd[a] != P0[a]
+                      and last_c[a] >= tail_lo and last_d[a] >= tail_lo]
+            last_give = {}
+            for j, e in enumerate(events):
+                if e["kind"] == "give":
+                    last_give[e["o"]] = j
+            lo, hi = length // 10, int(0.75 * length)
+            cand_b = [o for o in objs if writes[o] >= 2 and Bc[o] != B0[o] and Bd[o] != B0[o]
+                      and lo <= last_give.get(o, -1) <= hi]
+            if not cand_s or not cand_b:
+                continue
+            q_state, q_bind = rng.choice(cand_s), rng.choice(cand_b)
+            fact_roles, fact_holds = agents[:], objs[:]
+            rng.shuffle(fact_roles)
+            rng.shuffle(fact_holds)
+            finals = {spec.rho_p: (Pc, Bc, touch_c), None: (Pd, Bd, touch_d)}
+            return (P0, B0, events, writes, last_give, q_state, q_bind,
+                    fact_roles, fact_holds, finals)
+        raise RuntimeError(f"{spec.name}: no admissible item at idx={idx} "
+                           f"(k={k}, m={m}, L={length})")
+
+    lanes = _s5_bind_lanes(spec)
+    if spec.rho_p != spec.rho_b:
+        raise ValueError(f"{spec.name}: a rho_ladder spec is one-dimensional, so rho_p "
+                         f"({spec.rho_p}) must equal rho_b ({spec.rho_b}).")
+    if spec.rho_p not in lanes:
+        raise ValueError(f"{spec.name}: rho_p={spec.rho_p} is not a rung of "
+                         f"rho_ladder={lanes}.")
+    for _outer in range(200):
+        P0 = dict(zip(agents, rng.sample(roles, k)))
+        B0 = dict(zip(objs, rng.sample(agents, m)))
+        P0inv = _invert(P0)
+        # one trajectory per rung; the all-static reading IS the 0.0 rung
+        st = {d: {"P": dict(P0), "Pinv": _invert(P0), "B": dict(B0), "pin": {},
+                  "touch": {a: 0 for a in agents}, "last": {a: -1 for a in agents}}
+              for d in lanes}
+        events, writes = [], {o: 0 for o in objs}
+        for _i in range(length):
+            swap = rng.random() < spec.p_swap
+            u = rng.random()                     # THE SKELETON DRAW: one coin per event slot,
+            ok = False                           # before the operands and outside the retries
+            for _try in range(200):
+                if swap:
+                    a, o = rng.choice(agents), rng.choice(objs)
+                else:
+                    o, rl = rng.choice(objs), rng.choice(roles)
+                res, good = {}, True
+                for d in lanes:
+                    s = st[d]
+                    dyn = u < d
+                    if swap:
+                        x = (s["B"] if dyn else B0)[o]
+                        if x == a:                             # self-swap: a no-op event
+                            good = False
+                            break
+                        if (spec.no_pin and dyn and s["pin"].get(o) is not None
+                                and s["P"][x] == s["pin"][o]):
+                            good = False                       # state-free reset channel
+                            break
+                    else:
+                        x = (s["Pinv"] if dyn else P0inv)[rl]
+                        if x == s["B"][o]:                     # no-op write
+                            good = False
+                            break
+                    res[d] = x
+                if good:
+                    ok = True
+                    break
+            if not ok:
+                break
+            events.append({"kind": "swap", "a": a, "ref": o, "dyn": u < spec.rho_p} if swap
+                          else {"kind": "give", "o": o, "ref": rl, "dyn": u < spec.rho_p})
+            for d in lanes:
+                s, x = st[d], res[d]
+                if swap:
+                    s["P"][a], s["P"][x] = s["P"][x], s["P"][a]
+                    s["Pinv"] = _invert(s["P"])
+                    s["touch"][a] += 1
+                    s["touch"][x] += 1
+                    s["last"][a] = s["last"][x] = len(events) - 1
+                else:
+                    s["B"][o] = x
+                    s["pin"][o] = rl if u < d else None
+            if not swap:
+                writes[o] += 1
+        if len(events) < length:
+            continue
+        tail_lo = _s5_bind_tail_lo(spec, length)
+        cand_s = [a for a in agents
+                  if all(st[d]["touch"][a] >= 2 and st[d]["P"][a] != P0[a]
+                         and st[d]["last"][a] >= tail_lo for d in lanes)]
+        last_give = {}
+        for j, e in enumerate(events):
+            if e["kind"] == "give":
+                last_give[e["o"]] = j
+        lo, hi = length // 10, int(0.75 * length)
+        cand_b = [o for o in objs
+                  if writes[o] >= 2 and lo <= last_give.get(o, -1) <= hi
+                  and all(st[d]["B"][o] != B0[o] for d in lanes)]
+        if not cand_s or not cand_b:
+            continue
+        q_state, q_bind = rng.choice(cand_s), rng.choice(cand_b)
+        fact_roles, fact_holds = agents[:], objs[:]
+        rng.shuffle(fact_roles)
+        rng.shuffle(fact_holds)
+        finals = {d: (st[d]["P"], st[d]["B"], st[d]["touch"]) for d in lanes}
+        finals[None] = finals[0.0]
+        return (P0, B0, events, writes, last_give, q_state, q_bind,
+                fact_roles, fact_holds, finals)
+    raise RuntimeError(f"{spec.name}: no admissible item at idx={idx} "
+                       f"(k={k}, m={m}, L={length}, rho_ladder={lanes})")
+
+
 def _ex_s5_bind(spec, w, r, rng, length, idx):
     """s5_bind: two structures over one event stream, each naming its operands through the other.
 
@@ -700,12 +958,16 @@ def _ex_s5_bind(spec, w, r, rng, length, idx):
     artifact of forbidding a cheaper schedule.
 
     QUERY GATES, applied identically under both semantics so the arms condition on the same
-    items: the queried agent is moved at least twice and ends on a role other than its stated
-    one, and the queried object is written at least twice, ends with a holder other than its
-    stated one, and its resolving write sits in [0.1L, 0.75L]. Without the last clause the
-    resolving write lands near the stream end, where the map has not moved since, and
-    "resolve every reference against the FINAL map" — a wrong-TIME policy, not a shallow one —
-    reads 0.33-0.44 at every L.
+    items: the queried agent is moved at least twice, ends on a role other than its stated one,
+    and its LAST carrier event sits in the final ``q_tail`` of the stream; the queried object is
+    written at least twice, ends with a holder other than its stated one, and its resolving
+    write sits in [0.1L, 0.75L]. Each positional clause answers a truncation policy. Without the
+    object's upper bound its resolving write lands near the stream end, where the map has not
+    moved since, and "resolve every reference against the FINAL map" — a wrong-TIME policy, not
+    a shallow one — reads 0.33-0.44 at every L. Without ``q_tail`` the queried agent's carrier
+    chain finishes mid-stream, and simulating the task exactly and stopping 10% early reads
+    0.45/0.37/0.29 at L=128/192/256 against a 0.10-0.12 floor: the two clauses are the two ends
+    of one family (see TaskSpec.q_tail and validity's window_/prefix_ rows).
 
     NO_PIN. Two dynamic references compose into a state-free reset channel: a give writes
     B[o] <- Pinv[r], pinning o's holder to role r, and a later swap naming o then writes r onto
@@ -716,9 +978,27 @@ def _ex_s5_bind(spec, w, r, rng, length, idx):
 
     FLOORS. The registered shallow policies are in ``factworld.validity.s5_bind_floors``; the
     operative floor is the max over them (``s5_bind_operative_floor``) and is what a score is
-    read against. With no_pin set and L/k >= 8 it lands at the informed chance 1/(k-1); at
-    shorter L the recency-window and one-leg rows are still above it, which is what the length
-    grid in CANONICAL is cut on.
+    read against. Over the REGISTERED rows, with no_pin and q_tail set and L/k >= 8, it lands
+    within 1.06-1.28x the informed chance 1/(k-1) across k=6..16 (n=1500); at shorter L the
+    one-leg and window rows are still 2-8x above it, which is what the length grid in CANONICAL
+    is cut on.
+
+    THAT FLOOR IS NOT YET HONEST, and the cell is not scoreable until it is. The registered
+    truncation rows are the two ENDPOINTS of a family parameterised by where the dropped block
+    sits, and accuracy over that family peaks in the INTERIOR: playing every event except the
+    block [0.85L, 0.95L) reads 0.247 / 0.164 / 0.127 at k=12, L=128/192/256 against registered
+    floors of 0.111 / 0.099 / 0.103, and 0.315 / 0.303 at k=6, L=48/64 against 0.223 / 0.231
+    (n=1500, independent simulator). The position profile is smooth and rises toward the late
+    interior (0.081 -> 0.247 at L=128), so this is structure, not noise.
+
+    Registering more members does not close it. The family is continuous in (position, width),
+    non-monotone in both, and every member costs ~0.9x the task, so the max over any finite
+    registered subset is a selection statistic over an effectively exchangeable set — the thing
+    a floor may never be. The cause is that a block-drop is only wrong when it drops an event on
+    the queried agent's dependency chain, and that chain holds ~2L/k of the L events, so most
+    blocks miss it. Sparsity is also what buys the step multiplier (the components admit sparse
+    backward walks; only the composition forces a dense forward pass), so the closure has to
+    make the chain dense IN TIME without making the state dense.
     """
     k, m = spec.k, spec.n_objects_active
     if m > k:
@@ -734,77 +1014,12 @@ def _ex_s5_bind(spec, w, r, rng, length, idx):
     objs = list(w.objects[:m])
     coupled = spec.coupled
 
-    for _outer in range(200):
-        P0 = dict(zip(agents, rng.sample(roles, k)))
-        B0 = dict(zip(objs, rng.sample(agents, m)))
-        P0inv = _invert(P0)
-        Pc, Bc = dict(P0), dict(B0)          # the coupled ("at this point") trajectory
-        Pd, Bd = dict(P0), dict(B0)          # the decoupled ("at the start") trajectory
-        Pc_inv = _invert(Pc)
-        events, touch_c, touch_d = [], {a: 0 for a in agents}, {a: 0 for a in agents}
-        writes = {o: 0 for o in objs}
-        # o -> the role its last DYNAMIC give named, while that give still stands: the live pin
-        # (see TaskSpec.no_pin). A static give leaves no pin, and any give clears the old one.
-        pin: dict[str, str | None] = {}
-        for _i in range(length):
-            swap = rng.random() < spec.p_swap
-            ok = False
-            for _try in range(200):
-                if swap:
-                    a, o = rng.choice(agents), rng.choice(objs)
-                    dyn = rng.random() < spec.rho_p
-                    bc = Bc[o] if dyn else B0[o]
-                    bd = B0[o]
-                    if bc != a and bd != a:          # no self-swap under EITHER semantics
-                        if spec.no_pin and dyn and pin.get(o) is not None and Pc[bc] == pin[o]:
-                            continue                 # the two references would cancel the state
-                        ok = True
-                        break
-                else:
-                    o, rl = rng.choice(objs), rng.choice(roles)
-                    dyn = rng.random() < spec.rho_b
-                    hc = (Pc_inv if dyn else P0inv)[rl]
-                    hd = P0inv[rl]
-                    if hc != Bc[o] and hd != Bd[o]:  # no no-op write under EITHER semantics
-                        ok = True
-                        break
-            if not ok:
-                break
-            if swap:
-                events.append({"kind": "swap", "a": a, "ref": o, "dyn": dyn})
-                Pc[a], Pc[bc] = Pc[bc], Pc[a]
-                Pd[a], Pd[bd] = Pd[bd], Pd[a]
-                Pc_inv = _invert(Pc)
-                touch_c[a] += 1
-                touch_c[bc] += 1
-                touch_d[a] += 1
-                touch_d[bd] += 1
-            else:
-                events.append({"kind": "give", "o": o, "ref": rl, "dyn": dyn})
-                Bc[o], Bd[o] = hc, hd
-                pin[o] = rl if dyn else None
-                writes[o] += 1
-        if len(events) < length:
-            continue
-
-        cand_s = [a for a in agents if touch_c[a] >= 2 and touch_d[a] >= 2
-                  and Pc[a] != P0[a] and Pd[a] != P0[a]]
-        last_give = {}
-        for j, e in enumerate(events):
-            if e["kind"] == "give":
-                last_give[e["o"]] = j
-        lo, hi = length // 10, int(0.75 * length)
-        cand_b = [o for o in objs if writes[o] >= 2 and Bc[o] != B0[o] and Bd[o] != B0[o]
-                  and lo <= last_give.get(o, -1) <= hi]
-        if not cand_s or not cand_b:
-            continue
-        q_state, q_bind = rng.choice(cand_s), rng.choice(cand_b)
-        fact_roles, fact_holds = agents[:], objs[:]
-        rng.shuffle(fact_roles)
-        rng.shuffle(fact_holds)
-        break
-    else:
-        raise RuntimeError(f"{spec.name}: no admissible item at idx={idx} (k={k}, m={m}, L={length})")
+    (P0, B0, events, writes, last_give, q_state, q_bind,
+     fact_roles, fact_holds, finals) = _s5_bind_stream(spec, agents, roles, objs,
+                                                       rng, length, idx)
+    P0inv = _invert(P0)
+    Pc, Bc, touch_c = finals[spec.rho_p]      # the coupled ("at this point") trajectory
+    Pd, Bd, touch_d = finals[None]            # the decoupled ("at the start") trajectory
 
     facts = [r.render_role(a, P0[a], when=Renderer.AT_START) for a in fact_roles]
     facts += [r.render_holder(o, B0[o], when=Renderer.AT_START) for o in fact_holds]
@@ -1358,11 +1573,11 @@ CANONICAL = {
     # registered policy) is what sets the shortest scored length, and with the pin channel
     # closed it reaches the informed chance 1/(k-1) = 0.0909 rather than plateauing above it.
     # Measured on this stream at n=3000, k=12, coupled/state, as a ratio to that chance:
-    # L=64 2.59, L=128 1.07, L=192 1.11, L=256 1.07. The residual at L=64 is not the pin
+    # L=64 2.15, L=128 1.09, L=192 1.09, L=256 1.10. The residual at L=64 is not the pin
     # channel (pin density is 0.000 at every length) but stream length against k: with 12
     # agents and 12 objects a 64-event stream gives the queried agent a short carrier chain and
     # each object ~2.7 writes, so a policy reading the last 0.9L events, or feeding B into P
-    # but not P into B, still lands 2.4x chance. From L/k >= 8 both fall to chance, so the grid
+    # but not P into B, still lands 2.1x chance. From L/k >= 8 both fall to chance, so the grid
     # starts at 128. The floor per cell is recomputed and printed by scripts/validate_suite.py;
     # a rescaled cell carries its own.
     #
@@ -1370,39 +1585,41 @@ CANONICAL = {
     "s5_bind_v2":       TaskSpec("s5_bind_v2", "s5_bind", kind="experimental",
                                   k=12, n_objects=12, n_objects_active=12,
                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
-                                  no_pin=True,
+                                  no_pin=True, q_tail=0.1,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     "s5_bind_v2_state": TaskSpec("s5_bind_v2_state", "s5_bind", kind="experimental",
                                   k=12, n_objects=12, n_objects_active=12,
                                   coupled=False, query_arm="state", stream_name="s5_bind_v2",
-                                  no_pin=True,
+                                  no_pin=True, q_tail=0.1,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     "s5_bind_v2_bind":  TaskSpec("s5_bind_v2_bind", "s5_bind", kind="experimental",
                                   k=12, n_objects=12, n_objects_active=12,
                                   coupled=False, query_arm="bind", stream_name="s5_bind_v2",
-                                  no_pin=True,
+                                  no_pin=True, q_tail=0.1,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     "s5_bind_v2_map":   TaskSpec("s5_bind_v2_map", "s5_bind", kind="experimental",
                                   k=12, n_objects=12, n_objects_active=12,
                                   coupled=False, query_arm="state_all", stream_name="s5_bind_v2",
-                                  no_pin=True,
+                                  no_pin=True, q_tail=0.1,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     # The from-scratch operating point: k=6, m=6, shorter streams, and per-EVENT state
     # checkpoints (event_trace — the whole state after every event, the supervision density
     # that formed s5 locally). A streaming model has no scratchpad, so its cost model is the
     # forward pass, which is the algorithm this construct forces in both regimes. Paired the
     # same way, on their own stream. Its operative floor reaches the 0.200 informed chance at
-    # the same L/k as the frontier point (measured n=3000, as a ratio to chance: L=32 1.66,
-    # L=48 1.08, L=64 1.04), so the scored lengths start at 48.
+    # the same L/k as the frontier point (measured n=3000, as a ratio to chance: L=32 1.51,
+    # L=48 1.12, L=64 1.13), so the scored lengths start at 48.
     "s5_bind_local_v2": TaskSpec("s5_bind_local_v2", "s5_bind", kind="experimental",
                                   k=6, n_objects=6, n_objects_active=6,
                                   coupled=True, query_arm="state",
-                                  stream_name="s5_bind_local_v2", event_trace=True, no_pin=True,
+                                  stream_name="s5_bind_local_v2", event_trace=True,
+                                  no_pin=True, q_tail=0.1,
                                   train_lengths=(16, 32), eval_lengths=(48, 64)),
     "s5_bind_local_v2_state": TaskSpec("s5_bind_local_v2_state", "s5_bind", kind="experimental",
                                         k=6, n_objects=6, n_objects_active=6,
                                         coupled=False, query_arm="state",
-                                        stream_name="s5_bind_local_v2", event_trace=True, no_pin=True,
+                                        stream_name="s5_bind_local_v2", event_trace=True,
+                                        no_pin=True, q_tail=0.1,
                                         train_lengths=(16, 32), eval_lengths=(48, 64)),
 }
 
@@ -1493,20 +1710,28 @@ RETIRED = {
 # ---- s5_bind: the coupling-DOSE ladder ---------------------------------------------------
 # rho_p = rho_b in {0, 0.25, 0.5, 0.75, 1} on the composed arm of the k=12 operating point:
 # the fraction of events whose second operand is named "at this point" rather than "at the
-# start". The top rung is s5_bind_v2 itself (every other field equal, same stream_name, so item
-# i is byte-identical), and the bottom rung renders every reference statically, which makes the
-# origin of a dose-response an identity control — at rho=0 the coupled and decoupled readings
-# of an item are the same string — rather than an assumption.
+# start".
+#
+# THE LADDER IS ONE ITEM STREAM READ FIVE WAYS. All five rungs set the same rho_ladder and
+# share stream_name="s5_bind_v2_lad", so the skeleton-first sampler (TaskSpec.rho_ladder)
+# gives index i the same world, the same events and the same two queries at every dose; the
+# five prompts differ only in which sentences say "at this point", at equal whitespace-token
+# counts, and gold is the only other thing that moves. A dose contrast is therefore
+# within-item. The bottom rung renders every reference statically, so the origin of a dose
+# response is an identity control — at rho=0 the coupled and decoupled readings of an item are
+# the same string — rather than an assumption. The top rung carries the composed cell's knobs
+# but is a different draw from s5_bind_v2, whose stream predates the paired sampler; the
+# ladder is read within itself, never against that cell item by item.
 #
 # Two measured properties fix what the ladder can be read for.
 #
 #   THE FLOOR MOVES WITH THE DOSE, and at the low end it takes most of the cell. Operative
-#   floor (factworld.validity.s5_bind_floors, n=250 test items) against 1/(k-1) = 0.091:
+#   floor (factworld.validity.s5_bind_floors, n=500 paired test items) against 1/(k-1) = 0.091:
 #       rho        0.0    0.25     0.5    0.75     1.0
-#       L=64     0.556   0.944   0.692   0.496   0.248
-#       L=192    0.236   0.592   0.164   0.108   0.116
-#   The low rungs are set by one_leg_B — feed B into P but never P into B — because when a
-#   quarter of the events are referenced, half the coupling already reproduces the answer.
+#       L=192    0.250   0.558   0.144   0.108   0.104
+#   and pin density is 0.0000 at every rung. The low rungs are set by one_leg_B — feed B into P
+#   but never P into B — because when a quarter of the events are referenced, half the coupling
+#   already reproduces the answer; the top two are set by stale_resolution at chance.
 #   Lowering the dose walks the cell continuously into its own decoupled reading, so headroom
 #   is a function of the dose. Only L=192 is registered: at L=64 four of the five rungs read
 #   0.496 or more, and a rung with 0.06 of headroom measures its floor.
@@ -1520,40 +1745,92 @@ RETIRED = {
 #   walks down the ladder: 0.80 / 0.74 / 0.65 / 0.60 at rho = 0.25 / 0.5 / 0.75 / 1, a slope of
 #   0.27 per unit dose, at a slip rate that leaves the decoupled component at 0.95. A slope in
 #   rho measures the cost of the cheapest algorithm; it is not by itself evidence about
-#   composition.
+#   composition. What the paired ladder adds is the per-ITEM contrast the between-item ladder
+#   could not support: at a fixed dose the skeleton fixes WHICH of an item's own references
+#   cross structures, so the number of load-bearing cross-structure resolutions varies at
+#   fixed load-bearing depth.
 #
-# The rungs are independent draws from one generator family, not one item stream read five
-# times: the dose is consumed inside the sampler's rejection loop and a rejected item redraws
-# the stated maps, so index i is a different world at each dose (0 of 60 prompts identical at
-# k=12/L=64). Dose comparisons across rungs are between-item.
+# WHAT SEPARATES COMPOSITION FROM STEP COUNT, AND WHAT DOES NOT.
+#
+#   MATCHED STEP COUNT DOES NOT. Split the answer's backward dataflow slice under the cheapest
+#   correct algorithm into the ops it actually depends on: at k=12/L=192/rho=1 that is 213 of
+#   the 676 steps, because the forward pass must materialise B before it knows which of it the
+#   query needs. The decoupled whole-map arm's slice is ALL of its steps. Matched on steps at
+#   ~700, an executor with no composition-specific failure — one per-op slip rate, nothing
+#   else — already reads acc(map) - acc(composed) = -0.385 scoring the map whole and +0.178
+#   scoring it per slot: the null offset is larger than any composition effect and its SIGN is
+#   a scoring choice. Read against the SLICE instead, one accuracy-vs-slice law fits both arms:
+#   at a 0.002 slip rate it misses the composed arm by -0.022 and the whole-map arm by -0.026,
+#   so the arm difference it leaves is 0.004. The two matchings cannot be satisfied at once —
+#   the composed arm's slice/steps ratio is 0.31 and every uncomposed arm of this family is at
+#   1.0 — so an arm difference prices whichever cost variable was matched, not composition. A
+#   within-arm regression of accuracy on steps says the same: at one slip rate the per-step
+#   log-survival slope is -6.8e-4 on the composed arm and -21.8e-4 on the uncomposed one, 3.2x
+#   apart with no composition deficit anywhere. The ladder makes
+#   the same point without a second arm: every rung costs 677.1 steps, and the
+#   composition-free executor still walks 0.901 / 0.832 / 0.761 / 0.675 across
+#   rho = 0.25 / 0.5 / 0.75 / 1.
+#
+#   AN OP-TYPE CONTRAST WITHIN ONE CELL DOES. Fit P(correct) = q + (1-q)/k with
+#   q = exp(-(theta_w w + theta_z z + theta_x x)) over items, where w counts the slice's writes,
+#   z its resolutions that did NOT need the other structure's running state, and x those that
+#   did. z and x are the same operation in the same position of the same algorithm at the same
+#   cost; they differ only in where the value came from, so theta_x - theta_z is zero for any
+#   executor whose slip rate does not depend on that. Measured over 24 composition-free
+#   executor configurations (k=12 rho=1/0.75 L=192, k=6 L=64; slips propagating / read-only /
+#   first-slip-fatal / per-item-heterogeneous; two slip rates each) the statistic reads -0.021
+#   to +0.0004 and the one-sided likelihood-ratio test's type-I is 0.000-0.090 against a
+#   nominal 0.05. It is blind by design to a failure that garbles every dynamic reference
+#   alike, including the ones whose referenced cell has not moved: those ask nothing about
+#   composition, and a uniform surface failure on them is not evidence about it.
+#
+#   ITS POWER IS THE PROBLEM, AND IT SPLITS THE TWO REGIMES. Against an executor that resolves
+#   a cross-structure reference against the STATED map with probability gamma, power at
+#   alpha=0.05 is
+#       k=12, L=192, n=500 :  0.09 / 0.27 / 0.35 for deficits costing 0.00 / 0.36 / 0.54
+#       k=6,  L=64,  n=500 :  0.03 / 0.20 / 0.34 for deficits costing 0.00 / 0.12 / 0.22
+#       k=6,  L=64,  n=5000:  0.02 / 0.81 / 0.99 for the same three
+#   Nothing in the construct lifts the k=12 curve: greedy selection of the most informative
+#   (item, query) pairs — the strongest lever that still conditions on the item alone — moves
+#   the contrast's standard error from 0.0054 to 0.0026, worth about 4x the sample size. So the
+#   statistic is an instrument for the from-scratch regime, where thousands of items are free,
+#   and not for the frontier regime, where a few hundred is the budget.
 #
 # The k=6 operating point has no ladder: its longest scored stream is 48 events, where the five
-# rungs read 0.488 / 0.852 / 0.604 / 0.320 / 0.228 against a 0.200 chance level.
+# rungs read 0.488 / 0.852 / 0.604 / 0.320 / 0.228 against a 0.200 chance level. The op-type
+# contrast needs no ladder — it runs on any coupled cell, including s5_bind_local_v2 itself.
+_S5_BIND_LADDER = (0.0, 0.25, 0.5, 0.75, 1.0)
+
 CALIBRATION = {
-    "s5_bind_v2_rho00":  TaskSpec("s5_bind_v2_rho00", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
-                                   rho_p=0.0, rho_b=0.0,
-                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+    "s5_bind_v2_lad00":  TaskSpec("s5_bind_v2_lad00", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
+                                   rho_p=0.0, rho_b=0.0, rho_ladder=_S5_BIND_LADDER,
+                                   coupled=True, query_arm="state",
+                                   stream_name="s5_bind_v2_lad",
                                    train_lengths=(16, 32), eval_lengths=(192,)),
-    "s5_bind_v2_rho25":  TaskSpec("s5_bind_v2_rho25", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
-                                   rho_p=0.25, rho_b=0.25,
-                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+    "s5_bind_v2_lad25":  TaskSpec("s5_bind_v2_lad25", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
+                                   rho_p=0.25, rho_b=0.25, rho_ladder=_S5_BIND_LADDER,
+                                   coupled=True, query_arm="state",
+                                   stream_name="s5_bind_v2_lad",
                                    train_lengths=(16, 32), eval_lengths=(192,)),
-    "s5_bind_v2_rho50":  TaskSpec("s5_bind_v2_rho50", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
-                                   rho_p=0.5, rho_b=0.5,
-                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+    "s5_bind_v2_lad50":  TaskSpec("s5_bind_v2_lad50", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
+                                   rho_p=0.5, rho_b=0.5, rho_ladder=_S5_BIND_LADDER,
+                                   coupled=True, query_arm="state",
+                                   stream_name="s5_bind_v2_lad",
                                    train_lengths=(16, 32), eval_lengths=(192,)),
-    "s5_bind_v2_rho75":  TaskSpec("s5_bind_v2_rho75", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
-                                   rho_p=0.75, rho_b=0.75,
-                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+    "s5_bind_v2_lad75":  TaskSpec("s5_bind_v2_lad75", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
+                                   rho_p=0.75, rho_b=0.75, rho_ladder=_S5_BIND_LADDER,
+                                   coupled=True, query_arm="state",
+                                   stream_name="s5_bind_v2_lad",
                                    train_lengths=(16, 32), eval_lengths=(192,)),
-    "s5_bind_v2_rho100": TaskSpec("s5_bind_v2_rho100", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True,
-                                   rho_p=1.0, rho_b=1.0,
-                                   coupled=True, query_arm="state", stream_name="s5_bind_v2",
+    "s5_bind_v2_lad100": TaskSpec("s5_bind_v2_lad100", "s5_bind", kind="experimental",
+                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
+                                   rho_p=1.0, rho_b=1.0, rho_ladder=_S5_BIND_LADDER,
+                                   coupled=True, query_arm="state",
+                                   stream_name="s5_bind_v2_lad",
                                    train_lengths=(16, 32), eval_lengths=(192,)),
 }
 

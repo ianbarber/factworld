@@ -158,11 +158,14 @@ def test_backhop_is_reported_but_not_registered_as_an_adversary():
     assert operative_floor(floors) == 0.20
 
 
-def test_the_recency_window_and_the_pin_chain_are_registered_s5_bind_floors():
+def test_the_truncation_family_and_the_pin_chain_are_registered_s5_bind_floors():
     """Both families that could set the mutual-reference floor are registered.
 
-    The recency windows simulate the task exactly from the stated maps over only the last
-    fraction of the stream; the family is monotone in its cut — cut 1.0 is the oracle by
+    The truncation family simulates the task exactly over T = f*L of its L events — the last T
+    (window_f, carrying the stated maps in at the cut) or the first T (prefix_f, reading the
+    true maps out at the cut). BOTH halves are registered at every budget: at a given f they pay
+    the same T events, so registering one and not the other prices the same purchase differently
+    at the two ends of the stream. Each half is monotone in its cut — cut 1.0 is the oracle by
     construction — so its max is always the largest cut and never a selection statistic, which
     is what separates it from the pointer-map fixed-offset family. The pin chain is the
     zero-state policy that reads the give -> swap reference pair, and it is what the window
@@ -178,14 +181,16 @@ def test_the_recency_window_and_the_pin_chain_are_registered_s5_bind_floors():
         S5_BIND_CHANCE_ROWS,
         S5_BIND_COUPLED_ONLY_ROWS,
         S5_BIND_ROWS,
+        S5_BIND_TRUNCATION_ROWS,
         S5_BIND_WINDOWS,
         s5_bind_floors,
         s5_bind_operative_floor,
         s5_bind_pin_density,
     )
 
-    windows = tuple(r for r in S5_BIND_ROWS if r.startswith("window_"))
-    assert len(windows) == len(S5_BIND_WINDOWS)
+    windows = tuple(r for r in S5_BIND_ROWS if r.startswith(("window_", "prefix_")))
+    assert windows == S5_BIND_TRUNCATION_ROWS
+    assert len(windows) == 2 * len(S5_BIND_WINDOWS)
     assert set(windows) <= set(S5_BIND_ADVERSARIES)
     assert "pin_chain" in S5_BIND_ADVERSARIES
     assert set(S5_BIND_CHANCE_ROWS) <= set(S5_BIND_ADVERSARIES)
@@ -198,6 +203,10 @@ def test_the_recency_window_and_the_pin_chain_are_registered_s5_bind_floors():
     assert op >= fl["uniform_non_initial"]                # the chance row is registered
     assert op <= 1.6 * fl["uniform_non_initial"]
     assert fl["pin_chain"] <= fl["uniform_non_initial"]
+    # both halves of the truncation family land there too, which is the property the query
+    # gates buy: the object's resolving write makes the head load-bearing, q_tail the tail
+    for row in S5_BIND_TRUNCATION_ROWS:
+        assert fl[row] <= 1.6 * fl["uniform_non_initial"], f"{row}: {fl[row]:.4f}"
     # the same cell with the channel open: the window rows lift far off chance and the
     # zero-state policy reads more than twice it
     open_fl = s5_bind_floors(generate(spec.scaled(no_pin=False), "test", n=400,

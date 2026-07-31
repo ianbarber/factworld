@@ -20,12 +20,13 @@ For every canonical task, certify that no shallow baseline clears floor on the h
     so its null is uniform-over-non-start and a max over it measures selection.
   - SHALLOW-ADVERSARY floor (s5_bind): the largest registered mutual-reference policy
     (factworld.validity.S5_BIND_ADVERSARIES) — the coupling-blind rows, the wrong-time row, the
-    zero-state pin chain, the stated/one-hop rows, and the recency-window family. The window
-    rows enter the GATE, and the operative floor, only on a coupled rendering: a windowed policy
-    still maintains both maps, so it is cheaper than the task exactly where the task's own
-    cheapest correct algorithm reads the whole stream, which is the coupled arm. On a decoupled
-    arm the retrieval component is one content-addressed lookup, a windowed policy is more
-    expensive than the task rather than a shortcut, and the row reads 1.000 by doing the work —
+    zero-state pin chain, the stated/one-hop rows, and the truncation family at matched budgets
+    (window_f keeps the last f*L events, prefix_f the first f*L). The truncation rows enter the
+    GATE, and the operative floor, only on a coupled rendering: a truncated policy still
+    maintains both maps, so it is cheaper than the task exactly where the task's own cheapest
+    correct algorithm reads the whole stream, which is the coupled arm. On a decoupled arm the
+    retrieval component is one content-addressed lookup, a truncated policy is more expensive
+    than the task rather than a shortcut, and the rows read ~1.000 by doing the work —
     measured, printed, and neither gated nor counted. Every row is printed for every cell in the
     s5_bind floor block below the table, next to the operative floor and its ratio to the
     informed chance 1/(k-1): with TaskSpec.no_pin closing the state-free reset channel that
@@ -52,6 +53,7 @@ from factworld.validity import (  # noqa: E402
     S5_BIND_ADVERSARIES,
     S5_BIND_CHANCE_ROWS,
     S5_BIND_ROWS,
+    S5_BIND_TRUNCATION_ROWS,
     S5_CHAIN_ADVERSARIES,
     S5_CHAIN_CHANCE_ROWS,
     comm_shallow_accuracy,
@@ -83,9 +85,9 @@ S5_CHAIN_SHORTCUTS = tuple(n for n in S5_CHAIN_ADVERSARIES if n not in S5_CHAIN_
 # enough to put it in this column, and a row that cannot set a floor cannot enter the gate.
 S5_BIND_FAMILIES = ("s5_bind",)
 S5_BIND_SHORTCUTS = tuple(n for n in S5_BIND_ADVERSARIES if n not in S5_BIND_CHANCE_ROWS)
-# The recency-window rows gate only where the task's own cheapest correct algorithm reads the
-# whole stream — the coupled rendering. See the module docstring.
-S5_BIND_WINDOW_ROWS = tuple(n for n in S5_BIND_ROWS if n.startswith("window_"))
+# The truncation rows — both halves of the family — gate only where the task's own cheapest
+# correct algorithm reads the whole stream, i.e. the coupled rendering. See the module docstring.
+S5_BIND_WINDOW_ROWS = S5_BIND_TRUNCATION_ROWS
 
 
 def positional_pred(prompt: str, ans_type: str, which: str):
@@ -162,11 +164,11 @@ def main():
         print(f"\n  s5_bind registered floors (n={N} at eval_lengths[-1]; "
               f"'*' = enters the gate, 'op' = the number a score is read against, "
               f"'op/ch' = op over the informed chance 1/(k-1))")
-        print("    " + f"{'task':<24}{'L':>5}" + "".join(f"{r[:10]:>12}" for r in S5_BIND_ROWS)
+        print("    " + f"{'task':<24}{'L':>5}" + "".join(f"{r[:10]:>11}" for r in S5_BIND_ROWS)
               + f"{'op':>9}{'op/ch':>8}")
         for name, (fl, op, gated, L, k) in bind_rows.items():
             cells = "".join(
-                (f"{fl[r]:>11.3f}{'*' if r in gated else ' '}" if r in fl else f"{'—':>12}")
+                (f"{fl[r]:>10.3f}{'*' if r in gated else ' '}" if r in fl else f"{'—':>11}")
                 for r in S5_BIND_ROWS)
             ratio = op / fl["uniform_non_initial"] if "uniform_non_initial" in fl else None
             print(f"    {name:<24}{L:>5}" + cells + f"{op:>9.3f}"

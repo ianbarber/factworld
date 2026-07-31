@@ -42,10 +42,13 @@ from factworld.validity import (  # noqa: E402
     S5_BIND_CHANCE_ROWS,
     S5_BIND_COUPLED_ONLY_ROWS,
     S5_BIND_ROWS,
+    S5_BIND_TRUNCATION_ROWS,
+    S5_BIND_WINDOWS,
     operative_floor,
     s5_bind_floors,
     s5_bind_operative_floor,
     s5_bind_pin_density,
+    s5_bind_preds,
     s5_bind_read,
     _sb_answer,
     _sb_pin_chain,
@@ -57,7 +60,7 @@ ARMS = ("s5_bind_v2", "s5_bind_v2_state", "s5_bind_v2_bind", "s5_bind_v2_map")
 LOCAL = ("s5_bind_local_v2", "s5_bind_local_v2_state")
 ALL = ARMS + LOCAL
 COUPLING_BLIND = ("stale_resolution", "one_leg_B", "one_leg_P", "final_state_resolution")
-WINDOWS = tuple(r for r in S5_BIND_ROWS if r.startswith("window_"))
+WINDOWS = S5_BIND_TRUNCATION_ROWS
 
 # The operative floor is a MAX over a dozen registered rows, so at a finite n it carries an
 # upward selection bias of order the largest row's standard error even when every row sits at
@@ -70,12 +73,12 @@ FLOOR_RATIO_MAX = 1.45
 
 # Frozen streams: same (spec, split, length, idx) -> identical example, forever.
 GOLDENS = {
-    "s5_bind_v2": {128: "14c5b489f6b1ec00", 192: "ceb08d301107cbf2", 256: "23bbf13c6895608a"},
-    "s5_bind_v2_state": {128: "c33ce6e53dcf5da7", 192: "7d4556b0ac54cd42", 256: "ce634131e5e3356f"},
-    "s5_bind_v2_bind": {128: "ca4458320ac62191", 192: "dc07072a09427f6e", 256: "ef1e48662404bcf3"},
-    "s5_bind_v2_map": {128: "464ff5156aedf178", 192: "dad7cbd3874ac57b", 256: "f0d5334b0476ec19"},
-    "s5_bind_local_v2": {48: "b6f519744303b318", 64: "2c27c6f0b438524b"},
-    "s5_bind_local_v2_state": {48: "2827950081ff7857", 64: "456a7ee79eb09340"},
+    "s5_bind_v2": {128: "95db0338a0567784", 192: "153edc1c97dd74e5", 256: "7c6e8f1770d25d56"},
+    "s5_bind_v2_state": {128: "421f23d9a7c0b923", 192: "1908f2626443fe92", 256: "69f5b92ae40ae729"},
+    "s5_bind_v2_bind": {128: "ca4458320ac62191", 192: "cf214b641852abf7", 256: "907208d3458f8ec6"},
+    "s5_bind_v2_map": {128: "464ff5156aedf178", 192: "d1e56e324b005fa1", 256: "4d013e8e5680ea10"},
+    "s5_bind_local_v2": {48: "03533f8c242232cf", 64: "91a0056a1c2976ba"},
+    "s5_bind_local_v2_state": {48: "afd55d6129af10f9", 64: "8a956658af65892a"},
 }
 
 
@@ -221,16 +224,21 @@ def test_query_gates_hold_on_every_item():
             P0inv = {v: k for k, v in read["P0"].items()}
             Pinv = dict(P0inv)
             P = dict(read["P0"])
-            touched = 0
-            for k, x, y, dyn in events:
+            touched, last = 0, -1
+            for i, (k, x, y, dyn) in enumerate(events):
                 if k == "swap":
                     b = (B if dyn else read["B0"])[y]
-                    touched += int(q_state in (x, b))
+                    if q_state in (x, b):
+                        touched += 1
+                        last = i
                     P[x], P[b] = P[b], P[x]
                     Pinv = {v: kk for kk, v in P.items()}
                 else:
                     B[x] = (Pinv if dyn else P0inv)[y]
             assert touched == e.meta["touch"] >= 2
+            # and its LAST carrier event is inside the final q_tail of the stream, so the
+            # events a prefix policy discards are load-bearing (TaskSpec.q_tail)
+            assert last >= L - max(1, round(spec.q_tail * L)), (name, last)
             if spec.query_arm == "state":                 # and does not end where it started
                 assert read["P0"][q_state] != e.answer.rstrip(".")
             # the bind query: >= 2 writes and the resolving one inside [0.1L, 0.75L]
@@ -469,6 +477,70 @@ def test_no_pin_is_set_on_the_family_and_defaults_off_everywhere_else():
             assert spec.no_pin is (spec.family == "s5_bind"), name
 
 
+def test_the_truncation_family_is_registered_at_matched_budgets():
+    """Truncation is a two-sided family and both sides pay the same price.
+
+    window_f plays the LAST T = f*L events from the stated maps; prefix_f plays the FIRST T
+    exactly and reads the true maps out there. Registering one half and not the other prices
+    the same T events differently at the two ends of the stream, which is what left prefix_90
+    unregistered at 4x the operative floor.
+    """
+    assert len(S5_BIND_TRUNCATION_ROWS) == 2 * len(S5_BIND_WINDOWS)
+    for f in S5_BIND_WINDOWS:
+        tag = int(round(f * 100))
+        assert f"window_{tag}" in S5_BIND_ADVERSARIES
+        assert f"prefix_{tag}" in S5_BIND_ADVERSARIES
+    spec = TK.CANONICAL["s5_bind_v2"]
+    for e in TK.generate(spec, "test", n=20, length=64):
+        read = s5_bind_read(e.prompt)
+        preds = s5_bind_preds(e.prompt)
+        L = len(read["events"])
+        for f in S5_BIND_WINDOWS:
+            T, tag = max(1, int(round(f * L))), int(round(f * 100))
+            assert preds[f"window_{tag}"] == _sb_answer(
+                read, _sb_run(read, "surface", start=L - T))
+            assert preds[f"prefix_{tag}"] == _sb_answer(
+                read, _sb_run(read, "surface", end=T))
+
+
+def test_q_tail_closes_the_prefix_half():
+    """The defect the gate closes, measured on the same cell with the knob off and on.
+
+    The state gate asked that the queried agent MOVE but never said when, so its carrier chain
+    typically finished mid-stream: simulating the task exactly and stopping 10% early was simply
+    right on 45% of items at L=128, against an operative floor of 0.098. With q_tail the last
+    carrier event is inside the final decile — the events that policy discards — and every
+    prefix cut falls to chance or below.
+    """
+    for name in ("s5_bind_v2", "s5_bind_local_v2"):
+        spec = TK.CANONICAL[name]
+        assert spec.q_tail == 0.1
+        chance = 1.0 / (spec.k - 1)
+        L = spec.eval_lengths[0]
+        rows = {}
+        for gated, s in ((False, spec.scaled(q_tail=0.0)), (True, spec)):
+            rows[gated] = s5_bind_floors(TK.generate(s, "test", n=N_FLOOR, length=L), spec.k)
+        assert rows[False]["prefix_90"] > 2.0 * chance, \
+            f"{name}: the hole is not reproduced ({rows[False]['prefix_90']:.4f})"
+        for row in S5_BIND_TRUNCATION_ROWS:
+            assert rows[True][row] <= FLOOR_RATIO_MAX * chance, \
+                f"{name}: {row} {rows[True][row]:.4f} vs chance {chance:.4f}"
+
+
+def test_q_tail_is_set_on_the_family_and_defaults_off_everywhere_else():
+    """Appended and defaulted, so the gate moved only this family's streams."""
+    assert TK.TaskSpec("x", "s5_bind").q_tail == 0.0
+    for reg in (TK.CANONICAL, TK.RETIRED, TK.CALIBRATION):
+        for name, spec in reg.items():
+            assert spec.q_tail == (0.1 if spec.family == "s5_bind" else 0.0), name
+    # the gate is a bound on an INDEX, matched to the tightest registered truncation budget:
+    # exactly the events prefix_90 discards
+    for L in (48, 64, 128, 192, 256):
+        spec = TK.CANONICAL["s5_bind_v2"]
+        assert TK._s5_bind_tail_lo(spec, L) == max(1, int(round(0.9 * L)))
+        assert TK._s5_bind_tail_lo(spec.scaled(q_tail=0.0), L) == -1
+
+
 def test_coupling_blind_policies_reach_chance_on_the_long_cells():
     """Resolving every reference against the stated maps — the decoupled algorithm run on a
     coupled item — has to be worth nothing, or the composed cell is the component cell."""
@@ -498,6 +570,49 @@ def test_coupled_only_rows_are_dropped_on_a_decoupled_rendering():
         assert _sb_answer(read, _sb_run(read, "stale")) == e.answer
     for e in TK.generate(TK.CANONICAL["s5_bind_v2_bind"], "test", n=100, length=64):
         assert _sb_pin_chain(s5_bind_read(e.prompt)) == e.answer
+
+
+def test_the_truncation_rows_are_measured_but_not_a_floor_on_a_decoupled_cell():
+    """A floor row has to be CHEAPER than the task. On the decoupled retrieval arm the task is
+    one content-addressed lookup and a truncated pass is 0.9L events, so both halves read ~1.000
+    by doing an order of magnitude more work than the cell asks for. They stay measured and
+    printed; they may not set the number the score is read against."""
+    spec = TK.CANONICAL["s5_bind_v2_bind"]
+    fl = s5_bind_floors(TK.generate(spec, "test", n=100, length=128), spec.k)
+    assert not spec.coupled
+    assert fl["prefix_90"] > 0.9 and fl["window_90"] > 0.9
+    op = s5_bind_operative_floor(fl, coupled=False)
+    assert op <= 1.5 / (spec.k - 1), f"a truncation row set the component floor ({op:.3f})"
+    assert s5_bind_operative_floor(fl, coupled=True) > 0.9
+
+
+def test_the_anti_pin_guess_is_registered_chance_and_is_not_sampling_noise():
+    """no_pin makes pin_chain an ANTI-predictor — the sampler rejects the very event on which it
+    would have been right — so a guesser who strikes out its answer as well as the stated one is
+    choosing uniformly over k-2 answers that carry more than (k-2)/(k-1) of the mass. The row is
+    CHANCE, not a shortcut: its edge comes from the generator's rejection rule rather than from
+    the item, so it enters the number a score is read against and not the suite gate.
+
+    It is not a small-sample artifact either. The row is computed in closed form per item, so its
+    only sampling error is that of pin_chain's own accuracy, and pin_chain sits many standard
+    errors BELOW chance on every scored cell.
+    """
+    from math import sqrt  # noqa: PLC0415
+
+    assert "uniform_anti_pin" in S5_BIND_CHANCE_ROWS
+    assert "uniform_anti_pin" in S5_BIND_ADVERSARIES
+    for name in ("s5_bind_v2", "s5_bind_local_v2"):
+        spec = TK.CANONICAL[name]
+        k, chance = spec.k, 1.0 / (spec.k - 1)
+        n = N_FLOOR
+        fl = s5_bind_floors(TK.generate(spec, "test", n=n, length=spec.eval_lengths[-1]), k)
+        anti, pin = fl["uniform_anti_pin"], fl["pin_chain"]
+        assert anti > chance
+        # bounded above by striking one certainly-wrong answer — it cannot run away
+        assert anti <= chance * (k - 1) / (k - 2) + 1e-9
+        # and the reason is measured: pin_chain is many SE below chance, not near it
+        se = sqrt(chance * (1 - chance) / n)
+        assert (chance - pin) / se > 3.0, f"{name}: pin_chain {pin:.4f} vs chance {chance:.4f}"
 
 
 def test_the_whole_map_readout_has_its_own_chance_row():
