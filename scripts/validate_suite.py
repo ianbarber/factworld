@@ -25,13 +25,12 @@ For every canonical task, certify that no shallow baseline clears floor on the h
     own cheapest correct algorithm carries P, its inverse and B. That rule is what excludes the
     block-drop family — window_f keeps the last f*L events, prefix_f the first f*L, and both are
     positions of one continuum whose members all carry both maps. Those rows are measured and
-    printed as diagnostics, marked '†', and are separately CHECKED to sit at chance on a coupled
-    cell: TaskSpec.chain_max_gap gates the stream so that every block of width >= chain_max_gap*L
-    drops an event that can change the answer, so the class exclusion is not carrying a live
-    policy. Every row is printed for every cell in the s5_bind floor block below the table, next
-    to the operative floor and its ratio to the informed chance 1/(k-1): with TaskSpec.no_pin
-    closing the state-free reset channel that ratio is ~1 on every scored cell, and a cell that
-    drifts off it has an open shortcut.
+    printed as diagnostics, marked '†'. The SOURCE-STRUCTURE rung (s5_bind_v3) sharpens the rule
+    to a PARETO one — a row may set a floor only if it is strictly cheaper than the cell's
+    cheapest correct algorithm in live slots AND no more expensive in steps — which also
+    excludes a demand-driven resolver that the slots-only rule wrongly admitted. Every row is
+    printed for every cell in the floor blocks below the table, next to the operative floor and
+    its ratio to the informed chance 1/(k-1).
 A task PASSES if majority, recency, first-position and (where defined) strong-recency accuracy are
 all well below 0.5 (near the 1/#answers floor). The pointer-map families answer over a much larger
 space than 2, so their column is gated against their own chance level instead: no shallow policy
@@ -52,6 +51,14 @@ from factworld import tasks as TK          # noqa: E402
 from factworld.render import Renderer, classify  # noqa: E402  (atomic-token type by prefix: g/v/r/o/...)
 from factworld.validity import (  # noqa: E402
     S5_BIND_ADVERSARIES,
+    S5_BIND_V3_CHANCE_ROWS,
+    S5_BIND_V3_ROWS,
+    S5_BIND_V3_TRUNCATION_ROWS,
+    s5_bind_v3_classify,
+    s5_bind_v3_floors,
+    s5_bind_v3_operative_floor,
+    s5_bind_v3_shape,
+    s5_bind_v3_is_named,
     S5_BIND_CHANCE_ROWS,
     S5_BIND_MAP_CARRYING_ROWS,
     S5_BIND_ROWS,
@@ -87,12 +94,19 @@ S5_CHAIN_SHORTCUTS = tuple(n for n in S5_CHAIN_ADVERSARIES if n not in S5_CHAIN_
 # enough to put it in this column, and a row that cannot set a floor cannot enter the gate.
 S5_BIND_FAMILIES = ("s5_bind",)
 S5_BIND_SHORTCUTS = tuple(n for n in S5_BIND_ADVERSARIES if n not in S5_BIND_CHANCE_ROWS)
-# The map-carrying rows are out of the floor by class, so they are checked instead of gated: on a
-# COUPLED cell with the chain gate on, TaskSpec.chain_max_gap makes every block of width >=
-# chain_max_gap*L drop an event on the queried agent's dependency chain, so each of them has to
-# sit at chance. A cell where one does not has a live policy the class rule would be hiding.
+# The map-carrying rows are out of the floor by class, so they are checked instead of gated: a
+# cell where one of them reads far off chance has a live policy the class rule would be hiding.
 S5_BIND_DIAGNOSTIC_ROWS = S5_BIND_TRUNCATION_ROWS
 S5_BIND_DIAGNOSTIC_MAX = 2.0                     # multiples of the informed chance 1/(k-1)
+
+# The SOURCE-STRUCTURE rung. Which rows enter the gate is decided by the PARETO CLASS RULE
+# (factworld.validity.s5_bind_v3_classify: strictly cheaper than the cell's cheapest correct
+# algorithm in live slots, no more expensive in steps), evaluated at the cell's own shape — so
+# registering a row in factworld.validity reaches this column with no edit here, and a row that
+# cannot set a floor cannot enter the gate either. The class-excluded rows are printed as
+# diagnostics and are separately checked to sit within S5_BIND_DIAGNOSTIC_MAX of chance: the
+# exclusion is a cost argument, and a live policy hiding behind it would show up there.
+S5_BIND_V3_SHORTCUTS = tuple(n for n in S5_BIND_V3_ROWS if n not in S5_BIND_V3_CHANCE_ROWS)
 
 
 def positional_pred(prompt: str, ans_type: str, which: str):
@@ -114,6 +128,7 @@ def main():
     print(f"  {'task':<22} {'#ans':>5} {'floor':>6} {'majority':>9} {'recency':>8} {'firstpos':>9} {'strongrec':>10}   verdict")
     all_ok = True
     bind_rows = {}
+    bind_v3_rows = {}
     for name, spec in TK.CANONICAL.items():
         test = TK.generate(spec, "test", n=N, length=spec.eval_lengths[-1])
         # normalize answers so the check is format-agnostic (attached `.` -> ` .`)
@@ -148,6 +163,27 @@ def main():
             strongrec = max([fl[n] for n in S5_CHAIN_SHORTCUTS if n in fl], default=0.0)
             ok &= strongrec < 2.0 * floor
             srec_col = f"{strongrec:>10.3f}"
+        elif spec.family in S5_BIND_FAMILIES and spec.source_ablation:
+            # source-structure rung: every registered policy, recomputed from these exact items,
+            # classified by cost at this cell's own shape.
+            m = spec.n_objects_active
+            ns, ng = s5_bind_v3_shape(test)
+            named = s5_bind_v3_is_named(test)
+            fl = s5_bind_v3_floors(test, spec.k, m)
+            cls = s5_bind_v3_classify(spec.k, m, ns, ng, named)
+            gated = [n for n in S5_BIND_V3_SHORTCUTS if n in fl and cls[n]]
+            strongrec = max([fl[n] for n in gated], default=0.0)
+            ok &= strongrec < 0.5
+            srec_col = f"{strongrec:>10.3f}"
+            # The class exclusion is a cost argument; on the COMPOSED cell a live policy hiding
+            # behind it would show up in the truncation diagnostics, so they are checked there.
+            # On a component cell a truncation that keeps the load-bearing end IS the component's
+            # own algorithm at a discount, and it costs k + m slots against the component's 2.
+            if not named:
+                lim = S5_BIND_DIAGNOSTIC_MAX / max(1, spec.k - 1)
+                ok &= all(fl[n] < lim for n in S5_BIND_V3_TRUNCATION_ROWS if n in fl)
+            bind_v3_rows[name] = (fl, s5_bind_v3_operative_floor(fl, spec.k, m, ns, ng, named),
+                                  gated, spec.eval_lengths[-1], spec.k)
         elif spec.family in S5_BIND_FAMILIES:
             # mutual-reference rung: every registered policy, recomputed from these exact items.
             fl = s5_bind_floors(test, spec.k)
@@ -157,7 +193,7 @@ def main():
             srec_col = f"{strongrec:>10.3f}"
             # the class-excluded rows are not a floor, but on a gated coupled cell they must be
             # dead: the chain gate is what earns the exclusion.
-            if spec.coupled and spec.chain_max_gap:
+            if spec.coupled:
                 lim = S5_BIND_DIAGNOSTIC_MAX / max(1, spec.k - 1)
                 ok &= all(fl[n] < lim for n in S5_BIND_DIAGNOSTIC_ROWS if n in fl)
             bind_rows[name] = (fl, s5_bind_operative_floor(fl, coupled=spec.coupled), gated,
@@ -184,6 +220,20 @@ def main():
                 for r in S5_BIND_ROWS)
             ratio = op / fl["uniform_non_initial"] if "uniform_non_initial" in fl else None
             print(f"    {name:<24}{L:>5}" + cells + f"{op:>9.3f}"
+                  + (f"{ratio:>8.2f}" if ratio is not None else f"{'—':>8}"))
+    if bind_v3_rows:
+        print(f"\n  s5_bind_v3 registered floors (n={N} at eval_lengths[-1]; "
+              f"'*' = admitted by the Pareto class rule, so it enters the gate and may set the "
+              f"floor, '†' = class-excluded (ties the task on live slots, or pays more steps), "
+              f"'op' = the number a score is read against, 'op/ch' = op over the informed "
+              f"chance 1/(k-1))")
+        print("    " + f"{'task':<26}{'L':>5}"
+              + "".join(f"{r[:10]:>11}" for r in S5_BIND_V3_ROWS) + f"{'op':>9}{'op/ch':>8}")
+        for name, (fl, op, gated, L, k) in bind_v3_rows.items():
+            cells = "".join((f"{fl[r]:>10.3f}{'*' if r in gated else '†'}"
+                             if r in fl else f"{'—':>11}") for r in S5_BIND_V3_ROWS)
+            ratio = op / fl["uniform_non_initial"] if "uniform_non_initial" in fl else None
+            print(f"    {name:<26}{L:>5}" + cells + f"{op:>9.3f}"
                   + (f"{ratio:>8.2f}" if ratio is not None else f"{'—':>8}"))
     print(f"\nSUITE VALIDITY: {'PASS — no shallow/recency/position shortcut clears floor on any canonical task' if all_ok else 'FLAG — investigate'}")
     return all_ok

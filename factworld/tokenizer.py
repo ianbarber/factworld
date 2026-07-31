@@ -118,6 +118,14 @@ _STRUCTURAL_SEED = {
     # emitted too; "at the start"/"at this point" also occur mid-sentence in the give form
     # ("... whose role at the start is r5."), so the bare words are needed as well.
     "this", "point", "start", "end", "each", "who", "point.", "start.", "end?",
+    # source-structure family (s5_bind_v3): two maps INTO AGENTS, "g4 points to g9 at the
+    # start." / "o2 belongs to g7 at the start.", events "s0 swaps the pointers of g4 and the
+    # agent o2 belongs to at this point." / "s1 gives o3 to the agent g7 points to at this
+    # point.", and the queries "which agent does g4 point to at the end?" /
+    # "which agent does o2 belong to at the end?". The renderer probe reaches all of these;
+    # the words are seeded as well so a hand-built tokenizer over a world without objects
+    # still covers them.
+    "pointers", "points", "belongs", "belong", "which",
 }
 
 
@@ -298,6 +306,23 @@ class Tokenizer:
             yield renderer.render_query("s5bind_state", target=a)
             yield renderer.render_query("s5bind_bind", target=o)
             yield renderer.render_query("s5bind_state_all", targets=list(world.agents))
+
+        # source-structure (s5_bind_v3) — the two initial-condition lines, the four event
+        # forms (swap/give x reads-P/reads-B) and the three queries. The reference clauses
+        # are the only place in the suite that emits "points"/"belongs"/"pointers", and the
+        # queries the only place that emits "which"/"point"/"belong" in verb position.
+        if len(world.agents) >= 2 and world.objects:
+            a, b = world.agents[0], world.agents[1]
+            o = world.objects[0]
+            o2 = world.objects[1] if len(world.objects) > 1 else o
+            yield renderer.render_pointer(a, b)
+            yield renderer.render_belongs(o, a)
+            for kind, args in (("swap_ptr_by_p", (a, b)), ("swap_ptr_by_b", (a, o)),
+                               ("give_ptr_by_p", (o, b)), ("give_ptr_by_b", (o, o2))):
+                yield renderer.render_event(Event(kind, args), step="s0")
+            yield renderer.render_query("s5bind3_state", target=a)
+            yield renderer.render_query("s5bind3_bind", target=o)
+            yield renderer.render_query("s5bind3_state_all", targets=list(world.agents))
 
         # commutative-state — needs agents and dial positions.
         if world.agents and world.positions:

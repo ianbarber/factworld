@@ -633,14 +633,9 @@ def s5_chain_floors(examples, k: int, has_events: bool = True) -> dict[str, floa
 # TaskSpec.q_tail gates on the queried agent's last carrier event, and before that gate existed
 # prefix_90 read 0.45/0.37/0.29 at k=12/L=128/192/256 against a 0.098-0.117 operative floor.
 #
-# WHAT KILLS THEM, rather than merely declassifying them, is TaskSpec.chain_max_gap: from the
-# chain's first event on, the stream is gated to have no off-chain run as long as w_min, so
-# every block of width >= w_min drops an event that can change the answer. All six registered
-# budgets drop at least 0.1L and w_min is 0.05L (k=12) or 0.1L (k=6), so all six are dead as
-# well as declassified, and so is every unregistered member at those widths: over the same
-# 19 x 8 scan the best member at any width >= w_min reads 1.00-1.33x chance on every scored
-# cell. Narrower blocks are excluded by class alone and their residual is reported, not folded
-# in — see TaskSpec.chain_max_gap.
+# NO SAMPLER GATE STANDS BEHIND THE EXCLUSION, and none is needed. Four rounds were lost trying
+# to gate the family member by member; what closes it is the cost argument, applied to the whole
+# continuum at once. See the s5_bind_v3 block below for the rule in its final form.
 #
 # ON A DECOUPLED RENDERING they are not shortcuts at all: the state component costs a sparse
 # backward walk over one live symbol and the retrieval component costs three retrievals, so a
@@ -720,16 +715,9 @@ S5_BIND_ROWS = ("stale_resolution", "one_leg_B", "one_leg_P", "final_state_resol
 # every (position, width) with width < L, has W = 2k + m, so the whole continuum is excluded by
 # one rule rather than member by member.
 #
-# WHAT THIS EXCLUDES, AND WHAT PAYS FOR THE EXCLUSION. It excludes near-oracle policies — play
-# 0.99L events, carry both maps — which is right: they are the task, discounted. It must not
-# become a licence to ignore a cheap policy that happens to be expensive to describe, so the
-# exclusion is not left to stand on the cost argument alone. TaskSpec.chain_max_gap gates the
-# stream so that every block of width >= w_min = chain_max_gap * L drops an event on the queried
-# agent's dependency chain, which puts the whole width >= w_min half of the family at chance by
-# construction. On the registered cells the truncation rows are therefore excluded by class AND
-# dead: they are printed, and a suite check asserts they sit at chance. Blocks NARROWER than
-# w_min are excluded by class alone; scripts/probe_s5bind_block_drop_20260730.py measures that
-# residual, and it is reported rather than folded into the floor.
+# WHAT THIS EXCLUDES. Near-oracle policies — play 0.99L events, carry both maps — which is
+# right: they are the task, discounted. What the excluded continuum reads is measured and
+# reported rather than folded into the floor.
 #
 # The rows that carry a map. final_state_resolution needs the true final maps before it can
 # start, so it costs MORE than the task and could never have been a floor; the truncation rows
@@ -999,8 +987,7 @@ def s5_bind_block_drop(examples, width: float, pos: float) -> float:
 
     window_f is the member at pos 0 with width 1-f, prefix_f the member at pos 1. The family is
     continuous in both arguments and every member carries both maps, so no member is a floor row
-    (see S5_BIND_MAP_CARRYING_ROWS); this exists to CHECK that TaskSpec.chain_max_gap has killed
-    the half of it that the class rule would otherwise be excluding on cost alone.
+    (see S5_BIND_MAP_CARRYING_ROWS); this exists to MEASURE what the excluded continuum reads.
     """
     hits = n = 0
     for e in examples:
@@ -1055,8 +1042,8 @@ def s5_bind_runs(read: dict) -> tuple[int, int] | None:
 
     A block of width w misses the chain iff it fits inside one of these runs, so every width-w
     block that starts at or after the chain's first event hits it iff the SECOND number is < w.
-    That is the quantity TaskSpec.chain_max_gap bounds at sampling time; the first is left free
-    and reported, because bounding it is what hands a zero-state policy the answer.
+    The second number is the one a gate would have to bound; bounding the first hands a
+    zero-state policy the answer, which is why the family is closed by cost and not by a gate.
     """
     idx = s5_bind_chain(read)
     if idx is None:
@@ -1188,6 +1175,280 @@ def _fmt(report: dict) -> str:
     lines.append("")
     lines.append(f"GATE: {'PASSED' if report['passed'] else 'FAILED'}")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# s5_bind_v3 — the SOURCE-STRUCTURE family, and the Pareto floor class.
+#
+# WHAT A FLOOR ROW IS HERE. The construct claims the composed cell forces a forward pass
+# carrying BOTH structures. A floor row is a named way of not doing that. Which rows may set a
+# floor is decided by COST, not by accuracy — and not by live slots alone, which the earlier
+# rule used and which is unsound in both directions:
+#
+#   a W-only rule ADMITS a demand-driven resolver that carries no map — it resolves the query's
+#   dependencies recursively, re-walking the event list for each one, holding only a stack of
+#   frames. On the temporal construct that resolver was exactly correct (1.0000 at n=1000) with
+#   at most 25/18/14 live frames at k=12/32/48, FALLING in k, so a W-only rule set that cell's
+#   floor to 1.000. It separated from the task only on STEPS, by 5,100x. Measured here it is
+#   weaker but the argument is the same shape: memo-free and budgeted it reads 0.15-0.67x chance
+#   at every budget up to 25x the task's own steps at both scored cells, and only reaches 0.94 at
+#   the local cell at ~480x (scripts/probe_s5bind_v3_construct_20260731.py --stage demand).
+#   a W-only rule with a "no structure-sized state" reading EXCLUDES the block-drop continuum
+#   correctly, but only because every member carries both maps — it has nothing to say about a
+#   member that carried one.
+#
+# THE PARETO RULE, stated so it is checkable:
+#
+#     A ROW MAY SET A FLOOR IFF IT IS STRICTLY CHEAPER THAN THE CELL'S CHEAPEST CORRECT
+#     ALGORITHM IN LIVE SLOTS W, AND NO MORE EXPENSIVE IN STEPS S.
+#
+# Both halves are load-bearing and the tie-breaking is deliberate. A row that TIES on W is
+# holding everything the task holds; whatever else it does, it is the task at a constant-factor
+# discount, and that is exactly what the whole (position, width) block-drop continuum is — every
+# member carries P and B across its budget, so W = k + m for all of them and the continuum goes
+# out by ONE argument rather than member by member. A row that is cheaper in W but pays more in
+# S is buying its slots with time; the demand resolver is that case, and it is out.
+#
+# Costs are counted by ``factworld.composition`` against the convention stated there (one step =
+# a keyed header read, an event read, a map resolution, a map write, or a comparison — and a
+# backward walk IS charged for the events it scans and rejects).
+# ---------------------------------------------------------------------------
+S5_BIND_V3_ROWS = ("stated_reference", "one_structure_P", "one_structure_B",
+                   "final_state", "last_write_1hop", "initial_only",
+                   "window_90", "window_75", "window_50",
+                   "prefix_90", "prefix_75", "prefix_50",
+                   "uniform_non_initial", "uniform")
+S5_BIND_V3_CHANCE_ROWS = ("uniform_non_initial", "uniform")
+S5_BIND_V3_TRUNCATION_ROWS = tuple(r for r in S5_BIND_V3_ROWS
+                                   if r.startswith(("window_", "prefix_")))
+# Rows defined only where some event carries a REFERENCE. On a component cell every operand is
+# named, so each of these reproduces the oracle exactly and is dropped rather than reported.
+S5_BIND_V3_REFERENCE_ROWS = ("stated_reference", "one_structure_P", "one_structure_B",
+                             "final_state")
+S5_BIND_V3_WINDOWS = (0.9, 0.75, 0.5)
+
+
+def s5_bind_v3_row_cost(row: str, k: int, m: int, n_swap: int, n_give: int) -> tuple[int, int]:
+    """``(W, S)`` for one registered row, under the cost convention in factworld.composition.
+
+    The task's own cheapest correct algorithm is the forward pass carrying P and B:
+    ``W = k + m``, ``S = (k + m) + 6 n_swap + 3 n_give + 1``.
+    """
+    L = n_swap + n_give
+    if row in ("uniform", "uniform_non_initial", "initial_only"):
+        return 1, 2
+    if row == "last_write_1hop":
+        return 2, 2 * L + 2
+    if row in ("stated_reference", "one_structure_P"):
+        # carries P alone: a cross reference is a keyed read of the stated holder block
+        return k + 1, k + 6 * n_swap + n_give + 1
+    if row == "one_structure_B":
+        return m + 1, m + 3 * n_give + n_swap + 1
+    if row == "final_state":
+        # needs the true final maps before it can start: two passes, both maps, twice over
+        return 2 * (k + m), 2 * ((k + m) + 6 * n_swap + 3 * n_give + 1)
+    if row.startswith(("window_", "prefix_")):
+        f = int(row.split("_")[1]) / 100.0
+        return k + m, int((k + m) + f * (6 * n_swap + 3 * n_give) + 1)
+    raise KeyError(row)
+
+
+def pareto_eligible(w_row: int, s_row: int, w_task: int, s_task: int) -> bool:
+    """The class rule: strictly cheaper in live slots, no more expensive in steps."""
+    return w_row < w_task and s_row <= s_task
+
+
+def s5_bind_v3_task_cost(k: int, m: int, n_swap: int, n_give: int,
+                         named: bool = False) -> tuple[int, int]:
+    """``(W, S)`` for THIS CELL's cheapest correct algorithm.
+
+    The composed cell's is the forward pass carrying both maps. A COMPONENT cell renders its
+    second operand by name, so every event's identity is fixed on the surface and the cheapest
+    correct algorithm is the sparse backward carrier walk over one register — which is the whole
+    point of the component arms, and why the class rule has to be evaluated against the cell in
+    front of it rather than against the composed cell's cost everywhere.
+    """
+    if named:
+        L = n_swap + n_give
+        return 2, 2 * L + 2
+    return k + m, (k + m) + 6 * n_swap + 3 * n_give + 1
+
+
+def s5_bind_v3_classify(k: int, m: int, n_swap: int, n_give: int,
+                        named: bool = False) -> dict[str, bool]:
+    """Every registered row, classified by the Pareto rule at this cell's shape."""
+    wt, st = s5_bind_v3_task_cost(k, m, n_swap, n_give, named)
+    out = {}
+    for row in S5_BIND_V3_ROWS:
+        w, s = s5_bind_v3_row_cost(row, k, m, n_swap, n_give)
+        out[row] = pareto_eligible(w, s, wt, st)
+    return out
+
+
+def s5_bind_v3_preds(prompt: str, windows=S5_BIND_V3_WINDOWS) -> dict[str, str | None]:
+    """Every registered policy's answer for one rendered prompt, in canonical rendered form."""
+    from .composition import GIVE, SWAP, answer_of, read, replay
+
+    rec = read(prompt)
+    names = [n for n in S5_BIND_V3_ROWS if n not in S5_BIND_V3_CHANCE_ROWS]
+    if rec is None:
+        return {n: None for n in names}
+    evs = rec["events"]
+    L = len(evs)
+    exact = replay(rec)
+    out: dict[str, str | None] = {
+        "stated_reference": answer_of(rec, replay(rec, "stated")),
+        "one_structure_P": answer_of(rec, replay(rec, "P_live")),
+        "one_structure_B": answer_of(rec, replay(rec, "B_live")),
+        "initial_only": answer_of(rec, (dict(rec["P0"]), dict(rec["B0"]))),
+    }
+    out["final_state"] = (None if exact is None else
+                          answer_of(rec, _v3_final_pass(rec, exact)))
+    for f in windows:
+        T = max(1, int(round(f * L)))
+        out[f"window_{int(round(f * 100))}"] = answer_of(rec, replay(rec, drop=(0, L - T)))
+        out[f"prefix_{int(round(f * 100))}"] = answer_of(rec, replay(rec, drop=(T, L)))
+    out["last_write_1hop"] = None
+    kind, target = rec["query"]
+    if kind == "state":
+        for kd, tgt, ref, src in reversed(evs):
+            if kd == SWAP and tgt == target:
+                x = ref if src == "N" else (rec["P0"] if src == "P" else rec["B0"]).get(ref)
+                if x is not None and x in rec["P0"]:
+                    out["last_write_1hop"] = f"{rec['P0'][x]}."
+                break
+    elif kind == "bind":
+        for kd, tgt, ref, src in reversed(evs):
+            if kd == GIVE and tgt == target:
+                x = ref if src == "N" else (rec["P0"] if src == "P" else rec["B0"]).get(ref)
+                if x is not None:
+                    out["last_write_1hop"] = f"{x}."
+                break
+    return {n: out.get(n) for n in names}
+
+
+def _v3_final_pass(rec, final):
+    """Replay resolving every reference against the TRUE FINAL maps — a wrong-TIME policy, and
+    the one that costs more than the task rather than less."""
+    from .composition import SWAP
+
+    P, B = dict(rec["P0"]), dict(rec["B0"])
+    Pf, Bf = final
+    for kind, tgt, ref, src in rec["events"]:
+        x = ref if src == "N" else (Pf if src == "P" else Bf).get(ref)
+        if x is None:
+            return None
+        if kind == SWAP:
+            if tgt not in P or x not in P:
+                return None
+            P[tgt], P[x] = P[x], P[tgt]
+        else:
+            B[tgt] = x
+    return P, B
+
+
+def s5_bind_v3_floors(examples, k: int, m: int | None = None,
+                      windows=S5_BIND_V3_WINDOWS) -> dict[str, float]:
+    """Every registered row's accuracy on a list of source-structure ``tasks.Example``.
+
+    Recomputed from the exact deterministic items a cell scores. Which of these rows may SET the
+    cell's floor is the Pareto class rule (``s5_bind_v3_operative_floor``); the rest are printed
+    as diagnostics.
+
+    The reference-resolution rows are DROPPED on a component cell. A component renders every
+    second operand by name, so "resolve the references against the stated maps" and "carry one
+    structure" are both the exact algorithm there, and printing 1.000 as a floor would be a
+    correctness check wearing a floor's clothes.
+    """
+    from math import factorial
+
+    n = len(examples)
+    if not n:
+        return {}
+    names = [nm for nm in S5_BIND_V3_ROWS if nm not in S5_BIND_V3_CHANCE_ROWS]
+    hits: Counter = Counter()
+    defined: Counter = Counter()
+    is_all = False
+    for e in examples:
+        preds = s5_bind_v3_preds(e.prompt, windows=windows)
+        for nm in names:
+            if preds[nm] is not None:
+                defined[nm] += 1
+                hits[nm] += int(preds[nm] == e.answer)
+        if "each of" in e.prompt:
+            is_all = True
+    out = {nm: hits[nm] / n for nm in names if defined[nm]}
+    if s5_bind_v3_is_named(examples):
+        for nm in S5_BIND_V3_REFERENCE_ROWS:
+            out.pop(nm, None)
+    if is_all:
+        out["uniform"] = 1.0 / factorial(k)
+    else:
+        out["uniform_non_initial"] = 1.0 / max(1, k - 1)
+        out["uniform"] = 1.0 / k
+    return {nm: out[nm] for nm in S5_BIND_V3_ROWS if nm in out}
+
+
+def s5_bind_v3_shape(examples) -> tuple[int, int]:
+    """``(mean swaps, mean gives)`` over a cell's items — the shape the cost rule is evaluated
+    at, read back off the rendered prompts."""
+    from .composition import SWAP, read
+
+    sw = gv = n = 0
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is None:
+            continue
+        n += 1
+        s = sum(1 for x in rec["events"] if x[0] == SWAP)
+        sw += s
+        gv += len(rec["events"]) - s
+    return (round(sw / max(1, n)), round(gv / max(1, n)))
+
+
+def s5_bind_v3_is_named(examples) -> bool:
+    """Whether this cell renders every second operand by NAME — i.e. whether it is a component
+    arm. Read off the prompts, not off the spec."""
+    from .composition import read
+
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is not None:
+            return all(ev[3] == "N" for ev in rec["events"])
+    return False
+
+
+def s5_bind_v3_operative_floor(floors: dict[str, float], k: int, m: int,
+                               n_swap: int, n_give: int, named: bool = False) -> float | None:
+    """The number a source-structure cell has to clear: the max over the rows the Pareto class
+    rule ADMITS at this cell's shape. Rows that tie the task on live slots, or that pay more
+    steps, are diagnostics and never enter this max."""
+    ok = s5_bind_v3_classify(k, m, n_swap, n_give, named)
+    vals = [v for nm, v in floors.items() if ok.get(nm) and v is not None]
+    return max(vals) if vals else None
+
+
+def s5_bind_v3_block_drop(examples, width: float, pos: float) -> float:
+    """One member of the block-drop family: skip ``width * L`` events starting at
+    ``pos * (L - width * L)`` and play the rest exactly.
+
+    Every member carries both maps, so no member can be a floor row under the Pareto rule; this
+    exists to MEASURE what the excluded continuum actually reads, so the exclusion can be judged
+    rather than taken on faith.
+    """
+    from .composition import answer_of, read, replay
+
+    hits = n = 0
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is None:
+            continue
+        L = len(rec["events"])
+        w = max(1, int(round(width * L)))
+        lo = int(round(pos * (L - w)))
+        n += 1
+        hits += int(answer_of(rec, replay(rec, drop=(lo, lo + w))) == e.answer)
+    return hits / n if n else 0.0
 
 
 if __name__ == "__main__":

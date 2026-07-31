@@ -175,7 +175,7 @@ def test_the_truncation_family_and_the_pin_chain_are_registered_s5_bind_floors()
     length; with it closed every registered row lands at chance on the scored grid, which is
     the property the construct claims.
     """
-    from factworld.tasks import CANONICAL, generate
+    from factworld.tasks import RETIRED, generate
     from factworld.validity import (
         S5_BIND_ADVERSARIES,
         S5_BIND_CHANCE_ROWS,
@@ -199,7 +199,7 @@ def test_the_truncation_family_and_the_pin_chain_are_registered_s5_bind_floors()
     assert "pin_chain" in S5_BIND_ADVERSARIES
     assert set(S5_BIND_CHANCE_ROWS) <= set(S5_BIND_ADVERSARIES)
     assert set(S5_BIND_COUPLED_ONLY_ROWS) <= set(S5_BIND_ROWS)
-    spec = CANONICAL["s5_bind_v2"]
+    spec = RETIRED["s5_bind_v2"]
     exs = generate(spec, "test", n=400, length=spec.eval_lengths[0])
     fl = s5_bind_floors(exs, spec.k)
     op = s5_bind_operative_floor(fl)
@@ -225,7 +225,7 @@ def test_the_operative_floor_resolves_the_family_from_the_rows():
     row name, so the pointer-map default found ``uniform`` in a mutual-reference floor dict and
     returned 1/k — a floor BELOW that family's own informed chance 1/(k-1). Dispatch is now on
     the rows only one family can emit, and an unresolvable dict raises."""
-    from factworld.tasks import CANONICAL, generate
+    from factworld.tasks import RETIRED, generate
     from factworld.validity import (
         S5_BIND_ADVERSARIES,
         S5_CHAIN_ADVERSARIES,
@@ -235,7 +235,7 @@ def test_the_operative_floor_resolves_the_family_from_the_rows():
         s5_bind_operative_floor,
     )
 
-    spec = CANONICAL["s5_bind_v2"]
+    spec = RETIRED["s5_bind_v2"]
     fl = s5_bind_floors(generate(spec, "test", n=100, length=spec.eval_lengths[0]), spec.k)
     assert set(S5_CHAIN_ADVERSARIES) & set(fl) == {"uniform"}
     assert registered_for(fl) is S5_BIND_ADVERSARIES
@@ -255,12 +255,15 @@ def test_the_operative_floor_resolves_the_family_from_the_rows():
 def test_s5_bind_reader_sees_only_what_the_prompt_says():
     """Every mutual-reference policy reads the rendered sentences, so the reader has to
     recover the two stated maps, the events in rendered order, and each event's temporal
-    phrase — and replaying that reproduces the gold exactly, on both renderings."""
-    from factworld.tasks import CANONICAL, generate
+    phrase — and replaying that reproduces the gold exactly, on both renderings.
+
+    Run against the RETIRED temporal family, which stays generable: the reader is the thing
+    being pinned, not the construct."""
+    from factworld.tasks import RETIRED, generate
     from factworld.validity import _sb_answer, _sb_run, s5_bind_read
 
     for name in ("s5_bind_v2", "s5_bind_v2_state", "s5_bind_v2_bind", "s5_bind_v2_map"):
-        spec = CANONICAL[name]
+        spec = RETIRED[name]
         for e in generate(spec, "test", n=10, length=64):
             read = s5_bind_read(e.prompt)
             assert len(read["events"]) == 64

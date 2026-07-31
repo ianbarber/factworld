@@ -22,11 +22,13 @@ retired specs stay generable — and byte-identical (frozen-spec immutability; r
 tests/goldens_prechange.json) — in the ``RETIRED`` dict for historical reproduction and the
 defect-documentation tests, but are never scored.
 
-The ``s5_bind`` family runs two structures over one interleaved event stream and has every event
-name its second operand through the other one, so the composed query cannot be answered by either
-component's algorithm. Its arms — the composed cell, the two components and the whole-map capacity
-control — share a ``stream_name`` and therefore ONE item stream, so they are exactly paired and
-the coupling ablation is a within-item comparison at identical prompt length (``s5_bind_arms``).
+The ``s5_bind`` family is the COMPOSED task: two structures over one event stream, each event
+naming its second operand LIVE through one of them, so the composed query cannot be answered by
+either component's algorithm. The registered version ablates the SOURCE STRUCTURE a reference
+reads (``TaskSpec.source_ablation``), and its composition statistic is a within-cell op-type
+contrast (``factworld.composition``). The temporal version, which ablated the time index instead,
+is RETIRED: its composition class was by construction the overwritten-cell class, so a
+composition-free read-history failure loaded on the contrast as hard as a real deficit.
 
   from factworld.tasks import CANONICAL, generate, score_exact
   spec = CANONICAL["composite_copy_v2"]
@@ -183,29 +185,25 @@ class TaskSpec:
     # draw is short-circuited at 0.0, so every existing example stream is untouched.
     conditional_rate: float = 0.0
 
-    # s5_bind-only. The family runs TWO structures over ONE interleaved event stream —
-    # P: agents -> roles, a bijection permuted by the swaps (state tracking), and
-    # B: objects -> agents, rewritten by the gives under last-write-wins (retrieval under
-    # overwrite) — and every event names its second operand THROUGH the other structure.
+    # s5_bind-only. The family runs TWO structures over ONE event stream and has every event
+    # name its second operand through one of them.
     #
-    #   p_swap      P(an event is a swap); the rest are gives.
-    #   rho_p       fraction of swaps whose holder reference is rendered "at this point"
-    #   rho_b       fraction of gives whose role reference is rendered "at this point"
-    #   coupled     THE RENDERING TOGGLE. True renders those references "at this point", so
-    #               they resolve against the running maps; False renders every reference
-    #               "at the start", so the same item's events resolve against the stated
-    #               maps and the two structures never touch. The phrases are the same
-    #               length, so the ablation moves two tokens per referenced event and NOT
-    #               the prompt length.
-    #   query_arm   which of the three paired queries is scored: 'state' (the queried
-    #               agent's final role), 'bind' (the queried object's final holder), or
-    #               'state_all' (every agent's final role — the whole-map readout that
-    #               prices capacity separately from composition).
+    #   p_swap      P(an event is a swap); the rest are gives. On a source-structure spec this
+    #               is NOT a taste knob — see TaskSpec.source_ablation: a swap moves two cells
+    #               of the first structure and a give writes one of the second, so p_swap is
+    #               what equalises the two structures' write rates, and equal write rates are
+    #               what make the CROSS and SAME op classes matched on read history.
+    #   query_arm   which query is scored: 'state' (the queried agent's final pointer/role),
+    #               'bind' (the queried object's final holder), or 'state_all' (the whole-map
+    #               readout, which prices capacity separately from composition).
+    #   rho_p       RETIRED temporal family only: fraction of swaps rendered "at this point".
+    #   rho_b       RETIRED temporal family only: the same for gives.
+    #   coupled     RETIRED temporal family only: the time-index rendering toggle.
     #
     # m, the number of objects, is n_objects_active (reused as this family's working set the
     # way the commutative rung reuses it for active dials); m <= k is required so the stated
-    # holder map is injective. All four fields are appended and defaulted, `_rng` does not
-    # key on them, and no existing spec is in this family, so no stream moves.
+    # holder map is injective. All five fields are appended and defaulted, `_rng` does not
+    # key on them, so no pre-existing stream moves.
     p_swap: float = 0.5
     rho_p: float = 1.0
     rho_b: float = 1.0
@@ -294,76 +292,70 @@ class TaskSpec:
     # truncation budget (validity.S5_BIND_WINDOWS).
     q_tail: float = 0.0
 
-    # s5_bind-only. The largest RUN of consecutive events allowed OFF the queried agent's
-    # dependency chain, as a fraction of L — the gate that closes the block-drop family.
+
+    # ---- s5_bind_v3: the SOURCE-STRUCTURE ablation ----------------------------------------
+    # ``source_ablation`` selects the v3 builder (_ex_s5_bind_v3) and nothing else in this
+    # dataclass changes meaning; it is appended, defaulted False and read before the first RNG
+    # draw, so every pre-existing stream is byte-identical.
     #
-    # THE FAMILY IT CLOSES. window_f (keep the last f*L events) and prefix_f (keep the first
-    # f*L) are the two endpoints of one family: drop a block of width w at position p and play
-    # everything else. The family is continuous in (p, w), non-monotone in both, and every
-    # member costs ~0.9x the task, so the max over any finite registered subset of it is a
-    # selection statistic over an effectively exchangeable set. Registering members cannot close
-    # it; three rounds of registration each lost to a neighbour.
+    # WHY IT EXISTS. The v2 construct ablated the TIME INDEX: the same reference was rendered
+    # "at this point" (resolve against the running map) or "at the start" (against the stated
+    # one). But the stated structure is BY DEFINITION the one before any write, so a reference
+    # witnesses composition exactly when its referenced cell has been written since the start —
+    # measured on the v2 generator, P(the two readings differ | write count of the read cell =
+    # 0) = 0.000 and = 1.000 at one write, at both scored cells. The composition class IS the
+    # overwritten-cell class, so a composition-free solver whose failures concentrate on
+    # overwritten cells (bounded capacity with LRU eviction; stale-value interference) loads on
+    # the contrast at type-I rates at or above the real deficit's power. The temporal ablation
+    # cannot identify composition, and no repair on the write count fixes it because there is no
+    # support at zero writes.
     #
-    # WHY THE FAMILY WORKED. A block-drop is wrong only when it drops an event on the queried
-    # agent's DEPENDENCY CHAIN — the events that can change the answer. That chain is the
-    # backward carrier walk of the answer's role: at each swap both operands are on it (the
-    # answer's role moves from one to the other), and under the coupled rendering the second
-    # operand is itself resolved through B, so the chain closes over both structures. Under the
-    # free sampler the chain holds ~2 p_swap L / k of the L events, so most blocks miss it: the
-    # longest off-chain run is 43 events at k=12/L=128 and 17 at k=6/L=48, and a width-0.1L
-    # block dropped in the late interior read 2.2x the floor.
+    # WHAT REPLACES IT. Every reference stays DYNAMIC; only the SOURCE STRUCTURE varies. Two maps
+    # into agents run over one stream — P: agents -> agents (a permutation, rewritten by swaps)
+    # and B: objects -> agents (last-write-wins, rewritten by gives) — and each event names its
+    # second operand through one of them:
+    #     swap (writes P)  CROSS "the agent {o} belongs to at this point"  -> reads B
+    #                      SAME  "the agent {g} points to at this point"   -> reads P
+    #     give (writes B)  CROSS "the agent {g} points to at this point"   -> reads P
+    #                      SAME  "the agent {o} belongs to at this point"  -> reads B
+    # Both classes are live reads of overwritten cells, at matched write counts and matched
+    # retrieval distances, so interference is common to them and cancels in theta_cross -
+    # theta_same, while a solver that cannot hold the other structure fails only on CROSS.
     #
-    # THE CONSTRAINT. With chain_max_gap = f the sampler holds every off-chain run FROM THE
-    # CHAIN'S FIRST EVENT ONWARD to at most w_min - 1 events, w_min = round(f*L), the run after
-    # the last chain event included. Every block of width >= w_min that starts at or after that
-    # first event therefore contains an event that can change the answer. Two mechanisms:
-    #   - STEERING. When the run reaches w_min - 1 the swap the coin has already produced is
-    #     re-targeted onto the answer's current carrier; only if that slot drew a give as well
-    #     is a swap forced into the stream. Re-targeting rather than inserting is what keeps the
-    #     swap:give mix — the quantity both the composed pass and the component walk are priced
-    #     on — from moving, so the step multiplier does not fall (measured: 4% or less, and the
-    #     composed step count RISES). Which operand carries the steer is drawn per event: through
-    #     the referenced one the sentence names an object the carrier holds, through the named
-    #     one it names the carrier.
-    #   - QUERY GATE. The queried agent is drawn from the agents whose final role's chain
-    #     satisfies the bound. In practice that is the steered role, so the bound is a property
-    #     of the item and not a selection over roles.
+    # THE ONE CONFOUND THE SURFACES CARRY, and where it is handled. Within an event kind the
+    # class IS the reference clause, so a solver that is simply worse at one clause slips on
+    # swap-CROSS and give-SAME. The clause-to-class map FLIPS between the kinds, which is what
+    # makes the confound cancellable at all, but the two kinds do not carry equal weight on the
+    # answer (a swap resolution is on its path; a give resolution reaches it only through a
+    # later swap), so it does not cancel on its own: measured, the raw contrast rejects a pure
+    # clause slip at 0.117-0.211 at n=500. The registered primary statistic is therefore the
+    # KIND-BALANCED contrast (factworld.composition.PRIMARY_STAT), which divides each op by its
+    # kind's mean slice mass so the two kinds contribute equally and the clause effect enters
+    # both class columns at the same size.
     #
-    # THE HEAD IS NOT BOUNDED, AND MAY NOT BE. The run BEFORE the chain's first event is left
-    # exactly as the free sampler draws it. Bounding it looks symmetric and is not: the first
-    # chain event names the agent holding the answer's role AT THE START, whose STATED role is
-    # the answer, so forcing that event into the first w_min events makes "the stated role of an
-    # operand of the j-th swap" — one retrieval, no state — a shortcut. Measured with the head
-    # bounded at k=12/L=128: that policy reads 1.6x chance at the best offset and 2.7x when the
-    # steer also fixed which operand carried it, against 1.03x on the free stream. Widening
-    # w_min does not fix it, because the leak is ~chance / P(the first chain event falls inside
-    # w_min) and only reaches chance at w_min ~ 3k events, by which point the gate no longer
-    # covers the widths the family actually lives at. The tail has no such leak — the last chain
-    # event's other operand is the previous carrier, whose stated role is unrelated to the
-    # answer — which is why q_tail could be bought and head coverage cannot.
+    #   p_cross       P(an event's reference reads the OTHER structure).
+    #                 The per-slot cross coin is drawn BEFORE the operands and both candidate
+    #                 operands are drawn on every slot, so which class a slot lands in does not
+    #                 depend on which operands the rejection loop happened to admit.
     #
-    # WHAT THAT LEAVES. Blocks lying entirely inside the leading run are not closed by
-    # construction. They are the ones that discard the stream's HEAD, and dropping the head
-    # perturbs P and B for every later resolution, so the answer's trajectory diverges even when
-    # the block misses the chain. Measured over the full (position, width) scan at n=1500 and
-    # widths >= w_min, the position-0 column reads 0.71-1.11x chance on the free stream and
-    # 0.70-1.07x on the gated one, and the drops that DID miss the chain — 0-10% of the
-    # (item, position) pairs at k >= 8 — read 0.7-1.5x chance conditional on missing. That is
-    # measured, not constructed, and it is reported as such.
-    #
-    # Appended and defaulted to 0.0, which disables both mechanisms, so every pre-existing
-    # stream is byte-identical. The CANONICAL specs set 0.05 at k=12 (w_min = 6/10/13 events at
-    # L=128/192/256) and 0.10 at k=6 (w_min = 5/6 at L=48/64) — in both cases the smallest
-    # fraction whose w_min at the cell's shortest length is still around five events. Below that
-    # the sampler has to put a chain event on almost every slot and the stream degenerates into
-    # alternating kinds.
-    #
-    # NOT AVAILABLE ON A rho_ladder SPEC. The steer follows ONE coupled trajectory, and a ladder
-    # spec's whole construction is one skeleton read at five doses whose trajectories differ, so
-    # no single steered event is on the chain at every rung. Setting both raises. The ladder cells
-    # are CALIBRATION and are never scored; their block-drop family stays open and is reported as
-    # the diagnostic it is.
-    chain_max_gap: float = 0.0
+    #                 THERE IS NO p_cross = 0 ARM. A SAME give copies another object's holder,
+    #                 so with no cross-structure injection the holder map is a pure coalescent:
+    #                 it collapses onto one agent, every further same-structure give is a no-op,
+    #                 and the sampler cannot fill the stream (measured at k = m = 6, L = 64:
+    #                 200 of 200 draws starve). The all-SAME reading is not a cell, and it is not
+    #                 needed — the ablation is WITHIN the composed cell, one op class against the
+    #                 other, so the control is the theta_same class itself.
+    #   event_kinds   'both' (the composed stream), 'swap' (P events only) or 'give' (B events
+    #                 only) — the two COMPONENT arms.
+    #   named_operands  render the second operand by NAME instead of by reference. The component
+    #                 arms set it: a named-operand swap stream is the S5 word problem (a sparse
+    #                 backward carrier walk answers it), a named-operand give stream is
+    #                 last-write-wins retrieval. Reference-rendered components are not the
+    #                 components — they cost a forward pass over their own structure.
+    source_ablation: bool = False
+    p_cross: float = 0.5
+    event_kinds: str = "both"
+    named_operands: bool = False
 
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
@@ -804,33 +796,6 @@ def _s5_bind_lanes(spec) -> tuple[float, ...]:
     return tuple(sorted(set(spec.rho_ladder) | {0.0}))
 
 
-def _s5_bind_gap_limit(spec, length: int) -> int:
-    """The largest off-chain run the stream may contain AFTER the chain's first event
-    (TaskSpec.chain_max_gap), in events.
-
-    ``w_min = round(chain_max_gap * length)`` is the smallest block width the gate makes
-    unavoidable, so the run may be at most ``w_min - 1``. -1 disables the gate.
-    """
-    if not spec.chain_max_gap:
-        return -1
-    return max(1, int(round(spec.chain_max_gap * length))) - 1
-
-
-def _s5_bind_runs(idxs, length: int) -> tuple[int, int]:
-    """``(leading run, longest run after it)`` — the runs of consecutive event indices NOT in
-    ``idxs``, split at the first index because the two ends of the stream are not symmetric.
-
-    A block of width w misses ``idxs`` iff it fits inside one of these runs. The gate bounds the
-    SECOND number only; see TaskSpec.chain_max_gap on why bounding the first one hands a
-    zero-state policy the answer.
-    """
-    if not idxs:
-        return length, 0
-    rest = [length - 1 - idxs[-1]]
-    rest += [idxs[j + 1] - idxs[j] - 1 for j in range(len(idxs) - 1)]
-    return idxs[0], max(rest)
-
-
 def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
     """One s5_bind item's world, event stream and queries — the part of the sampler that must
     not consult the rendering.
@@ -843,11 +808,7 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
 
       DEFAULT      each event's coupling coin is drawn inside the rejection loop, and the item
                    is checked for degeneracy under the spec's own dose and under the all-static
-                   reading. Two doses, two lanes. This is also the sampler that can carry the
-                   chain gate (``spec.chain_max_gap``): one designated role's carrier is tracked
-                   under the coupled trajectory, and once it has moved once, a swap is steered
-                   onto it whenever the run of events since its last move would otherwise reach
-                   ``w_min``.
+                   reading. Two doses, two lanes.
       SKELETON-FIRST (rho_ladder set)
                    the coupling variate is drawn once per event SLOT, before the operands, and
                    the item is checked under every dose in the ladder. The draw sequence is then
@@ -855,11 +816,7 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
                    item — see TaskSpec.rho_ladder.
     """
     k, m = spec.k, spec.n_objects_active
-    if spec.chain_max_gap and spec.rho_ladder:
-        raise ValueError(f"{spec.name}: chain_max_gap steers ONE coupled trajectory and a "
-                         f"rho_ladder spec has one per rung; the two cannot both be set.")
     if not spec.rho_ladder:
-        gap_limit = _s5_bind_gap_limit(spec, length)
         for _outer in range(200):
             P0 = dict(zip(agents, rng.sample(roles, k)))
             B0 = dict(zip(objs, rng.sample(agents, m)))
@@ -874,60 +831,18 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
             # o -> the role its last DYNAMIC give named, while that give still stands: the live
             # pin (see TaskSpec.no_pin). A static give leaves no pin, and any give clears it.
             pin: dict[str, str | None] = {}
-            # role -> the indices of the events that MOVE it, under the coupled trajectory: the
-            # dependency chain of whichever agent ends up holding it (TaskSpec.chain_max_gap).
-            chain_c: dict[str, list[int]] = {rl: [] for rl in roles}
-            # the steered role's current holder, the run of events since it last moved, and
-            # whether it has moved at all yet (the leading run is not steered — see below)
-            carrier = rng.choice(agents) if gap_limit >= 0 else None
-            run, started = 0, False
             for _i in range(length):
-                # STEER the swap that the coin already gave us one slot before the run runs
-                # out, and only FORCE a swap into the stream when the coin gave a give at that
-                # slot too. Steering re-targets an event the stream was going to contain
-                # anyway, so the swap:give mix — which is what both the composed pass and the
-                # component walk are priced on — barely moves.
-                #
-                # NOTHING IS STEERED BEFORE THE FIRST CHAIN EVENT. That event names the agent
-                # holding the answer's role at the start, so its stated role IS the answer; a
-                # steered one would put that agent at a predictable place on the surface and
-                # hand a zero-state policy the answer in two retrievals. Left free it lands
-                # where the free stream puts it, on either operand, and the leading run is
-                # bounded by REJECTION at the query gate instead — which selects items rather
-                # than shaping them.
-                steer = gap_limit >= 0 and started and run >= gap_limit - 1
-                force = gap_limit >= 0 and started and run >= gap_limit
-                swap = True if force else rng.random() < spec.p_swap
+                swap = rng.random() < spec.p_swap
                 ok = False
                 for _try in range(200):
                     if swap:
-                        if steer:
-                            # WHICH SIDE carries the steer is drawn per try. Through the
-                            # REFERENCED operand the sentence names an object the carrier
-                            # happens to hold; through the NAMED one it names the carrier. A
-                            # fixed side would make the answer's first carrier readable off the
-                            # surface at a fixed place — see chain_max_gap on why the head is
-                            # where that matters — so neither side is fixed, and the naming form
-                            # is also the fallback where the carrier holds nothing or where every
-                            # object it holds is refused by the other constraints (no_pin above
-                            # all), which is what keeps the retry loop from starving.
-                            dyn = rng.random() < spec.rho_p
-                            held = ([x for x in objs if (Bc if dyn else B0)[x] == carrier]
-                                    if rng.random() < 0.5 else [])
-                            if held:
-                                o, a = rng.choice(held), rng.choice(agents)
-                            else:
-                                a, o = carrier, rng.choice(objs)
-                        else:
-                            a, o = rng.choice(agents), rng.choice(objs)
-                            dyn = rng.random() < spec.rho_p
+                        a, o = rng.choice(agents), rng.choice(objs)
+                        dyn = rng.random() < spec.rho_p
                         bc = Bc[o] if dyn else B0[o]
                         bd = B0[o]
                         if bc != a and bd != a:          # no self-swap under EITHER semantics
                             if spec.no_pin and dyn and pin.get(o) is not None and Pc[bc] == pin[o]:
                                 continue                 # the references would cancel the state
-                            if steer and carrier not in (a, bc):
-                                continue                 # the steered event must move the carrier
                             ok = True
                             break
                     else:
@@ -942,8 +857,6 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
                     break
                 if swap:
                     events.append({"kind": "swap", "a": a, "ref": o, "dyn": dyn})
-                    chain_c[Pc[a]].append(len(events) - 1)
-                    chain_c[Pc[bc]].append(len(events) - 1)
                     Pc[a], Pc[bc] = Pc[bc], Pc[a]
                     Pd[a], Pd[bd] = Pd[bd], Pd[a]
                     Pc_inv = _invert(Pc)
@@ -952,28 +865,17 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
                     touch_d[a] += 1
                     touch_d[bd] += 1
                     last_c[a] = last_c[bc] = last_d[a] = last_d[bd] = len(events) - 1
-                    if carrier in (a, bc):
-                        carrier = bc if carrier == a else a
-                        run, started = 0, True
-                    else:
-                        run += 1
                 else:
                     events.append({"kind": "give", "o": o, "ref": rl, "dyn": dyn})
                     Bc[o], Bd[o] = hc, hd
                     pin[o] = rl if dyn else None
                     writes[o] += 1
-                    run += 1
             if len(events) < length:
                 continue
             tail_lo = _s5_bind_tail_lo(spec, length)
             cand_s = [a for a in agents if touch_c[a] >= 2 and touch_d[a] >= 2
                       and Pc[a] != P0[a] and Pd[a] != P0[a]
                       and last_c[a] >= tail_lo and last_d[a] >= tail_lo]
-            if gap_limit >= 0:
-                # every block of width >= w_min that starts at or after the chain's first event
-                # hits the chain by construction
-                cand_s = [a for a in cand_s
-                          if _s5_bind_runs(chain_c[Pc[a]], length)[1] <= gap_limit]
             last_give = {}
             for j, e in enumerate(events):
                 if e["kind"] == "give":
@@ -1086,82 +988,32 @@ def _s5_bind_stream(spec, agents, roles, objs, rng, length, idx):
 
 
 def _ex_s5_bind(spec, w, r, rng, length, idx):
-    """s5_bind: two structures over one event stream, each naming its operands through the other.
+    """The RETIRED temporal construct (tasks.RETIRED), kept generable.
 
-    WORLD. k agents, k roles, m <= k objects. P maps agents to roles and is a bijection
-    permuted by swap events; B maps objects to agents under last-write-wins. Both initial maps
-    are STATED ("g3 has role r1 at the start." / "g7 holds o2 at the start.") in scrambled
-    order, so nothing about either is conventional.
+    WORLD. k agents, k roles, m <= k objects. P maps agents to roles and is a bijection permuted
+    by swap events; B maps objects to agents under last-write-wins. Both initial maps are STATED
+    ("g3 has role r1 at the start." / "g7 holds o2 at the start.") in scrambled order.
 
     STREAM. Each event is a swap with probability ``p_swap``, else a give, and each names its
     second operand through the OTHER structure:
       swap — "s0 swaps the roles of g4 and the agent who holds o2 {when}."
       give — "s1 gives o3 to the agent whose role {when} is r5."
-    ``when`` is "at this point" (resolve against the running map) on a ``rho_p`` / ``rho_b``
-    fraction of swaps / gives when ``spec.coupled``, and "at the start" (resolve against the
-    stated map) otherwise. The decoupled rendering of the same item is the same sentences with
-    that phrase replaced, so the two arms are token-for-token identical in length.
+    ``when`` is "at this point" on a ``rho_p`` / ``rho_b`` fraction of swaps / gives when
+    ``spec.coupled``, and "at the start" otherwise, at identical whitespace-token counts.
 
-    WHY THE COUPLING IS THE WHOLE CONSTRUCT. Decoupled, the two legs are separable and cheap:
-    the queried agent's role is a SPARSE backward walk over the swaps that name it (one live
-    symbol), and the queried object's holder is one content-addressed retrieval of its last
-    give plus one fact lookup. Coupled, neither is available — a swap's second operand is not
-    known until B has been evaluated forward to that event, and a give's recipient is not known
-    until P has — so the cheapest correct algorithm is a single forward pass carrying P, its
-    inverse and B. Measured on this generator (step-counted register machine with free
-    content-addressed retrieval, cheapest algorithm correct on EVERY item of the cell):
-    at k=12/m=12/L=192 the composed cell costs 674.6 steps and 36 live cells against 90.4/2 for
-    the state component (a sparse backward walk) and 3.0/3 for the retrieval component — a step
-    multiplier of 7.46. Across the scored grid it reads 7.15 / 7.46 / 7.28 at L=128/192/256 and
-    3.45 / 3.60 at k=6/L=48/64. The demand-driven serialisation (resolve only what the query
-    needs, memoizing every event's operand) and the iterate-to-a-fixed-point serialisation are
-    both more expensive, the latter by an order of magnitude, so the multiplier is not an
-    artifact of forbidding a cheaper schedule.
+    WHY IT IS RETIRED. That temporal pair cannot identify composition. "At the start" is by
+    definition the structure before any write, so a reference witnesses composition exactly when
+    its referenced cell has been written since the start; the composition class IS the
+    overwritten-cell class, and a composition-free solver whose failures concentrate on
+    overwritten cells loads on the contrast as hard as a real deficit. The construct is
+    superseded by the SOURCE-STRUCTURE version (``_ex_s5_bind_v3``), where every reference is
+    live and only the structure it reads varies. The retirement note on tasks.RETIRED carries
+    the measurements.
 
-    QUERY GATES, applied identically under both semantics so the arms condition on the same
-    items: the queried agent is moved at least twice, ends on a role other than its stated one,
-    and its LAST carrier event sits in the final ``q_tail`` of the stream; the queried object is
-    written at least twice, ends with a holder other than its stated one, and its resolving
-    write sits in [0.1L, 0.75L]. Each positional clause answers a truncation policy. Without the
-    object's upper bound its resolving write lands near the stream end, where the map has not
-    moved since, and "resolve every reference against the FINAL map" — a wrong-TIME policy, not
-    a shallow one — reads 0.33-0.44 at every L. Without ``q_tail`` the queried agent's carrier
-    chain finishes mid-stream, and simulating the task exactly and stopping 10% early reads
-    0.45/0.37/0.29 at L=128/192/256 against a 0.10-0.12 floor: the two clauses are the two ends
-    of one family (see TaskSpec.q_tail and validity's window_/prefix_ rows). The queried agent's
-    chain also has no gap of ``chain_max_gap`` events or more after its first event, which is
-    what makes every block-drop of that width or wider land on it.
-
-    NO_PIN. Two dynamic references compose into a state-free reset channel: a give writes
-    B[o] <- Pinv[r], pinning o's holder to role r, and a later swap naming o then writes r onto
-    its own agent, because selecting an agent by its role and reading that role back returns
-    the role. On such items a 2-retrieval policy carrying no map answers the state query, and
-    because the channel is length-free that policy does not decay with L. ``spec.no_pin``
-    rejects the second event of such a pair at sampling time; see TaskSpec.no_pin.
-
-    FLOORS. The registered shallow policies are in ``factworld.validity.s5_bind_floors``; the
-    operative floor is the max over the rows that carry NO map (``s5_bind_operative_floor``) and
-    is what a score is read against. Registration is by resource class, not by accuracy: the
-    cheapest correct algorithm on a coupled cell carries P, its inverse and B — 2k + m live
-    slots — so a policy that carries a map is doing the task's own work at a constant-factor
-    discount and is reported as a diagnostic instead. With no_pin, q_tail and chain_max_gap set
-    and L/k >= 8, that floor lands within 1.03-1.14x the informed chance 1/(k-1) across k=6..16
-    (n=1500); at shorter L the one-leg rows are still well above it, which is what the length
-    grid in CANONICAL is cut on.
-
-    THE BLOCK-DROP FAMILY. window_f and prefix_f are two positions of one continuum — drop a
-    block of width w at position p, play everything else — which is continuous in (p, w) and
-    non-monotone in both, so the max over any finite registered subset of it is a selection
-    statistic and no set of registered members could ever have been its floor. Every member
-    carries both maps, so the class rule excludes the whole continuum at once. The class rule is
-    not left to carry it alone: ``spec.chain_max_gap`` bounds the off-chain runs so that every
-    block of width >= w_min drops an event that can change the answer, and over the full
-    19-position x 8-width scan (n=1500, independent parser and simulator,
-    scripts/probe_s5bind_block_drop_20260730.py) the best member at any width >= w_min reads
-    1.00-1.33x chance on every scored cell, against 1.7-5.1x before the gate. Blocks NARROWER
-    than w_min, and blocks lying inside the stream's un-gated leading run, are excluded by class
-    alone; the residual is measured (see TaskSpec.chain_max_gap) and is not folded into the
-    floor.
+    NO_PIN and Q_TAIL are still set on the retired specs and still do what they say: no_pin
+    closes the give -> swap reset channel (two dynamic references cancel the state, so a
+    2-retrieval policy carrying no map answers a state query), and q_tail makes the stream's
+    tail load-bearing. Their floor rows live in ``factworld.validity`` and still run.
     """
     k, m = spec.k, spec.n_objects_active
     if m > k:
@@ -1243,6 +1095,267 @@ def _ex_s5_bind(spec, w, r, rng, length, idx):
                 + f" {query}")
         else:
             meta["trace"] = " ".join(resolved)
+    return Example(" ".join(facts + ev_txts + [query]), _render_answer(gold), length, meta)
+
+
+def _s5_bind_v3_lanes(spec) -> tuple[float, ...]:
+    """The cross-doses one skeleton must be admissible under. One lane: the spec's own dose.
+
+    Kept as a tuple because the sampler simulates a dict of trajectories keyed by dose, which is
+    what lets a future dose comparison be item-paired without moving the draw sequence.
+    """
+    return (spec.p_cross,)
+
+
+def _derangement(items, rng):
+    """A permutation of ``items`` with no fixed point, by rejection — so no stated pointer fact
+    is ``g4 points to g4``, which would be a degenerate reference target."""
+    for _ in range(200):
+        perm = rng.sample(items, len(items))
+        if all(a != b for a, b in zip(items, perm)):
+            return dict(zip(items, perm))
+    raise RuntimeError("no derangement drawn")
+
+
+def _s5_bind_v3_stream(spec, agents, objs, rng, length, idx):
+    """One source-structure item's world, event skeleton and queries.
+
+    SKELETON-FIRST, always. Each slot draws its kind, then the cross coin ``u``, then BOTH
+    candidate reference operands (an object and an agent) and the named operand — before any
+    dose is consulted. A slot is admitted only if it is non-degenerate under EVERY dose in
+    ``_s5_bind_v3_lanes`` (no self-swap, no no-op write, and with ``no_pin`` no reference whose
+    value a solver carrying the OTHER structure alone could already compute). Nothing in the
+    draw sequence depends on the spec's own ``p_cross``, so two specs differing only in the dose
+    build the SAME world, the SAME event kinds and the SAME queries: the composed cell and its
+    same-structure control are one item stream read twice.
+
+    Returns ``(P0, B0, events, moves, writes, last_move, last_write, q_state, q_bind,
+    fact_agents, fact_objs, finals)``; ``finals[d] = (P, B)`` per dose.
+
+    ``no_pin`` closes the REDUCTION channel. A CROSS give writes B[o] <- P[b], so until P[b]
+    moves again a later CROSS swap naming o resolves to a value a P-only solver already has: the
+    op is rendered CROSS and costs no composition. The provenance propagates through SAME gives
+    (B[o] <- B[o2] inherits o2's), and dies the moment the grounding agent's pointer moves. The
+    gate refuses a CROSS reference onto a live-provenance object, which is what keeps the CROSS
+    class from containing ops that ask nothing of the other structure.
+    """
+    k, m = spec.k, spec.n_objects_active
+    lanes = _s5_bind_v3_lanes(spec)
+    named = spec.named_operands
+    kinds = spec.event_kinds
+    if kinds not in ("both", "swap", "give"):
+        raise ValueError(f"{spec.name}: event_kinds={kinds!r} not in {{'both','swap','give'}}")
+    for _outer in range(200):
+        P0 = _derangement(agents, rng)
+        B0 = dict(zip(objs, rng.sample(agents, m)))
+        st = {d: {"P": dict(P0), "B": dict(B0),
+                  "prov": {o: None for o in objs},          # o -> b with B[o] == P[b], or None
+                  "moves": {a: 0 for a in agents},
+                  "last": {a: -1 for a in agents}} for d in lanes}
+        events, writes, last_write = [], {o: 0 for o in objs}, {}
+        for _i in range(length):
+            swap = kinds == "swap" or (kinds == "both" and rng.random() < spec.p_swap)
+            u = rng.random()                       # THE SKELETON DRAW: before the operands
+            ok = False
+            for _try in range(200):
+                a = rng.choice(agents)             # swap: the named first operand
+                o = rng.choice(objs)               # give: the object written
+                ref_o = rng.choice(objs)
+                ref_a = rng.choice(agents)
+                nmd = rng.choice(agents)           # the named-operand rendering's second operand
+                res, good = {}, True
+                for d in lanes:
+                    s = st[d]
+                    cross = u < d
+                    if swap:
+                        x = nmd if named else (s["B"][ref_o] if cross else s["P"][ref_a])
+                        if x == a:                              # self-swap: a no-op event
+                            good = False
+                            break
+                        if spec.no_pin and not named and cross and s["prov"][ref_o] is not None:
+                            good = False                        # the reference asks nothing of B
+                            break
+                    else:
+                        if not named and not cross and ref_o == o:
+                            good = False                        # "gives o to whoever holds o"
+                            break
+                        x = nmd if named else (s["P"][ref_a] if cross else s["B"][ref_o])
+                        if x == s["B"][o]:                      # no-op write
+                            good = False
+                            break
+                    res[d] = x
+                if good:
+                    ok = True
+                    break
+            if not ok:
+                break
+            events.append({"kind": "swap" if swap else "give", "u": u, "a": a, "o": o,
+                           "ref_o": ref_o, "ref_a": ref_a, "named": nmd})
+            for d in lanes:
+                s, x = st[d], res[d]
+                if swap:
+                    s["P"][a], s["P"][x] = s["P"][x], s["P"][a]
+                    for g in (a, x):
+                        s["moves"][g] += 1
+                        s["last"][g] = len(events) - 1
+                        for oo in objs:                          # the equality B[oo]==P[g] dies
+                            if s["prov"][oo] == g:
+                                s["prov"][oo] = None
+                else:
+                    s["B"][o] = x
+                    cross = u < d
+                    s["prov"][o] = (ref_a if cross else s["prov"][ref_o]) if not named else None
+            if not swap:
+                writes[o] += 1
+                last_write[o] = len(events) - 1
+        if len(events) < length:
+            continue
+        tail_lo = _s5_bind_tail_lo(spec, length)
+        cand_s = [a for a in agents
+                  if all(st[d]["moves"][a] >= 2 and st[d]["P"][a] != P0[a]
+                         and st[d]["last"][a] >= tail_lo for d in lanes)]
+        lo, hi = length // 10, int(0.75 * length)
+        cand_b = [o for o in objs
+                  if writes[o] >= 2 and lo <= last_write.get(o, -1) <= hi
+                  and all(st[d]["B"][o] != B0[o] for d in lanes)]
+        need_s = spec.query_arm in ("state", "state_all")
+        if (need_s and not cand_s) or (spec.query_arm == "bind" and not cand_b):
+            continue
+        q_state = rng.choice(cand_s) if cand_s else None
+        q_bind = rng.choice(cand_b) if cand_b else None
+        fact_agents, fact_objs = agents[:], objs[:]
+        rng.shuffle(fact_agents)
+        rng.shuffle(fact_objs)
+        finals = {d: (st[d]["P"], st[d]["B"]) for d in lanes}
+        moves = {a: st[spec.p_cross]["moves"][a] for a in agents}
+        last_move = {a: st[spec.p_cross]["last"][a] for a in agents}
+        return (P0, B0, events, moves, writes, last_move, last_write, q_state, q_bind,
+                fact_agents, fact_objs, finals)
+    raise RuntimeError(f"{spec.name}: no admissible item at idx={idx} "
+                       f"(k={k}, m={m}, L={length}, kinds={kinds}, lanes={lanes})")
+
+
+def _s5_bind_v3_event(spec, e, cross: bool) -> Event:
+    """The rendered Event one skeleton slot becomes at a given dose. The four reference forms
+    plus the two named-operand forms; the named give reuses the suite's plain ``give``."""
+    if spec.named_operands:
+        return (Event("swap_ptr_named", (e["a"], e["named"])) if e["kind"] == "swap"
+                else Event("give", (e["o"], e["named"])))
+    if e["kind"] == "swap":
+        return (Event("swap_ptr_by_b", (e["a"], e["ref_o"])) if cross
+                else Event("swap_ptr_by_p", (e["a"], e["ref_a"])))
+    return (Event("give_ptr_by_p", (e["o"], e["ref_a"])) if cross
+            else Event("give_ptr_by_b", (e["o"], e["ref_o"])))
+
+
+def _ex_s5_bind_v3(spec, w, r, rng, length, idx):
+    """s5_bind_v3: two structures over one event stream, ablated on the SOURCE STRUCTURE.
+
+    WORLD. k agents, m <= k objects. P: agents -> agents is a derangement at the start and is
+    rewritten by swaps; B: objects -> agents is stated and rewritten by gives under
+    last-write-wins. Both maps land in the SAME type, which is what lets the two reference
+    clauses have the same shape and the same length:
+
+        g4 points to g9 at the start.          o2 belongs to g7 at the start.
+        s0 swaps the pointers of g4 and the agent o2 belongs to at this point.   (CROSS: reads B)
+        s0 swaps the pointers of g4 and the agent g7 points to at this point.    (SAME:  reads P)
+        s1 gives o3 to the agent g7 points to at this point.                     (CROSS: reads P)
+        s1 gives o3 to the agent o7 belongs to at this point.                    (SAME:  reads B)
+
+    Within an event kind the two classes are identical in whitespace-token count (16 for a swap,
+    13 for a give) and in register — "the agent {slot} {verb} to at this point" — so the ablation
+    moves the SOURCE and nothing a token counter can see. EVERY reference is live; there is no
+    static reading, which is the point (see TaskSpec.source_ablation).
+
+    WRITE-COUNT MATCHING IS A SAMPLER PROPERTY, not an accident. A swap moves TWO agents'
+    pointers and a give writes ONE object, so the two structures' cells accumulate writes at
+    equal rates iff 2 p_swap / k = (1 - p_swap) / m. At m = k that is p_swap = 1/3, which is what
+    the registered specs set: the cell a CROSS reference reads and the cell a SAME reference
+    reads then have the same write-count and the same retrieval-distance distribution, and an
+    interference effect that depends on either is common to the two classes.
+
+    QUERIES. ``state`` "which agent does {g} point to at the end?", ``bind`` "which agent does
+    {o} belong to at the end?", ``state_all`` the whole pointer map. The two single-slot forms
+    are 10 whitespace tokens each. Gates, applied under every dose so a ladder's rungs condition
+    on the same items: the queried agent's pointer moved at least twice, ends different from its
+    stated target, and last moved inside the final ``q_tail`` of the stream; the queried object
+    is written at least twice, ends different, and its resolving write sits in [0.1L, 0.75L].
+
+    COST. The composed cell's cheapest correct algorithm is a single forward pass carrying P and
+    B: W = k + m live slots, S = (k + m) + 6 n_swap + 3 n_give + 1 steps under the convention in
+    ``factworld.composition`` (P is read FORWARD, so no inverse is needed — unlike v2). The two
+    component arms render their second operand by name, which is what makes each of them a
+    sparse backward walk over ONE carrier register; the composed cell admits neither walk,
+    because no event's operand is known until the other structure has been evaluated forward to
+    it. ``factworld.composition.cost_report`` counts all of this against the stated rule.
+    """
+    k, m = spec.k, spec.n_objects_active
+    if m > k:
+        raise ValueError(f"{spec.name}: m={m} objects > k={k} agents; the stated holder map "
+                         f"must be injective, so n_objects_active <= k.")
+    if m > len(w.objects):
+        raise ValueError(f"{spec.name}: m={m} exceeds the {len(w.objects)}-object pool "
+                         f"(raise n_objects).")
+    if spec.query_arm not in ("state", "bind", "state_all"):
+        raise ValueError(f"{spec.name}: query_arm={spec.query_arm!r} not in "
+                         f"{{'state','bind','state_all'}}")
+    agents, objs = list(w.agents[:k]), list(w.objects[:m])
+
+    (P0, B0, events, moves, writes, last_move, last_write, q_state, q_bind,
+     fact_agents, fact_objs, finals) = _s5_bind_v3_stream(spec, agents, objs, rng, length, idx)
+    P_fin, B_fin = finals[spec.p_cross]
+
+    # Only the structures this arm touches are stated. A component arm is defined by what it
+    # does NOT contain, so stating the other map's facts would put a retrieval load on the
+    # state component (and a state load on the retrieval one) that the arm never uses.
+    need_p = spec.event_kinds != "give" or spec.query_arm in ("state", "state_all")
+    need_b = spec.event_kinds != "swap" or spec.query_arm == "bind"
+    facts = [r.render_pointer(a, P0[a]) for a in fact_agents] if need_p else []
+    facts += [r.render_belongs(o, B0[o]) for o in fact_objs] if need_b else []
+    ev_txts, cross_flags = [], []
+    for i, e in enumerate(events):
+        cross = (not spec.named_operands) and e["u"] < spec.p_cross
+        cross_flags.append(cross)
+        ev_txts.append(r.render_event(_s5_bind_v3_event(spec, e, cross), step=f"s{i}"))
+
+    if spec.query_arm == "state":
+        query = r.render_query("s5bind3_state", target=q_state)
+        gold = P_fin[q_state]
+    elif spec.query_arm == "bind":
+        query = r.render_query("s5bind3_bind", target=q_bind)
+        gold = B_fin[q_bind]
+    else:
+        query = r.render_query("s5bind3_state_all", targets=agents)
+        gold = " ".join(P_fin[a] for a in agents)
+
+    meta = {"q_state": q_state, "q_bind": q_bind, "p_cross": spec.p_cross,
+            "n_swap": sum(1 for e in events if e["kind"] == "swap"),
+            "n_cross": sum(cross_flags),
+            "moves": moves.get(q_state), "writes": writes.get(q_bind),
+            "last_write_pos": last_write.get(q_bind)}
+    if spec.event_trace or spec.worked_trace:
+        # Per-EVENT state checkpoints (the whole of P in agent order then B in object order),
+        # replayed under this spec's own dose — the supervision density that formed s5 locally.
+        P, B = dict(P0), dict(B0)
+        snaps, resolved = [], []
+        for e, cross in zip(events, cross_flags):
+            if spec.named_operands:
+                x = e["named"]
+            elif e["kind"] == "swap":
+                x = B[e["ref_o"]] if cross else P[e["ref_a"]]
+            else:
+                x = P[e["ref_a"]] if cross else B[e["ref_o"]]
+            if e["kind"] == "swap":
+                P[e["a"]], P[x] = P[x], P[e["a"]]
+            else:
+                B[e["o"]] = x
+            resolved.append(x)
+            snaps.append(" ".join(P[a] for a in agents) + " " + " ".join(B[o] for o in objs))
+        meta["trace"] = " ".join(snaps if spec.event_trace else resolved)
+        if spec.event_trace:
+            meta["interleaved_prompt"] = (
+                " ".join(facts) + " " + " ".join(f"{t} {s}" for t, s in zip(ev_txts, snaps))
+                + f" {query}")
     return Example(" ".join(facts + ev_txts + [query]), _render_answer(gold), length, meta)
 
 
@@ -1355,34 +1468,15 @@ def generate(spec: TaskSpec, split: str, n: int = 1000, length: int | None = Non
             build = _ex_s5_chain_typed if spec.typed_values else _ex_s5_chain
             out.append(build(spec, w, r, rng, L, idx))               # L = permutation events
         elif spec.family == "s5_bind":
-            out.append(_ex_s5_bind(spec, w, r, rng, L, idx))         # L = interleaved events
+            # source_ablation selects the v3 builder BEFORE any draw, so the temporal builder's
+            # streams are untouched.
+            build = _ex_s5_bind_v3 if spec.source_ablation else _ex_s5_bind
+            out.append(build(spec, w, r, rng, L, idx))               # L = interleaved events
         elif spec.family == "chain":
             out.append(_ex_chain(spec, w, r, rng, L, idx))           # L = chain depth
         else:
             raise ValueError(spec.family)
     return out
-
-
-def s5_bind_arms(spec: TaskSpec, split: str = "test", n: int = 200, length: int | None = None,
-                 arms=((True, "state"), (False, "state"), (False, "bind"), (False, "state_all"))
-                 ) -> dict[tuple[bool, str], list[Example]]:
-    """The SAME s5_bind items read under several (coupled, query_arm) settings.
-
-    Item generation does not consult either knob — the sampler rejects self-swaps and no-op
-    writes under BOTH semantics and the query gates hold under both — so index i is one world,
-    one event stream and one pair of queries throughout, and the returned lists are aligned.
-
-    This is what makes the coupling ablation a within-item comparison: the coupled and
-    decoupled renderings of item i are the same sentences with "at this point" replaced by "at
-    the start", identical in whitespace-token count, so a difference between the two arms is
-    not a difference of samples, of prompt lengths, or of query difficulty. A per-step error
-    rate that scales with prompt length is common to both and cancels — which a normalised gap
-    against the whole-map readout does not do: a single error rate fitted on a component
-    predicts a large state_all-to-composed gap with no composition ability present at all.
-    """
-    base = spec if spec.stream_name is not None else replace(spec, stream_name=spec.name)
-    return {(c, q): generate(replace(base, coupled=c, query_arm=q), split, n, length)
-            for c, q in arms}
 
 
 def score_exact(pred: str, gold: str) -> int:
@@ -1709,93 +1803,85 @@ CANONICAL = {
                                    chain_depth=1, typed_values=True,
                                    event_trace=True, worked_trace=True,
                                    train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
-    # ---- s5_bind: the mutual-reference composition (see _ex_s5_bind) --------------------
-    # Four specs, ONE item stream. They share ``stream_name="s5_bind_v2"``, so item i is the
-    # same world, the same events and the same two queries in all four; they differ only in
-    # what is rendered ("at this point" vs "at the start") and what is asked. That is the
-    # pairing the family exists for — the composed cell and its two components are read off
-    # the same items, at identical prompt lengths, so the coupling ablation is within-item.
+    # ---- s5_bind_v3: the source-structure composition (see _ex_s5_bind_v3) ---------------
+    # The COMPOSED task the instrument's goal asks for, plus its two components, on one basis.
+    # Two maps into agents run over one event stream — P: agents -> agents, rewritten by swaps,
+    # and B: objects -> agents under last-write-wins, rewritten by gives — and every event
+    # names its second operand LIVE through one of them. The ablation is which structure the
+    # reference reads (TaskSpec.source_ablation), not when it reads it.
     #
-    #   s5_bind_v2        COMPOSED   coupled rendering, single-slot state query
-    #   s5_bind_v2_state  COMPONENT  decoupled, same query — permutation tracking alone
-    #   s5_bind_v2_bind   COMPONENT  decoupled, holder query — retrieval under overwrite alone
-    #   s5_bind_v2_map    CONTROL    decoupled, whole-map readout — capacity, not composition
+    #   s5_bind_v3        COMPOSED   p_cross=0.5, state query. Both structures feed each other.
+    #   s5_bind_v3_state  COMPONENT  swaps only, second operand NAMED: the S5 word problem.
+    #   s5_bind_v3_bind   COMPONENT  gives only, recipient NAMED: last-write-wins retrieval.
     #
-    # The control is registered because the composed cell needs k slots live and the state
-    # component needs one; without a k-slot readout at the same length, a composed-minus-
-    # component gap is not separable from carrying more state at all. It is a CONTROL, not a
-    # null: min(component, control) is a ceiling on the composed cell, never a floor.
+    # The two components are their own streams: a component is defined by what it does NOT
+    # contain, so there is no skeleton it could share with the composed cell. The composition
+    # contrast does not need one — it is an op-type contrast INSIDE the composed cell.
     #
-    # Operating point k=12, m=12: the answer space is the 12 roles and the whole-map readout
-    # is a 12-slot permutation. The name carries the construct version, ``version`` the RNG
-    # stream (frozen at introduction); v1 of the construct never reached the registry — it
-    # admitted an iterate-to-a-fixed-point serialisation and its coupling ablation moved
-    # prompt length, both of which this rendering excludes by construction.
+    # p_swap = 1/3 IS THE WRITE-COUNT MATCHING. A swap moves two agents' pointers and a give
+    # writes one object, so at m = k the two structures' cells accumulate writes at equal rates
+    # exactly at p_swap = 1/3. That is what makes theta_cross - theta_same a contrast between
+    # two op classes at matched read-history load rather than between two structures at
+    # different ones (factworld.composition).
     #
-    # LENGTH GRID. The operative floor (validity.s5_bind_operative_floor — the max over the
-    # registered policies that carry no map) is what sets the shortest scored length, and with
-    # the pin channel closed and the chain gate on it reaches the informed chance
-    # 1/(k-1) = 0.0909 rather than plateauing above it. Measured on this stream at n=3000,
-    # k=12, coupled/state, as a ratio to that chance: L=64 1.38, L=96 1.06, L=128 1.03,
-    # L=192 1.03, L=256 1.15. The residual at L=64 is not the pin channel (pin density is 0.000
-    # at every length) but stream length against k: with 12 agents and 12 objects a 64-event
-    # stream gives the queried agent a short carrier chain and each object ~2.7 writes, so
-    # feeding B into P but not P into B still lands 1.4x chance. From L/k >= 8 it falls to
-    # chance, so the grid starts at 128. The floor per cell is recomputed and printed by
-    # scripts/validate_suite.py; a rescaled cell carries its own.
+    # Operating point k = 12, m = 12: the answer space is the 12 agents, informed chance
+    # 1/(k-1) = 0.0909. Floors are recomputed per cell by scripts/validate_suite.py from
+    # factworld.validity.s5_bind_v3_floors, under the Pareto class rule.
     #
-    # chain_max_gap = 0.05 here: w_min = 6 / 10 / 13 events at L = 128 / 192 / 256, so every
-    # block-drop that wide or wider lands on the queried agent's dependency chain. Over the full
-    # 19-position x 8-width scan at n=1500 the best member reads 1.08-1.20x chance, against
-    # 2.36-4.73x on the un-gated stream (scripts/probe_s5bind_block_drop_20260730.py).
+    # THE LENGTH GRID IS CUT ON THE FLOOR. The operative floor — the max over the rows the class
+    # rule admits — reaches informed chance from L/k ~ 10 and sits above it below that. Measured
+    # at n=400 as a ratio to chance, over k x L:
+    #        L        32    48    64    96   128   192   256
+    #     k= 6      1.19  1.00  1.00  1.00  1.00  1.00  1.00
+    #     k= 8      1.75  1.19  1.07  1.12  1.01  1.10  1.07
+    #     k=12      4.24  2.45  1.51  1.32  1.00  1.00  1.16
+    #     k=16      7.09  4.73  2.89  1.28  1.28  1.00  1.00
+    # so the k=12 grid starts at 128 and the k=6 grid at 48. Below the cut the floor is set by
+    # one_structure_B or one_structure_P — feed one structure into the other but never the
+    # reverse — because a short stream against k gives the queried agent too few carrier events
+    # for the second leg to matter. The step multiplier holds flat across the whole grid
+    # (1.92-2.39 under the stated convention), so the cut is a floor cut and not a cost cut.
     #
-    # kind=experimental until the calibration lands, so none of the four is in REPORTED.
-    "s5_bind_v2":       TaskSpec("s5_bind_v2", "s5_bind", kind="experimental",
-                                  k=12, n_objects=12, n_objects_active=12,
-                                  coupled=True, query_arm="state", stream_name="s5_bind_v2",
-                                  no_pin=True, q_tail=0.1, chain_max_gap=0.05,
+    # kind=experimental until the calibration lands, so none of the six is in REPORTED.
+    "s5_bind_v3":       TaskSpec("s5_bind_v3", "s5_bind", version="3.0", kind="experimental",
+                                  source_ablation=True, k=12, n_objects=12, n_objects_active=12,
+                                  p_swap=1.0 / 3.0, p_cross=0.5,
+                                  query_arm="state", stream_name="s5_bind_v3",
+                                  no_pin=True, q_tail=0.1,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
-    "s5_bind_v2_state": TaskSpec("s5_bind_v2_state", "s5_bind", kind="experimental",
-                                  k=12, n_objects=12, n_objects_active=12,
-                                  coupled=False, query_arm="state", stream_name="s5_bind_v2",
-                                  no_pin=True, q_tail=0.1, chain_max_gap=0.05,
+    "s5_bind_v3_state": TaskSpec("s5_bind_v3_state", "s5_bind", version="3.0", kind="experimental",
+                                  source_ablation=True, k=12, n_objects=12, n_objects_active=12,
+                                  event_kinds="swap", named_operands=True,
+                                  query_arm="state", stream_name="s5_bind_v3_state", q_tail=0.1,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
-    "s5_bind_v2_bind":  TaskSpec("s5_bind_v2_bind", "s5_bind", kind="experimental",
-                                  k=12, n_objects=12, n_objects_active=12,
-                                  coupled=False, query_arm="bind", stream_name="s5_bind_v2",
-                                  no_pin=True, q_tail=0.1, chain_max_gap=0.05,
-                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
-    "s5_bind_v2_map":   TaskSpec("s5_bind_v2_map", "s5_bind", kind="experimental",
-                                  k=12, n_objects=12, n_objects_active=12,
-                                  coupled=False, query_arm="state_all", stream_name="s5_bind_v2",
-                                  no_pin=True, q_tail=0.1, chain_max_gap=0.05,
+    "s5_bind_v3_bind":  TaskSpec("s5_bind_v3_bind", "s5_bind", version="3.0", kind="experimental",
+                                  source_ablation=True, k=12, n_objects=12, n_objects_active=12,
+                                  event_kinds="give", named_operands=True,
+                                  query_arm="bind", stream_name="s5_bind_v3_bind",
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     # The from-scratch operating point: k=6, m=6, shorter streams, and per-EVENT state
-    # checkpoints (event_trace — the whole state after every event, the supervision density
-    # that formed s5 locally). A streaming model has no scratchpad, so its cost model is the
-    # forward pass, which is the algorithm this construct forces in both regimes. Paired the
-    # same way, on their own stream. Its operative floor reaches the 0.200 informed chance at
-    # the same L/k as the frontier point (measured n=3000, as a ratio to chance: L=32 1.28,
-    # L=48 1.11, L=64 1.09), so the scored lengths start at 48.
-    #
-    # chain_max_gap = 0.1 here, not the 0.05 the k=12 point carries: at L=48 a 0.05 fraction is
-    # a two-event w_min, and holding the chain that dense leaves the sampler no free swap:give
-    # mix — the event kinds start alternating. At 0.1 w_min is 5 / 6 events at L = 48 / 64 and
-    # the best drop that wide, over the whole position scan, reads 1.08x and 1.03x chance;
-    # drops of 2-3 events are not closed, reading 1.97x and 1.53x, and are excluded by resource
-    # class alone.
-    "s5_bind_local_v2": TaskSpec("s5_bind_local_v2", "s5_bind", kind="experimental",
-                                  k=6, n_objects=6, n_objects_active=6,
-                                  coupled=True, query_arm="state",
-                                  stream_name="s5_bind_local_v2", event_trace=True,
-                                  no_pin=True, q_tail=0.1, chain_max_gap=0.1,
-                                  train_lengths=(16, 32), eval_lengths=(48, 64)),
-    "s5_bind_local_v2_state": TaskSpec("s5_bind_local_v2_state", "s5_bind", kind="experimental",
-                                        k=6, n_objects=6, n_objects_active=6,
-                                        coupled=False, query_arm="state",
-                                        stream_name="s5_bind_local_v2", event_trace=True,
-                                        no_pin=True, q_tail=0.1, chain_max_gap=0.1,
-                                        train_lengths=(16, 32), eval_lengths=(48, 64)),
+    # checkpoints (event_trace — the whole of P then B after every event, the supervision
+    # density that formed s5 locally). A streaming model has no scratchpad, so its cost model
+    # IS the forward pass, which is the algorithm this construct forces in both regimes.
+    "s5_bind_local_v3": TaskSpec("s5_bind_local_v3", "s5_bind", version="3.0", kind="experimental",
+                                  source_ablation=True, k=6, n_objects=6, n_objects_active=6,
+                                  p_swap=1.0 / 3.0, p_cross=0.5,
+                                  query_arm="state", stream_name="s5_bind_local_v3",
+                                  event_trace=True, no_pin=True, q_tail=0.1,
+                                  train_lengths=(16, 32), eval_lengths=(48, 64, 96)),
+    "s5_bind_local_v3_state": TaskSpec("s5_bind_local_v3_state", "s5_bind", version="3.0",
+                                  kind="experimental",
+                                  source_ablation=True, k=6, n_objects=6, n_objects_active=6,
+                                  event_kinds="swap", named_operands=True, event_trace=True,
+                                  query_arm="state", stream_name="s5_bind_local_v3_state",
+                                  q_tail=0.1,
+                                  train_lengths=(16, 32), eval_lengths=(48, 64, 96)),
+    "s5_bind_local_v3_bind": TaskSpec("s5_bind_local_v3_bind", "s5_bind", version="3.0",
+                                  kind="experimental",
+                                  source_ablation=True, k=6, n_objects=6, n_objects_active=6,
+                                  event_kinds="give", named_operands=True, event_trace=True,
+                                  query_arm="bind", stream_name="s5_bind_local_v3_bind",
+                                  train_lengths=(16, 32), eval_lengths=(48, 64, 96)),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)
@@ -1874,6 +1960,72 @@ RETIRED = {
     # depth annotation ("(128 hops)") to the same query.
     "chain_v1":         TaskSpec("chain_v1", "chain", k=6, train_lengths=(2, 3), eval_lengths=(4, 5),
                                   kind="retired"),
+    # ---- the s5_bind TEMPORAL family (retired 2026-07-31) ------------------------------
+    # Two structures over one stream, each event naming its second operand through the other,
+    # ablated on the TIME INDEX: "at this point" resolves against the running map, "at the
+    # start" against the stated one. RETIRED because THE ABLATION CANNOT IDENTIFY COMPOSITION.
+    # The stated structure is by definition the one before any write, so a reference witnesses
+    # composition exactly when its referenced cell has been written since the start — measured
+    # on these streams, P(coupled reading != decoupled reading | write count of the read cell
+    # = 0) = 0.000 and = 1.000 at one write, over 16,386/31,276 and 8,825/19,933 dependency-slice
+    # resolutions at the two scored cells. The composition class IS the overwritten-cell class,
+    # so a composition-free bounded-capacity solver (M = k/2 slots, LRU by last write, a miss
+    # re-reads the stated fact, no composition deficit anywhere in it) rejects the op-type
+    # contrast at 0.180/0.657/0.623 where the real deficit's power is 0.152/0.520/0.526, and a
+    # stale-to-previous-value solver inflates it to 0.260. The one contrast clean of read
+    # history — dynamic-but-unmoved references against static ones — has exactly zero power.
+    # Superseded by the SOURCE-STRUCTURE family (s5_bind_v3), where every reference is live and
+    # only the structure it reads varies.
+    #
+    # These specs were never scored and never published, and they no longer carry the
+    # ``chain_max_gap`` steer, which was removed with the field (it could not close the
+    # block-drop family and it charged the construct's own comparison — the steer follows the
+    # coupled trajectory only, so the coupled arm's carrier chain ran 11.8 -> 27.6 events while
+    # the decoupled reading of the same stream stayed at 12.2). Their streams are therefore
+    # pinned at retirement, not at their pre-retirement values; nothing reproduces against them.
+    "s5_bind_v2":       TaskSpec("s5_bind_v2", "s5_bind", kind="retired",
+                                  k=12, n_objects=12, n_objects_active=12,
+                                  coupled=True, query_arm="state", stream_name="s5_bind_v2",
+                                  no_pin=True, q_tail=0.1,
+                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+    "s5_bind_v2_state": TaskSpec("s5_bind_v2_state", "s5_bind", kind="retired",
+                                  k=12, n_objects=12, n_objects_active=12,
+                                  coupled=False, query_arm="state", stream_name="s5_bind_v2",
+                                  no_pin=True, q_tail=0.1,
+                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+    "s5_bind_v2_bind":  TaskSpec("s5_bind_v2_bind", "s5_bind", kind="retired",
+                                  k=12, n_objects=12, n_objects_active=12,
+                                  coupled=False, query_arm="bind", stream_name="s5_bind_v2",
+                                  no_pin=True, q_tail=0.1,
+                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+    "s5_bind_v2_map":   TaskSpec("s5_bind_v2_map", "s5_bind", kind="retired",
+                                  k=12, n_objects=12, n_objects_active=12,
+                                  coupled=False, query_arm="state_all", stream_name="s5_bind_v2",
+                                  no_pin=True, q_tail=0.1,
+                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+    "s5_bind_local_v2": TaskSpec("s5_bind_local_v2", "s5_bind", kind="retired",
+                                  k=6, n_objects=6, n_objects_active=6,
+                                  coupled=True, query_arm="state",
+                                  stream_name="s5_bind_local_v2", event_trace=True,
+                                  no_pin=True, q_tail=0.1,
+                                  train_lengths=(16, 32), eval_lengths=(48, 64)),
+    "s5_bind_local_v2_state": TaskSpec("s5_bind_local_v2_state", "s5_bind", kind="retired",
+                                        k=6, n_objects=6, n_objects_active=6,
+                                        coupled=False, query_arm="state",
+                                        stream_name="s5_bind_local_v2", event_trace=True,
+                                        no_pin=True, q_tail=0.1,
+                                        train_lengths=(16, 32), eval_lengths=(48, 64)),
+    # The temporal family's coupling-DOSE ladder: rho in {0, .25, .5, .75, 1} on one skeleton.
+    # Retired with the family it calibrates — a dose in the temporal reading is a dose of
+    # "resolve against the running map", i.e. of the read-history predicate, so the ladder
+    # measures the same confound at five strengths.
+    **{f"s5_bind_v2_lad{int(r * 100):02d}":
+       TaskSpec(f"s5_bind_v2_lad{int(r * 100):02d}", "s5_bind", kind="retired",
+                k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
+                rho_p=r, rho_b=r, rho_ladder=(0.0, 0.25, 0.5, 0.75, 1.0),
+                coupled=True, query_arm="state", stream_name="s5_bind_v2_lad",
+                train_lengths=(16, 32), eval_lengths=(192,))
+       for r in (0.0, 0.25, 0.5, 0.75, 1.0)},
 }
 
 # CALIBRATION specs: cells that measure how a construct behaves rather than how a model scores.
@@ -1881,133 +2033,7 @@ RETIRED = {
 # REPORTED, nothing in the benchmark roster, and outside the CANONICAL validity gate, which
 # fails a cell whose strongest registered shallow policy reads 0.5 or more (a calibration cell
 # is allowed to be mostly floor; that is often the thing being measured).
-#
-# ---- s5_bind: the coupling-DOSE ladder ---------------------------------------------------
-# rho_p = rho_b in {0, 0.25, 0.5, 0.75, 1} on the composed arm of the k=12 operating point:
-# the fraction of events whose second operand is named "at this point" rather than "at the
-# start".
-#
-# THE LADDER IS ONE ITEM STREAM READ FIVE WAYS. All five rungs set the same rho_ladder and
-# share stream_name="s5_bind_v2_lad", so the skeleton-first sampler (TaskSpec.rho_ladder)
-# gives index i the same world, the same events and the same two queries at every dose; the
-# five prompts differ only in which sentences say "at this point", at equal whitespace-token
-# counts, and gold is the only other thing that moves. A dose contrast is therefore
-# within-item. The bottom rung renders every reference statically, so the origin of a dose
-# response is an identity control — at rho=0 the coupled and decoupled readings of an item are
-# the same string — rather than an assumption. The top rung carries the composed cell's knobs
-# but is a different draw from s5_bind_v2, whose stream predates the paired sampler; the
-# ladder is read within itself, never against that cell item by item.
-#
-# Two measured properties fix what the ladder can be read for.
-#
-#   THE FLOOR MOVES WITH THE DOSE, and at the low end it takes most of the cell. Operative
-#   floor (factworld.validity.s5_bind_floors, n=500 paired test items) against 1/(k-1) = 0.091:
-#       rho        0.0    0.25     0.5    0.75     1.0
-#       L=192    0.250   0.558   0.144   0.108   0.104
-#   and pin density is 0.0000 at every rung. The low rungs are set by one_leg_B — feed B into P
-#   but never P into B — because when a quarter of the events are referenced, half the coupling
-#   already reproduces the answer; the top two are set by stale_resolution at chance.
-#   Lowering the dose walks the cell continuously into its own decoupled reading, so headroom
-#   is a function of the dose. Only L=192 is registered: at L=64 four of the five rungs read
-#   0.496 or more, and a rung with 0.06 of headroom measures its floor.
-#
-#   THE CHEAPEST CORRECT ALGORITHM IS A FUNCTION OF THE DOSE. On a step-counted register
-#   machine with free content-addressed retrieval, k=12/L=64, the composed cell costs
-#   29 / 127 / 178 / 249 / 289 steps at rho = 0 / 0.25 / 0.5 / 0.75 / 1: the all-static reading
-#   is a sparse backward walk over one live symbol, the intermediate doses are cheapest under
-#   demand-driven resolution, and only rho=1 forces the full forward pass. An executor with no
-#   composition-specific failure at all — one per-step slip rate, nothing else — therefore
-#   walks down the ladder: 0.80 / 0.74 / 0.65 / 0.60 at rho = 0.25 / 0.5 / 0.75 / 1, a slope of
-#   0.27 per unit dose, at a slip rate that leaves the decoupled component at 0.95. A slope in
-#   rho measures the cost of the cheapest algorithm; it is not by itself evidence about
-#   composition. What the paired ladder adds is the per-ITEM contrast the between-item ladder
-#   could not support: at a fixed dose the skeleton fixes WHICH of an item's own references
-#   cross structures, so the number of load-bearing cross-structure resolutions varies at
-#   fixed load-bearing depth.
-#
-# WHAT SEPARATES COMPOSITION FROM STEP COUNT, AND WHAT DOES NOT.
-#
-#   MATCHED STEP COUNT DOES NOT. Split the answer's backward dataflow slice under the cheapest
-#   correct algorithm into the ops it actually depends on: at k=12/L=192/rho=1 that is 213 of
-#   the 676 steps, because the forward pass must materialise B before it knows which of it the
-#   query needs. The decoupled whole-map arm's slice is ALL of its steps. Matched on steps at
-#   ~700, an executor with no composition-specific failure — one per-op slip rate, nothing
-#   else — already reads acc(map) - acc(composed) = -0.385 scoring the map whole and +0.178
-#   scoring it per slot: the null offset is larger than any composition effect and its SIGN is
-#   a scoring choice. Read against the SLICE instead, one accuracy-vs-slice law fits both arms:
-#   at a 0.002 slip rate it misses the composed arm by -0.022 and the whole-map arm by -0.026,
-#   so the arm difference it leaves is 0.004. The two matchings cannot be satisfied at once —
-#   the composed arm's slice/steps ratio is 0.31 and every uncomposed arm of this family is at
-#   1.0 — so an arm difference prices whichever cost variable was matched, not composition. A
-#   within-arm regression of accuracy on steps says the same: at one slip rate the per-step
-#   log-survival slope is -6.8e-4 on the composed arm and -21.8e-4 on the uncomposed one, 3.2x
-#   apart with no composition deficit anywhere. The ladder makes
-#   the same point without a second arm: every rung costs 677.1 steps, and the
-#   composition-free executor still walks 0.901 / 0.832 / 0.761 / 0.675 across
-#   rho = 0.25 / 0.5 / 0.75 / 1.
-#
-#   AN OP-TYPE CONTRAST WITHIN ONE CELL DOES. Fit P(correct) = q + (1-q)/k with
-#   q = exp(-(theta_w w + theta_z z + theta_x x)) over items, where w counts the slice's writes,
-#   z its resolutions that did NOT need the other structure's running state, and x those that
-#   did. z and x are the same operation in the same position of the same algorithm at the same
-#   cost; they differ only in where the value came from, so theta_x - theta_z is zero for any
-#   executor whose slip rate does not depend on that. Measured over 24 composition-free
-#   executor configurations (k=12 rho=1/0.75 L=192, k=6 L=64; slips propagating / read-only /
-#   first-slip-fatal / per-item-heterogeneous; two slip rates each) the statistic reads -0.021
-#   to +0.0004 and the one-sided likelihood-ratio test's type-I is 0.000-0.090 against a
-#   nominal 0.05. It is blind by design to a failure that garbles every dynamic reference
-#   alike, including the ones whose referenced cell has not moved: those ask nothing about
-#   composition, and a uniform surface failure on them is not evidence about it.
-#
-#   ITS POWER IS THE PROBLEM, AND IT SPLITS THE TWO REGIMES. Against an executor that resolves
-#   a cross-structure reference against the STATED map with probability gamma, power at
-#   alpha=0.05 is
-#       k=12, L=192, n=500 :  0.09 / 0.27 / 0.35 for deficits costing 0.00 / 0.36 / 0.54
-#       k=6,  L=64,  n=500 :  0.03 / 0.20 / 0.34 for deficits costing 0.00 / 0.12 / 0.22
-#       k=6,  L=64,  n=5000:  0.02 / 0.81 / 0.99 for the same three
-#   Nothing in the construct lifts the k=12 curve: greedy selection of the most informative
-#   (item, query) pairs — the strongest lever that still conditions on the item alone — moves
-#   the contrast's standard error from 0.0054 to 0.0026, worth about 4x the sample size. So the
-#   statistic is an instrument for the from-scratch regime, where thousands of items are free,
-#   and not for the frontier regime, where a few hundred is the budget.
-#
-# The k=6 operating point has no ladder: its longest scored stream is 48 events, where the five
-# rungs read 0.488 / 0.852 / 0.604 / 0.320 / 0.228 against a 0.200 chance level. The op-type
-# contrast needs no ladder — it runs on any coupled cell, including s5_bind_local_v2 itself.
-_S5_BIND_LADDER = (0.0, 0.25, 0.5, 0.75, 1.0)
-
-CALIBRATION = {
-    "s5_bind_v2_lad00":  TaskSpec("s5_bind_v2_lad00", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
-                                   rho_p=0.0, rho_b=0.0, rho_ladder=_S5_BIND_LADDER,
-                                   coupled=True, query_arm="state",
-                                   stream_name="s5_bind_v2_lad",
-                                   train_lengths=(16, 32), eval_lengths=(192,)),
-    "s5_bind_v2_lad25":  TaskSpec("s5_bind_v2_lad25", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
-                                   rho_p=0.25, rho_b=0.25, rho_ladder=_S5_BIND_LADDER,
-                                   coupled=True, query_arm="state",
-                                   stream_name="s5_bind_v2_lad",
-                                   train_lengths=(16, 32), eval_lengths=(192,)),
-    "s5_bind_v2_lad50":  TaskSpec("s5_bind_v2_lad50", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
-                                   rho_p=0.5, rho_b=0.5, rho_ladder=_S5_BIND_LADDER,
-                                   coupled=True, query_arm="state",
-                                   stream_name="s5_bind_v2_lad",
-                                   train_lengths=(16, 32), eval_lengths=(192,)),
-    "s5_bind_v2_lad75":  TaskSpec("s5_bind_v2_lad75", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
-                                   rho_p=0.75, rho_b=0.75, rho_ladder=_S5_BIND_LADDER,
-                                   coupled=True, query_arm="state",
-                                   stream_name="s5_bind_v2_lad",
-                                   train_lengths=(16, 32), eval_lengths=(192,)),
-    "s5_bind_v2_lad100": TaskSpec("s5_bind_v2_lad100", "s5_bind", kind="experimental",
-                                   k=12, n_objects=12, n_objects_active=12, no_pin=True, q_tail=0.1,
-                                   rho_p=1.0, rho_b=1.0, rho_ladder=_S5_BIND_LADDER,
-                                   coupled=True, query_arm="state",
-                                   stream_name="s5_bind_v2_lad",
-                                   train_lengths=(16, 32), eval_lengths=(192,)),
-}
+CALIBRATION: dict[str, TaskSpec] = {}
 
 
 def spec_for(name: str) -> TaskSpec:
