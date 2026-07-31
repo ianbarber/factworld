@@ -50,17 +50,23 @@ def profile_block(name, L, n):
     query = V.s5_bind_v3_query_kind(ex)
     ns, ng = V.s5_bind_v3_shape(ex)
     wt, st = V.s5_bind_v3_task_cost(k, m, ns, ng, named, query)
-    bound = wt if named else V.one_structure_bound(k, m)
-    fl = V.s5_bind_v3_floors(ex, k, m)
+    smin = V.s5_bind_v3_task_cost_min(k, m, ns, ng, named, query)
+    dep = V.s5_bind_v3_task_depth(k, m, ns, ng, named, query)
+    bound = (f"depth <= {V.S5_BIND_V3_MAX_DEPTH} hop against the algorithm's {dep}, and S < {smin}"
+             if named else f"W <= {V.one_structure_bound(k, m)}")
+    fl = dict(V.s5_bind_v3_floors(ex, k, m))
+    fl.update(V.s5_bind_v3_family_floors(ex, k, m, named, query))
     op = V.s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query)
     basis = V.s5_bind_v3_floor_basis(k, m, ns, ng, named, query)
     print(f"\n== {name}@L{L}  k={k} m={m} swaps={ns} gives={ng} query={query} n={n}")
-    print(f"   task cheapest correct algorithm: W={wt} S={st};  floor row bound W<={bound}")
+    print(f"   task cheapest correct algorithm: W={wt} S={st} (per-item minimum {smin}) "
+          f"depth={dep};  floor row bound {bound}")
     if basis == "chance":
-        print(f"   OPERATIVE FLOOR {op:.4f} = INFORMED CHANCE, BY DEFINITION. No row that reads "
-              f"the item is admissible\n   here — the only one that would bound the cell is its "
-              f"own algorithm, which ties it — so this\n   number is a definition and not a "
-              f"measurement.")
+        print(f"   OPERATIVE FLOOR {op:.4f} = INFORMED CHANCE. No REGISTERED row that reads the "
+              f"item is admissible\n   here — the one that would bound the cell is its own "
+              f"one-hop algorithm, which no admitted row\n   may pay for — and every admitted "
+              f"member of the swept give-scan family is too short to reach\n   the write the "
+              f"sampler pins into the window, so each resolves nothing at all.")
     else:
         print(f"   OPERATIVE FLOOR {op:.4f} ({op / ch:.2f}x chance), MEASURED")
     prof = V.s5_bind_v3_slot_profile(ex, k, m, named, query)
@@ -85,9 +91,14 @@ def profile_block(name, L, n):
         print("   block-drop width profile (best position at each width, W = k+m+1), x chance:")
         print("     w    " + "".join(f"{w:>6.2f}" for w in WIDTHS))
         print("     x    " + "".join(f"{wp[w] / ch:>6.2f}" for w in WIDTHS))
-    print("   THE W AXIS HAS NO FORCE IN THE FRONTIER REGIME: a model with a scratchpad is not")
-    print("   register-bounded, so every row above is available to it and the number its score")
-    print("   must clear is the TOP of this profile, not the admitted max.")
+    if axis == "W":
+        print("   THE W AXIS HAS NO FORCE IN THE FRONTIER REGIME: a model with a scratchpad is")
+        print("   not register-bounded, so every row above is available to it and the number its")
+        print("   score must clear is the TOP of this profile, not the admitted max.")
+    else:
+        print("   THE DEPTH BOUND DOES BIND IN THE FRONTIER REGIME: a scratchpad makes a")
+        print("   truncated walk affordable, not correct, so the excluded rows above are what a")
+        print("   score on this cell has to beat and the admitted max is what it has to clear.")
 
 
 # --- the surface read ----------------------------------------------------------------------

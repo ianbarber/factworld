@@ -1180,6 +1180,37 @@ def _s5_bind_v3_lanes(spec) -> tuple[float, ...]:
     return (spec.p_cross,)
 
 
+S5_BIND_V3_BIND_TAIL = 0.75
+# THE SOURCE-STRUCTURE RETRIEVAL WINDOW, and the floor argument that rests on it. The queried
+# object's RESOLVING (last) write must land in [L // 10, S5_BIND_V3_BIND_TAIL * L], so its
+# distance from the end of the stream is at least L - 1 - floor(0.75 L) — a quarter of the
+# stream. A policy that reads fewer events than that cannot have read the write, so on the
+# retrieval component every bounded scan is exactly a guess, which is what makes that cell's
+# floor informed chance rather than an accident of which rows were written down
+# (factworld.validity, the component rule).
+#
+# WHAT IT COSTS, AND WHY L IS NOT A FREE AXIS HERE. The window is a REJECTION, and its acceptance
+# rate falls exponentially in (1 - tail) L / m: an object qualifies only if it takes no write in
+# the last quarter of the stream, which is ~(1 - 1/m)^{L/4} per object. Measured acceptance, as a
+# fraction of drawn streams: 0.62 / 0.19 / 0.047 at m = 12 and L = 128/192/256, and 0.54 / 0.079
+# at m = 6 and L = 48/96. The retrieval component therefore costs 22 stream restarts per item at
+# its longest cell against 1.6 at its shortest, and the same window at L = 512 would admit
+# roughly one stream in 500. The restart cap below is sized against that rate rather than a
+# typical one: at 200 it fails one item in ~4000 at L = 256 (idx 1771 of the s5_bind_v3_bind
+# test split), which is a crash and not a degradation.
+S5_BIND_V3_STREAM_RESTARTS = 4000
+
+
+def s5_bind_v3_bind_window(length: int) -> tuple[int, int]:
+    """The event indices the queried object's resolving write may occupy, ``(lo, hi)`` inclusive.
+
+    Stated once and read by both the sampler and ``factworld.validity``, so the cost model and
+    the stream cannot drift: the retrieval component's own algorithm is a backward scan whose
+    length this window sets, and the floor rule prices every row against it.
+    """
+    return length // 10, int(S5_BIND_V3_BIND_TAIL * length)
+
+
 def _nearest(pool, key, target, rng):
     """The pool cell whose read history is closest to ``target``, ties broken uniformly.
 
@@ -1257,7 +1288,7 @@ def _s5_bind_v3_stream(spec, agents, objs, rng, length, idx):
     kinds = spec.event_kinds
     if kinds not in ("both", "swap", "give"):
         raise ValueError(f"{spec.name}: event_kinds={kinds!r} not in {{'both','swap','give'}}")
-    for _outer in range(200):
+    for _outer in range(S5_BIND_V3_STREAM_RESTARTS):
         ADMISSION["restarts"] += 1
         P0 = _derangement(agents, rng)
         B0 = dict(zip(objs, rng.sample(agents, m)))
@@ -1380,7 +1411,7 @@ def _s5_bind_v3_stream(spec, agents, objs, rng, length, idx):
                          and (not spec.q_no_surface
                               or st[d]["P"][a] != st[d]["surf"].get(a))
                          for d in lanes)]
-        lo, hi = length // 10, int(0.75 * length)
+        lo, hi = s5_bind_v3_bind_window(length)
         cand_b = [o for o in objs
                   if writes[o] >= 2 and lo <= last_write.get(o, -1) <= hi
                   and all(st[d]["B"][o] != B0[o] for d in lanes)]
@@ -1996,27 +2027,39 @@ CANONICAL = {
     # factworld.validity.s5_bind_v3_floors, under the one-structure class rule.
     #
     # THE FLOOR IS A PROFILE, NOT A NUMBER, and the length grid is cut so the admitted end of it
-    # sits at informed chance. Measured at n=500 on the scored items (validity.s5_bind_v3_*,
-    # scripts/probe_s5bind_v3_floor_20260731.py), as ratios to informed chance 1/(k-1):
+    # sits at informed chance. The composed cells are measured at n=500 on the scored items
+    # (validity.s5_bind_v3_*, scripts/probe_s5bind_v3_floor_20260731.py) and the component cells
+    # at n=4000, because the max over admitted rows carries an upward selection bias at small n:
+    # the state component's ``last_write_1hop`` reads 1.30x at n=500 and 0.98x at n=4000, and the
+    # published 1.30x was a high draw. As ratios to informed chance 1/(k-1):
     #
     #   cell                        L   operative floor   what sets it
     #   s5_bind_v3                256       1.09x        uniform_anti_surface, the gate's price
-    #   s5_bind_local_v3           96       1.16x        the fitted surface ranker
-    #   s5_bind_v3_state          256       1.30x        last_write_1hop, the carrier walk cut
-    #   s5_bind_local_v3_state     96       1.08x        after one hop / the fitted ranker
-    #   s5_bind_v3_bind           256       1.00x        informed chance, BY DEFINITION: the only
-    #   s5_bind_local_v3_bind      96       1.00x        row that would bound them is the
-    #                                                    component's own algorithm, which ties it
+    #   s5_bind_local_v3           96       1.14x        the fitted surface ranker
+    #   s5_bind_v3_state          256       1.00x        informed chance: last_write_1hop, the
+    #   s5_bind_local_v3_state     96       1.02x        carrier walk cut after one hop, reads
+    #                                                    0.98x and 1.03x, the state-free surface
+    #                                                    read 0.97x / 0.75x and the fitted ranker
+    #                                                    0.89x / 1.01x (n=4000)
+    #   s5_bind_v3_bind           256       1.00x        informed chance, PROVED: the sampler
+    #   s5_bind_local_v3_bind      96       1.00x        pins the queried object's resolving
+    #                                                    write out of reach of every admitted
+    #                                                    budget, and each reads exactly 0.000
     #
     # The surface entry is a RANKER over 25 state-free features fitted on one sample and scored
     # on a disjoint one, so it is neither a selection statistic nor the weakest member of the
-    # family; it moves with the FIT budget, and these are at 500 fitted / 500 scored.
+    # family; it moves with the FIT budget, and these are at 500 fitted / 4000 scored.
     #
     # What the class rule EXCLUDES is measured beside it, since the exclusion is a cost argument.
     # The partial-carry family (carry P and j of the m holder cells, W = k+j+1) climbs to 6.12x
     # at j=11 at k=12/L=128 and 3.17x at j=5 at k=6/L=48; the block-drop family (both maps, one
     # block dropped) reaches 9.57x at a 0.01L block and decays to chance by 0.25L. Both sit above
-    # the one-structure bound and neither is a floor.
+    # the one-structure bound and neither is a floor. On the component cells the excluded family
+    # is the cell's own algorithm truncated: the carrier walk with c events left unread reads
+    # 9.28x / 7.62x / 6.41x / 4.74x / 2.79x / 1.31x / 0.96x at c = 1 2 3 5 9 17 33 (k=12, L=256)
+    # and the truncated give-scan jumps from 0.000 to a resolved fraction the moment its budget
+    # reaches the sampler's window. Both are excluded by the component rule — the first on depth,
+    # the second on the algorithm's per-item minimum cost — and neither is a floor.
     #
     # The k=12 grid starts at 128 and the k=6 grid at 48 because below that a short stream
     # against k gives the queried agent too few carrier events for the second leg to matter. The

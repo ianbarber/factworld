@@ -1258,22 +1258,93 @@ def _fmt(report: dict) -> str:
 # The j-profile above is exactly the check that this is not vacuous: every admitted member is at
 # chance and every member above chance is excluded, with the boundary between them at j = 1.
 #
-# COMPONENT CELLS SEPARATE ON THE OTHER AXIS. A component renders every second operand by name,
-# so its cheapest correct algorithm already holds NO structure — the sparse backward carrier
-# walk, W = 2 — and the one-structure bound is vacuous there. What the component's difficulty is
-# made of is STEPS, so that is where the strictness goes: a row may set a component cell's floor
-# if it holds no more than the component's own two registers and STOPS EARLIER than the walk.
-#   state component:     ``last_write_1hop`` is the carrier walk truncated after ONE hop. It
-#                        scans back to the last swap naming the queried agent and stops, so it
-#                        pays ~2Lk/n_swap steps against the walk's 2L, and it is ADMITTED. It
-#                        reads 1.30x informed chance at k=12/L=256 and 1.05x at k=6/L=96, which
-#                        is that cell's floor and is a measured number.
-#   retrieval component: the same row IS the component's whole algorithm — a named give's
-#                        recipient is the answer — so it reads 1.000, ties the task on steps and
-#                        is EXCLUDED. Nothing else reads the item, so that cell's floor is
-#                        informed chance BY DEFINITION. ``s5_bind_v3_floor_basis`` returns
-#                        'chance' there and the suite prints that word instead of a 1.00x ratio
-#                        that looks like a policy was measured up to it.
+# ===========================================================================================
+# THE COMPONENT RULE — the same move on the axis a component separates on
+# ===========================================================================================
+# A component renders every second operand by name, so its cheapest correct algorithm already
+# holds NO structure — the sparse backward carrier walk, W = 2 — and the one-structure bound is
+# vacuous there. The strictness has to go somewhere else, and TWO earlier placements of it fail
+# for the same reason the W half failed: they are thresholds on a continuous axis, so the
+# continuum reopens one step over.
+#
+#   ``s_row < s_task``, steps against the task's MEAN. The backward carrier walk truncated to the
+#   last L - c events costs 2(L - c) + 3 against the walk's 2L + 2, so every c >= 1 is cheaper
+#   and admitted. It is not a cheap policy: it is the task with c events dropped, and it reads
+#   9.46x / 9.36x / 9.28x informed chance at c = 1 and L = 128/192/256 (n = 800), decaying
+#   smoothly (9.28 7.62 6.41 4.74 2.79 1.31 0.96 at c = 1 2 3 5 9 17 33, L = 256) to chance
+#   around c = 33.
+#
+#   ``S = O(1) in L``, bounded lookback, tested by doubling the stream. It keeps the one-hop read
+#   (S = 2k + 3) and excludes c-drop truncation written as such — but the SAME policy written as
+#   an absolute budget, "read the last 127 events", has S = 2 min(127, L) + 3, which does not
+#   move when the stream doubles. At L = 128 that policy IS the c = 1 walk and reads 9.35x. A
+#   rule whose verdict depends on how a parameter is written down is not a rule.
+#
+# WHAT THE ACCURACIES SAY. On the state component a truncated walk's accuracy is governed by the
+# UNREAD PREFIX, not by the budget: at every registered length, absolute budgets T = 1 .. L/2 sit
+# at 0.10x-1.18x chance while c-drops of 1 .. 9 sit at 2.5x-9.4x. The two families are the same
+# policy; what separates them is how many of the carrier's HOPS they compose.
+#
+# THE RULE THAT CLOSES IT, and it is the one-structure move on the axis this cell is made of:
+#
+#     A ROW MAY SET A COMPONENT CELL'S FLOOR IFF IT COMPOSES AT MOST ONE HOP — one event's
+#     content resolved into its answer — AND COSTS STRICTLY LESS THAN THE CELL'S OWN ALGORITHM
+#     ON EVERY ITEM, i.e. less than that algorithm's MINIMUM per-item cost, not its mean.
+#
+# Both halves are gaps in KIND and neither is a threshold:
+#   DEPTH.  The state component's algorithm composes the whole carrier chain — 2 n_swap / k hops,
+#           21 at L=128 and 43 at L=256 — and the bound is ONE, exactly as the composed cell's
+#           bound is one structure against two. Hops are integers and a truncation of an
+#           unbounded-depth walk still composes more than one of them at every budget that reads
+#           more than one hop's worth of stream, so the WHOLE T-family goes out at once, in both
+#           parameterisations, with no threshold to place.
+#   COST.   Against the MINIMUM the algorithm can cost on any item, a row that ever RUNS that
+#           algorithm to completion is excluded — it ties, and a policy that runs the task where
+#           it can and abstains elsewhere is the task on a subset, not a cheaper policy. Against
+#           the MEAN it was admitted. One word.
+# The depth convention is D1-D3 below; the two halves are checked separately by
+# ``s5_bind_v3_row_depth`` and ``s5_bind_v3_task_cost_min`` so each verdict is readable.
+#
+#   state component:     the bound bites. ``last_write_1hop`` — scan back to the last swap naming
+#                        the queried agent, take its named partner, read that agent's stated
+#                        pointer — is one hop and pays 2k + 3 against a minimum of 2L + 2, so it
+#                        is ADMITTED, and it reads 0.98x informed chance at k=12/L=256 and 1.03x
+#                        at k=6/L=96 (n = 4000). Every other one-hop row measured there is at or
+#                        below chance: the state-free surface read 0.97x / 0.75x, the fitted
+#                        25-feature ranker 0.89x / 1.01x on 4000 held-out items, the truncated
+#                        walk 0.10x-1.18x over absolute budgets. The operative floor is then
+#                        1.00x and 1.02x. The whole c-drop continuum is excluded on DEPTH.
+#   retrieval component: the depth bound is VACUOUS — that cell's own algorithm is itself one hop
+#                        (a named give's recipient IS the answer), so there is nothing to hold at
+#                        most one of, and the floor rests entirely on the cost half. It closes
+#                        because the SAMPLER puts the answer out of reach: the queried object's
+#                        resolving write is pinned into [L/10, 0.75L]
+#                        (tasks.s5_bind_v3_bind_window), so it sits at least L - 1 - floor(0.75L)
+#                        events from the end and a row cheaper than 2(L - floor(0.75L)) + 3
+#                        cannot have read it. Measured at n = 4000, the truncated give-scan
+#                        resolves NOTHING at every admitted budget — 0.000, not "near chance" —
+#                        and resolves a positive fraction at the first excluded one (0.082 at
+#                        k=12/L=256, 0.174 at k=6/L=96), at all six cells. The boundary is the
+#                        window's, to the event. That cell's floor is informed chance and it is
+#                        now a proof rather than a definition; ``s5_bind_v3_floor_basis`` still
+#                        returns 'chance' there, because no admitted row that reads the item
+#                        beats a guess.
+#
+# ===========================================================================================
+# THE DEPTH CONVENTION  (D1-D3, stated so "one hop" can be applied by reading a policy's code)
+# ===========================================================================================
+#   D1  A HOP is one event whose CONTENT the row resolves into its answer. A row's DEPTH is the
+#       longest chain of read events in which each is located or resolved using the previous
+#       one's output.
+#   D2  LOCATING an event by a key the row already holds is free — "the last swap naming the
+#       queried agent" is keyed by the query, which every policy has. Locating the NEXT event by
+#       the previous one's output is a hop; that is what a carrier walk does and what a one-hop
+#       read refuses.
+#   D3  Resolving a symbol through the STATED fact block is not a hop: it is content-addressed
+#       (W4) and reads no event.
+# Under D1-D3 a guess is depth 0, the one-hop read and the state-free surface read are depth 1,
+# a walk truncated to T events is depth T (its budget bounds its hops), and the forward pass a
+# composed cell needs is depth L.
 #
 # THE W AXIS HAS NO FORCE IN THE FRONTIER REGIME. A model with a scratchpad is not register
 # bounded: it can write both maps down and replay. Every row of the profile is available to it,
@@ -1326,28 +1397,129 @@ def s5_bind_v3_needs(row: str, query: str = "state") -> tuple[bool, bool]:
     raise KeyError(row)
 
 
+def _v3_bind_scan(m: int, L: int) -> tuple[int, int]:
+    """``(minimum, mean)`` events a backward scan to the queried OBJECT's resolving write reads.
+
+    The sampler pins that write into ``tasks.s5_bind_v3_bind_window``, so the scan is Theta(L)
+    and not Theta(m): its distance from the end is at least ``L - 1 - hi``, and the last write
+    below ``hi`` sits a further ~m events down (the writes to one object are ~Geometric(1/m)
+    apart), so the mean is that minimum plus m.
+
+    The earlier ``L / (n_give / m) = m`` priced the window out of existence and understated this
+    cell's own algorithm 5.7x at L = 256 — 27 steps where ``composition.cost_isolated_bind``
+    measures 152.4 on the same items. Measured means: 89.3 / 120.1 / 152.4 at k=12/L=128/192/256
+    against 89 / 121 / 153 here, and 37.1 / 44.8 / 61.1 at k=6/L=48/64/96 against 37 / 45 / 61.
+    """
+    from .tasks import s5_bind_v3_bind_window
+
+    _lo, hi = s5_bind_v3_bind_window(L)
+    d_min = max(0, L - 1 - hi)               # the closest the window lets the write sit
+    return min(L, d_min + 1), min(L, d_min + max(1, m))
+
+
 def _v3_scan_len(k: int, m: int, n_swap: int, n_give: int, query: str) -> int:
     """Events a backward scan to "the last event naming the queried slot" passes, in expectation.
 
     The event stream is not addressable (W5), so the scan is charged for every event it reads
-    and rejects. A state query scans for a swap naming one of k agents, a bind query for a give
-    naming one of m objects, so the expected distance from the end is the stream length over the
-    number of such events per slot.
+    and rejects. A STATE query scans for a swap naming one of k agents, so the expected distance
+    from the end is the stream length over the number of such events per slot. A BIND query is
+    not that: the sampler places the queried object's write, so the scan is ``_v3_bind_scan``.
     """
     L = n_swap + n_give
-    per = (n_swap / k) if query in ("state", "state_all") else (n_give / max(1, m))
+    if query not in ("state", "state_all"):
+        return _v3_bind_scan(m, L)[1]
+    per = n_swap / k
     return L if per <= 0 else min(L, int(round(L / per)))
+
+
+S5_BIND_V3_FAMILY_PREFIXES = ("trunc_walk_T", "trunc_walk_drop", "give_scan_d")
+S5_BIND_V3_MAX_DEPTH = 1                         # a component floor row composes at most one hop
+
+
+def _v3_family(row: str) -> tuple[str, int] | None:
+    """``(family, parameter)`` for a swept family member, or None for a named registry row.
+
+    The two component families are registered with a parameter in the NAME so a whole continuum
+    can be priced and plotted rather than summarised by whichever member somebody wrote down:
+    ``trunc_walk_T{T}`` reads the last T events, ``trunc_walk_drop{c}`` leaves the first c
+    unread, and ``give_scan_d{d}`` reads the last d for the queried object's write.
+    ``surface_ranker`` is the fitted 25-feature state-free ranker (``s5_bind_v3_surface_bound``),
+    priced here so its admission is decided by the same rule as everything else.
+    """
+    if row == "surface_ranker":
+        return ("surface_ranker", 0)
+    for pre in S5_BIND_V3_FAMILY_PREFIXES:
+        if row.startswith(pre):
+            tail = row[len(pre):]
+            if tail.isdigit():
+                return (pre, int(tail))
+    return None
+
+
+def s5_bind_v3_row_depth(row: str, query: str = "state", length: int | None = None) -> int:
+    """The row's COMPOSITION DEPTH under D1-D3: the MOST events whose contents it can chain.
+
+    A guess chains none; the one-hop read and the state-free surface read chain one and stop; a
+    walk given T events can chain up to T. The bound is the policy's, not the stream's, which is
+    what makes it independent of how the parameter is written: at one cell ``trunc_walk_T{L-c}``
+    and ``trunc_walk_drop{c}`` are the same policy and get the same depth.
+    """
+    fam = _v3_family(row)
+    if fam is not None:
+        kind, p = fam
+        if kind == "trunc_walk_T":
+            return p if length is None else min(p, length)
+        if kind == "trunc_walk_drop":
+            return (1 << 30) if length is None else max(0, length - p)
+        return 1                                 # give_scan_d / surface_ranker: one event each
+    if row in ("uniform", "uniform_non_initial", "uniform_anti_surface", "initial_only"):
+        return 0
+    if row in ("last_write_1hop", "last_swap_ref"):
+        return 1
+    return 1 << 30                               # every replay row chains the whole stream
+
+
+def s5_bind_v3_task_depth(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
+                          query: str = "state") -> int:
+    """THIS CELL's own algorithm's composition depth — what the one-hop bound is a gap against.
+
+    The composed cell's forward pass chains every event. The STATE component's carrier walk
+    chains the carrier's hops, and a swap moves 2 of the k agents, so that is 2 n_swap / k — 21
+    at k=12/L=128 and 43 at L=256, measured 21.3 and 42.6. The RETRIEVAL component's algorithm
+    chains ONE, which is why the bound is vacuous there and that cell's floor rests on cost.
+    """
+    if not named:
+        return n_swap + n_give
+    if query == "bind":
+        return 1
+    return int(round(2 * n_swap / max(1, k)))
 
 
 def s5_bind_v3_row_cost(row: str, k: int, m: int, n_swap: int, n_give: int,
                         query: str = "state") -> tuple[int, int]:
-    """``(W, S)`` for one registered row, under the W convention above and the step convention in
-    ``factworld.composition``.
+    """``(W, S)`` for one row — registry or swept family member — under the W convention above
+    and the step convention in ``factworld.composition``.
 
     W is ``1 + (k if the row needs P) + (m if it needs B)`` (``s5_bind_v3_needs``) for a row that
     carries a structure, 2 for a row that walks one carrier, and 1 for a row that holds only its
     own answer; the scratch register is the +1 and every row pays it, the task included.
+
+    A swept family member is priced at the BUDGET it declares, which is exact on every member the
+    rule admits: an admitted truncated walk reads its whole budget, and an admitted truncated
+    give-scan never finds the write the sampler pinned, so it reads its whole budget too.
     """
+    L = n_swap + n_give
+    fam = _v3_family(row)
+    if fam is not None:
+        kind, p = fam
+        if kind == "trunc_walk_T":               # read the last p events, following the carrier
+            return 2, 2 * min(p, L) + 3
+        if kind == "trunc_walk_drop":             # the same walk with the first p events unread
+            return 2, 2 * max(0, L - p) + 3
+        if kind == "give_scan_d":                 # read the last p events, then fall back
+            return 2, 2 * min(p, L) + 3
+        # surface_ranker: one forward pass over the stream, O(1) live slots
+        return 2, 2 * L
     needs_p, needs_b = s5_bind_v3_needs(row, query)
     scan = 2 * _v3_scan_len(k, m, n_swap, n_give, query) + 3
     if row in ("uniform", "uniform_non_initial", "initial_only"):
@@ -1381,68 +1553,106 @@ def one_structure_bound(k: int, m: int) -> int:
 
 
 def floor_eligible(w_row: int, s_row: int, w_max: int, s_max: int,
-                   strict_steps: bool = False) -> bool:
-    """The class rule, in the one form both cell kinds use: cheaper in the resource the cell's
-    difficulty is made of, no more expensive in the other.
+                   depth_row: int = 0, depth_max: int | None = None) -> bool:
+    """The class rule, in the one form both cell kinds use: at most ONE unit of the resource the
+    cell's difficulty is made of, and no more of the other than the cell's own algorithm needs.
 
-    ``strict_steps`` picks which axis carries the strictness — slots on a composed cell, steps on
-    a component one, where the cheapest correct algorithm already holds no structure.
+    ``depth_max`` picks which axis carries the gap. It is None on a COMPOSED cell — the gap is on
+    W (one structure against two) and steps are compared to the task's own cost, where a tie is
+    allowed because a row holding one structure cannot be the task however long it runs. It is an
+    integer on a COMPONENT cell — the gap is on composition DEPTH (one hop against the carrier
+    chain), and steps are then compared to the task's MINIMUM per-item cost with NO tie, because
+    a row that ever pays exactly what the algorithm pays has run the algorithm.
     """
-    return w_row <= w_max and (s_row < s_max if strict_steps else s_row <= s_max)
+    if w_row > w_max:
+        return False
+    if depth_max is None:
+        return s_row <= s_max
+    return depth_row <= depth_max and s_row < s_max
 
 
 def s5_bind_v3_task_cost(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
                          query: str = "state") -> tuple[int, int]:
-    """``(W, S)`` for THIS CELL's cheapest correct algorithm.
+    """``(W, S)`` for THIS CELL's cheapest correct algorithm, S in the MEAN over its items.
 
     The composed cell's is the forward pass carrying both maps plus the scratch register. A
     COMPONENT cell renders its second operand by name, so every event's identity is fixed on the
     surface: the STATE component is the sparse backward carrier walk, which under W5 pays for
-    every event it passes (2L + 2); the RETRIEVAL component stops at the last give naming the
-    queried object and pays only that scan. Both hold one carrier and one scratch register.
+    every event it passes and one resolve per carrier hop (2L + 2 n_swap/k + 2); the RETRIEVAL
+    component stops at the last give naming the queried object and pays that scan
+    (``_v3_bind_scan``). Both hold one carrier and one scratch register. Every number here is
+    within a step of what ``composition.cost_report`` counts on the same items.
     """
     if named:
         L = n_swap + n_give
         if query == "bind":
-            return 2, 2 * _v3_scan_len(k, m, n_swap, n_give, query) + 3
-        return 2, 2 * L + 2
+            return 2, 2 * _v3_bind_scan(m, L)[1] + 3
+        return 2, 2 * L + int(round(2 * n_swap / max(1, k))) + 2
     return k + m + 1, (k + m) + 6 * n_swap + 3 * n_give + 1
 
 
+def s5_bind_v3_task_cost_min(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
+                             query: str = "state") -> int:
+    """The LEAST this cell's own algorithm can pay on any ONE of its items — the number a
+    component floor row has to come in strictly under.
+
+    It is the mean that let the whole truncation continuum in: the c-drop walk beats the MEAN by
+    2c and ties nothing, while against the minimum a row that ever runs the algorithm to
+    completion is excluded. The state component's walk reads every event on every item, so its
+    minimum is 2L + 2 (zero carrier hops); the retrieval component's scan is as short as the
+    sampler's window lets it be, ``2 (L - floor(0.75 L)) + 3``.
+    """
+    if not named:
+        return s5_bind_v3_task_cost(k, m, n_swap, n_give, named, query)[1]
+    L = n_swap + n_give
+    if query == "bind":
+        return 2 * _v3_bind_scan(m, L)[0] + 3
+    return 2 * L + 2
+
+
+def s5_bind_v3_admits(row: str, k: int, m: int, n_swap: int, n_give: int, named: bool = False,
+                      query: str = "state") -> bool:
+    """Whether ONE row — registry or swept family member — may set this cell's floor."""
+    w, s = s5_bind_v3_row_cost(row, k, m, n_swap, n_give, query)
+    wt, st = s5_bind_v3_task_cost(k, m, n_swap, n_give, named, query)
+    if not named:
+        return floor_eligible(w, s, one_structure_bound(k, m), st)
+    return floor_eligible(w, s, wt, s5_bind_v3_task_cost_min(k, m, n_swap, n_give, named, query),
+                          s5_bind_v3_row_depth(row, query, n_swap + n_give),
+                          S5_BIND_V3_MAX_DEPTH)
+
+
 def s5_bind_v3_classify(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
-                        query: str = "state") -> dict[str, bool]:
-    """Every registered row, classified at this cell's shape.
+                        query: str = "state", rows=S5_BIND_V3_ROWS) -> dict[str, bool]:
+    """Every row, classified at this cell's shape. ``rows`` takes swept family members too.
 
     COMPOSED cell: the one-structure bound, ``W <= max(k, m) + 1``, and no more steps than the
-    task. The cell's difficulty is structure-sized memory, so that is the axis the strictness
-    goes on.
+    task. The cell's difficulty is structure-sized memory, so that is the axis the gap goes on.
     COMPONENT cell: the cheapest correct algorithm already holds no structure, so the
-    one-structure bound is vacuous and the axis that separates is STEPS — a row may set the
-    floor if it holds no more than the component's own two registers and STOPS EARLIER. That
-    admits the one-hop read on the state component (which is the carrier walk truncated after
-    one hop) and excludes it on the retrieval component (where the same read IS the component's
-    whole algorithm and ties it).
+    one-structure bound is vacuous and the gap goes on composition DEPTH — at most one hop —
+    with steps then held strictly under the algorithm's MINIMUM per-item cost. That admits the
+    one-hop read and the state-free surface family on the state component, excludes the whole
+    truncated-walk continuum there on depth, and on the retrieval component (whose own algorithm
+    is one hop) leaves only rows too short to reach the write the sampler has pinned.
     """
-    wt, st = s5_bind_v3_task_cost(k, m, n_swap, n_give, named, query)
-    w_max = wt if named else one_structure_bound(k, m)
-    out = {}
-    for row in S5_BIND_V3_ROWS:
-        w, s = s5_bind_v3_row_cost(row, k, m, n_swap, n_give, query)
-        out[row] = floor_eligible(w, s, w_max, st, strict_steps=named)
-    return out
+    return {row: s5_bind_v3_admits(row, k, m, n_swap, n_give, named, query) for row in rows}
 
 
 def s5_bind_v3_floor_basis(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
                            query: str = "state") -> str:
     """Whether this cell's operative floor is MEASURED or DEFINITIONAL.
 
-    'measured' — some admitted row is a policy that reads the item and could have come out
-                 anywhere; the floor is whatever it scored.
-    'chance'   — every admitted row holds nothing at all and reads nothing (the guess rows), so
-                 the max over them is the family's own chance level however the items fall.
+    'measured' — some REGISTERED row is a policy that reads the item, is admitted, and could
+                 have come out anywhere; the floor is whatever it scored.
+    'chance'   — every admitted registered row holds nothing and reads nothing (the guess rows),
+                 so the max over them is the family's own chance level however the items fall.
                  Printing the resulting 1.00x as though a policy had been measured up to it is
-                 what this exists to stop. It is the retrieval component's case: the only row
-                 that would bound it is the component's own algorithm, which ties it on steps.
+                 what this exists to stop. It is the retrieval component's case: the row that
+                 would bound it is that cell's own one-hop algorithm, which no admitted row may
+                 pay for, and the swept give-scan family — which IS admitted below the sampler's
+                 window — resolves nothing there and measures 0.000 at every admitted budget.
+    The swept families are measured separately (``s5_bind_v3_family_floors``) and printed in the
+    profile; this label is about which REGISTERED rows the rule lets set the number.
     """
     cls = s5_bind_v3_classify(k, m, n_swap, n_give, named, query)
     for row, ok in cls.items():
@@ -1685,16 +1895,141 @@ def s5_bind_v3_operative_floor(floors: dict[str, float], k: int, m: int,
                                n_swap: int, n_give: int, named: bool = False,
                                query: str = "state") -> float | None:
     """The number a source-structure cell has to clear: the max over the rows the class rule
-    ADMITS at this cell's shape. A row holding more than one structure, or paying more steps than
-    the task, is a diagnostic and never enters this max.
+    ADMITS at this cell's shape. A row holding more than one structure, composing more than one
+    hop, or paying what the cell's own algorithm pays, is a diagnostic and never enters this max.
 
-    On a component cell every admitted row holds nothing at all, so this returns chance BY
-    DEFINITION — ``s5_bind_v3_floor_basis`` is what says so, and a caller printing this number
-    without it is printing a definition as a measurement.
+    ``floors`` may carry swept family members as well as registry rows — every key is classified
+    on its own cost, so a family enters the floor exactly where its members are admitted.
     """
-    ok = s5_bind_v3_classify(k, m, n_swap, n_give, named, query)
+    ok = s5_bind_v3_classify(k, m, n_swap, n_give, named, query, rows=tuple(floors))
     vals = [v for nm, v in floors.items() if ok.get(nm) and v is not None]
     return max(vals) if vals else None
+
+
+# --- the two component families, swept, so each cell carries its continuum ------------------
+S5_BIND_V3_TRUNC_WALK_T = (1, 2, 3, 6, 12, 24, 48, 96)
+S5_BIND_V3_TRUNC_WALK_DROP = (1, 2, 3, 5, 9, 17, 33, 65)
+S5_BIND_V3_GIVE_SCAN_D = (1, 2, 4, 8, 16, 32, 64, 128)
+
+
+def s5_bind_v3_family_rows(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
+                           query: str = "state") -> tuple[str, ...]:
+    """The swept family members defined at this cell — empty on a composed cell, where no
+    backward walk is available at all (no event's operand is known until the other structure has
+    been evaluated forward to it).
+
+    The state component carries the truncated carrier walk in BOTH parameterisations, absolute
+    budget and c-drop, because they are the same policy and the earlier rules disagreed about
+    which one they were looking at. The retrieval component carries the truncated give-scan, and
+    the sweep includes the two members either side of the sampler's window so the exclusion
+    boundary is visible rather than asserted.
+    """
+    if not named:
+        return ()
+    L = n_swap + n_give
+    if query == "bind":
+        d_min = _v3_bind_scan(m, L)[0]
+        ds = set(S5_BIND_V3_GIVE_SCAN_D) | {d_min - 1, d_min, L // 2, L}
+        return tuple(f"give_scan_d{d}" for d in sorted(d for d in ds if 1 <= d <= L))
+    return (tuple(f"trunc_walk_T{t}" for t in sorted(S5_BIND_V3_TRUNC_WALK_T) if 1 <= t < L)
+            + tuple(f"trunc_walk_drop{c}" for c in sorted(S5_BIND_V3_TRUNC_WALK_DROP)
+                    if 1 <= c < L))
+
+
+def s5_bind_v3_trunc_walk(examples, T: int) -> float | None:
+    """THE TRUNCATED CARRIER WALK: scan back over the last ``T`` events following the carrier,
+    then read the agent it lands on out of the stated pointer map.
+
+    ``T = L`` is the state component's own algorithm and reads 1.000; every smaller T is that
+    algorithm stopped early. Its accuracy is governed by the events it does NOT read, so an
+    absolute budget and a c-drop behave completely differently at one cell — which is why the
+    rule bounds the HOPS it composes and not the events it reads. None where the stream is not a
+    named state component.
+    """
+    from .composition import SWAP, read
+
+    hits = n = 0
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is None or rec["query"][0] != "state":
+            return None
+        evs = rec["events"]
+        if any(ev[3] != "N" for ev in evs):
+            return None
+        carrier = rec["query"][1]
+        for i in range(len(evs) - 1, max(-1, len(evs) - 1 - T), -1):
+            kind, tgt, ref, _src = evs[i]
+            if kind != SWAP:
+                continue
+            if carrier == tgt:
+                carrier = ref
+            elif carrier == ref:
+                carrier = tgt
+        v = rec["P0"].get(carrier)
+        n += 1
+        hits += int(v is not None and f"{v}." == e.answer)
+    return hits / n if n else None
+
+
+def s5_bind_v3_give_scan(examples, d: int) -> float | None:
+    """THE TRUNCATED GIVE-SCAN: read back over the last ``d`` events for a give naming the
+    queried object and answer its named recipient; where none is there, fall back to the stated
+    holder, which the sampler guarantees is wrong.
+
+    So this row measures exactly the fraction of items a ``d``-event lookback RESOLVES. A
+    guessing version adds 1/(k-1) on the rest, which is what ``uniform_non_initial`` already
+    prices, so nothing is hidden by the deterministic fallback. None off a named bind component.
+    """
+    from .composition import GIVE, read
+
+    hits = n = 0
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is None or rec["query"][0] != "bind":
+            return None
+        evs = rec["events"]
+        if any(ev[3] != "N" for ev in evs):
+            return None
+        target = rec["query"][1]
+        pred = rec["B0"].get(target)
+        for i in range(len(evs) - 1, max(-1, len(evs) - 1 - d), -1):
+            kind, tgt, ref, _src = evs[i]
+            if kind == GIVE and tgt == target:
+                pred = ref
+                break
+        n += 1
+        hits += int(pred is not None and f"{pred}." == e.answer)
+    return hits / n if n else None
+
+
+def s5_bind_v3_family_floors(examples, k: int, m: int, named: bool | None = None,
+                             query: str | None = None, rows=None) -> dict[str, float]:
+    """Every swept family member's accuracy on this cell's exact items, keyed by row name.
+
+    Merged into ``s5_bind_v3_floors`` by a caller that wants the continuum in the floor and in
+    the profile; each member is then admitted or excluded on its own cost, like any other row.
+    ``rows`` restricts the sweep — a caller re-measuring only the ADMITTED end at a large n does
+    not have to pay for the deep walks it has already excluded.
+    """
+    if named is None:
+        named = s5_bind_v3_is_named(examples)
+    if query is None:
+        query = s5_bind_v3_query_kind(examples)
+    if not named or not examples:
+        return {}
+    ns, ng = s5_bind_v3_shape(examples)
+    out: dict[str, float] = {}
+    for row in (s5_bind_v3_family_rows(k, m, ns, ng, named, query) if rows is None else rows):
+        kind, p = _v3_family(row)
+        if kind == "give_scan_d":
+            v = s5_bind_v3_give_scan(examples, p)
+        elif kind == "trunc_walk_T":
+            v = s5_bind_v3_trunc_walk(examples, p)
+        else:
+            v = s5_bind_v3_trunc_walk(examples, max(0, (ns + ng) - p))
+        if v is not None:
+            out[row] = v
+    return out
 
 
 S5_BIND_V3_SURFACE_FEATURES = (
@@ -1959,8 +2294,9 @@ def s5_bind_v3_slot_profile(examples, k: int, m: int, named: bool = False,
     if query is None:
         query = s5_bind_v3_query_kind(examples)
     ns, ng = s5_bind_v3_shape(examples)
-    fl = s5_bind_v3_floors(examples, k, m)
-    cls = s5_bind_v3_classify(k, m, ns, ng, named, query)
+    fl = dict(s5_bind_v3_floors(examples, k, m))
+    fl.update(s5_bind_v3_family_floors(examples, k, m, named, query))
+    cls = s5_bind_v3_classify(k, m, ns, ng, named, query, rows=tuple(fl))
     wt, st = s5_bind_v3_task_cost(k, m, ns, ng, named, query)
     # the profile runs along whichever resource the cell separates on: live slots on a composed
     # cell, steps on a component one, where every policy already holds two registers.
@@ -1975,7 +2311,11 @@ def s5_bind_v3_slot_profile(examples, k: int, m: int, named: bool = False,
         w, s = s5_bind_v3_row_cost(row, k, m, ns, ng, query)
         put(s if named else w, v, row if cls[row] else row + " (excluded)", cls[row])
     if named:
-        put(st, 1.0, "the component's own algorithm", False)
+        # the truncation continuum sits at the top of the STEP axis, one step under the cell's
+        # own algorithm, and the profile has to show it there: it is what the depth bound
+        # excludes and what a step bound against the mean admitted.
+        smin = s5_bind_v3_task_cost_min(k, m, ns, ng, named, query)
+        put(smin, 1.0, f"the component's own algorithm (min {smin}, mean {st})", False)
     else:
         # j = m is the task itself, so the family is reported up to m - 1 and the task named.
         for j in range(m):

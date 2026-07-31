@@ -1,0 +1,297 @@
+{
+  "written_utc": "2026-07-31T17:01:18+00:00",
+  "protocol": "protocol_s5bind_v3_three_cell_20260731.py",
+  "local_cells": {
+    "state": "s5_bind_local_v3_state",
+    "bind": "s5_bind_local_v3_bind",
+    "composed": "s5_bind_local_v3"
+  },
+  "frontier_cells": {
+    "state": "s5_bind_v3_state",
+    "bind": "s5_bind_v3_bind",
+    "composed": "s5_bind_v3"
+  },
+  "local_lengths": [
+    48,
+    64,
+    96
+  ],
+  "control_length": 16,
+  "train_lengths": [
+    16,
+    32,
+    48,
+    64,
+    96
+  ],
+  "thresholds": {
+    "n_eval": 1000,
+    "z_clear": 3.0,
+    "margin": 0.15,
+    "seeds_clear": 2,
+    "n_fit": 2000,
+    "n_score": 4000
+  },
+  "costs": {
+    "state@16": {
+      "charged_steps": 39,
+      "prompt_tokens": 179
+    },
+    "state@48": {
+      "charged_steps": 114,
+      "prompt_tokens": 435
+    },
+    "state@64": {
+      "charged_steps": 151,
+      "prompt_tokens": 563
+    },
+    "state@96": {
+      "charged_steps": 226,
+      "prompt_tokens": 819
+    },
+    "bind@16": {
+      "charged_steps": 21,
+      "prompt_tokens": 131
+    },
+    "bind@48": {
+      "charged_steps": 37,
+      "prompt_tokens": 291
+    },
+    "bind@64": {
+      "charged_steps": 45,
+      "prompt_tokens": 371
+    },
+    "bind@96": {
+      "charged_steps": 61,
+      "prompt_tokens": 531
+    },
+    "composed@16": {
+      "charged_steps": 79,
+      "prompt_tokens": 305
+    },
+    "composed@48": {
+      "charged_steps": 208,
+      "prompt_tokens": 717
+    },
+    "composed@64": {
+      "charged_steps": 274,
+      "prompt_tokens": 930
+    },
+    "composed@96": {
+      "charged_steps": 403,
+      "prompt_tokens": 1348
+    }
+  },
+  "matched_lengths": {
+    "48": {
+      "composed_L": 48,
+      "composed_steps": 208,
+      "composed_tokens": 717,
+      "axis": "tokens",
+      "target_cost": 717,
+      "state": {
+        "L": 80,
+        "cost": 691,
+        "target": 717,
+        "reachable": true,
+        "cap": 768,
+        "solved_candidate": 80
+      },
+      "bind": {
+        "L": 132,
+        "cost": 711,
+        "target": 717,
+        "reachable": true,
+        "cap": 144,
+        "solved_candidate": 132
+      }
+    },
+    "64": {
+      "composed_L": 64,
+      "composed_steps": 274,
+      "composed_tokens": 930,
+      "axis": "tokens",
+      "target_cost": 930,
+      "state": {
+        "L": 108,
+        "cost": 915,
+        "target": 930,
+        "reachable": true,
+        "cap": 1024,
+        "solved_candidate": 108
+      },
+      "bind": {
+        "L": null,
+        "cost": null,
+        "target": 930,
+        "reachable": false,
+        "cap": 144,
+        "solved_candidate": 144
+      }
+    },
+    "96": {
+      "composed_L": 96,
+      "composed_steps": 403,
+      "composed_tokens": 1348,
+      "axis": "tokens",
+      "target_cost": 1348,
+      "state": {
+        "L": 160,
+        "cost": 1331,
+        "target": 1348,
+        "reachable": true,
+        "cap": 1536,
+        "solved_candidate": 160
+      },
+      "bind": {
+        "L": null,
+        "cost": null,
+        "target": 1348,
+        "reachable": false,
+        "cap": 144,
+        "solved_candidate": 144
+      }
+    }
+  },
+  "matched_axis": "tokens",
+  "floors": {},
+  "verdicts": [
+    "V5_HARNESS_NULL",
+    "V4_COMPONENT_UNREADABLE",
+    "V3_GAP_IS_THE_COST",
+    "V1_COMPOSITION_GAP",
+    "V2_NO_GAP_HERE"
+  ],
+  "scout": {
+    "cells": [
+      {
+        "task": "s5_bind_v3",
+        "length": 128,
+        "n": 40,
+        "settings": {
+          "effort": "high",
+          "max_new_tokens": 8192
+        }
+      },
+      {
+        "task": "s5_bind_v3",
+        "length": 256,
+        "n": 40,
+        "settings": {
+          "effort": "high",
+          "max_new_tokens": 8192
+        }
+      },
+      {
+        "task": "s5_bind_v3_state",
+        "length": 256,
+        "n": 40,
+        "settings": {
+          "effort": "high",
+          "max_new_tokens": 8192
+        }
+      },
+      {
+        "task": "s5_bind_v3_bind",
+        "length": 256,
+        "n": 40,
+        "settings": {
+          "effort": "high",
+          "max_new_tokens": 8192
+        }
+      }
+    ],
+    "n_cells": 4,
+    "per_model": [
+      {
+        "model": "openai/gpt-5.5",
+        "calls": 160,
+        "prompt_tokens": 561640,
+        "completion_tokens": 640000,
+        "cost_usd": 22.0082
+      },
+      {
+        "model": "z-ai/glm-5.2",
+        "calls": 160,
+        "prompt_tokens": 561640,
+        "completion_tokens": 640000,
+        "cost_usd": 2.4423
+      },
+      {
+        "model": "nvidia/nemotron-3-ultra-550b-a55b",
+        "calls": 160,
+        "prompt_tokens": 561640,
+        "completion_tokens": 640000,
+        "cost_usd": 1.6888
+      }
+    ],
+    "total_usd": 26.14,
+    "roster_run_if_bought": {
+      "models": 13,
+      "cells_per_model": 9,
+      "n": 100,
+      "per_model": [
+        {
+          "model": "anthropic/claude-fable-5",
+          "cost_usd": 205.386
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "cost_usd": 120.693
+        },
+        {
+          "model": "openai/gpt-5.6-sol",
+          "cost_usd": 120.693
+        },
+        {
+          "model": "anthropic/claude-opus-4.8",
+          "cost_usd": 102.693
+        },
+        {
+          "model": "moonshotai/kimi-k3",
+          "cost_usd": 61.6158
+        },
+        {
+          "model": "anthropic/claude-sonnet-5",
+          "cost_usd": 41.0772
+        },
+        {
+          "model": "google/gemini-3.6-flash",
+          "cost_usd": 30.8079
+        },
+        {
+          "model": "x-ai/grok-4.5",
+          "cost_usd": 26.6772
+        },
+        {
+          "model": "muse-spark-1.1",
+          "cost_usd": 18.4733
+        },
+        {
+          "model": "qwen/qwen3.7-max",
+          "cost_usd": 16.6732
+        },
+        {
+          "model": "z-ai/glm-5.2",
+          "cost_usd": 13.1609
+        },
+        {
+          "model": "nvidia/nemotron-3-ultra-550b-a55b",
+          "cost_usd": 9.1893
+        },
+        {
+          "model": "deepseek/deepseek-v4-pro",
+          "cost_usd": 4.2363
+        }
+      ],
+      "total_usd": 771.38
+    },
+    "stop_rules": [
+      "STOP (ceiling) if the top scout model's COMPOSED match >= 0.9 at L=256. A ceiling cannot rank the roster, so the roster run buys nothing; redesign (raise k or L) before spending.",
+      "STOP (floor) if the composed cell is at its operative floor for ALL scout models. Zero separation across the roster's range means zero expected pairwise separations in the full run \u2014 the same reading that stopped the s5_chain ranking.",
+      "STOP (component) if either COMPONENT is below 0.8 for the top scout model. The composed cell is then unreadable on the frontier for the same reason it is unreadable locally when a component does not form."
+    ],
+    "buy_rule": "BUY the roster run iff the composed cell's spread across the three scout models is >= 0.2 match AND both components are >= 0.8 for every scout model \u2014 the composed cell discriminates inside the roster's range while the components do not.",
+    "budget_note": "Priced at 8192-token reasoning cells with 4000 assumed completion tokens per call. The 8192 budget is the protocol minimum for a reasoning-on cell; smaller budgets manufactured the published s5 L64 cliff and chain floor as truncation artifacts, so a cheaper scout is not available."
+  }
+}

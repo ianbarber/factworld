@@ -29,11 +29,17 @@ For every canonical task, certify that no shallow baseline clears floor on the h
     slots-only half with a ONE-STRUCTURE BOUND — a row may set a floor only if it holds at most
     one structure (W <= max(k,m)+1 under the W convention stated in factworld.validity) and pays
     no more steps than the task — which closes the partial-carry continuum (carry P in full and
-    j of the m holder cells) by the same argument that closes the block-drop one. Every row is
-    printed for every cell in the floor blocks below the table, and each cell's floor is then
-    printed AS A PROFILE OVER W, since a single number hides exactly the continuum that has to
-    be visible. The surface family enters as a FITTED RANKER scored out of sample rather than as
-    a max over one-at-a-time rules, which is a selection statistic.
+    j of the m holder cells) by the same argument that closes the block-drop one. Its COMPONENT
+    cells, whose own algorithm holds no structure at all, take the same move on the axis they
+    separate on: at most ONE HOP composed, and strictly fewer steps than that algorithm's
+    MINIMUM per-item cost. That excludes the truncated-carrier-walk continuum in both of its
+    parameterisations and leaves the retrieval component only rows too short to reach the write
+    the sampler pins into [L/10, 0.75L]. Every row is printed for every cell in the floor blocks
+    below the table, and each cell's floor is then printed AS A PROFILE — over W on a composed
+    cell, over STEPS on a component one, with both swept families (truncated walk, truncated
+    give-scan) plotted on it, since a single number hides exactly the continuum that has to be
+    visible. The surface family enters as a FITTED RANKER scored out of sample rather than as a
+    max over one-at-a-time rules, which is a selection statistic.
 A task PASSES if majority, recency, first-position and (where defined) strong-recency accuracy are
 all well below 0.5 (near the 1/#answers floor). The pointer-map families answer over a much larger
 space than 2, so their column is gated against their own chance level instead: no shallow policy
@@ -57,7 +63,10 @@ from factworld.validity import (  # noqa: E402
     S5_BIND_V3_CHANCE_ROWS,
     S5_BIND_V3_ROWS,
     S5_BIND_V3_TRUNCATION_ROWS,
+    s5_bind_v3_admits,
     s5_bind_v3_classify,
+    s5_bind_v3_family_floors,
+    s5_bind_v3_family_rows,
     s5_bind_v3_floor_basis,
     s5_bind_v3_floors,
     s5_bind_v3_operative_floor,
@@ -82,6 +91,16 @@ from factworld.validity import (  # noqa: E402
 )
 
 N = 500
+# THE OPERATIVE FLOOR IS A MAX OVER ROWS, so at a finite n it carries an upward selection bias of
+# order the largest row's standard error even when every row sits at chance. At n = 500 and k = 12
+# one row's standard error alone is 0.14 of chance, and that is what the component cells'
+# published 1.30x and 1.08x were: ``last_write_1hop`` reads 1.30x at n = 500 on
+# s5_bind_v3_state@256 and 0.98x at n = 4000. The floor number is therefore re-measured on a
+# larger held-out sample, and only for the rows the rule ADMITS — the deep excluded walks are
+# diagnostics and stay at n = 500, where they are already an order of magnitude off chance. The
+# fitted surface ranker keeps its n = 500 FIT (the expensive half) and is scored on the large
+# sample, since scoring a fitted ranker is a pass and the fit sample is what biases it down.
+N_FLOOR = 4000
 
 # The strong recency baseline only has a defined prediction on the give-stream families.
 STRONG_REC_FAMILIES = ("binding", "composite")
@@ -108,13 +127,17 @@ S5_BIND_SHORTCUTS = tuple(n for n in S5_BIND_ADVERSARIES if n not in S5_BIND_CHA
 S5_BIND_DIAGNOSTIC_ROWS = S5_BIND_TRUNCATION_ROWS
 S5_BIND_DIAGNOSTIC_MAX = 2.0                     # multiples of the informed chance 1/(k-1)
 
-# The SOURCE-STRUCTURE rung. Which rows enter the gate is decided by the PARETO CLASS RULE
-# (factworld.validity.s5_bind_v3_classify: strictly cheaper than the cell's cheapest correct
-# algorithm in live slots, no more expensive in steps), evaluated at the cell's own shape — so
-# registering a row in factworld.validity reaches this column with no edit here, and a row that
-# cannot set a floor cannot enter the gate either. The class-excluded rows are printed as
-# diagnostics and are separately checked to sit within S5_BIND_DIAGNOSTIC_MAX of chance: the
-# exclusion is a cost argument, and a live policy hiding behind it would show up there.
+# The SOURCE-STRUCTURE rung. Which rows enter the gate is decided by the CLASS RULE
+# (factworld.validity.s5_bind_v3_classify: at most one structure held on a composed cell, at most
+# one hop chained and strictly under the algorithm's per-item minimum cost on a component one),
+# evaluated at the cell's own shape — so registering a row in factworld.validity reaches this
+# column with no edit here, and a row that cannot set a floor cannot enter the gate either. On a
+# COMPOSED cell the class-excluded rows are printed as diagnostics and separately checked to sit
+# within S5_BIND_DIAGNOSTIC_MAX of chance: the exclusion is a cost argument, and a live policy
+# hiding behind it would show up there. On a COMPONENT cell that check is not available and must
+# not be faked — the excluded end there IS the cell's own algorithm with a few events dropped and
+# reads 9.3x chance by construction. What is checked instead is the ADMITTED end: the operative
+# floor itself must sit within S5_BIND_DIAGNOSTIC_MAX of chance, on every cell.
 S5_BIND_V3_SHORTCUTS = tuple(n for n in S5_BIND_V3_ROWS if n not in S5_BIND_V3_CHANCE_ROWS)
 
 
@@ -180,22 +203,40 @@ def main():
             named = s5_bind_v3_is_named(test)
             query = s5_bind_v3_query_kind(test)
             fl = s5_bind_v3_floors(test, spec.k, m)
-            cls = s5_bind_v3_classify(spec.k, m, ns, ng, named, query)
+            # the two swept component families (truncated carrier walk, truncated give-scan)
+            # carry each component cell's continuum; every member is classified on its own cost,
+            # so they enter the floor exactly where the rule admits them and nowhere else.
+            fam = s5_bind_v3_family_floors(test, spec.k, m, named, query)
+            allfl = dict(fl)
+            allfl.update(fam)
+            cls = s5_bind_v3_classify(spec.k, m, ns, ng, named, query, rows=tuple(allfl))
             gated = [n for n in S5_BIND_V3_SHORTCUTS if n in fl and cls[n]]
             # the surface family enters as a FITTED bound scored out of sample, not as a max
             # over one-at-a-time rules — see validity.s5_bind_v3_surface_bound. The fit runs on
-            # the scored split and the scoring on items N..2N-1, which are disjoint from it and
-            # deterministic, so the estimate is out of sample and the fit gets the whole N.
-            sb = s5_bind_v3_surface_bound(
-                test, spec.k,
-                held_out=TK.generate(spec, "test", n=2 * N,
-                                     length=spec.eval_lengths[-1])[N:])
-            op = s5_bind_v3_operative_floor(fl, spec.k, m, ns, ng, named, query)
+            # the scored split and the scoring on items N..N+N_FLOOR-1, which are disjoint from
+            # it and deterministic, so the estimate is out of sample and the fit gets the whole
+            # N. It is a W=2, one-hop, one-pass policy and is admitted by the same rule as any
+            # row — on a component cell it pays 2L against an algorithm whose minimum is 2L+2.
+            big = TK.generate(spec, "test", n=N + N_FLOOR,
+                              length=spec.eval_lengths[-1])[N:]
+            sb = s5_bind_v3_surface_bound(test, spec.k, held_out=big)
+            if sb is not None and not s5_bind_v3_admits("surface_ranker", spec.k, m, ns, ng,
+                                                        named, query):
+                sb = None
+            # the floor itself, re-measured at N_FLOOR on the rows the rule admits
+            nsb, ngb = s5_bind_v3_shape(big)
+            keep = tuple(r for r in s5_bind_v3_family_rows(spec.k, m, nsb, ngb, named, query)
+                         if s5_bind_v3_admits(r, spec.k, m, nsb, ngb, named, query))
+            bigfl = dict(s5_bind_v3_floors(big, spec.k, m))
+            bigfl.update(s5_bind_v3_family_floors(big, spec.k, m, named, query, rows=keep))
+            op = s5_bind_v3_operative_floor(bigfl, spec.k, m, nsb, ngb, named, query)
             if sb is not None and (op is None or sb["held_out"] > op):
                 op = sb["held_out"]
-            strongrec = max([fl[n] for n in gated] + ([sb["held_out"]] if sb else []),
-                            default=0.0)
+            strongrec = op or 0.0
             ok &= strongrec < 0.5
+            # AND the real gate on this rung: the admitted end of the profile must sit at
+            # informed chance. A rule that admits a policy far above it has not closed.
+            ok &= strongrec < S5_BIND_DIAGNOSTIC_MAX / max(1, spec.k - 1)
             srec_col = f"{strongrec:>10.3f}"
             # The class exclusion is a cost argument; on the COMPOSED cell a live policy hiding
             # behind it would show up in the truncation diagnostics, so they are checked there.
@@ -206,7 +247,7 @@ def main():
                 ok &= all(fl[n] < lim for n in S5_BIND_V3_TRUNCATION_ROWS if n in fl)
             bind_v3_rows[name] = (fl, op, gated, spec.eval_lengths[-1], spec.k, sb,
                                   s5_bind_v3_floor_basis(spec.k, m, ns, ng, named, query),
-                                  (test, m, named, query))
+                                  (test, m, named, query), fam, cls, bigfl)
         elif spec.family in S5_BIND_FAMILIES:
             # mutual-reference rung: every registered policy, recomputed from these exact items.
             fl = s5_bind_floors(test, spec.k)
@@ -245,15 +286,18 @@ def main():
             print(f"    {name:<24}{L:>5}" + cells + f"{op:>9.3f}"
                   + (f"{ratio:>8.2f}" if ratio is not None else f"{'—':>8}"))
     if bind_v3_rows:
-        print(f"\n  s5_bind_v3 registered floors (n={N} at eval_lengths[-1]; "
-              f"'*' = admitted by the one-structure class rule, so it enters the gate and may "
-              f"set the floor, '†' = class-excluded (holds both structures, or pays more steps), "
-              f"'op' = the number a score is read against, 'op/ch' = op over the informed "
-              f"chance 1/(k-1), 'basis' = whether any admitted row is a measured policy)")
+        print(f"\n  s5_bind_v3 registered floors (rows at n={N} at eval_lengths[-1], "
+              f"'op' re-measured at n={N_FLOOR} on the admitted rows; "
+              f"'*' = admitted by the class rule, so it enters the gate and may set the floor "
+              f"('op' is the max over ALL admitted rows, the swept families included), "
+              f"'†' = class-excluded — on a composed cell it holds both structures or pays more "
+              f"steps than the task, on a component cell it composes more than one hop or pays "
+              f"what that cell's own algorithm pays; 'op/ch' = op over the informed chance "
+              f"1/(k-1), 'basis' = whether any admitted REGISTERED row is a measured policy)")
         print("    " + f"{'task':<26}{'L':>5}"
               + "".join(f"{r[:10]:>11}" for r in S5_BIND_V3_ROWS)
               + f"{'surf.fit':>10}{'op':>9}{'op/ch':>8}  basis")
-        for name, (fl, op, gated, L, k, sb, basis, _ctx) in bind_v3_rows.items():
+        for name, (fl, op, gated, L, k, sb, basis, _ctx, _fam, _cls, _big) in bind_v3_rows.items():
             cells = "".join((f"{fl[r]:>10.3f}{'*' if r in gated else '†'}"
                              if r in fl else f"{'—':>11}") for r in S5_BIND_V3_ROWS)
             ratio = op / fl["uniform_non_initial"] if "uniform_non_initial" in fl else None
@@ -261,20 +305,24 @@ def main():
             print(f"    {name:<26}{L:>5}" + cells + sbc + f"{op:>9.3f}"
                   + (f"{ratio:>8.2f}" if ratio is not None else f"{'—':>8}")
                   + f"  {basis}")
-        print(f"\n  s5_bind_v3 FLOOR PROFILES OVER LIVE SLOTS (n={N}). A cell's floor is not one "
-              f"number: it is what each\n  state budget W buys. The one-structure bound "
-              f"(W <= max(k,m)+1) is the last admitted row; everything\n  above it holds both "
-              f"structures and is doing the composition at a discount. THE W AXIS HAS NO FORCE "
-              f"IN\n  THE FRONTIER REGIME — a model with a scratchpad is not register-bounded, "
-              f"so every row below is\n  available to it and the number a frontier score must "
-              f"clear is the TOP of the profile, not the\n  admitted max; there the composition "
-              f"evidence has to come from the within-cell contrast instead.")
-        for name, (fl, op, gated, L, k, sb, basis, ctx) in bind_v3_rows.items():
+        print(f"\n  s5_bind_v3 FLOOR PROFILES (n={N}). A cell's floor is not one number: it is "
+              f"what each budget buys,\n  along the resource that cell separates on — LIVE SLOTS "
+              f"on the composed cell (the one-structure bound\n  W <= max(k,m)+1 is the last "
+              f"admitted row; everything above it holds both structures and is doing\n  the "
+              f"composition at a discount) and STEPS on a component one, where the bound is ONE "
+              f"HOP and the\n  excluded end is the cell's own algorithm with a few events "
+              f"dropped, sitting one step under it.\n  THE W AXIS HAS NO FORCE IN THE FRONTIER "
+              f"REGIME — a model with a scratchpad is not register-bounded,\n  so every row "
+              f"below is available to it and the number a frontier score must clear is the TOP "
+              f"of the\n  profile, not the admitted max. The DEPTH axis does bind there: a "
+              f"scratchpad does not make a\n  truncated walk correct, it only makes it "
+              f"affordable.")
+        for name, (fl, op, gated, L, k, sb, basis, ctx, fam, cls, bigfl) in bind_v3_rows.items():
             test, m, named, query = ctx
             prof = s5_bind_v3_slot_profile(test, k, m, named, query)
             ch = 1.0 / max(1, k - 1)
             axis = prof[0]["axis"] if prof else "W"
-            bound = ("steps < the component's own walk" if named
+            bound = ("depth <= 1 hop and steps < the algorithm's per-item minimum" if named
                      else f"W <= max(k,m)+1 = {max(k, m) + 1}")
             print(f"    {name}@L{L}  k={k} m={m}  chance {ch:.4f}  along {axis}, "
                   f"admitted while {bound}  floor {op:.4f} ({op / ch:.2f}x, {basis})")
@@ -288,17 +336,30 @@ def main():
                       + " ".join(f"{v / ch:.2f}" for v in pc))
                 print("      block-drop width x chance:  "
                       + " ".join(f"{w:.2f}:{v / ch:.2f}" for w, v in sorted(wp.items())))
+            elif fam:
+                # the component continuum, in the order the rule sees it, so the excluded member
+                # one step under the cell's own algorithm is visible next to the admitted ones.
+                print("      swept family x chance ('*' = excluded): " + " ".join(
+                    f"{r.replace('trunc_walk_', '').replace('give_scan_', '')}"
+                    f":{fam[r] / ch:.2f}{'' if cls[r] else '*'}"
+                    for r in sorted(fam, key=lambda r: fam[r])))
             if sb is not None:
                 print(f"      fitted surface ranker (W=2, {len(sb['weights'])} features, "
                       f"fit {sb['n_fit']} / held out {sb['n_held_out']}): "
                       f"{sb['held_out']:.4f} ({sb['held_out'] / ch:.2f}x), "
                       f"in-sample {sb['in_sample']:.4f}")
         print("    (* = not admitted. On a COMPOSED cell that means the row holds both "
-              "structures; on a COMPONENT\n     cell the bound is vacuous — its own algorithm "
-              "already holds none — so the profile runs along STEPS\n     instead and a row is "
-              "admitted only if it stops earlier than that algorithm. Where nothing does, the\n"
-              "     floor is informed chance BY DEFINITION and the basis column says 'chance' "
-              "rather than printing\n     1.00x as though a policy had been measured up to it.)")
+              "structures. On a COMPONENT cell\n     the W bound is vacuous — its own algorithm "
+              "already holds none — so the profile runs along STEPS\n     and a row is admitted "
+              "only if it chains at most ONE hop and pays strictly less than that\n     "
+              "algorithm's per-item MINIMUM. On the state component that excludes the whole "
+              "truncated-walk\n     continuum, whose cheap end sits one step under the algorithm "
+              "at 9.3x chance. On the retrieval\n     component the depth bound is vacuous too — "
+              "that algorithm is one hop — and the cost bound admits\n     only budgets too "
+              "short to reach the write the sampler pins into [L/10, 0.75L], every one of "
+              "which\n     resolves nothing; the floor is informed chance and the basis column "
+              "says 'chance' rather than\n     printing 1.00x as though a registered policy had "
+              "been measured up to it.)")
     print(f"\nSUITE VALIDITY: {'PASS — no shallow/recency/position shortcut clears floor on any canonical task' if all_ok else 'FLAG — investigate'}")
     return all_ok
 

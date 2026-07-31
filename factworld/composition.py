@@ -2,10 +2,12 @@
 
 Two things live here, both for the ``s5_bind_v3`` family (TaskSpec.source_ablation):
 
-  THE COMPOSITION STATISTIC  a within-item, within-cell contrast between the two op classes the
-                          construct ablates on. A cell reports it alongside match (``contrast``).
-                          Its size is stated below and two composition-free executors still fire
-                          it, so it is reported, not yet registered as a primary.
+  THE STRUCTURE-SWITCH DIAGNOSTIC  a within-item, within-cell contrast between the two op classes
+                          the construct ablates on (``contrast``). It is NOT a composition
+                          measure on this rendering and cannot be made into one — the
+                          identification argument is below and it is an impossibility, not a
+                          calibration gap. It is reported alongside match as what it identifies:
+                          whether a solver is worse when the reference SWITCHES structure.
   THE COST CONVENTION     a stated, testable rule for what one step is, and a counter that
                           implements it (``cost_report``). The convention is what decides the
                           step multiplier and the Pareto floor class, so it is written down
@@ -16,7 +18,38 @@ Everything reads the RENDERED prompt through this module's own parser: nothing h
 Pure stdlib, like the rest of the package.
 
 -------------------------------------------------------------------------------------------
-THE STATISTIC
+THE STATISTIC — WHAT IT IDENTIFIES, AND WHAT IT CANNOT
+-------------------------------------------------------------------------------------------
+IT IS NOT A COMPOSITION MEASURE ON THIS RENDERING, and no reweighting, stratification or sample
+size makes it one. Within an event kind the class label IS the printed clause. The only four
+forms that occur are (swap, reads B, CROSS), (swap, reads P, SAME), (give, reads P, CROSS),
+(give, reads B, SAME), and ``src`` is set by the clause regex in ``read`` — so "which structure
+this reference reads" and "which clause is printed" are ONE VARIABLE, not two. A solver that
+cannot hold B fails on exactly {swap CROSS, give SAME}: sign-flipped across the kinds, which is
+precisely the ANTI-symmetric direction the kind-balancing below is built to annihilate. The
+repair for the clause confound removes the deficit of interest with it.
+
+MEASURED, at matched accuracy, k=6/L=64, n=800, 40 replicates
+(scripts/probe_s5bind_v3_statistic_20260731.py): against a ``one_structure_P`` carrier the
+contrast is -0.0190 with 0/40 rejections; against ``one_structure_B``, -0.0344 with 0/40; against
+a reads-B-only slip, -0.0116 with 0/40. Zero power against every single-structure policy, and
+the contrast points the WRONG WAY. A single-structure solver is the exact thing a composition
+measure has to detect, so this is an identification impossibility on this rendering, not a
+threshold that a larger n moves.
+
+WHAT IT IS. A STRUCTURE-SWITCH diagnostic: it is sensitive to solvers that degrade when the
+reference clause switches structure — a stated-map fallback (power 0.867) and an outright
+garbled cross reference (0.899) — and it must be reported under that name. ``contrast`` returns
+``"identifies": "structure_switch"`` so a caller cannot read it as composition by accident, and
+``tests/test_s5_bind_v3.py`` asserts the zero power above so the composition claim cannot be
+quietly re-made. The composition evidence has to come from the three-cell comparison — state
+component, retrieval component, composed cell, each against its own floor at the stated step
+multiplier — and not from within one cell.
+
+The design below is kept, and it is what the numbers above were measured on.
+
+-------------------------------------------------------------------------------------------
+THE DESIGN THE DIAGNOSTIC RUNS ON
 -------------------------------------------------------------------------------------------
 The composed cell's events each name their second operand LIVE through one of the two
 structures. An op is CROSS when it reads the structure it does not write (a swap reading the
@@ -734,12 +767,19 @@ def lrt_drop(cols, y, i):
 
 
 def contrast(examples, correct, draws: int = 2, seed: int = 0, stat: str = PRIMARY_STAT) -> dict:
-    """THE PRIMARY STATISTIC for one cell: ``theta_cross - theta_same``, per item, within item.
+    """THE STRUCTURE-SWITCH DIAGNOSTIC for one cell: ``theta_cross - theta_same``, within item.
+
+    NOT a composition measure. Within a kind the class label is the printed clause, so a solver
+    that holds one structure and not the other is invisible to this: measured against
+    ``one_structure_P`` / ``one_structure_B`` / a reads-B-only slip at k=6/L=64, n=800, it rejects
+    0/40 times with the contrast pointing the wrong way (module docstring). It has power against
+    solvers that degrade when the reference clause SWITCHES structure, which is what it is named
+    for and all a caller may claim from it.
 
     ``examples`` are the cell's exact items and ``correct`` the per-item 0/1 match outcomes, in
-    the same order. Returns the contrast, the one-sided LRT decision at alpha = 0.05, and the
-    class balance and read-history matching the contrast rests on — so a caller reporting the
-    statistic reports what makes it valid alongside it.
+    the same order. Returns the contrast, the one-sided LRT decision at alpha = 0.05, what the
+    statistic identifies, and the class balance and read-history matching it rests on — so a
+    caller reporting it reports both what makes it valid and what it does not show.
     """
     rng = random.Random(seed)
     all_ops, y = [], []
@@ -779,6 +819,9 @@ def contrast(examples, correct, draws: int = 2, seed: int = 0, stat: str = PRIMA
         c, rej = lrt_drop(cols, y, len(cols) - 1)
     return {
         "stat": stat, "contrast": c, "reject": rej, "n": len(y), "acc": sum(y) / len(y),
+        # what a rejection licenses. Within a kind the class IS the clause, so a single-structure
+        # carrier is not identified here at any n; this key travels with the number.
+        "identifies": "structure_switch",
         "slice_cross": sum(r["nx"] for r in cov) / len(cov),
         "slice_same": sum(r["nz"] for r in cov) / len(cov),
         "slice_write": sum(r["nw"] for r in cov) / len(cov),

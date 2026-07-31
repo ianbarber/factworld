@@ -18,8 +18,16 @@ operand LIVE through one of them. The construct rests on properties this file pi
                                               convention) and pays no more steps than the task,
                                               so the block-drop continuum, the partial-carry
                                               continuum and the demand resolver are all out by
-                                              one argument; a COMPONENT cell separates on steps
-                                              instead, since its own algorithm holds nothing;
+                                              one argument;
+  the COMPONENT rule is the same move       — its own algorithm holds no structure, so the bound
+                                              goes on composition DEPTH (at most ONE hop against
+                                              a carrier chain of 2 n_swap / k) and steps are held
+                                              under that algorithm's MINIMUM per-item cost, not
+                                              its mean. Both halves are attacked here by sweeping
+                                              the truncated walk and the truncated give-scan over
+                                              their whole parameter and asserting the admitted
+                                              set is at chance — a test of the RULE, not of the
+                                              registry;
   the cost convention is stated             — one step is a named thing, a backward walk IS
                                               charged for the events it scans and rejects, and
                                               the counter implements exactly that.
@@ -47,12 +55,17 @@ from factworld.validity import (  # noqa: E402
     S5_BIND_V3_ROWS,
     S5_BIND_V3_SURFACE_FEATURES,
     S5_BIND_V3_TRUNCATION_ROWS,
+    S5_BIND_V3_MAX_DEPTH,
     floor_eligible,
     one_structure_bound,
+    s5_bind_v3_admits,
     s5_bind_v3_block_drop,
     s5_bind_v3_classify,
+    s5_bind_v3_family_floors,
+    s5_bind_v3_family_rows,
     s5_bind_v3_floor_basis,
     s5_bind_v3_floors,
+    s5_bind_v3_give_scan,
     s5_bind_v3_is_named,
     s5_bind_v3_needs,
     s5_bind_v3_operative_floor,
@@ -60,10 +73,14 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_partial_carry_profile,
     s5_bind_v3_query_kind,
     s5_bind_v3_row_cost,
+    s5_bind_v3_row_depth,
     s5_bind_v3_shape,
     s5_bind_v3_slot_profile,
     s5_bind_v3_surface_bound,
     s5_bind_v3_task_cost,
+    s5_bind_v3_task_cost_min,
+    s5_bind_v3_task_depth,
+    s5_bind_v3_trunc_walk,
 )
 from factworld.world import Event  # noqa: E402
 
@@ -591,6 +608,159 @@ def test_every_admitted_member_of_the_partial_carry_family_is_at_chance():
             assert prof[j] <= FLOOR_RATIO_MAX * chance, (j, prof)
 
 
+# --- the COMPONENT rule: one hop, and the algorithm's MINIMUM cost ---------------------------
+
+def test_the_component_bound_is_one_hop_against_a_chain_of_many():
+    """The gap in kind on the axis a component separates on. The state component's own algorithm
+    chains the whole carrier walk — 2 n_swap / k hops — and a floor row may chain ONE, exactly as
+    a composed floor row may hold one structure against two. On the retrieval component the
+    algorithm is itself one hop, so the bound is vacuous there and says so."""
+    for name in COMPONENTS:
+        spec, ex = _short(name, 40)
+        ns, ng = s5_bind_v3_shape(ex)
+        k, m = spec.k, spec.n_objects_active
+        d = s5_bind_v3_task_depth(k, m, ns, ng, True, spec.query_arm)
+        if spec.query_arm == "state":
+            assert d == round(2 * ns / k) and d >= 8 * S5_BIND_V3_MAX_DEPTH, (name, d)
+        else:
+            assert d == S5_BIND_V3_MAX_DEPTH == 1, (name, d)
+    # and on a composed cell the depth bound is not what is applied: its own rule is on W
+    for name in COMPOSED:
+        spec, ex = _short(name, 40)
+        ns, ng = s5_bind_v3_shape(ex)
+        assert s5_bind_v3_task_depth(spec.k, spec.n_objects_active, ns, ng) == ns + ng
+        assert s5_bind_v3_classify(spec.k, spec.n_objects_active, ns, ng)["one_structure_P"]
+
+
+def test_the_step_bound_is_the_algorithms_minimum_and_not_its_mean():
+    """One word, and it is the whole retrieval floor. A truncated give-scan reading fewer events
+    than the algorithm's MEAN scan is far above chance and is EXACTLY that algorithm on the items
+    it answers — it pays what the algorithm pays there. Only the per-item MINIMUM excludes it."""
+    for name in ("s5_bind_v3_bind", "s5_bind_local_v3_bind"):
+        spec = TK.CANONICAL[name]
+        L = spec.eval_lengths[0]
+        ex = TK.generate(spec, "test", n=N_FLOOR, length=L)
+        k, m = spec.k, spec.n_objects_active
+        ns, ng = s5_bind_v3_shape(ex)
+        mean = s5_bind_v3_task_cost(k, m, ns, ng, True, "bind")[1]
+        smin = s5_bind_v3_task_cost_min(k, m, ns, ng, True, "bind")
+        assert smin < mean, (name, smin, mean)
+        d_over = (mean - 3) // 2                     # under the mean, over the minimum
+        row = f"give_scan_d{d_over}"
+        _w, s = s5_bind_v3_row_cost(row, k, m, ns, ng, "bind")
+        assert smin <= s <= mean, (name, s, smin, mean)
+        assert not s5_bind_v3_admits(row, k, m, ns, ng, True, "bind"), name
+        assert s5_bind_v3_give_scan(ex, d_over) > 2.0 / (k - 1), name
+
+
+def test_no_truncation_of_a_cells_own_algorithm_is_admitted_on_either_axis():
+    """THE TEST OF THE RULE, not of the registry: it sweeps the four truncation families over
+    their whole parameter rather than checking the rows somebody registered.
+
+    W axis (composed cell): partial carry at every j >= 1 and block drop at every (width,
+    position) hold both structures and are out. STEP axis (component cell): every member that can
+    chain more than one hop is out however its parameter is written, and every member the rule
+    ADMITS sits at chance — which is the claim the floor rests on."""
+    for name in COMPOSED:                            # the W axis
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        bound = one_structure_bound(k, m)
+        for j in range(1, m + 1):                    # carry P and j of the m holder cells
+            assert not floor_eligible(k + j + 1, 0, bound, 10 ** 9), (name, j)
+        for _w in (0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 0.9):   # every block-drop member
+            assert not floor_eligible(k + m + 1, 0, bound, 10 ** 9), name
+    for name in COMPONENTS:                          # the STEP axis
+        spec = TK.CANONICAL[name]
+        L = spec.eval_lengths[0]
+        ex = TK.generate(spec, "test", n=N_FLOOR, length=L)
+        k, m = spec.k, spec.n_objects_active
+        ns, ng = s5_bind_v3_shape(ex)
+        q, ch = spec.query_arm, 1.0 / (k - 1)
+        step = max(1, L // 16)
+        if q == "state":
+            rows = [f"trunc_walk_T{t}" for t in range(1, L, step)]
+            rows += [f"trunc_walk_drop{c}" for c in range(1, L, step)]
+        else:
+            rows = [f"give_scan_d{d}" for d in range(1, L + 1, step)]
+        assert len(rows) >= 16
+        for row in rows:
+            kind = row.rstrip("0123456789")
+            p = int(row[len(kind):])
+            admitted = s5_bind_v3_admits(row, k, m, ns, ng, True, q)
+            if s5_bind_v3_row_depth(row, q, L) > S5_BIND_V3_MAX_DEPTH:
+                assert not admitted, f"{name}: {row} chains more than one hop and is admitted"
+            if kind == "give_scan_d":
+                acc = s5_bind_v3_give_scan(ex, p)
+            else:
+                acc = s5_bind_v3_trunc_walk(ex, p if kind == "trunc_walk_T" else max(0, L - p))
+            if admitted:
+                assert acc <= FLOOR_RATIO_MAX * ch, \
+                    f"{name}: {row} is ADMITTED and reads {acc / ch:.2f}x chance"
+
+
+def test_the_two_parameterisations_of_the_truncated_walk_get_one_verdict():
+    """The reason the rule is on hops and not on steps. At one cell ``trunc_walk_drop{c}`` and
+    ``trunc_walk_T{L-c}`` are the same policy; a rule that reads the step cost as a constant
+    admits the second and excludes the first. Cost, depth and verdict must agree on both."""
+    for name in ("s5_bind_v3_state", "s5_bind_local_v3_state"):
+        spec = TK.CANONICAL[name]
+        L = spec.eval_lengths[0]
+        ex = TK.generate(spec, "test", n=120, length=L)
+        k, m = spec.k, spec.n_objects_active
+        ns, ng = s5_bind_v3_shape(ex)
+        for c in (1, 2, 5, 17, L // 2, L - 1):
+            a, b = f"trunc_walk_drop{c}", f"trunc_walk_T{L - c}"
+            assert s5_bind_v3_row_cost(a, k, m, ns, ng) == s5_bind_v3_row_cost(b, k, m, ns, ng)
+            assert s5_bind_v3_row_depth(a, "state", L) == s5_bind_v3_row_depth(b, "state", L)
+            assert (s5_bind_v3_admits(a, k, m, ns, ng, True, "state")
+                    == s5_bind_v3_admits(b, k, m, ns, ng, True, "state")), (name, c)
+        # and the excluded end is the cell's own algorithm with ONE event dropped, one step under
+        # it: that is what has to be visible in the profile rather than hidden by a step rule
+        assert not s5_bind_v3_admits("trunc_walk_drop1", k, m, ns, ng, True, "state")
+        smin = s5_bind_v3_task_cost_min(k, m, ns, ng, True, "state")
+        assert s5_bind_v3_row_cost("trunc_walk_drop1", k, m, ns, ng)[1] == smin - 1
+        assert s5_bind_v3_trunc_walk(ex, L - 1) > 3.0 / (k - 1)
+
+
+def test_the_retrieval_floor_is_the_samplers_window_to_the_event():
+    """Why the retrieval component's floor is informed chance, as a proof rather than a
+    definition: the sampler pins the queried object's resolving write at least L - 1 - hi events
+    from the end, and the rule admits exactly the budgets that cannot reach it."""
+    for name in ("s5_bind_v3_bind", "s5_bind_local_v3_bind"):
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        for L in spec.eval_lengths:
+            ex = TK.generate(spec, "test", n=N_FLOOR, length=L)
+            ns, ng = s5_bind_v3_shape(ex)
+            _lo, hi = TK.s5_bind_v3_bind_window(L)
+            reach = L - hi                          # the first budget that can read the write
+            assert s5_bind_v3_give_scan(ex, reach - 1) == 0.0, (name, L)
+            assert s5_bind_v3_give_scan(ex, reach) > 0.0, (name, L)
+            assert s5_bind_v3_admits(f"give_scan_d{reach - 1}", k, m, ns, ng, True, "bind")
+            assert not s5_bind_v3_admits(f"give_scan_d{reach}", k, m, ns, ng, True, "bind")
+            # so every admitted family member resolves nothing at all
+            fam = s5_bind_v3_family_floors(ex, k, m, True, "bind")
+            cls = s5_bind_v3_classify(k, m, ns, ng, True, "bind", rows=tuple(fam))
+            assert fam and all(v == 0.0 for r, v in fam.items() if cls[r]), (name, L)
+
+
+def test_the_retrieval_scan_is_priced_at_the_window_and_the_two_counters_agree():
+    """``validity`` and ``composition.cost_isolated_bind`` price the same algorithm on the same
+    items. The pricing this replaces read the scan as L / (n_give / m) = m and understated it
+    5.7x at L = 256 — 27 steps against a measured 152.4."""
+    for name in COMPONENTS:
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        for L in spec.eval_lengths:
+            ex = TK.generate(spec, "test", n=200, length=L)
+            ns, ng = s5_bind_v3_shape(ex)
+            want = s5_bind_v3_task_cost(k, m, ns, ng, True, spec.query_arm)[1]
+            cost = (C.cost_isolated_bind if spec.query_arm == "bind" else C.cost_isolated_state)
+            got = sum(cost(C.read(e.prompt), k, m)[0] for e in ex) / len(ex)
+            assert abs(got - want) <= 0.03 * want, f"{name}@{L}: validity {want}, counter {got}"
+            assert s5_bind_v3_task_cost_min(k, m, ns, ng, True, spec.query_arm) <= want
+
+
 def test_reference_rows_are_dropped_on_a_component_cell():
     for name in COMPONENTS:
         spec = TK.CANONICAL[name]
@@ -862,6 +1032,32 @@ def test_a_uniform_slip_does_not_move_the_contrast():
     names = C.TWO_CLASS_STATS["T_cross"]
     c, _rej = C.lrt([[r[n] for r in cov] for n in names], y, len(names) - 1, len(names) - 2)
     assert abs(c) < 0.05, f"uniform slip moved the contrast to {c:.4f}"
+
+
+def test_the_statistic_has_zero_power_against_a_single_structure_carrier():
+    """THE STATISTIC IS A STRUCTURE-SWITCH DIAGNOSTIC AND NOT A COMPOSITION MEASURE, pinned so the
+    composition claim cannot be quietly re-made.
+
+    A solver that carries P alone, or B alone, is exactly what a composition measure has to
+    detect. It is not detected here at any n, because within a kind the class label IS the
+    printed clause: a one-structure solver fails on {swap CROSS, give SAME}, sign-flipped across
+    the kinds, which is the anti-symmetric direction the kind-balancing annihilates. At the
+    registered setting — k=6/L=64, n=800 — neither carrier rejects, and the contrast points the
+    wrong way. ``contrast`` carries ``identifies`` so a caller cannot read it as composition.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    ex = TK.generate(spec, "test", n=800, length=64)
+    recs = [C.read(e.prompt) for e in ex]
+    for mode in ("P_live", "B_live"):
+        correct = [int(C.answer_of(r, C.replay(r, mode)) == e.answer)
+                   for r, e in zip(recs, ex)]
+        assert 0.05 < sum(correct) / len(correct) < 0.5, mode      # a real, costly deficit
+        for seed in (0, 1):
+            out = C.contrast(ex, correct, seed=seed)
+            assert out["identifies"] == "structure_switch"
+            assert not out["reject"], \
+                f"{mode}: the statistic rejected on a single-structure carrier ({out})"
+            assert out["contrast"] < 0.0, f"{mode}: contrast {out['contrast']:.4f}"
 
 
 def _run() -> int:
