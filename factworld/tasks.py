@@ -324,14 +324,12 @@ class TaskSpec:
     #
     # THE ONE CONFOUND THE SURFACES CARRY, and where it is handled. Within an event kind the
     # class IS the reference clause, so a solver that is simply worse at one clause slips on
-    # swap-CROSS and give-SAME. The clause-to-class map FLIPS between the kinds, which is what
-    # makes the confound cancellable at all, but the two kinds do not carry equal weight on the
-    # answer (a swap resolution is on its path; a give resolution reaches it only through a
-    # later swap), so it does not cancel on its own: measured, the raw contrast rejects a pure
-    # clause slip at 0.117-0.211 at n=500. The registered primary statistic is therefore the
-    # KIND-BALANCED contrast (factworld.composition.PRIMARY_STAT), which divides each op by its
-    # kind's mean slice mass so the two kinds contribute equally and the clause effect enters
-    # both class columns at the same size.
+    # swap-CROSS and give-SAME. The clause-to-class map FLIPS between the kinds, so the effect
+    # lives entirely in the ANTI-symmetric combination of the two kinds' class differences, and
+    # the registered primary (factworld.composition.PRIMARY_STAT) is built to be uncorrelated
+    # with that direction: one RAW mass column per stratum, so any hazard that is a function of
+    # the stratum sits in the model's span with a zero contrast, and a precision-weighted
+    # contrast column, so the clause direction projects onto it at zero.
     #
     #   p_cross       P(an event's reference reads the OTHER structure).
     #                 The per-slot cross coin is drawn BEFORE the operands and both candidate
@@ -352,10 +350,85 @@ class TaskSpec:
     #                 backward carrier walk answers it), a named-operand give stream is
     #                 last-write-wins retrieval. Reference-rendered components are not the
     #                 components — they cost a forward pass over their own structure.
+    #   match_reads   WITHIN-KIND CLASS MATCHING, as a sampler draw rule: the number of matched
+    #                 candidate draws a slot takes the best of, or 0 for no matching.
+    #
+    #                 WHAT IT FIXES. p_swap = 1/3 equalises the two structures' write RATES, so
+    #                 the two classes are matched when pooled — but the primary is KIND-BALANCED,
+    #                 and within a kind they were not. Measured on the shipped stream at
+    #                 k=6/L=64, a swap's CROSS read was 28.5% staler than its SAME read (age
+    #                 10.16 vs 7.91) with 13.0% fewer writes behind it; at k=12/L=192, 20.0%
+    #                 staler. The cause is the ``no_pin`` gate: it fires only on the CROSS
+    #                 reading, and the objects it refuses are exactly the recently written ones,
+    #                 so it selects the CROSS class toward older cells. Pooled the gap hides
+    #                 (18.64 vs 16.72) because the gives run the other way. A composition-free
+    #                 solver that is merely RECENCY-BOUNDED then reads as composition: a hard
+    #                 forgetting horizon at H=18, holding both structures identically, produced a
+    #                 larger contrast than a real cross-only deficit at the same accuracy.
+    #
+    #                 THE RULE. Every slot chooses BOTH candidate reference cells — the object
+    #                 ``ref_o`` (a B cell) and the agent ``ref_a`` (a P cell) — before the cross
+    #                 coin is consulted, and chooses them MATCHED: a fair coin picks which pool
+    #                 leads, the leader is drawn uniformly over its admissible cells, and the
+    #                 other pool supplies the cell nearest the leader's read history (_nearest).
+    #                 Leading always with the same pool does not work — the gated pool is offset
+    #                 in age, so a one-directional projection inherits the whole offset (measured
+    #                 at k=6: +17.1% leading with the objects, +7.5% with the leader randomised)
+    #                 — so the direction is randomised and the two projection errors cancel. The
+    #                 slot then takes the BEST of ``match_reads`` such draws. Best-of-N and not a
+    #                 tolerance: a tolerance rejects, and a per-slot rejection costs item yield
+    #                 like (1 - p)^L — a (3, 2) tolerance costs 34 item restarts at k=6/L=64 and
+    #                 completes none at L=96 — while also conditioning the whole stream on a
+    #                 property of every one of its slots.
+    #
+    #                 N IS PER OPERATING POINT, and measured. At k=12 ONE matched draw already
+    #                 equalises the two classes' read histories to within 1% of each other and
+    #                 further draws only cost yield. At k=6 the pools are six cells wide: one
+    #                 draw leaves +4.6% / -10.6% on the two kinds, two close the swap kind
+    #                 (+4.5%, and P(distance > 18) 0.0549 against 0.0545), and three or more
+    #                 starve the L=96 cell — tighter matching feeds the holder map's coalescence,
+    #                 the give pool empties, and the item restarts. The residual that leaves is
+    #                 measured and reported, not assumed away (scripts/probe_s5bind_v3_statistic).
+    #
+    #                 IT IS NOT ENOUGH ON ITS OWN: the admission must also be coin-INDEPENDENT,
+    #                 or the rule that admits a slot is itself a class-conditional selection.
+    #                 Degeneracy is therefore filtered out of BOTH candidate pools, and the
+    #                 ``no_pin`` gate is applied to the object pool on EVERY slot rather than
+    #                 only on the ones the coin sent CROSS. Appended and defaulted to 0, so no
+    #                 pre-existing stream moves.
     source_ablation: bool = False
     p_cross: float = 0.5
     event_kinds: str = "both"
     named_operands: bool = False
+
+    # s5_bind_v3-only. The queried agent's LAST naming swap must not name the answer on the
+    # surface — the query gate that kills the state-free surface read.
+    #
+    # THE LEAK. Scan back to the last swap whose FIRST operand is the queried agent. On a SAME
+    # swap that sentence names an AGENT ("the agent g7 points to at this point"), and the swap
+    # writes P[a] <- P(P(g7)), which is g7 exactly when g7 sits on a cycle of P of length 1 or 2
+    # — probability 2/k with no other structure, i.e. 1.83x the informed chance 1/(k-1) at
+    # k = 12 before the rest of the stream dilutes it. Emitting that slot is one backward scan
+    # over two registers and carries no map at all. Measured on the ungated stream at n = 3000,
+    # conditional on the branch: 0.1279 = 1.41x, z = +4.96 at k=12/L=128 and 0.2503 = 1.25x,
+    # z = +4.90 at k=6/L=64. On a CROSS swap the same sentence names an OBJECT, which is not a
+    # candidate answer; reading it through the stated holder map is the mirror policy and that
+    # branch sits BELOW chance (0.84x / 0.86x). The component arms name their operand outright
+    # and read 0.94x / 0.74x, so they do not set the gate.
+    #
+    # THE CONSTRAINT. With q_no_surface the sampler keeps only agents for which that reading is
+    # WRONG under every simulated dose, on BOTH branches — the policy has to answer every item,
+    # so it is the completed policy that is gated and not the elevated half of it. It is a gate
+    # on the QUERY, not on the stream: no event distribution moves and the cheapest correct
+    # algorithm is untouched. Retention is not what it costs (item restarts go 1.027 -> 1.030 at
+    # k=12/L=128 and 2.403 -> 2.442 at k=6/L=96); FLOOR is. Striking an answer the sampler has
+    # emptied hands a guesser the mass it carried, which is the registered
+    # ``uniform_anti_surface`` row (factworld.validity) and the honest price of the gate.
+    #
+    # Appended and defaulted to False, which disables the gate, so every pre-existing stream is
+    # byte-identical.
+    q_no_surface: bool = False
+    match_reads: int = 0
 
     def scaled(self, **knobs) -> "TaskSpec":
         """Return a harder/easier variant (e.g. spec.scaled(k=64, recall_pool=64, eval_lengths=(32,128)))."""
@@ -1107,6 +1180,23 @@ def _s5_bind_v3_lanes(spec) -> tuple[float, ...]:
     return (spec.p_cross,)
 
 
+def _nearest(pool, key, target, rng):
+    """The pool cell whose read history is closest to ``target``, ties broken uniformly.
+
+    ``key`` maps a cell to ``(last-write index, write count)`` and the distance is that pair's
+    componentwise absolute difference, ordered lexicographically: recency first, because it is
+    the nuisance the bounded-memory executors read, and the write count as the tiebreak.
+    """
+    best, best_d = [], None
+    for c in pool:
+        d = (abs(key[c][0] - target[0]), abs(key[c][1] - target[1]))
+        if best_d is None or d < best_d:
+            best, best_d = [c], d
+        elif d == best_d:
+            best.append(c)
+    return rng.choice(best)
+
+
 def _derangement(items, rng):
     """A permutation of ``items`` with no fixed point, by rejection — so no stated pointer fact
     is ``g4 points to g4``, which would be a degenerate reference target."""
@@ -1115,6 +1205,12 @@ def _derangement(items, rng):
         if all(a != b for a, b in zip(items, perm)):
             return dict(zip(items, perm))
     raise RuntimeError("no derangement drawn")
+
+
+# What the admission rules cost, as counters a diagnostic can read: operand draws attempted per
+# admitted slot, and item restarts per item returned. Generation is deterministic, so these are
+# a pure measurement of the sampler's rejection rate and nothing reads them back.
+ADMISSION = {"items": 0, "slots": 0, "draws": 0, "restarts": 0, "short": 0}
 
 
 def _s5_bind_v3_stream(spec, agents, objs, rng, length, idx):
@@ -1132,12 +1228,28 @@ def _s5_bind_v3_stream(spec, agents, objs, rng, length, idx):
     Returns ``(P0, B0, events, moves, writes, last_move, last_write, q_state, q_bind,
     fact_agents, fact_objs, finals)``; ``finals[d] = (P, B)`` per dose.
 
-    ``no_pin`` closes the REDUCTION channel. A CROSS give writes B[o] <- P[b], so until P[b]
-    moves again a later CROSS swap naming o resolves to a value a P-only solver already has: the
-    op is rendered CROSS and costs no composition. The provenance propagates through SAME gives
-    (B[o] <- B[o2] inherits o2's), and dies the moment the grounding agent's pointer moves. The
-    gate refuses a CROSS reference onto a live-provenance object, which is what keeps the CROSS
-    class from containing ops that ask nothing of the other structure.
+    ``no_pin`` closes the REDUCTION channel on the object side, and is applied to the SLOT. A
+    CROSS give writes B[o] <- P[b], so until P[b] moves again the equality B[o] == P[b] is live
+    and a later CROSS swap naming o resolves to a value a P-only solver already has: the op is
+    rendered CROSS and costs no composition. The provenance propagates through SAME gives
+    (B[o] <- B[o2] inherits o2's) and dies the moment the grounding agent's pointer moves. The
+    gate refuses such an object as a reference on EVERY slot, not only on the ones the coin sent
+    CROSS, because a gate that fires on one class is a class-conditional selection — and this
+    one selects on recency, since a pinned object is by construction a recently written one.
+
+    THE MIRROR CHANNEL IS LEFT OPEN, and that is a power cost, not a size one. The same live
+    equality is readable from the agent side: a CROSS give naming b resolves to a value a B-only
+    solver already has. Refusing those agents too closes the channel (measured reducible CROSS
+    density 0.156 -> 0.000 at k=12) but restricts the agent pool by ANTI-recency — an agent stays
+    pinned exactly while it does not move — so the two candidate pools are then offset in
+    opposite directions and no per-slot matching can bring them together: the within-kind age gap
+    goes to +6.2%/-4.0% at k=12 and +20.0%/-14.3% at k=6 against +1.0%/+0.7% and +7.5%/-8.2% with
+    the object gate alone. A diluted CROSS class costs power on the give kind; an unmatched one
+    costs the null.
+
+    ``match_reads`` matches the two classes WITHIN kind at the draw (see TaskSpec.match_reads), and
+    every degeneracy filter runs over both candidate pools, so the set of admitted slots does not
+    depend on the cross coin and the coin is the only thing that decides the class.
     """
     k, m = spec.k, spec.n_objects_active
     lanes = _s5_bind_v3_lanes(spec)
@@ -1146,54 +1258,105 @@ def _s5_bind_v3_stream(spec, agents, objs, rng, length, idx):
     if kinds not in ("both", "swap", "give"):
         raise ValueError(f"{spec.name}: event_kinds={kinds!r} not in {{'both','swap','give'}}")
     for _outer in range(200):
+        ADMISSION["restarts"] += 1
         P0 = _derangement(agents, rng)
         B0 = dict(zip(objs, rng.sample(agents, m)))
         st = {d: {"P": dict(P0), "B": dict(B0),
                   "prov": {o: None for o in objs},          # o -> b with B[o] == P[b], or None
                   "moves": {a: 0 for a in agents},
-                  "last": {a: -1 for a in agents}} for d in lanes}
+                  "last": {a: -1 for a in agents},
+                  # a -> the agent the LAST swap naming a as its first operand names on the
+                  # surface: the reference slot itself on a SAME swap, that object's stated
+                  # holder on a CROSS one, the named partner on a component swap. The
+                  # state-free read TaskSpec.q_no_surface gates on.
+                  "surf": {}} for d in lanes}
         events, writes, last_write = [], {o: 0 for o in objs}, {}
         for _i in range(length):
             swap = kinds == "swap" or (kinds == "both" and rng.random() < spec.p_swap)
             u = rng.random()                       # THE SKELETON DRAW: before the operands
-            ok = False
+            ok, best, n_good = False, None, 0
             for _try in range(200):
-                a = rng.choice(agents)             # swap: the named first operand
-                o = rng.choice(objs)               # give: the object written
-                ref_o = rng.choice(objs)
-                ref_a = rng.choice(agents)
-                nmd = rng.choice(agents)           # the named-operand rendering's second operand
-                res, good = {}, True
+                ADMISSION["draws"] += 1
+                if named:
+                    a = rng.choice(agents)         # swap: the named first operand
+                    o = rng.choice(objs)           # give: the object written
+                    ref_o = rng.choice(objs)
+                    ref_a = rng.choice(agents)
+                    nmd = rng.choice(agents)       # the named rendering's second operand
+                    good = True
+                    for d in lanes:
+                        s = st[d]
+                        if (nmd == a) if swap else (nmd == s["B"][o]):
+                            good = False           # self-swap / no-op write
+                            break
+                    res = dict.fromkeys(lanes, nmd)
+                    if good:
+                        ok = True
+                        break
+                    continue
+                a = rng.choice(agents)
+                o = rng.choice(objs)
+                nmd = None
+                # THE MATCHED DRAW. Both candidate reference cells are chosen on every slot,
+                # against the same read history, so the cross coin decides the class and nothing
+                # else does. One pool leads on a fair coin and the other supplies its nearest
+                # cell, which symmetrises the projection error the leading direction carries.
+                anchor = rng.random()          # which pool leads this matched draw
+                res, good, gap = {}, True, (0, 0)
                 for d in lanes:
                     s = st[d]
-                    cross = u < d
-                    if swap:
-                        x = nmd if named else (s["B"][ref_o] if cross else s["P"][ref_a])
-                        if x == a:                              # self-swap: a no-op event
-                            good = False
-                            break
-                        if spec.no_pin and not named and cross and s["prov"][ref_o] is not None:
-                            good = False                        # the reference asks nothing of B
-                            break
+                    if swap:                       # no self-swap under either reading
+                        pool_o = [c for c in objs if s["B"][c] != a]
+                        pool_a = [c for c in agents if s["P"][c] != a]
+                    else:                          # no "gives o to whoever holds o", no no-op
+                        pool_o = [c for c in objs if c != o and s["B"][c] != s["B"][o]]
+                        pool_a = [c for c in agents if s["P"][c] != s["B"][o]]
+                    if spec.no_pin:
+                        pool_o = [c for c in pool_o if s["prov"][c] is None]
+                    if not pool_o or not pool_a:
+                        good = False               # every candidate is degenerate at this slot
+                        break
+                    key_o = {c: (last_write.get(c, -1), writes[c]) for c in pool_o}
+                    key_a = {c: (s["last"][c], s["moves"][c]) for c in pool_a}
+                    if not spec.match_reads:       # the unmatched control: two free draws
+                        ref_o, ref_a = rng.choice(pool_o), rng.choice(pool_a)
+                    elif anchor < 0.5:
+                        ref_o = rng.choice(pool_o)
+                        ref_a = _nearest(pool_a, key_a, key_o[ref_o], rng)
                     else:
-                        if not named and not cross and ref_o == o:
-                            good = False                        # "gives o to whoever holds o"
-                            break
-                        x = nmd if named else (s["P"][ref_a] if cross else s["B"][ref_o])
-                        if x == s["B"][o]:                      # no-op write
-                            good = False
-                            break
-                    res[d] = x
-                if good:
+                        ref_a = rng.choice(pool_a)
+                        ref_o = _nearest(pool_o, key_o, key_a[ref_a], rng)
+                    gap = max(gap, (abs(key_o[ref_o][0] - key_a[ref_a][0]),
+                                    abs(key_o[ref_o][1] - key_a[ref_a][1])))
+                    res[d] = (s["B"][ref_o] if swap else s["P"][ref_a]) if u < d \
+                        else (s["P"][ref_a] if swap else s["B"][ref_o])
+                if not good:
+                    continue
+                if best is None or gap < best[0]:
+                    best = (gap, a, o, ref_o, ref_a, res)
+                n_good += 1
+                if n_good >= max(1, spec.match_reads):
                     ok = True
                     break
-            if not ok:
+            if not ok and best is None:
+                ADMISSION["short"] += 1            # every candidate pool was empty at this slot
                 break
+            # THE MATCH IS BEST-OF-N, NOT A TOLERANCE. Rejecting a slot whose pair misses a
+            # stated tolerance makes the item yield fall like (1 - p)^L: at k=6 a tolerance of
+            # (3, 2) costs 34 item restarts at L=64 and cannot complete one at L=96, and it
+            # conditions the whole stream on a property of every one of its slots. Taking the
+            # best of N independent matched draws tightens the same quantity with no rejection
+            # at all, and the draw does not read the cross coin, so it selects no class.
+            if not named:
+                _gap, a, o, ref_o, ref_a, res = best
+            ADMISSION["slots"] += 1
             events.append({"kind": "swap" if swap else "give", "u": u, "a": a, "o": o,
                            "ref_o": ref_o, "ref_a": ref_a, "named": nmd})
             for d in lanes:
                 s, x = st[d], res[d]
                 if swap:
+                    s["surf"][a] = (nmd if named else
+                                    (B0[ref_o] if u < d else ref_a))
                     s["P"][a], s["P"][x] = s["P"][x], s["P"][a]
                     for g in (a, x):
                         s["moves"][g] += 1
@@ -1213,7 +1376,10 @@ def _s5_bind_v3_stream(spec, agents, objs, rng, length, idx):
         tail_lo = _s5_bind_tail_lo(spec, length)
         cand_s = [a for a in agents
                   if all(st[d]["moves"][a] >= 2 and st[d]["P"][a] != P0[a]
-                         and st[d]["last"][a] >= tail_lo for d in lanes)]
+                         and st[d]["last"][a] >= tail_lo
+                         and (not spec.q_no_surface
+                              or st[d]["P"][a] != st[d]["surf"].get(a))
+                         for d in lanes)]
         lo, hi = length // 10, int(0.75 * length)
         cand_b = [o for o in objs
                   if writes[o] >= 2 and lo <= last_write.get(o, -1) <= hi
@@ -1229,6 +1395,7 @@ def _s5_bind_v3_stream(spec, agents, objs, rng, length, idx):
         finals = {d: (st[d]["P"], st[d]["B"]) for d in lanes}
         moves = {a: st[spec.p_cross]["moves"][a] for a in agents}
         last_move = {a: st[spec.p_cross]["last"][a] for a in agents}
+        ADMISSION["items"] += 1
         return (P0, B0, events, moves, writes, last_move, last_write, q_state, q_bind,
                 fact_agents, fact_objs, finals)
     raise RuntimeError(f"{spec.name}: no admissible item at idx={idx} "
@@ -1826,28 +1993,50 @@ CANONICAL = {
     #
     # Operating point k = 12, m = 12: the answer space is the 12 agents, informed chance
     # 1/(k-1) = 0.0909. Floors are recomputed per cell by scripts/validate_suite.py from
-    # factworld.validity.s5_bind_v3_floors, under the Pareto class rule.
+    # factworld.validity.s5_bind_v3_floors, under the one-structure class rule.
     #
-    # THE LENGTH GRID IS CUT ON THE FLOOR. The operative floor — the max over the rows the class
-    # rule admits — reaches informed chance from L/k ~ 10 and sits above it below that. Measured
-    # at n=400 as a ratio to chance, over k x L:
-    #        L        32    48    64    96   128   192   256
-    #     k= 6      1.19  1.00  1.00  1.00  1.00  1.00  1.00
-    #     k= 8      1.75  1.19  1.07  1.12  1.01  1.10  1.07
-    #     k=12      4.24  2.45  1.51  1.32  1.00  1.00  1.16
-    #     k=16      7.09  4.73  2.89  1.28  1.28  1.00  1.00
-    # so the k=12 grid starts at 128 and the k=6 grid at 48. Below the cut the floor is set by
-    # one_structure_B or one_structure_P — feed one structure into the other but never the
-    # reverse — because a short stream against k gives the queried agent too few carrier events
-    # for the second leg to matter. The step multiplier holds flat across the whole grid
-    # (1.92-2.39 under the stated convention), so the cut is a floor cut and not a cost cut.
+    # THE FLOOR IS A PROFILE, NOT A NUMBER, and the length grid is cut so the admitted end of it
+    # sits at informed chance. Measured at n=500 on the scored items (validity.s5_bind_v3_*,
+    # scripts/probe_s5bind_v3_floor_20260731.py), as ratios to informed chance 1/(k-1):
+    #
+    #   cell                        L   operative floor   what sets it
+    #   s5_bind_v3                256       1.09x        uniform_anti_surface, the gate's price
+    #   s5_bind_local_v3           96       1.16x        the fitted surface ranker
+    #   s5_bind_v3_state          256       1.30x        last_write_1hop, the carrier walk cut
+    #   s5_bind_local_v3_state     96       1.08x        after one hop / the fitted ranker
+    #   s5_bind_v3_bind           256       1.00x        informed chance, BY DEFINITION: the only
+    #   s5_bind_local_v3_bind      96       1.00x        row that would bound them is the
+    #                                                    component's own algorithm, which ties it
+    #
+    # The surface entry is a RANKER over 25 state-free features fitted on one sample and scored
+    # on a disjoint one, so it is neither a selection statistic nor the weakest member of the
+    # family; it moves with the FIT budget, and these are at 500 fitted / 500 scored.
+    #
+    # What the class rule EXCLUDES is measured beside it, since the exclusion is a cost argument.
+    # The partial-carry family (carry P and j of the m holder cells, W = k+j+1) climbs to 6.12x
+    # at j=11 at k=12/L=128 and 3.17x at j=5 at k=6/L=48; the block-drop family (both maps, one
+    # block dropped) reaches 9.57x at a 0.01L block and decays to chance by 0.25L. Both sit above
+    # the one-structure bound and neither is a floor.
+    #
+    # The k=12 grid starts at 128 and the k=6 grid at 48 because below that a short stream
+    # against k gives the queried agent too few carrier events for the second leg to matter. The
+    # step multiplier holds flat across the grid (1.92-2.39 under the stated convention), so the
+    # cut is a floor cut and not a cost cut.
     #
     # kind=experimental until the calibration lands, so none of the six is in REPORTED.
+    # q_no_surface IS SET AT k=12 AND NOT AT k=6, and the reason is measured on both. The gate
+    # empties the state-free surface read (TaskSpec.q_no_surface) and hands a guesser the mass
+    # that read used to carry, which the closed-form ``uniform_anti_surface`` row prices. At
+    # k=12 that trade is bought — the operative floor falls from 1.11x/1.18x chance at L=128/256
+    # to 1.09x — and at k=6 it is not: the ungated row reads 1.01x/1.02x there, because the
+    # CROSS branch sits below chance and drags the whole-item policy down, while striking one of
+    # five candidate answers is worth 1.20x on its own. Retention is not what decides it; the
+    # gate costs 1.027 -> 1.030 item restarts at k=12/L=128 and 2.403 -> 2.442 at k=6/L=96.
     "s5_bind_v3":       TaskSpec("s5_bind_v3", "s5_bind", version="3.0", kind="experimental",
                                   source_ablation=True, k=12, n_objects=12, n_objects_active=12,
                                   p_swap=1.0 / 3.0, p_cross=0.5,
                                   query_arm="state", stream_name="s5_bind_v3",
-                                  no_pin=True, q_tail=0.1,
+                                  no_pin=True, q_tail=0.1, q_no_surface=True, match_reads=1,
                                   train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
     "s5_bind_v3_state": TaskSpec("s5_bind_v3_state", "s5_bind", version="3.0", kind="experimental",
                                   source_ablation=True, k=12, n_objects=12, n_objects_active=12,
@@ -1867,7 +2056,7 @@ CANONICAL = {
                                   source_ablation=True, k=6, n_objects=6, n_objects_active=6,
                                   p_swap=1.0 / 3.0, p_cross=0.5,
                                   query_arm="state", stream_name="s5_bind_local_v3",
-                                  event_trace=True, no_pin=True, q_tail=0.1,
+                                  event_trace=True, no_pin=True, q_tail=0.1, match_reads=2,
                                   train_lengths=(16, 32), eval_lengths=(48, 64, 96)),
     "s5_bind_local_v3_state": TaskSpec("s5_bind_local_v3_state", "s5_bind", version="3.0",
                                   kind="experimental",

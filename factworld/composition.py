@@ -2,9 +2,10 @@
 
 Two things live here, both for the ``s5_bind_v3`` family (TaskSpec.source_ablation):
 
-  THE PRIMARY STATISTIC   ``theta_cross - theta_same``, a within-item, within-cell contrast
-                          between the two op classes the construct ablates on. A cell reports
-                          it alongside match (``contrast``).
+  THE COMPOSITION STATISTIC  a within-item, within-cell contrast between the two op classes the
+                          construct ablates on. A cell reports it alongside match (``contrast``).
+                          Its size is stated below and two composition-free executors still fire
+                          it, so it is reported, not yet registered as a primary.
   THE COST CONVENTION     a stated, testable rule for what one step is, and a counter that
                           implements it (``cost_report``). The convention is what decides the
                           step multiplier and the Pareto floor class, so it is written down
@@ -19,65 +20,97 @@ THE STATISTIC
 -------------------------------------------------------------------------------------------
 The composed cell's events each name their second operand LIVE through one of the two
 structures. An op is CROSS when it reads the structure it does not write (a swap reading the
-holder map; a give reading the pointer map) and SAME when it reads the one it does write. Both
-classes are live reads of overwritten cells at matched write counts and matched retrieval
-distances — the sampler's ``p_swap = 1/3`` at ``m = k`` equalises the two structures' write
-rates exactly — so a failure that depends on read history is common to the two classes and
-cancels in the contrast, while a solver that cannot hold the other structure fails only on
-CROSS.
+holder map; a give reading the pointer map) and SAME when it reads the one it does write. The
+sampler draws the two candidate reference cells MATCHED on read history and decides the class
+with an independent coin (TaskSpec.match_reads), so a failure that depends on how stale or how
+overwritten the read cell is falls on the two classes alike, while a solver that cannot hold the
+other structure fails only on CROSS.
 
-THE SURFACE CONFOUND, AND WHAT CANCELS IT. Within an event kind the class is carried by the
-reference clause: on a swap CROSS is "belongs to" and SAME is "points to", on a give it is the
-other way round. So a solver that is simply WORSE AT ONE CLAUSE — a surface failure with no
-composition deficit in it — slips on swap-CROSS and give-SAME. The clause-to-class map flips
-between the kinds, so the effect would cancel if the two kinds carried equal weight; they do
-not (a swap resolution sits directly on the answer's path, a give resolution only reaches it
-through a later swap, so their mean answer sensitivities are ~0.72 and ~0.15). Measured, the
-raw contrast rejects a pure clause slip at 0.117-0.211 at n=500, which is the same order as its
-power against a real deficit.
+THE SURFACE CONFOUND. Within an event kind the class is carried by the reference clause: on a
+swap CROSS is "belongs to" and SAME is "points to", on a give it is the other way round. So a
+solver that is simply WORSE AT ONE CLAUSE — a surface failure with no composition deficit in it
+— slips on swap-CROSS and give-SAME. The clause-to-class map flips between the kinds, so the
+effect lives entirely in the ANTI-symmetric combination of the two kinds' class differences.
 
-THE KIND-BALANCED CONTRAST fixes that by construction: each op's weight is divided by its event
-kind's mean slice mass in this cell, so swaps and gives contribute equally to both class columns
-and a clause effect enters the two columns at equal size. It is the registered primary
-(``T_kind``); the raw ``T_cross`` stays measured, as the diagnostic that shows what the
-balancing buys.
+THE DESIGN. Over the items of one cell,
 
-Fit, over items of one cell:
+    P(item correct) = exp(-(theta_w W + sum_s theta_s T_s + theta_c C))
 
-    P(item correct) = q,     q = exp(-(theta_w w + theta_z z + theta_x x))
+where ``W`` counts the writes and the readout, ``T_s`` is the item's slice mass in stratum s
+over BOTH classes, and ``C`` is a fixed combination of the per-stratum class differences (cross
+mass minus same mass). Every op is weighted by its ANSWER SENSITIVITY — the probability that
+garbling it changes the answer, measured by one-at-a-time perturbation of the clean trajectory.
+The statistic is ``theta_c``, tested one-sided by dropping ``C``.
 
-where, for the answer's dependency slice, ``w`` counts the writes and the readout, ``z`` the
-SAME resolutions and ``x`` the CROSS ones, each weighted by that op's ANSWER SENSITIVITY (the
-probability that garbling it changes the answer, measured by one-at-a-time perturbation of the
-clean trajectory). The reported statistic is ``theta_x - theta_z`` with a one-sided likelihood
-ratio test. z and x are the same operation, in the same position of the same algorithm, at the
-same cost; they differ only in which structure supplied the value.
+TWO PROPERTIES DO THE WORK, and both are structural rather than asymptotic:
+
+  THE MASS COLUMNS ARE RAW. Any hazard that is a function of the stratum alone is then exactly
+  in the model's span with ``theta_c = 0``. A reweighting of the class columns instead — one
+  divisor per kind, say — only holds where the within-kind class MASSES are equal, and they are
+  not: a CROSS give's object cannot be referenced again until its pin dies, so its mean answer
+  sensitivity is about half a SAME give's, and a reweighting reports that as a coefficient.
+  THE CONTRAST IS PRECISION-WEIGHTED. With ``w = Sigma^-1 1`` the contrast column is exactly
+  uncorrelated with every anti-symmetric combination of the strata, which is where a clause
+  failure lives, while a real cross-only deficit is symmetric and survives. That is a statement
+  about the COLUMNS, and it does not carry all the way through the fit: measured, a pure clause
+  slip still rejects at 0.118 (below).
+
+``T_kind``, the default, strata on the event kind; ``T_strat`` adds retrieval-distance
+quartiles, which extends the same argument to any hazard that is a function of the distance —
+including a hard forgetting horizon whose cutoff falls inside a bin. ``T_cross``, the two raw
+class columns tested against each other with no stratification, stays measured as the
+diagnostic that shows what the design buys.
 
 This replaces the temporal contrast the family carried before, which could not identify
 composition at all: the temporal ablation's composition class was, by construction, the
 overwritten-cell class (see TaskSpec.source_ablation).
 
-WHAT IT IDENTIFIES, AND AT WHAT SAMPLE SIZE. Measured on the generated cells with an
-independent parser and replay, R = 1000 resamples, seven composition-free executors and two
-composition deficits all dialled to the SAME accuracy cost (a drop of 0.10 / 0.20 / 0.30 from a
-0.90 base), one-sided alpha = 0.05 (scripts/probe_s5bind_v3_statistic_20260731.py):
+WHAT IT IDENTIFIES, AND AT WHAT SAMPLE SIZE. Measured on the generated cells with an independent
+parser and replay, R = 1000 resamples, one-sided alpha = 0.05, and a composition-free executor
+family dialled to the SAME accuracy cost as the deficits — uniform per-op slip; slip linear in
+the write count, the retrieval distance, the stream depth, the derivation depth or the
+distinct-value count; stale-value intrusion; surface-clause slip; kind slip; FIFO and LRU at
+several capacities; and hard forgetting horizons
+(scripts/probe_s5bind_v3_statistic_20260731.py). Size and power are reported there as numbers at
+every cell, executor, cost and n.
 
-  TYPE-I, over uniform per-op slip, read slip linear in the write count / in the retrieval
-  distance / in the op's depth in the stream, stale-value interference on overwritten cells, a
-  bounded working set with LRU eviction, and a surface-clause slip:
-      k=6,  L=64 :  0.041 - 0.084 at every executor, cost and n
-      k=12, L=192:  0.044 - 0.085 at every executor, cost and n
-  The raw contrast is at alpha on six of the seven and reads 0.072-0.211 on the surface-clause
-  one, which is what the kind balancing buys.
+WHAT IS AND IS NOT NULL, at n = 2000, k=6/L=64, a 0.20 accuracy cost, alpha = 0.05 (Monte Carlo
+error +/- 0.007). ``T_kind`` reads 0.055 on a uniform slip, 0.047 on a write-count slip, 0.064 on
+a retrieval-distance slip, 0.075 on a stream-depth slip, 0.052 on a distinct-value slip — and
+0.060 on a stale-value intrusion — and 0.088 on a DERIVATION-DEPTH slip and 0.118 on a
+SURFACE-CLAUSE slip. Power against a stated-map fallback at the same cost is 0.867, and 0.899
+against an outright garbled cross reference. ``T_strat`` takes the distance slip to 0.041 and
+leaves the derivation-depth one at 0.110; the raw ``T_cross`` reads 0.29 on the clause slip.
 
-  POWER against a stated-map fallback / an outright garbled cross reference, at n = 100/200/500:
-      k=6,  L=64 :  0.11/0.13/0.22, 0.17/0.20/0.36, 0.20/0.31/0.52 at the three costs
-      k=12, L=192:  0.08/0.10/0.13, 0.12/0.15/0.22, 0.13/0.19/0.31
-  So the statistic is an instrument for the FROM-SCRATCH regime, where thousands of items are
-  free, and not for a few-hundred-item frontier budget: at n = 500 it detects a deficit costing
-  0.30 of accuracy about half the time at the local cell and a third of the time at the frontier
-  one. Entering the read-history load as a free nuisance (``T_kindWD``) holds every null at or
-  below 0.068 and costs about half the power.
+A BOUNDED WORKING SET IS THE LARGEST LEAK. LRU at 11 of the 12 live cells reads 0.102 / 0.153 /
+0.275 at n = 250 / 500 / 2000 with a contrast of +0.04, and FIFO at the same capacity 0.163 /
+0.079. Their accuracies are 0.633 and 0.734, not the 0.70 the continuous executors are dialled
+to — a capacity is integer-valued and cannot be dialled — so they are reported at the cost they
+land on rather than matched to one.
+
+BOTH SLIP LEAKS ARE THE LOCAL CELL'S. At k=12/L=192 and n = 2000 the clause slip reads 0.053 on
+``T_kind`` (against 0.118 at k=6/L=64) and the derivation-depth slip 0.046 (against 0.088), and
+every other executor measured there sits at 0.046-0.065. The raw ``T_cross`` reads 0.132 on the
+clause slip at k=12 and 0.29 at k=6. Six cells and twelve are not the same instrument: the k=6
+pools are six cells wide, which is what leaves the residual the matched draw cannot close.
+
+SO IT IS NOT YET A VALID PRIMARY, and the live leaks are named rather than absorbed. The
+DERIVATION DEPTH of the value a reference reads is not matched between the classes and cannot be
+matched by choosing cells — a P cell's value is deep because swaps chain, a B cell's because
+gives chain (-22.8% on swaps and +29.4% on gives at k=12), so a solver that degrades with
+derivation depth is a composition-free executor the design does not control. The SURFACE CLAUSE
+is anti-symmetric across the kinds by construction, and the precision weighting removes its
+linear projection but not its effect through the fit. A CAPACITY BOUND is matched in the read
+cell's recency and write count, which is what the sampler controls, but not in how many other
+cells sit between two reads of the same one.
+
+THE THRESHOLD IS NOT CALIBRATED BELOW n = 2000, and that is a property of the LRT here rather
+than of the design. Under a plain uniform slip at k=6/L=64 the measured size is 0.05 at n = 2000
+and 0.07-0.13 at n = 250, and it moves that far for the RAW two-class contrast as well
+(0.05 -> 0.07-0.10), so it is not the stratification or the contrast column that does it. Raising
+the trajectories behind each item's accuracy from 100 to 1600 does not move it either. A cell
+scored at a few hundred items therefore needs a resampled threshold rather than the chi-square
+one; the size at n = 2000 is the number this statistic is registered on.
 
 -------------------------------------------------------------------------------------------
 THE COST CONVENTION  (one step = ..., stated so the multiplier is testable)
@@ -452,54 +485,129 @@ def _replay_from(rec, P, B, j):
         _apply(ev, P, B, x)
 
 
-def _cov_from_ops(ops, balance=None) -> dict:
+def _cov_from_ops(ops) -> dict:
     """Per-item covariates of the fit.
 
     ``nw`` writes and the readout; ``nz`` SAME resolutions; ``nx`` CROSS resolutions; each
-    weighted by answer sensitivity. ``W``/``W2``/``D`` are the read-history load the CROSS class
-    carries, entered as nuisances by the repairs. ``bz``/``bx`` are the KIND-BALANCED class
-    columns: each op divided by its event kind's mean slice mass (``balance``), so swaps and
-    gives contribute equally and a surface-clause effect cancels in ``bx - bz``.
+    weighted by answer sensitivity. ``W``/``W2``/``D`` are the item's READ-HISTORY LOAD, summed
+    over EVERY resolution the item performs and entered as free nuisances by the repairs.
+
+    THE NUISANCE COLUMNS RUN OVER BOTH CLASSES. A read-history effect is a property of the cell
+    read, not of the class reading it, so the load it puts on an item is the sum over all of that
+    item's reads; a column summed over the CROSS reads alone absorbs the cross half of the effect
+    and leaves the same half loading on the SAME class column, which is a repair that moves the
+    contrast in the direction of the defect it claims to remove rather than a no-op.
     """
-    cov = {"nw": 0.0, "nz": 0.0, "nx": 0.0, "bz": 0.0, "bx": 0.0,
-           "W": 0.0, "W2": 0.0, "D": 0.0}
+    cov = {"nw": 0.0, "nz": 0.0, "nx": 0.0, "W": 0.0, "W2": 0.0, "D": 0.0}
     for op in ops:
         s = op["sens"]
         if op["cls"] == "write":
             cov["nw"] += s
             continue
-        g = 1.0 if balance is None else balance.get(op["kind"], 1.0)
-        if op["cls"] == "same":
-            cov["nz"] += s
-            cov["bz"] += s * g
-        else:
-            cov["nx"] += s
-            cov["bx"] += s * g
-            cov["W"] += s * op["w"]
-            cov["W2"] += s * op["w"] * op["w"]
-            cov["D"] += s * op["d"]
+        cov["nz" if op["cls"] == "same" else "nx"] += s
+        cov["W"] += s * op["w"]
+        cov["W2"] += s * op["w"] * op["w"]
+        cov["D"] += s * op["d"]
     cov["nw"] += 1.0                                   # the readout
     return cov
 
 
-def kind_balance(all_ops) -> dict:
-    """The per-kind weights that make swaps and gives contribute equally to the class columns:
-    one over each kind's mean CROSS slice mass. A swap resolution sits on the answer's path and
-    a give resolution reaches it only through a later swap, so the raw masses differ by ~5x and
-    the surface-clause confound does not cancel without this."""
-    mass: dict[str, float] = {}
-    for ops in all_ops:
-        for op in ops:
-            if op["cls"] == "cross":
-                mass[op["kind"]] = mass.get(op["kind"], 0.0) + op["sens"]
-    n = max(1, len(all_ops))
-    return {k: (n / v if v > 0 else 0.0) for k, v in mass.items()}
-
-
-def item_covariates(rec, draws: int = 2, rng: random.Random | None = None,
-                    balance=None) -> dict:
+def item_covariates(rec, draws: int = 2, rng: random.Random | None = None) -> dict:
     """Per-item covariates of the fit — see ``_cov_from_ops``."""
-    return _cov_from_ops(op_slice(rec, draws=draws, rng=rng), balance)
+    return _cov_from_ops(op_slice(rec, draws=draws, rng=rng))
+
+
+# --- the stratified design: one mass column per stratum, one contrast column ---------------
+def strata(all_ops, n_bins: int = 1):
+    """``(stratum_of(op), n_strata)``. A stratum is the EVENT KIND, crossed with a
+    retrieval-distance bin when ``n_bins > 1``; the bin edges are the pooled distance quantiles
+    of this cell's own ops, so the stratification is a property of the cell and not a constant.
+    """
+    kinds = (SWAP, GIVE)
+    edges: list[int] = []
+    if n_bins > 1:
+        ds = sorted(op["d"] for ops in all_ops for op in ops if op["cls"] != "write")
+        if ds:
+            edges = sorted({ds[len(ds) * j // n_bins] for j in range(1, n_bins)})
+    width = len(edges) + 1
+
+    def of(op):
+        b = sum(1 for e in edges if op["d"] >= e)
+        return kinds.index(op["kind"]) * width + b
+
+    return of, len(kinds) * width
+
+
+def _stratum_columns(all_ops, n_bins: int):
+    """``(mass columns, contrast column)`` — the design the composition coefficient sits in.
+
+    For every stratum s the MASS column T_s carries the item's whole slice mass in s, over both
+    classes, unweighted; the CONTRAST column is a fixed combination of the per-stratum class
+    differences (cross mass minus same mass).
+
+    THE MASS COLUMNS ARE RAW, AND THAT IS THE WHOLE POINT. Any hazard that is a function of the
+    stratum alone — a per-kind slip, a slip linear in the retrieval distance, a hard forgetting
+    horizon whose cutoff falls inside a bin — is then EXACTLY in the model's span with a zero
+    coefficient on the contrast column, so the fit returns zero by construction rather than by
+    cancellation. Divide the class columns by anything and the truth leaves the span the moment
+    the divisor varies with the class mix: the within-kind class MASSES are not equal here (a
+    CROSS give's object cannot be referenced again until its pin dies, so its mean answer
+    sensitivity is about half a SAME give's), and a reweighting reports that imbalance as a
+    coefficient.
+
+    THE CONTRAST COLUMN IS PRECISION-WEIGHTED, and that is what kills the surface confound. A
+    clause failure is CROSS on a swap and SAME on a give, so it loads on the ANTI-symmetric
+    combination of the per-stratum differences. Weighting them by ``w = Sigma^-1 1``, with Sigma
+    the covariance of the difference columns, makes the contrast exactly uncorrelated with every
+    anti-symmetric combination (``w' Sigma v = 1' v = 0`` whenever ``v`` sums to zero), while a
+    real cross-only deficit loads on the symmetric one and survives. Equal weights do that only
+    where the strata carry equal variance, and they do not — a swap resolution's mean sensitivity
+    is ~0.72 against a give's ~0.13.
+    """
+    of, ns = strata(all_ops, n_bins)
+    T = [[0.0] * ns for _ in all_ops]
+    Dm = [[0.0] * ns for _ in all_ops]
+    for i, ops in enumerate(all_ops):
+        for op in ops:
+            if op["cls"] == "write":
+                continue
+            s = of(op)
+            T[i][s] += op["sens"]
+            Dm[i][s] += op["sens"] if op["cls"] == "cross" else -op["sens"]
+    n = max(1, len(all_ops))
+    keep = [s for s in range(ns) if any(row[s] for row in T)]
+    live = [s for s in keep if _var([row[s] for row in Dm]) > 1e-12]
+    if not live:
+        return [[row[s] for s in keep] for row in T], [0.0] * n
+    w = _precision_weights([[row[s] for s in live] for row in Dm])
+    scale = sum(w[j] * sum(row[live[j]] for row in T) / n for j in range(len(live)))
+    if scale > 0:                       # one unit of contrast = one unit of mean slice mass
+        w = [x / scale for x in w]
+    else:
+        # a negative total weight would flip what "the cross class is worse" means, so a
+        # covariance that produces one is not used: fall back to equal weights, which keep the
+        # direction by construction and give up only the exact orthogonality.
+        w = [1.0 / len(live)] * len(live)
+    dif = [sum(w[j] * row[live[j]] for j in range(len(live))) for row in Dm]
+    return [[row[s] for s in keep] for row in T], dif
+
+
+def _var(xs):
+    mu = sum(xs) / len(xs)
+    return sum((x - mu) ** 2 for x in xs) / max(1, len(xs) - 1)
+
+
+def _precision_weights(D):
+    """``Sigma^-1 1`` for the columns of ``D``, with a ridge; equal weights if that is singular."""
+    p = len(D[0])
+    mu = [sum(row[j] for row in D) / len(D) for j in range(p)]
+    S = [[sum((row[a] - mu[a]) * (row[b] - mu[b]) for row in D) / max(1, len(D) - 1)
+          for b in range(p)] for a in range(p)]
+    tr = sum(S[a][a] for a in range(p)) or 1.0
+    for a in range(p):
+        S[a][a] += 1e-6 * tr / p
+    w = _solve(S, [1.0] * p)
+    return w if w is not None else [1.0] * p
 
 
 # --- the fit: P(correct) = exp(-X theta); one-sided LRT on a contrast of columns -----------
@@ -579,24 +687,25 @@ def fit(X, y, ridge=1e-6, iters=60):
 
 CHI2_1_90 = 2.70554          # one-sided alpha = 0.05 on a single contrast
 
-# The registered statistics. Each is (columns, the composition column, the reference column).
-#   T_cross    the published contrast: CROSS resolutions against SAME ones, at matched slice
-#              depth and matched op count.
-#   T_crossW   the write-count repair — the CROSS class's read-history load entered as a free
-#              nuisance. Valid against a read-history effect linear in the write count.
-#   T_crossW2  adds a quadratic term: any smooth read-history effect vanishing at zero writes.
-#   T_crossWD  adds retrieval distance as well.
-#   T_kind     THE PRIMARY: the same contrast on the KIND-BALANCED columns, so a surface-clause
-#              failure — worse at "belongs to" than at "points to", with no composition deficit
-#              in it — enters the two class columns at equal size and cancels.
+# The registered statistics, each ``(free nuisance columns, retrieval-distance bins)``. The
+# design is always those columns, then one MASS column per stratum, then the CONTRAST column;
+# the statistic is the coefficient on that last column and the test drops it.
+#   T_kind     THE PRIMARY: strata are the two event kinds. Any hazard that is a function of the
+#              event kind is in the span with a zero contrast, and the precision weighting makes
+#              the contrast orthogonal to the surface-clause direction (see _stratum_columns).
+#   T_strat    strata are kind x retrieval-distance quartile — the same argument extended to any
+#              hazard that is a function of the distance, at the resolution of the bins.
+#   T_kindWD   T_kind with the item's read-history load entered as free nuisances as well.
+#   T_cross    THE DIAGNOSTIC, and the shape the family carried before: the two raw class columns
+#              tested against each other, with no stratification. Kept measured so what the
+#              stratified design buys is visible rather than asserted.
 STATS = {
-    "T_kind": (("nw", "bz", "bx"), 2, 1),
-    "T_kindW": (("nw", "bz", "bx", "W"), 2, 1),
-    "T_kindWD": (("nw", "bz", "bx", "W", "D"), 2, 1),
-    "T_cross": (("nw", "nz", "nx"), 2, 1),
-    "T_crossW": (("nw", "nz", "nx", "W"), 2, 1),
-    "T_crossW2": (("nw", "nz", "nx", "W", "W2"), 2, 1),
-    "T_crossWD": (("nw", "nz", "nx", "W", "D"), 2, 1),
+    "T_kind": ((), 1),
+    "T_strat": ((), 4),
+    "T_kindWD": (("W", "D"), 1),
+}
+TWO_CLASS_STATS = {
+    "T_cross": ("nw", "nz", "nx"),
 }
 PRIMARY_STAT = "T_kind"
 
@@ -616,6 +725,14 @@ def lrt(cols, y, i_hi, i_lo):
     return c, bool(c > 0 and 2 * (ll1 - ll0) > CHI2_1_90)
 
 
+def lrt_drop(cols, y, i):
+    """One-sided LRT of theta[i] > 0, against the model with that column removed."""
+    X = [list(row) for row in zip(*cols)]
+    th, ll1 = fit(X, y)
+    _th0, ll0 = fit([row[:i] + row[i + 1:] for row in X], y)
+    return th[i], bool(th[i] > 0 and 2 * (ll1 - ll0) > CHI2_1_90)
+
+
 def contrast(examples, correct, draws: int = 2, seed: int = 0, stat: str = PRIMARY_STAT) -> dict:
     """THE PRIMARY STATISTIC for one cell: ``theta_cross - theta_same``, per item, within item.
 
@@ -627,6 +744,7 @@ def contrast(examples, correct, draws: int = 2, seed: int = 0, stat: str = PRIMA
     rng = random.Random(seed)
     all_ops, y = [], []
     bal = {"wx": 0.0, "wz": 0.0, "cx": 0, "cz": 0, "dx": 0.0, "dz": 0.0}
+    per_kind: dict = {}
     for e, c in zip(examples, correct):
         rec = read(e.prompt)
         if rec is None:
@@ -639,24 +757,53 @@ def contrast(examples, correct, draws: int = 2, seed: int = 0, stat: str = PRIMA
             bal["c" + k] += 1
             bal["w" + k] += op["w"]
             bal["d" + k] += op["d"]
+            row = per_kind.setdefault(op["kind"], {"cx": 0, "cz": 0, "dx": 0.0, "dz": 0.0,
+                                                   "wx": 0.0, "wz": 0.0, "sx": 0.0, "sz": 0.0})
+            row["c" + k] += 1
+            row["d" + k] += op["d"]
+            row["w" + k] += op["w"]
+            row["s" + k] += op["sens"]
         all_ops.append(ops)
         y.append(float(c))
     if not all_ops:
         return {}
-    weights = kind_balance(all_ops)
-    cov = [_cov_from_ops(ops, weights) for ops in all_ops]
-    names, hi, lo = STATS[stat]
-    cols = [[r[n] for r in cov] for n in names]
-    c, rej = lrt(cols, y, hi, lo)
+    cov = [_cov_from_ops(ops) for ops in all_ops]
+    if stat in TWO_CLASS_STATS:
+        names = TWO_CLASS_STATS[stat]
+        c, rej = lrt([[r[n] for r in cov] for n in names], y, len(names) - 1, len(names) - 2)
+    else:
+        free, bins = STATS[stat]
+        T, dif = _stratum_columns(all_ops, bins)
+        cols = [[r[n] for r in cov] for n in ("nw",) + free]
+        cols += [[row[j] for row in T] for j in range(len(T[0]))] + [dif]
+        c, rej = lrt_drop(cols, y, len(cols) - 1)
     return {
         "stat": stat, "contrast": c, "reject": rej, "n": len(y), "acc": sum(y) / len(y),
         "slice_cross": sum(r["nx"] for r in cov) / len(cov),
         "slice_same": sum(r["nz"] for r in cov) / len(cov),
         "slice_write": sum(r["nw"] for r in cov) / len(cov),
-        "kind_balance": weights,
         "class_balance_cross": bal["cx"] / max(1, bal["cx"] + bal["cz"]),
         "mean_write_count_cross": bal["wx"] / max(1, bal["cx"]),
         "mean_write_count_same": bal["wz"] / max(1, bal["cz"]),
         "mean_distance_cross": bal["dx"] / max(1, bal["cx"]),
         "mean_distance_same": bal["dz"] / max(1, bal["cz"]),
+        # WITHIN KIND is what the primary strata are, and pooling hides it: the two kinds carry
+        # the two clauses in opposite directions, so a class imbalance inside one kind can cancel
+        # in the pooled column and still load on the contrast at full size.
+        "within_kind": {kd: within_kind_matching(row) for kd, row in sorted(per_kind.items())},
     }
+
+
+def within_kind_matching(row: dict) -> dict:
+    """One kind's class matching: the share of ops that are CROSS, and the relative gap between
+    the classes in retrieval distance, write count and slice mass. Every gap is reported as a
+    signed fraction of the larger side, so a reader sees the size of the imbalance the contrast
+    is being asked to be blind to."""
+    def gap(x, z):
+        return 0.0 if max(abs(x), abs(z)) == 0 else (x - z) / max(abs(x), abs(z))
+    cx, cz = max(1, row["cx"]), max(1, row["cz"])
+    return {"n_cross": row["cx"], "n_same": row["cz"],
+            "cross_share": row["cx"] / (row["cx"] + row["cz"]) if row["cx"] + row["cz"] else 0.0,
+            "distance_gap": gap(row["dx"] / cx, row["dz"] / cz),
+            "write_count_gap": gap(row["wx"] / cx, row["wz"] / cz),
+            "slice_mass_gap": gap(row["sx"] / cx, row["sz"] / cz)}

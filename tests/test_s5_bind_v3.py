@@ -13,11 +13,13 @@ operand LIVE through one of them. The construct rests on properties this file pi
                                               to the two and cancel in the contrast;
   the prompt alone determines gold          — an independent parser and replay reproduce the
                                               answer, so nothing is carried in meta;
-  the floor is a PARETO class               — a row may set the floor only if it is strictly
-                                              cheaper than the cell's cheapest correct algorithm
-                                              in live slots AND no more expensive in steps, so
-                                              the block-drop continuum and the demand resolver
-                                              are both out, by one rule;
+  the floor is a ONE-STRUCTURE class        — a row may set the floor only if it holds at most
+                                              one structure (W <= max(k,m)+1 under the stated W
+                                              convention) and pays no more steps than the task,
+                                              so the block-drop continuum, the partial-carry
+                                              continuum and the demand resolver are all out by
+                                              one argument; a COMPONENT cell separates on steps
+                                              instead, since its own algorithm holds nothing;
   the cost convention is stated             — one step is a named thing, a backward walk IS
                                               charged for the events it scans and rejects, and
                                               the counter implements exactly that.
@@ -43,15 +45,24 @@ from factworld.validity import (  # noqa: E402
     S5_BIND_V3_CHANCE_ROWS,
     S5_BIND_V3_REFERENCE_ROWS,
     S5_BIND_V3_ROWS,
+    S5_BIND_V3_SURFACE_FEATURES,
     S5_BIND_V3_TRUNCATION_ROWS,
-    pareto_eligible,
+    floor_eligible,
+    one_structure_bound,
     s5_bind_v3_block_drop,
     s5_bind_v3_classify,
+    s5_bind_v3_floor_basis,
     s5_bind_v3_floors,
     s5_bind_v3_is_named,
+    s5_bind_v3_needs,
     s5_bind_v3_operative_floor,
+    s5_bind_v3_partial_carry,
+    s5_bind_v3_partial_carry_profile,
+    s5_bind_v3_query_kind,
     s5_bind_v3_row_cost,
     s5_bind_v3_shape,
+    s5_bind_v3_slot_profile,
+    s5_bind_v3_surface_bound,
     s5_bind_v3_task_cost,
 )
 from factworld.world import Event  # noqa: E402
@@ -69,13 +80,13 @@ N_FLOOR = 500
 FLOOR_RATIO_MAX = 1.35
 
 GOLDENS = {
-    "s5_bind_v3": {128: "b5d52166a7c4c212", 192: "6612054517cd9ee2", 256: "2ccf77528da9e639"},
+    "s5_bind_v3": {128: "a3f301a6769fe938", 192: "c0b0d78567ce1b29", 256: "147f0b5a10fc916f"},
     "s5_bind_v3_state": {128: "35d242c7be3fb858", 192: "cbd08f3ddc1223b1",
                          256: "ee22e51b922d44ac"},
     "s5_bind_v3_bind": {128: "1582867b26e59b3a", 192: "95ec70373bcc585a",
                         256: "894abea4d38df4a6"},
-    "s5_bind_local_v3": {48: "c014d4700a88ecec", 64: "27877e6c97873b5c",
-                         96: "1c8d6c6207943664"},
+    "s5_bind_local_v3": {48: "f47aa0f745e19a77", 64: "571f81b8ecda65b9",
+                         96: "1ef58f59227c3736"},
     "s5_bind_local_v3_state": {48: "056763639c7c4882", 64: "3534ff1db6a1b4d1",
                                96: "30322ddada9d71e4"},
     "s5_bind_local_v3_bind": {48: "dac8b968e64d81ab", 64: "edd3d8fa66f270f7",
@@ -219,40 +230,72 @@ def test_the_clause_to_class_map_flips_between_event_kinds():
                     assert C.is_cross(ev) == (src == "P")
 
 
-def test_the_classes_are_balanced_and_write_count_matched():
-    """The property the statistic rests on, measured on the exact scored items: the two classes
-    are equally frequent, and the cell each reads has the same write count and the same
-    retrieval distance."""
+def _class_read_history(ex):
+    """Per (kind, class): count, mean retrieval distance, mean write count of the cell read —
+    recomputed off the rendered prompt."""
+    cnt, wsum, dsum = Counter(), Counter(), Counter()
+    for e in ex:
+        rec = C.read(e.prompt)
+        P, B = dict(rec["P0"]), dict(rec["B0"])
+        wcnt, last = {}, {}
+        for j, ev in enumerate(rec["events"]):
+            key = (ev[0], "cross" if C.is_cross(ev) else "same")
+            cell = (ev[3], ev[2])
+            cnt[key] += 1
+            wsum[key] += wcnt.get(cell, 0)
+            dsum[key] += j - last.get(cell, -1)
+            x = C._resolve(ev, P, B, rec["P0"], rec["B0"])
+            if ev[0] == C.SWAP:
+                P[ev[1]], P[x] = P[x], P[ev[1]]
+                for g in (ev[1], x):
+                    wcnt[("P", g)] = wcnt.get(("P", g), 0) + 1
+                    last[("P", g)] = j
+            else:
+                B[ev[1]] = x
+                wcnt[("B", ev[1])] = wcnt.get(("B", ev[1]), 0) + 1
+                last[("B", ev[1])] = j
+    return cnt, wsum, dsum
+
+
+def test_the_classes_are_matched_WITHIN_KIND():
+    """The property the statistic rests on, measured where the primary reads it.
+
+    POOLING HIDES IT. The primary is kind-balanced, so what has to be matched is the read history
+    inside each event kind — and the two kinds carry the two clauses in opposite directions, so a
+    within-kind gap can cancel in the pooled column and still load on the contrast at full size.
+    The sampler matches the two candidate reference cells at the draw (TaskSpec.match_reads); this
+    is that rule's outcome on the exact scored items."""
     for name in COMPOSED:
         spec = TK.CANONICAL[name]
-        ex = TK.generate(spec, "test", n=120, length=spec.eval_lengths[0])
-        cnt, wsum, dsum = Counter(), Counter(), Counter()
-        for e in ex:
-            rec = C.read(e.prompt)
-            P, B = dict(rec["P0"]), dict(rec["B0"])
-            wcnt, last = {}, {}
-            for j, ev in enumerate(rec["events"]):
-                cls = "cross" if C.is_cross(ev) else "same"
-                cell = (ev[3], ev[2])
-                cnt[cls] += 1
-                wsum[cls] += wcnt.get(cell, 0)
-                dsum[cls] += j - last.get(cell, -1)
-                x = C._resolve(ev, P, B, rec["P0"], rec["B0"])
-                if ev[0] == C.SWAP:
-                    P[ev[1]], P[x] = P[x], P[ev[1]]
-                    for g in (ev[1], x):
-                        wcnt[("P", g)] = wcnt.get(("P", g), 0) + 1
-                        last[("P", g)] = j
-                else:
-                    B[ev[1]] = x
-                    wcnt[("B", ev[1])] = wcnt.get(("B", ev[1]), 0) + 1
-                    last[("B", ev[1])] = j
-        share = cnt["cross"] / (cnt["cross"] + cnt["same"])
-        assert 0.45 <= share <= 0.55, f"{name}: cross share {share:.3f}"
-        wx, wz = wsum["cross"] / cnt["cross"], wsum["same"] / cnt["same"]
-        dx, dz = dsum["cross"] / cnt["cross"], dsum["same"] / cnt["same"]
-        assert abs(wx - wz) / max(wx, wz) < 0.10, f"{name}: write counts {wx:.2f} vs {wz:.2f}"
-        assert abs(dx - dz) / max(dx, dz) < 0.20, f"{name}: distances {dx:.2f} vs {dz:.2f}"
+        ex = TK.generate(spec, "test", n=150, length=spec.eval_lengths[0])
+        cnt, wsum, dsum = _class_read_history(ex)
+        for kind in (C.SWAP, C.GIVE):
+            nx, nz = cnt[(kind, "cross")], cnt[(kind, "same")]
+            assert 0.45 <= nx / (nx + nz) <= 0.55, f"{name} {kind}: cross share"
+            dx, dz = dsum[(kind, "cross")] / nx, dsum[(kind, "same")] / nz
+            wx, wz = wsum[(kind, "cross")] / nx, wsum[(kind, "same")] / nz
+            assert abs(dx - dz) / max(dx, dz) < 0.15, \
+                f"{name} {kind}: distances {dx:.2f} vs {dz:.2f}"
+            assert abs(wx - wz) / max(wx, wz) < 0.15, \
+                f"{name} {kind}: write counts {wx:.2f} vs {wz:.2f}"
+
+
+def test_the_matched_draw_is_what_closes_the_within_kind_gap():
+    """Turning the matching off leaves a gap several times the matched one, in OPPOSITE
+    directions on the two kinds — which is why it survived a pooled check."""
+    for name in COMPOSED:
+        spec = TK.CANONICAL[name]
+        assert spec.match_reads >= 1
+        L = spec.eval_lengths[0]
+        gaps = {}
+        for tag, s in (("on", spec), ("off", spec.scaled(match_reads=0))):
+            cnt, _w, dsum = _class_read_history(TK.generate(s, "test", n=150, length=L))
+            gaps[tag] = {kd: (dsum[(kd, "cross")] / cnt[(kd, "cross")])
+                         / (dsum[(kd, "same")] / cnt[(kd, "same")]) - 1.0
+                         for kd in (C.SWAP, C.GIVE)}
+        assert gaps["off"][C.SWAP] > 0.05 and gaps["off"][C.GIVE] < -0.05, gaps["off"]
+        for kd in (C.SWAP, C.GIVE):
+            assert abs(gaps["on"][kd]) < abs(gaps["off"][kd]), (name, kd, gaps)
 
 
 def test_no_pin_keeps_the_cross_class_pure():
@@ -407,60 +450,145 @@ def test_tokenizer_covers_every_surface_with_no_unknowns():
     assert seen > 100_000
 
 
-# --- the Pareto floor class ---------------------------------------------------------------
+# --- the W convention and the one-structure floor class -------------------------------------
 
-def test_the_pareto_rule_is_strict_in_slots_and_weak_in_steps():
-    """Both halves are load-bearing. A row that TIES the task on live slots is the task at a
-    discount (the whole block-drop continuum); a row that is cheaper in slots but pays more
-    steps is buying its slots with time (the demand resolver)."""
-    assert pareto_eligible(3, 10, 4, 10)
-    assert not pareto_eligible(4, 5, 4, 10), "a tie on live slots must NOT be a floor row"
-    assert not pareto_eligible(1, 11, 4, 10), "more steps must NOT be a floor row"
-    assert not pareto_eligible(5, 5, 4, 10)
+def test_the_w_convention_is_one_scratch_plus_the_structures_the_row_needs():
+    """W1-W5 in factworld.validity, made checkable: W = 1 + (k if the row needs P) + (m if it
+    needs B), the scratch register is charged to every row INCLUDING the task, and a row needs a
+    structure when it reads it live OR when the answer comes out of it."""
+    k, m, ns, ng = 12, 12, 43, 85
+    guess = ("uniform", "uniform_non_initial", "initial_only")
+    scan = ("last_write_1hop", "last_swap_ref", "uniform_anti_surface")
+    for row in S5_BIND_V3_ROWS:
+        for query in ("state", "bind"):
+            np_, nb = s5_bind_v3_needs(row, query)
+            w, _s = s5_bind_v3_row_cost(row, k, m, ns, ng, query)
+            if row in guess:                     # holds only its own answer
+                want = 1
+            elif row in scan:                    # one carrier plus the scratch register
+                want = 2
+            else:                                # 1 + the structures it needs; final_state twice
+                want = 1 + (k if np_ else 0) + (m if nb else 0)
+                if row == "final_state":
+                    want += k + m
+            assert w == want, (row, query, w, want)
+    # the task pays the same scratch register, so the task and the rows are comparable at all
+    wt, _st = s5_bind_v3_task_cost(k, m, ns, ng)
+    assert wt == k + m + 1
+    assert s5_bind_v3_task_cost(k, m, ns, ng, named=True)[0] == 2
 
 
-def test_the_block_drop_continuum_is_excluded_by_one_argument():
-    """Every member at every (position, width) carries both maps, so W ties the task and the
-    whole continuum goes out at once — not member by member."""
+def test_one_structure_b_holds_both_maps_on_a_state_query():
+    """The mis-costing the rule replaces. one_structure_B resolves out of B, but its replay
+    writes P on every swap and a STATE query reads the answer out of P, so it holds k + m + 1
+    and is not a floor row. On a BIND query the same policy holds m + 1 and is."""
+    k, m, ns, ng = 12, 12, 43, 85
+    assert s5_bind_v3_row_cost("one_structure_B", k, m, ns, ng, "state")[0] == k + m + 1
+    assert s5_bind_v3_row_cost("one_structure_B", k, m, ns, ng, "bind")[0] == m + 1
+    assert not s5_bind_v3_classify(k, m, ns, ng, query="state")["one_structure_B"]
+    assert s5_bind_v3_classify(k, m, ns, ng, query="bind")["one_structure_B"]
+    # and the mirror, so the rule is not one-sided
+    assert s5_bind_v3_row_cost("one_structure_P", k, m, ns, ng, "state")[0] == k + 1
+    assert s5_bind_v3_row_cost("one_structure_P", k, m, ns, ng, "bind")[0] == k + m + 1
+
+
+def test_the_bound_is_one_structure_and_both_continua_go_out_by_it():
+    """ONE inequality closes both continua. Every block-drop member and every partial-carry
+    member with j >= 1 holds both structures, so W exceeds max(k,m)+1; j = 0 does not, and j = 0
+    IS one_structure_P."""
     for name in COMPOSED:
         spec = TK.CANONICAL[name]
         k, m = spec.k, spec.n_objects_active
         ex = TK.generate(spec, "test", n=30, length=spec.eval_lengths[0])
         ns, ng = s5_bind_v3_shape(ex)
-        wt, _st = s5_bind_v3_task_cost(k, m, ns, ng)
+        bound = one_structure_bound(k, m)
+        assert bound == max(k, m) + 1 < s5_bind_v3_task_cost(k, m, ns, ng)[0]
         cls = s5_bind_v3_classify(k, m, ns, ng)
         for row in S5_BIND_V3_TRUNCATION_ROWS:
             w, _s = s5_bind_v3_row_cost(row, k, m, ns, ng)
-            assert w == wt and not cls[row], row
+            assert w == k + m + 1 > bound and not cls[row], row
+        # the partial-carry family, priced by W2 of the convention: j cells cost j slots
+        for j in range(m + 1):
+            assert (k + j + 1 <= bound) == (j == 0), (j, k + j + 1, bound)
+        assert cls["one_structure_P"], "j = 0 must stay admitted — it is the registered row"
 
 
-def test_the_admitted_rows_are_all_cheaper_in_slots():
+def test_the_admitted_rows_all_hold_at_most_one_structure():
     for name in COMPOSED:
         spec = TK.CANONICAL[name]
         k, m = spec.k, spec.n_objects_active
         ex = TK.generate(spec, "test", n=30, length=spec.eval_lengths[0])
         ns, ng = s5_bind_v3_shape(ex)
-        wt, st = s5_bind_v3_task_cost(k, m, ns, ng)
+        _wt, st = s5_bind_v3_task_cost(k, m, ns, ng)
         cls = s5_bind_v3_classify(k, m, ns, ng)
         admitted = [r for r, ok in cls.items() if ok]
-        assert set(admitted) >= {"one_structure_P", "one_structure_B", "stated_reference",
+        assert set(admitted) >= {"one_structure_P", "stated_reference", "last_swap_ref",
                                  "uniform_non_initial"}
+        assert "one_structure_B" not in admitted, "it holds P as well on a state query"
         for row in admitted:
             w, s = s5_bind_v3_row_cost(row, k, m, ns, ng)
-            assert w < wt and s <= st, (row, w, s, wt, st)
+            assert floor_eligible(w, s, one_structure_bound(k, m), st), (row, w, s)
 
 
-def test_the_component_arms_are_classified_against_their_own_cheapest_algorithm():
-    """A component's cheapest correct algorithm is the backward carrier walk, W = 2. Classifying
-    it against the COMPOSED cell's cost would admit rows that carry a whole map."""
+def test_the_component_arms_separate_on_steps_and_not_on_slots():
+    """A component's cheapest correct algorithm already holds NO structure (W = 2), so the
+    one-structure bound is vacuous and the axis that separates is STEPS. That admits the one-hop
+    read on the STATE component — the carrier walk truncated after one hop, which stops early —
+    and excludes it on the RETRIEVAL component, where the same read IS the whole algorithm."""
     for name in COMPONENTS:
         spec = TK.CANONICAL[name]
         ex = TK.generate(spec, "test", n=20, length=spec.eval_lengths[0])
         assert s5_bind_v3_is_named(ex)
         ns, ng = s5_bind_v3_shape(ex)
-        cls = s5_bind_v3_classify(spec.k, spec.n_objects_active, ns, ng, named=True)
-        assert not cls["one_structure_P"] and not cls["last_write_1hop"]
+        k, m = spec.k, spec.n_objects_active
+        query = spec.query_arm
+        cls = s5_bind_v3_classify(k, m, ns, ng, True, query)
+        assert not cls["one_structure_P"], "a component floor row may not carry a map"
         assert cls["uniform_non_initial"] and cls["initial_only"]
+        assert cls["last_write_1hop"] == (query == "state"), name
+
+
+def test_a_definitional_floor_is_labelled_and_a_measured_one_is_not():
+    """The thing this replaces printed 1.00x on every component cell as though a policy had been
+    measured up to it. On the retrieval component it IS a definition and the basis says so; on
+    the state component a real row bounds it and the basis says that instead."""
+    for name in COMPOSED:
+        spec = TK.CANONICAL[name]
+        ex = TK.generate(spec, "test", n=20, length=spec.eval_lengths[0])
+        ns, ng = s5_bind_v3_shape(ex)
+        assert s5_bind_v3_floor_basis(spec.k, spec.n_objects_active, ns, ng, False) == "measured"
+    for name, want in (("s5_bind_v3_state", "measured"), ("s5_bind_v3_bind", "chance"),
+                       ("s5_bind_local_v3_state", "measured"),
+                       ("s5_bind_local_v3_bind", "chance")):
+        spec = TK.CANONICAL[name]
+        ex = TK.generate(spec, "test", n=40, length=spec.eval_lengths[0])
+        ns, ng = s5_bind_v3_shape(ex)
+        got = s5_bind_v3_floor_basis(spec.k, spec.n_objects_active, ns, ng, True,
+                                     spec.query_arm)
+        assert got == want, f"{name}: floor basis {got}, want {want}"
+    # what would have bounded the retrieval component is its own algorithm, which ties it
+    spec = TK.CANONICAL["s5_bind_v3_bind"]
+    fl = s5_bind_v3_floors(TK.generate(spec, "test", n=40, length=spec.eval_lengths[0]),
+                           spec.k, spec.n_objects_active)
+    assert fl["last_write_1hop"] > 0.9
+
+
+def test_every_admitted_member_of_the_partial_carry_family_is_at_chance():
+    """The j-profile is what makes the bound checkable rather than asserted: every ADMITTED
+    member sits at chance and the family only climbs above it where the bound has excluded it."""
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=300, length=64)
+    prof = s5_bind_v3_partial_carry_profile(ex, m)
+    chance = 1.0 / (k - 1)
+    assert prof[0] <= FLOOR_RATIO_MAX * chance, f"j=0 is admitted and must be at chance: {prof}"
+    assert prof[m] == 1.0, "j = m carries both maps and is the oracle"
+    assert prof[m - 1] > 2.0 * chance, f"the excluded end must be far above chance: {prof}"
+    for j in range(m + 1):
+        admitted = k + j + 1 <= one_structure_bound(k, m)
+        assert admitted == (j == 0)
+        if admitted:
+            assert prof[j] <= FLOOR_RATIO_MAX * chance, (j, prof)
 
 
 def test_reference_rows_are_dropped_on_a_component_cell():
@@ -482,18 +610,69 @@ def test_floors_are_recomputed_from_the_exact_items():
     assert a["initial_only"] == 0.0                       # the gate forbids the stated answer
 
 
-def test_the_operative_floor_is_at_informed_chance_on_every_scored_cell():
+def test_the_operative_floor_is_near_informed_chance_on_every_scored_cell():
     for name in ALL:
         spec = TK.CANONICAL[name]
         for L in spec.eval_lengths:
             ex = TK.generate(spec, "test", n=N_FLOOR, length=L)
             ns, ng = s5_bind_v3_shape(ex)
             named = s5_bind_v3_is_named(ex)
+            query = s5_bind_v3_query_kind(ex)
             fl = s5_bind_v3_floors(ex, spec.k, spec.n_objects_active)
-            op = s5_bind_v3_operative_floor(fl, spec.k, spec.n_objects_active, ns, ng, named)
+            op = s5_bind_v3_operative_floor(fl, spec.k, spec.n_objects_active, ns, ng, named,
+                                            query)
             chance = 1.0 / (spec.k - 1)
             assert op is not None and op / chance <= FLOOR_RATIO_MAX, \
                 f"{name}@{L}: operative floor {op:.4f} = {op / chance:.2f}x chance"
+
+
+def test_the_surface_read_is_dead_where_the_gate_is_set_and_priced_where_it_is_not():
+    """q_no_surface empties ``last_swap_ref`` and registers the closed-form exclusion that
+    striking it hands a guesser. Where the gate is off the row is measured instead, and the
+    exclusion is not registered — a row that is merely low on this sample is not a rejection."""
+    for name in COMPOSED:
+        spec = TK.CANONICAL[name]
+        fl = s5_bind_v3_floors(TK.generate(spec, "test", n=N_FLOOR, length=spec.eval_lengths[-1]),
+                               spec.k, spec.n_objects_active)
+        if spec.q_no_surface:
+            assert fl["last_swap_ref"] == 0.0, f"{name}: the gate must empty the surface read"
+            assert fl["uniform_anti_surface"] > 1.0 / (spec.k - 1) - 1e-9, \
+                f"{name}: striking an emptied answer must be priced"
+        else:
+            assert fl["last_swap_ref"] > 0.0, f"{name}: an ungated cell measures the row"
+            assert "uniform_anti_surface" not in fl
+
+
+def test_the_surface_bound_is_fitted_on_one_sample_and_scored_on_a_disjoint_one():
+    """The one-at-a-time sweep reported a best of 1.08x chance and did not contain the 1.41x
+    rule; a ranker over the whole feature set, scored out of sample, is the honest bound. It is
+    deterministic (no draw), and it is scored on items the fit never saw."""
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    both = TK.generate(spec, "test", n=600, length=64)
+    fit, ho = both[:300], both[300:]
+    assert not ({e.prompt for e in fit} & {e.prompt for e in ho})
+    a = s5_bind_v3_surface_bound(fit, spec.k, held_out=ho)
+    b = s5_bind_v3_surface_bound(fit, spec.k, held_out=ho)
+    assert a["held_out"] == b["held_out"], "the bound must not depend on a seed"
+    assert a["n_fit"] == 300 and a["n_held_out"] == 300
+    assert a["in_sample"] >= a["held_out"] - 0.05, (a["in_sample"], a["held_out"])
+    assert set(a["weights"]) == set(S5_BIND_V3_SURFACE_FEATURES)
+
+
+def test_the_profile_is_a_curve_over_slots_with_the_bound_drawn_across_it():
+    """A cell's floor is reported as a profile, not a number: the partial-carry family fills
+    every W from k+1 to k+m+1 and the bound sits at max(k,m)+1, so a continuum is visible."""
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=200, length=64)
+    prof = s5_bind_v3_slot_profile(ex, k, m, named=False, query="state")
+    assert all(r["axis"] == "W" for r in prof), "a composed cell separates on live slots"
+    by_w = {r["W"]: r for r in prof}
+    assert set(range(k + 1, k + m + 2)) <= set(by_w), sorted(by_w)
+    assert by_w[k + m + 1]["acc"] == 1.0, "the top of the profile is the task itself"
+    admitted = [w for w, r in by_w.items() if r["admitted"]]
+    assert max(admitted) == one_structure_bound(k, m) == max(k, m) + 1
+    assert all(w > max(admitted) for w, r in by_w.items() if not r["admitted"] and w > 2)
 
 
 def test_what_the_excluded_block_drop_family_actually_reads():
@@ -570,28 +749,65 @@ def test_the_statistic_is_registered_in_the_package():
     assert abs(wx - wz) / max(wx, wz) < 0.10
 
 
-def test_the_primary_statistic_is_the_kind_balanced_one():
+def test_the_primary_statistic_is_stratified_and_its_mass_columns_are_raw():
     """Within an event kind the class IS the reference clause — CROSS is "belongs to" on a swap
     and "points to" on a give — so a solver that is simply worse at one clause slips on
-    swap-CROSS and give-SAME. That would cancel if the two kinds carried equal weight, and they
-    do not: a swap resolution sits on the answer's path, a give resolution reaches it only
-    through a later swap. The primary contrast divides each op by its kind's mean cross mass, so
-    the two kinds contribute equally and a clause effect enters both class columns at equal
-    size."""
-    assert C.PRIMARY_STAT == "T_kind"
-    assert C.STATS[C.PRIMARY_STAT][0] == ("nw", "bz", "bx")
+    swap-CROSS and give-SAME, which is the ANTI-symmetric combination of the two kinds' class
+    differences. The design answers that with two properties, both pinned here.
+
+    THE MASS COLUMNS ARE RAW, so any hazard that is a function of the stratum is exactly in the
+    model's span with a zero contrast. Reweighting the class columns instead only works where the
+    within-kind class masses are equal, and they are not: a CROSS give's object is pinned and
+    cannot be referenced again until the pin dies, so its slice mass is about half a SAME give's.
+
+    THE CONTRAST IS PRECISION-WEIGHTED, which makes it exactly uncorrelated with every
+    anti-symmetric combination of the per-stratum differences."""
+    assert C.PRIMARY_STAT == "T_kind" and C.STATS["T_kind"] == ((), 1)
     spec = TK.CANONICAL["s5_bind_local_v3"]
-    ex = TK.generate(spec, "test", n=60, length=48)
+    ex = TK.generate(spec, "test", n=120, length=48)
     ops = [C.op_slice(C.read(e.prompt), draws=1) for e in ex]
-    g = C.kind_balance(ops)
-    assert set(g) == {"swap", "give"} and g["give"] > 1.5 * g["swap"]
-    # the balanced columns carry equal cross mass from the two kinds, by construction
-    per = {"swap": 0.0, "give": 0.0}
+    of, ns = C.strata(ops, 1)
+    assert ns == 2 and {of(op) for item in ops for op in item if op["cls"] != "write"} == {0, 1}
+    T, dif = C._stratum_columns(ops, 1)
+    # the mass column of a stratum is that stratum's whole slice mass, both classes, unweighted
+    for i, item in enumerate(ops):
+        for s in range(2):
+            want = sum(op["sens"] for op in item if op["cls"] != "write" and of(op) == s)
+            assert abs(T[i][s] - want) < 1e-9
+    # the within-kind class masses are NOT equal, which is what forbids a reweighting
+    mass = {}
     for item in ops:
         for op in item:
-            if op["cls"] == "cross":
-                per[op["kind"]] += op["sens"] * g[op["kind"]]
-    assert abs(per["swap"] - per["give"]) < 1e-6 * max(per.values())
+            if op["cls"] != "write":
+                mass[(op["kind"], op["cls"])] = mass.get((op["kind"], op["cls"]), 0.0) + op["sens"]
+    assert mass[("give", "cross")] < 0.7 * mass[("give", "same")]
+    # and the contrast column is uncorrelated with the anti-symmetric direction
+    Dm = [[0.0, 0.0] for _ in ops]
+    for i, item in enumerate(ops):
+        for op in item:
+            if op["cls"] != "write":
+                Dm[i][of(op)] += op["sens"] if op["cls"] == "cross" else -op["sens"]
+    anti = [row[0] - row[1] for row in Dm]
+    n = len(ops)
+    md, ma = sum(dif) / n, sum(anti) / n
+    cov = sum((dif[i] - md) * (anti[i] - ma) for i in range(n)) / (n - 1)
+    sd = (C._var(dif) * C._var(anti)) ** 0.5
+    assert abs(cov) < 0.02 * sd, f"contrast correlates with the clause direction: {cov / sd:.3f}"
+
+
+def test_the_nuisance_columns_run_over_both_classes():
+    """A read-history repair is a property of the cell READ, not of the class reading it, so the
+    load it puts on an item is the sum over all of that item's resolutions. Summed over the CROSS
+    reads alone it absorbs the cross half of the effect and leaves the same half loading on the
+    SAME column — a repair that moves the contrast toward the defect it claims to remove."""
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    for e in TK.generate(spec, "test", n=12, length=48):
+        ops = C.op_slice(C.read(e.prompt), draws=1)
+        cov = C._cov_from_ops(ops)
+        reads = [op for op in ops if op["cls"] != "write"]
+        assert abs(cov["W"] - sum(op["sens"] * op["w"] for op in reads)) < 1e-9
+        assert abs(cov["D"] - sum(op["sens"] * op["d"] for op in reads)) < 1e-9
+        assert cov["W"] > sum(op["sens"] * op["w"] for op in reads if op["cls"] == "cross")
 
 
 def test_a_cell_reports_the_statistic_alongside_match():
@@ -643,8 +859,8 @@ def test_a_uniform_slip_does_not_move_the_contrast():
     for row in cov:
         q = 2.718281828 ** (-0.02 * (row["nw"] + row["nz"] + row["nx"]))
         y.append(float(rng.random() < q))
-    names, hi, lo = C.STATS["T_cross"]
-    c, _rej = C.lrt([[r[n] for r in cov] for n in names], y, hi, lo)
+    names = C.TWO_CLASS_STATS["T_cross"]
+    c, _rej = C.lrt([[r[n] for r in cov] for n in names], y, len(names) - 1, len(names) - 2)
     assert abs(c) < 0.05, f"uniform slip moved the contrast to {c:.4f}"
 
 

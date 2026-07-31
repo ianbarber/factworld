@@ -3,8 +3,8 @@
 Everything is recomputed from the exact rendered items a cell scores, through
 ``factworld.composition``'s own parser (which shares no code with the sampler).
 
-  FLOORS   every registered row, split by the PARETO CLASS RULE (strictly cheaper than the
-           cell's cheapest correct algorithm in live slots W, no more expensive in steps S).
+  FLOORS   every registered row, split by the ONE-STRUCTURE CLASS RULE (at most one structure
+           in live slots W, no more expensive in steps S than the cell's own algorithm).
            The operative floor is the max over the admitted rows, as a ratio to informed chance.
   SCAN     the block-drop family over every position and every width from w to L/2 — the
            continuum the class rule excludes. Reported as a maximum with what it reads, so the
@@ -88,7 +88,7 @@ def demand_resolver(rec, budget):
     """The memo-free demand-driven resolver: resolve only what the query needs, recursively,
     re-walking the event list for each dependency; fall back to the stated map when the step
     budget is spent. Carries NO map (a bounded stack of frames), which is exactly why a
-    live-slots-only rule admits it and the Pareto rule does not."""
+    live-slots-only rule admits it and the class rule does not."""
     evs = rec["events"]
     P0, B0 = rec["P0"], rec["B0"]
     state = {"steps": 0, "max_depth": 0}
@@ -121,7 +121,7 @@ def demand_resolver(rec, budget):
 def demand_block(ex, ch, budgets, task_steps=1.0):
     print("   memo-free demand-driven resolver (carries no map, only a stack of frames) under a "
           "step budget, falling back to the stated map when spent. This is the policy a "
-          "live-slots-ONLY rule admits and the Pareto rule does not:")
+          "live-slots-ONLY rule admits and the class rule does not:")
     for b in budgets:
         hits = n = mx = 0
         used = 0

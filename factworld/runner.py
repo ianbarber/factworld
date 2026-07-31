@@ -70,8 +70,8 @@ def evaluate_task(
         canonical relaxed match), and a ``metrics`` dict with the canonical
         (``relaxed``) score plus diagnostics (``exact``, ``contains``,
         ``last_n``). A source-structure cell (TaskSpec.source_ablation) also carries
-        ``composition``: theta_cross - theta_same with its one-sided test, and the class
-        balance and read-history matching that make it valid.
+        ``composition``: the composition contrast with its one-sided test, and the class
+        balance and the within-kind read-history matching that make it valid.
     """
     if isinstance(task, str):
         spec = CANONICAL[task]
@@ -164,10 +164,11 @@ def evaluate_task(
         "metrics": metrics,
     }
     # A source-structure cell reports its COMPOSITION statistic alongside match: match says how
-    # often the answer was right, theta_cross - theta_same says whether the failures concentrate
-    # on the resolutions that needed the other structure. The statistic ships with the class
-    # balance and the write-count matching it rests on, so a caller reporting it reports what
-    # makes it valid (factworld.composition.contrast).
+    # often the answer was right, the contrast says whether the failures concentrate on the
+    # resolutions that needed the other structure. The statistic ships with the class balance and
+    # the WITHIN-KIND read-history matching it rests on — pooled matching is not the property the
+    # primary reads — so a caller reporting it reports what makes it valid
+    # (factworld.composition.contrast).
     if spec.source_ablation and spec.query_arm in ("state", "bind"):
         correct = [m[CANONICAL_METRIC] for m in example_metrics]
         stat = composition_contrast(examples, correct, draws=composition_draws)

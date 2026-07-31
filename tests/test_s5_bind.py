@@ -105,7 +105,7 @@ def test_the_chain_max_gap_steer_is_gone():
     and non-monotone in both — and it charged the construct's own comparison: the steer followed
     the coupled trajectory only, so the coupled arm's carrier chain ran 11.8 -> 27.6 events while
     the decoupled reading of the same stream stayed at 12.2. What replaces it is a class rule
-    (factworld.validity.pareto_eligible), not a gate."""
+    (factworld.validity.floor_eligible), not a gate."""
     names = {f.name for f in fields(TK.TaskSpec)}
     assert "chain_max_gap" not in names
     src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
