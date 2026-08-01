@@ -60,9 +60,14 @@ from factworld.validity import (  # noqa: E402
     S5_BIND_V3_MAX_DEPTH,
     floor_eligible,
     one_structure_bound,
+    S5_BIND_V3_CKPT_ROWS,
     s5_bind_v3_admits,
     s5_bind_v3_block_drop,
     s5_bind_v3_carrier_hops,
+    s5_bind_v3_ckpt_copy_per_slot,
+    s5_bind_v3_ckpt_floors,
+    s5_bind_v3_ckpt_lag,
+    s5_bind_v3_ckpt_preds,
     s5_bind_v3_classify,
     s5_bind_v3_family_floors,
     s5_bind_v3_family_rows,
@@ -84,9 +89,16 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_surface_impls,
     s5_bind_v3_surface_loaded,
     s5_bind_v3_surface_price,
+    s5_bind_v3_slot_moves,
     s5_bind_v3_task_cost,
     s5_bind_v3_task_cost_min,
     s5_bind_v3_task_depth,
+    s5_bind_v3_trace_admits,
+    s5_bind_v3_trace_floor_basis,
+    s5_bind_v3_trace_is_answer,
+    s5_bind_v3_trace_operative_floor,
+    s5_bind_v3_trace_pad_floor,
+    s5_bind_v3_trace_slot,
     s5_bind_v3_trunc_walk,
     s5_bind_v3_work_match,
 )
@@ -1435,6 +1447,211 @@ def test_the_statistic_has_zero_power_against_a_single_structure_carrier():
             assert not out["reject"], \
                 f"{mode}: the statistic rejected on a single-structure carrier ({out})"
             assert out["contrast"] < 0.0, f"{mode}: contrast {out['contrast']:.4f}"
+
+
+# --- the trace read -------------------------------------------------------------------------
+
+TRACE_CELLS = (("s5_bind_local_v3_state", 17), ("s5_bind_local_v3_state", 80),
+               ("s5_bind_local_v3_bind", 31), ("s5_bind_local_v3_bind", 132),
+               ("s5_bind_local_v3", 48))
+
+
+def _agents_objs(spec):
+    w, _r = TK.build_world(spec)
+    return list(w.agents[:spec.k]), list(w.objects[:spec.n_objects_active])
+
+
+def test_the_trace_read_scores_the_same_gold_as_the_answer_read():
+    """T1, and everything else about the trace read rests on it: the FINAL checkpoint's value for
+    the queried slot IS the gold answer. If it were not, the two reads would score different
+    quantities and no floor row's number would transfer between them."""
+    for name, L in TRACE_CELLS:
+        spec = TK.CANONICAL[name]
+        agents, objs = _agents_objs(spec)
+        ex = TK.generate(spec, "test", n=200, length=L)
+        agree, n = s5_bind_v3_trace_is_answer(ex, spec.k, spec.n_objects_active, agents, objs)
+        assert n == len(ex) and agree == n, f"{name}@{L}: {agree}/{n}"
+        v = s5_bind_v3_trace_slot(ex[0], spec.k, spec.n_objects_active, agents, objs)
+        assert f"{v}." == ex[0].answer
+
+
+def test_the_copier_is_zero_on_the_trace_read_and_the_gate_is_why():
+    """THE OBVIOUS CHEAP POLICY ON A CHECKPOINT READ IS TO COPY THE PREVIOUS CHECKPOINT, and a
+    trace that never moves ends at the STATED value. The query gate requires the queried slot to
+    move at least twice and to end different from what the prompt states, so that policy is wrong
+    on every item — 0.000 and not "near chance" — at every registered cell.
+
+    The move distribution is measured beside it rather than left at "at least two"."""
+    for name, L in TRACE_CELLS:
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        agents, objs = _agents_objs(spec)
+        ex = TK.generate(spec, "test", n=200, length=L)
+        ck = s5_bind_v3_ckpt_floors(ex)
+        assert ck["ckpt_copy_prev"] == 0.0, f"{name}@{L}: {ck['ckpt_copy_prev']}"
+        mv = s5_bind_v3_slot_moves(ex, k, m, agents, objs)
+        assert mv["n"] == len(ex) and mv["min"] >= 2, f"{name}@{L}: {mv['min']}"
+        assert mv["mean"] >= 2.5, f"{name}@{L}: {mv['mean']}"
+        # and the one-hop reads of the LAST event, which are admitted, stay at or under chance
+        for row in ("ckpt_last_event_operand", "ckpt_last_event_target"):
+            if row in ck:
+                assert ck[row] <= 1.35 / (k - 1), f"{name}@{L}/{row}: {ck[row]}"
+
+
+def test_every_checkpoint_row_is_priced_and_admitted_so_it_could_move_a_floor():
+    """The cheap checkpoint rows are not excluded by construction: each has a registered depth and
+    cost and each is ADMITTED at every cell, so if one ever read above chance the floor would
+    move. An unpriced row would raise; a silently excluded one could not raise the floor."""
+    for name, L in TRACE_CELLS:
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        ex = TK.generate(spec, "test", n=40, length=L)
+        ns, ng = s5_bind_v3_shape(ex)
+        named, query = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
+        for row in S5_BIND_V3_CKPT_ROWS:
+            assert s5_bind_v3_row_depth(row, query, L) <= S5_BIND_V3_MAX_DEPTH
+            assert s5_bind_v3_admits(row, k, m, ns, ng, named, query), f"{name}@{L}/{row}"
+            assert s5_bind_v3_trace_admits(row, k, m, ns, ng, named, query), f"{name}@{L}/{row}"
+        preds = s5_bind_v3_ckpt_preds(ex[0].prompt)
+        assert set(preds) == set(S5_BIND_V3_CKPT_ROWS)
+
+
+def test_the_trace_class_is_the_answer_class_on_a_component_cell():
+    """T2 removes the LIVE-SLOT axis, because the guided protocol requires the whole of P and B to
+    be written out at every event and so hands those slots to every policy. On a COMPONENT cell
+    that removes nothing: its W bound is 2 and every depth <= 1 row already costs 2, so the trace
+    class and the answer class admit exactly the same rows and the floors are the same number."""
+    for name, L in TRACE_CELLS:
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        ex = TK.generate(spec, "test", n=N_FLOOR, length=L)
+        ns, ng = s5_bind_v3_shape(ex)
+        named, query = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
+        if not named:
+            continue
+        rows = tuple(S5_BIND_V3_ROWS) + tuple(S5_BIND_V3_CKPT_ROWS) + ("surface_ranker",) + \
+            s5_bind_v3_family_rows(k, m, ns, ng, named, query)
+        for row in rows:
+            a = s5_bind_v3_admits(row, k, m, ns, ng, named, query)
+            t = s5_bind_v3_trace_admits(row, k, m, ns, ng, named, query)
+            assert a == t, f"{name}@{L}/{row}: answer {a} trace {t}"
+        fl = dict(s5_bind_v3_floors(ex, k, m))
+        fl.update(s5_bind_v3_family_floors(ex, k, m, named, query))
+        assert (s5_bind_v3_trace_operative_floor({**fl, **s5_bind_v3_ckpt_floors(ex)},
+                                                 k, m, ns, ng, named, query)
+                >= s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query))
+        assert s5_bind_v3_trace_floor_basis(k, m, ns, ng, named, query) in ("measured", "chance")
+
+
+def test_the_composed_cells_trace_read_has_no_floor_and_the_price_is_measured():
+    """THE COMPOSED CELL'S FLOOR ARGUMENT IS ENTIRELY A LIVE-SLOT ARGUMENT — W <= max(k, m) + 1
+    against the task's k + m + 1, with a step bound the task itself satisfies — and the guided
+    protocol hands out exactly those slots. What is left admits the task, so the operative floor
+    is None rather than a max over a class that contains the answer.
+
+    The price is measured, not asserted: the best both-maps policy strictly cheaper than the task
+    (drop one block of events, replay the rest) reads far above the answer floor."""
+    for name in ("s5_bind_local_v3", "s5_bind_v3"):
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        L = spec.eval_lengths[0]
+        ex = TK.generate(spec, "test", n=200, length=L)
+        ns, ng = s5_bind_v3_shape(ex)
+        named, query = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
+        assert not named
+        fl = dict(s5_bind_v3_floors(ex, k, m))
+        ans = s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query)
+        assert s5_bind_v3_trace_operative_floor({**fl, **s5_bind_v3_ckpt_floors(ex)},
+                                                k, m, ns, ng, named, query) is None
+        assert s5_bind_v3_trace_floor_basis(k, m, ns, ng, named, query) == "unfloorable"
+        pad = s5_bind_v3_trace_pad_floor(ex)
+        assert pad > ans + 0.3, f"{name}@{L}: pad {pad:.3f} against answer floor {ans:.3f}"
+        assert pad > 2.5 * ans, f"{name}@{L}: pad {pad:.3f} is {pad / ans:.2f}x the answer floor"
+
+
+def test_the_lag_family_is_the_copier_with_the_true_trace_and_is_never_admitted():
+    """"Copy the previous checkpoint" scores above zero only if the copier is handed the TRUE
+    trace, and then it is the cell's own algorithm stopped j events early. On the RETRIEVAL cell
+    the sampler pins the resolving write at or below 0.75L, so every small j reads 1.000 — the
+    slot has been constant for the last quarter of the stream. On the STATE and COMPOSED cells
+    the gate pulls the last move into the final tenth and j = 1 already loses items.
+
+    Neither is admitted: on a state or composed cell the row is depth L - j."""
+    spec = TK.CANONICAL["s5_bind_local_v3_bind"]
+    ex = TK.generate(spec, "test", n=200, length=62)
+    assert s5_bind_v3_ckpt_lag(ex, 1) == 1.0 and s5_bind_v3_ckpt_lag(ex, 9) == 1.0
+    assert s5_bind_v3_ckpt_lag(ex, 33) < 0.5
+    for name, L, hi in (("s5_bind_local_v3_state", 17, 0.55), ("s5_bind_local_v3", 48, 0.90)):
+        sp = TK.CANONICAL[name]
+        e2 = TK.generate(sp, "test", n=200, length=L)
+        lag1 = s5_bind_v3_ckpt_lag(e2, 1)
+        assert 0.2 < lag1 < hi, f"{name}@{L}: lag1 {lag1:.3f}"
+        assert s5_bind_v3_row_depth(f"trunc_walk_drop{1}", "state", L) > S5_BIND_V3_MAX_DEPTH
+
+
+def test_the_per_slot_checkpoint_diagnostic_is_read_against_a_copier_not_against_chance():
+    """A swap moves 2 of the k + m slots and a give moves 1, so a model that re-emits its previous
+    checkpoint scores 1 - (2 n_swap + n_give) / ((k + m) L) per slot — 0.80-0.92 here, against
+    1/k = 0.167. Reading the per-slot number against 1/k, or against the "frozen half" 0.583,
+    calls a score BELOW a policy that never updates anything a partial trace."""
+    for name, L in TRACE_CELLS:
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        agents, objs = _agents_objs(spec)
+        ex = TK.generate(spec, "test", n=128, length=L)
+        ns, ng = s5_bind_v3_shape(ex)
+        got = s5_bind_v3_ckpt_copy_per_slot(ex, k, m, agents, objs)
+        closed = 1.0 - (2 * ns + ng) / ((k + m) * float(ns + ng))
+        assert abs(got - closed) < 0.05, f"{name}@{L}: {got:.4f} against {closed:.4f}"
+        assert got > 0.75 and got > 4 * (1.0 / k), f"{name}@{L}: {got:.4f}"
+
+
+def test_the_trace_read_is_a_from_scratch_arm_instrument_and_the_protocol_enforces_it():
+    """A frontier model has no checkpoint stream this harness generates — its visible trace is
+    prose under its own budget — so a slot read out of it is a different quantity per model. The
+    restriction is code and not prose: ``assert_trace_read`` RAISES rather than falling back to
+    the answer read, because a silent fallback would put two quantities in one column."""
+    P = _protocol()
+    assert P.TRACE_READ_ARMS == ("local",) and P.FRONTIER_READS == ("answer",)
+    assert P.TRACE_READ_REQUIRES == "guided"
+    assert P.assert_trace_read("local") is True
+    for arm in ("frontier", "openrouter", None):
+        try:
+            P.assert_trace_read(arm)
+        except P.TraceReadNotAvailable:
+            pass
+        else:
+            raise AssertionError(f"the trace read was allowed on arm={arm!r}")
+    try:
+        P.assert_trace_read("local", read="plain")
+    except P.TraceReadNotAvailable:
+        pass
+    else:
+        raise AssertionError("the trace read was allowed off the guided protocol")
+
+
+def test_a_floor_is_recomputed_on_the_items_the_read_actually_scores():
+    """THE GUIDED READ SCORES 128 ITEMS AND THE PLAIN READ 1000, and the operative floor is a max
+    over rows on the exact scored set, so the two are different numbers on the same rows: 0.250
+    at state@80 and 0.234 at composed@48 against 0.207 and 0.201. A guided score read against the
+    plain read's floor is read against a different item set."""
+    P = _protocol()
+    for name, L, want in (("s5_bind_local_v3_state", 80, 32 / 128),
+                          ("s5_bind_local_v3", 48, 30 / 128)):
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        big = TK.generate(spec, "test", n=P.N_GUIDED + 1000, length=L)
+        scored = big[:P.N_GUIDED]
+        ns, ng = s5_bind_v3_shape(scored)
+        named, query = s5_bind_v3_is_named(scored), s5_bind_v3_query_kind(scored)
+        fl = dict(s5_bind_v3_floors(scored, k, m))
+        fl.update(s5_bind_v3_family_floors(scored, k, m, named, query))
+        got = s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query)
+        assert abs(got - want) < 1e-6, f"{name}@{L}: {got:.4f} against {want:.4f}"
+        fb = dict(s5_bind_v3_floors(big[P.N_GUIDED:], k, m))
+        assert got > s5_bind_v3_operative_floor(fb, k, m, ns, ng, named, query), (
+            f"{name}@{L}: the small-n max is not above the large-n one; the selection bias this "
+            "pins has gone")
 
 
 def _run() -> int:

@@ -113,6 +113,37 @@ THE TWO READS, and both are registered because they are two different regimes
     read. Mixing them — components on GUIDED, composed on PLAIN — would manufacture a gap out
     of the eval mode, so ``verdict()`` is applied to each read separately and both are printed.
 
+THE TRACE READ IS A FROM-SCRATCH-ARM INSTRUMENT AND IS NOT SCORED ON THE FRONTIER
+    The TRACE read takes the model's own FINAL CHECKPOINT's value for the queried slot instead of
+    the answer token. It exists because the answer channel is separable from the state: decoding
+    this run's saved checkpoints, one seed writes the CORRECT value on 100% of two state cells
+    and then emits a different token on 81% and 86% of them, so two published nulls were
+    emission verdicts rather than architecture ones.
+
+    IT IS DEFINED ONLY UNDER THE GUIDED PROTOCOL, which teacher-forces the events and generates
+    every checkpoint, and the GUIDED protocol is the from-scratch arm's. ``TRACE_READ_ARMS`` is
+    ``("local",)`` and ``assert_trace_read`` RAISES on any other arm rather than returning a
+    number, because a frontier model has no checkpoint stream this harness generates: its trace
+    is prose it chose to write, under its own budget, and reading a slot out of it would score a
+    different object per model. FRONTIER CELLS ARE SCORED ON THE ANSWER AND MUST STAY SO.
+
+    WHAT IT IS FLOORED BY, and the two cell kinds differ (factworld.validity, "THE TRACE READ"):
+      * the final checkpoint's queried slot IS the gold answer — 4000/4000 on the disjoint pool
+        and 128/128 on the scored items at every registered cell — so a floor row's trace score
+        is its answer score and the numbers transfer;
+      * the COMPONENT cells are floored, at the answer floor: their rule is depth <= 1 and cost
+        under the cell's own algorithm's minimum, and a scratchpad buys neither;
+      * the COMPOSED cell is NOT floored. Its registered class is the one-structure bound plus a
+        step bound its own algorithm satisfies, and the guided protocol REQUIRES the whole of P
+        and B to be written out at every event — so the k + m live slots that bound prices are
+        handed to every policy. ``s5_bind_v3_trace_operative_floor`` returns None there.
+        ``s5_bind_v3_trace_pad_floor`` measures how far the unfloorable class reaches: 0.719 on
+        the 128 scored composed@48 items and 0.734 on the disjoint pool, against an answer floor
+        of 0.234 and 0.200.
+    So a composed-cell trace score is a WITHIN-RUN COMPARISON — same seeds, same items, matched
+    depth and matched cost — and never a cleared floor. The DOWNWARD separation it carries does
+    not need one; the other direction is not available at any registered length.
+
 THE READING RULE (pre-registered; every threshold below is fixed before any result exists)
     Metric: match, the canonical evaluator, on N_EVAL held-out items per (cell, length) for the
     PLAIN read and N_GUIDED for the GUIDED read (the guided decode is ~(k+m)*L sequential
@@ -340,6 +371,49 @@ N_SCORE = 4000                            # N_FIT_BLOCKS * N_FIT pooled, with th
 Z_CLEAR = 3.0
 MARGIN = 0.15
 SEEDS_CLEAR = 2
+
+# ---- the trace read ---------------------------------------------------------------------------
+# The read is the model's own FINAL CHECKPOINT's value for the queried slot. It is defined only
+# where the harness generates that checkpoint stream, which is the GUIDED protocol, which is the
+# from-scratch arm's. A frontier model's visible trace is prose under its own budget and holds no
+# slot this harness can index, so no frontier cell is scored on it — see ``assert_trace_read``.
+TRACE_READ = "trace"
+TRACE_READ_ARMS = ("local",)
+TRACE_READ_REQUIRES = "guided"            # the only protocol that generates the checkpoints
+FRONTIER_READS = ("answer",)              # what a frontier cell is scored on, and all it is
+
+
+class TraceReadNotAvailable(RuntimeError):
+    """The trace read was asked for on an arm that has no harness-generated checkpoint stream.
+
+    Deliberately an exception and not a fallback to the answer read: a silent fallback would put
+    two different quantities in one column, and the whole point of the trace read is that the two
+    quantities come apart.
+    """
+
+
+def assert_trace_read(arm, read=TRACE_READ_REQUIRES):
+    """Raise unless the trace read is available on this arm under this protocol.
+
+    Args:
+        arm: "local" for the from-scratch arm, anything else for a frontier one.
+        read: the protocol the score came from; the trace read needs ``TRACE_READ_REQUIRES``.
+
+    Raises:
+        TraceReadNotAvailable: the arm is not in ``TRACE_READ_ARMS``, or the read is not the
+            guided one. Frontier cells are scored on ``FRONTIER_READS`` and must stay so.
+    """
+    if arm not in TRACE_READ_ARMS:
+        raise TraceReadNotAvailable(
+            f"the trace read is a from-scratch-arm instrument ({TRACE_READ_ARMS}); arm={arm!r} "
+            f"is scored on {FRONTIER_READS}. A frontier model's visible trace is prose under its "
+            "own budget, not a checkpoint stream this harness generates, so a slot read out of "
+            "it is a different quantity per model.")
+    if read != TRACE_READ_REQUIRES:
+        raise TraceReadNotAvailable(
+            f"the trace read needs the {TRACE_READ_REQUIRES!r} protocol, which generates the "
+            f"per-event checkpoints; read={read!r} has no checkpoint stream to index.")
+    return True
 
 # ---- the frontier scout --------------------------------------------------------------------
 SCOUT_COMPOSED_LENGTHS = (128, 256)       # the composed cell carries the length axis
@@ -600,6 +674,90 @@ def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE, n_blocks=N_
                               sorted(fl.items(), key=lambda x: -x[1])
                               if V.s5_bind_v3_admits(r, k, m, ns, ng, named, query)},
             "charged_steps": s, "n_swap": ns, "n_give": ng}
+
+
+def trace_floor(spec, L, n_scored=N_GUIDED, n_big=N_SCORE, arm="local"):
+    """The TRACE read's floor at (cell, length), and the answer floor on the same items.
+
+    Same pool discipline as ``cell_floor`` — rows measured on a DISJOINT pool because the max
+    over rows carries an upward selection bias at small n, and on the exact scored items because
+    a floor must be recomputed from the items it is read against, with the larger of the two
+    operative. ``n_scored`` defaults to the GUIDED read's own sample, since that is the only
+    protocol the trace read is defined under.
+
+    ``trace_floor`` is None on the COMPOSED cell and that is the cell's answer, not a missing
+    measurement: the guided protocol hands out the k + m live slots the one-structure bound
+    prices, and what is left of the class contains the task. ``pad_reach`` measures how far the
+    unfloorable class gets (the best both-maps policy strictly cheaper than the task) so the
+    distance from the answer floor is a number rather than a blank.
+    """
+    assert_trace_read(arm)
+    k, m = spec.k, spec.n_objects_active
+    pool = TK.generate(spec, "test", n=n_scored + n_big, length=L)
+    scored, big = pool[:n_scored], pool[n_scored:]
+
+    def rows_on(items):
+        ns, ng = V.s5_bind_v3_shape(items)
+        named = V.s5_bind_v3_is_named(items)
+        query = V.s5_bind_v3_query_kind(items)
+        fam = tuple(r for r in V.s5_bind_v3_family_rows(k, m, ns, ng, named, query)
+                    if V.s5_bind_v3_admits(r, k, m, ns, ng, named, query)
+                    or V.s5_bind_v3_trace_admits(r, k, m, ns, ng, named, query))
+        fl = dict(V.s5_bind_v3_floors(items, k, m))
+        fl.update(V.s5_bind_v3_family_floors(items, k, m, named, query, rows=fam))
+        return fl, V.s5_bind_v3_ckpt_floors(items), (ns, ng, named, query)
+
+    fs, cs, sh_s = rows_on(scored)
+    fb, cb, sh_b = rows_on(big)
+    ans = max(x for x in (V.s5_bind_v3_operative_floor(fs, k, m, *sh_s),
+                          V.s5_bind_v3_operative_floor(fb, k, m, *sh_b)) if x is not None)
+    tr = [V.s5_bind_v3_trace_operative_floor({**fs, **cs}, k, m, *sh_s),
+          V.s5_bind_v3_trace_operative_floor({**fb, **cb}, k, m, *sh_b)]
+    trace = None if all(x is None for x in tr) else max(x for x in tr if x is not None)
+    world, _r = TK.build_world(spec)
+    agents, objs = list(world.agents[:k]), list(world.objects[:m])
+    agree_s, n_s = V.s5_bind_v3_trace_is_answer(scored, k, m, agents, objs)
+    agree_b, n_b = V.s5_bind_v3_trace_is_answer(big, k, m, agents, objs)
+    return {"cell": spec.name, "L": L, "k": k, "m": m, "chance": 1.0 / (k - 1),
+            "n_scored": n_scored, "n_disjoint": n_big,
+            "answer_floor": ans, "trace_floor": trace,
+            "trace_basis": V.s5_bind_v3_trace_floor_basis(k, m, *sh_s),
+            "slot_is_gold_scored": f"{agree_s}/{n_s}",
+            "slot_is_gold_disjoint": f"{agree_b}/{n_b}",
+            "ckpt_rows_scored": {r: round(v, 4) for r, v in cs.items()},
+            "ckpt_rows_disjoint": {r: round(v, 4) for r, v in cb.items()},
+            "copy_per_slot": V.s5_bind_v3_ckpt_copy_per_slot(scored, k, m, agents, objs),
+            "slot_moves": V.s5_bind_v3_slot_moves(scored, k, m, agents, objs),
+            "ckpt_lag": {j: V.s5_bind_v3_ckpt_lag(scored, j)
+                         for j in V.S5_BIND_V3_CKPT_LAG if j < L},
+            "pad_reach": (None if sh_s[2] else V.s5_bind_v3_trace_pad_floor(scored)),
+            "trace_admitted": {r: round(v, 4) for r, v in
+                               sorted({**fs, **cs}.items(), key=lambda x: -x[1])
+                               if V.s5_bind_v3_trace_admits(r, k, m, *sh_s)}}
+
+
+def trace_floor_table(cells=LOCAL_CELLS, lengths=None, n_scored=N_GUIDED):
+    """``trace_floor`` over the cells and lengths the GUIDED read covers, keyed ``cell@L``."""
+    from factworld.tokenizer import Tokenizer
+
+    base = TK.CANONICAL[cells["composed"]]
+    w, r = TK.build_world(base)
+    tok = Tokenizer.build([w], r)
+    grid = lengths if lengths is not None else guided_grid(matched_lengths(tok, cells))
+    if lengths is None:
+        grid = dict(grid)
+        grid["composed"] = list(GUIDED_LENGTHS)
+    out = {}
+    for key in ("state", "bind", "composed"):
+        for L in grid.get(key, ()):
+            out[f"{key}@{L}"] = trace_floor(TK.CANONICAL[cells[key]], L, n_scored=n_scored)
+            row = out[f"{key}@{L}"]
+            tf = "unfloorable" if row["trace_floor"] is None else f"{row['trace_floor']:.4f}"
+            print(f"  {key}@{L}: answer {row['answer_floor']:.4f} "
+                  f"({row['answer_floor'] / row['chance']:.2f}x) | trace {tf} "
+                  f"[{row['trace_basis']}]  slot==gold {row['slot_is_gold_scored']} / "
+                  f"{row['slot_is_gold_disjoint']}", flush=True)
+    return out
 
 
 # ---- the rule -------------------------------------------------------------------------------
@@ -949,6 +1107,20 @@ def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
         },
         "eval_grid": grid,
         "floors": floors,
+        # THE TRACE READ, declared with its arm restriction rather than described in prose. The
+        # floors it carries are its own (validity.s5_bind_v3_trace_*): the components' are the
+        # answer floors unchanged, and the composed cell's is None because the guided protocol
+        # hands out the live slots that cell's floor argument is made of.
+        "trace_read": {
+            "read": TRACE_READ, "arms": list(TRACE_READ_ARMS),
+            "requires": TRACE_READ_REQUIRES, "frontier_reads": list(FRONTIER_READS),
+            "rule": "the model's own FINAL CHECKPOINT's value for the queried slot; a frontier "
+                    "cell is scored on the answer and assert_trace_read() raises on any other "
+                    "arm",
+            "floors": (trace_floor_table(
+                lengths={**guided_grid(ml), "composed": list(GUIDED_LENGTHS)})
+                if with_floors else {}),
+        },
         "verdicts": ["V5_HARNESS_NULL", "V4_COMPONENT_UNREADABLE", "V3_GAP_IS_THE_COST",
                      "V1_UNCONTROLLED", "V1_COMPOSITION_GAP", "V2_NO_GAP_HERE"],
         "scout": scout_plan(),
@@ -983,12 +1155,25 @@ def main():
     ap.add_argument("--no_floors", action="store_true", help="skip the floor pass (fast)")
     ap.add_argument("--axis", default=MATCHED_AXIS, choices=["tokens", "steps"])
     ap.add_argument("--scout", action="store_true", help="print the priced frontier scout")
+    ap.add_argument("--trace_floors", default=None,
+                    help="write the TRACE read's floor table (JSON path) and exit; the guided "
+                         "grid only, since the trace read is defined under no other protocol")
     ap.add_argument("--out_prefix",
                     default="results/s5bind_v3_three_cell_preregistration_20260731")
     a = ap.parse_args()
     if a.scout:
         p = scout_plan()
         print(json.dumps(p, indent=2))
+    if a.trace_floors:
+        os.makedirs(os.path.dirname(a.trace_floors) or ".", exist_ok=True)
+        tbl = trace_floor_table()
+        with open(a.trace_floors, "w") as f:
+            json.dump({"written_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                       "protocol": os.path.basename(__file__), "read": TRACE_READ,
+                       "arms": list(TRACE_READ_ARMS), "requires": TRACE_READ_REQUIRES,
+                       "frontier_reads": list(FRONTIER_READS),
+                       "n_scored": N_GUIDED, "n_disjoint": N_SCORE, "floors": tbl}, f, indent=2)
+        print(f"wrote {a.trace_floors}")
     if a.read:
         for arch, reads in sorted(read_results(a.read, a.read_floors).items()):
             for read, v in sorted(reads.items()):

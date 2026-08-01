@@ -25,7 +25,7 @@ Two numbers in it are set by the hardware, on the documents this run trains on (
 |---|---|---|
 | fprm | 0.117 | 2916 |
 | gdp_hybrid | 0.181 | 4514 |
-| transformer | 0.113 | 2827 |
+| transformer | 0.121 | 3031 |
 
 ## The two pairings, and the step multiplier under each
 
@@ -55,7 +55,9 @@ _The work-matched length is the composed stream's own count of that component's 
 | gdp_hybrid | 1 | **0.984** | **0.953** | **1.000** |
 | gdp_hybrid | 2 | 0.219 | 0.289 | **1.000** |
 | transformer | 0 | 0.172 | 0.125 | 0.211 |
-| _floor_ | | 0.200 | 0.204 | 0.200 |
+| transformer | 1 | 0.133 | 0.156 | 0.180 |
+| transformer | 2 | 0.211 | 0.133 | 0.141 |
+| _floor_ | | 0.200 | 0.234 | 0.200 |
 
 ## PLAIN read (n=1000)
 
@@ -70,6 +72,8 @@ _The work-matched length is the composed stream's own count of that component's 
 | gdp_hybrid | 1 | 0.213 | 0.186 | **0.999** |
 | gdp_hybrid | 2 | 0.198 | 0.218 | **1.000** |
 | transformer | 0 | 0.154 | 0.160 | 0.154 |
+| transformer | 1 | 0.147 | 0.150 | 0.190 |
+| transformer | 2 | 0.176 | 0.172 | 0.159 |
 | _floor_ | | 0.200 | 0.204 | 0.200 |
 
 **composed@64 vs state@23 and bind@41** — carrier chain 7.7 hops on both state legs (composed@64 holds 23 swaps and 41 gives).
@@ -83,6 +87,8 @@ _The work-matched length is the composed stream's own count of that component's 
 | gdp_hybrid | 1 | 0.197 | 0.201 | **1.000** |
 | gdp_hybrid | 2 | 0.215 | 0.228 | **1.000** |
 | transformer | 0 | 0.175 | 0.162 | 0.154 |
+| transformer | 1 | 0.152 | 0.162 | 0.172 |
+| transformer | 2 | 0.181 | 0.176 | 0.158 |
 | _floor_ | | 0.200 | 0.209 | 0.200 |
 
 **composed@96 vs state@34 and bind@62** — carrier chain 11.3 hops on both state legs (composed@96 holds 34 swaps and 62 gives).
@@ -96,6 +102,8 @@ _The work-matched length is the composed stream's own count of that component's 
 | gdp_hybrid | 1 | 0.197 | 0.193 | **1.000** |
 | gdp_hybrid | 2 | 0.199 | 0.229 | **1.000** |
 | transformer | 0 | 0.159 | 0.195 | 0.184 |
+| transformer | 1 | 0.166 | 0.152 | 0.163 |
+| transformer | 2 | 0.159 | 0.168 | 0.162 |
 | _floor_ | | 0.200 | 0.209 | 0.200 |
 
 _A **bold** cell clears its own recomputed floor under the pre-registered rule. Every column of a row costs the same amount of that column's own work; the TOKEN-matched pairing (state@80, bind@132 against composed@48) is the matched-COST control and is in the tables below._
@@ -108,7 +116,7 @@ _A **bold** cell clears its own recomputed floor under the pre-registered rule. 
 |---|---|---|---|---|---|---|---|---|---|
 | fprm | 0.172 0.166 0.173 | 0.154 0.166 0.177 | 0.173 0.161 0.190 | 0.172 0.174 0.170 | 0.164 0.156 0.175 | 0.154 0.168 0.178 | 0.144 0.158 0.184 | 0.179 0.162 0.183 | 0.202 0.192 0.175 |
 | gdp_hybrid | 0.183 0.189 0.188 | 0.195 0.213 0.198 | 0.213 0.197 0.215 | 0.189 0.197 0.199 | 0.188 0.182 0.193 | 0.197 0.218 0.204 | 0.200 0.189 0.206 | 0.201 0.216 0.208 | 0.205 0.187 0.205 |
-| transformer | 0.172 | 0.154 | 0.175 | 0.159 | 0.190 | 0.166 | 0.145 | 0.183 | 0.172 |
+| transformer | 0.172 0.161 0.173 | 0.154 0.147 0.176 | 0.175 0.152 0.181 | 0.159 0.166 0.159 | 0.190 0.161 0.163 | 0.166 0.174 0.177 | 0.145 0.176 0.158 | 0.183 0.149 0.186 | 0.172 0.161 0.146 |
 | _floor_ | 0.200 (1.00x) | 0.200 (1.00x) | 0.200 (1.00x) | 0.200 (1.00x) | 0.208 (1.04x) | 0.207 (1.03x) | 0.200 (1.00x) | 0.216 (1.08x) | 0.201 (1.00x) |
 
 ## bind cell — `s5_bind_local_v3_bind`
@@ -117,7 +125,7 @@ _A **bold** cell clears its own recomputed floor under the pre-registered rule. 
 |---|---|---|---|---|---|
 | fprm | 0.321 0.162 0.169 | 0.176 0.188 0.157 | 0.181 0.171 0.173 | 0.201 0.168 0.171 | 0.193 0.177 0.180 |
 | gdp_hybrid | **1.000** **1.000** **1.000** | **1.000** **0.999** **1.000** | **1.000** **1.000** **1.000** | **1.000** **1.000** **1.000** | **1.000** **1.000** **1.000** |
-| transformer | 0.153 | 0.154 | 0.154 | 0.184 | 0.153 |
+| transformer | 0.153 0.166 0.144 | 0.154 0.190 0.159 | 0.154 0.172 0.158 | 0.184 0.163 0.162 | 0.153 0.183 0.166 |
 | _floor_ | 0.200 (1.00x) | 0.200 (1.00x) | 0.200 (1.00x) | 0.200 (1.00x) | 0.200 (1.00x) |
 
 ## composed cell — `s5_bind_local_v3`
@@ -126,7 +134,7 @@ _A **bold** cell clears its own recomputed floor under the pre-registered rule. 
 |---|---|---|---|---|
 | fprm | 0.156 0.191 0.198 | 0.157 0.171 0.177 | 0.168 0.171 0.195 | 0.196 0.152 0.187 |
 | gdp_hybrid | 0.244 0.320 0.266 | 0.213 0.186 0.218 | 0.223 0.201 0.228 | 0.226 0.193 0.229 |
-| transformer | 0.160 | 0.160 | 0.162 | 0.195 |
+| transformer | 0.160 0.174 0.186 | 0.160 0.150 0.172 | 0.162 0.162 0.176 | 0.195 0.152 0.168 |
 | _floor_ | 0.521 (2.61x) | 0.204 (1.02x) | 0.209 (1.05x) | 0.209 (1.04x) |
 
 # GUIDED read — events forced, checkpoints and answer generated (n=128)
@@ -137,8 +145,8 @@ _A **bold** cell clears its own recomputed floor under the pre-registered rule. 
 |---|---|---|
 | fprm | 0.188 0.148 0.180 | 0.156 0.180 0.211 |
 | gdp_hybrid | **1.000** **0.984** 0.219 | **0.992** **0.992** 0.156 |
-| transformer | 0.172 | 0.164 |
-| _floor_ | 0.200 (1.00x) | 0.207 (1.03x) |
+| transformer | 0.172 0.133 0.211 | 0.164 0.125 0.180 |
+| _floor_ | 0.200 (1.00x) | 0.250 (1.25x) |
 
 ## bind cell — `s5_bind_local_v3_bind`
 
@@ -146,7 +154,7 @@ _A **bold** cell clears its own recomputed floor under the pre-registered rule. 
 |---|---|---|
 | fprm | 0.188 0.148 0.148 | 0.141 0.219 0.219 |
 | gdp_hybrid | **1.000** **1.000** **1.000** | **0.992** **0.984** **1.000** |
-| transformer | 0.211 | 0.203 |
+| transformer | 0.211 0.180 0.141 | 0.203 0.125 0.180 |
 | _floor_ | 0.200 (1.00x) | 0.200 (1.00x) |
 
 ## composed cell — `s5_bind_local_v3`
@@ -155,28 +163,30 @@ _A **bold** cell clears its own recomputed floor under the pre-registered rule. 
 |---|---|
 | fprm | 0.133 0.203 0.125 |
 | gdp_hybrid | **0.836** **0.953** 0.289 |
-| transformer | 0.125 |
-| _floor_ | 0.204 (1.02x) |
+| transformer | 0.125 0.156 0.133 |
+| _floor_ | 0.234 (1.17x) |
 
 ## Guided checkpoint accuracy (per-slot, diagnostic — not the metric)
 
-| arch | cell | L | per-seed | per-slot chance |
-|---|---|---|---|---|
-| fprm | state | 17 | 0.488 0.427 0.236 | 0.167 |
-| fprm | state | 80 | 0.499 0.423 0.213 | 0.167 |
-| fprm | bind | 31 | 0.619 0.607 0.551 | 0.167 |
-| fprm | bind | 132 | 0.593 0.605 0.587 | 0.167 |
-| fprm | composed | 48 | 0.834 0.838 0.257 | 0.167 |
-| gdp_hybrid | state | 17 | 0.584 0.577 0.575 | 0.167 |
-| gdp_hybrid | state | 80 | 0.592 0.581 0.585 | 0.167 |
-| gdp_hybrid | bind | 31 | 0.609 0.588 0.602 | 0.167 |
-| gdp_hybrid | bind | 132 | 0.598 0.603 0.583 | 0.167 |
-| gdp_hybrid | composed | 48 | 0.897 0.973 0.933 | 0.167 |
-| transformer | state | 17 | 0.169 | 0.167 |
-| transformer | state | 80 | 0.167 | 0.167 |
-| transformer | bind | 31 | 0.337 | 0.167 |
-| transformer | bind | 132 | 0.355 | 0.167 |
-| transformer | composed | 48 | 0.160 | 0.167 |
+Read against the copy-the-previous-checkpoint reference, not against 1/k; both are in _What the checkpoint diagnostic says_ below.
+
+| arch | cell | L | per-seed |
+|---|---|---|---|
+| fprm | state | 17 | 0.488 0.427 0.236 |
+| fprm | state | 80 | 0.499 0.423 0.213 |
+| fprm | bind | 31 | 0.619 0.607 0.551 |
+| fprm | bind | 132 | 0.593 0.605 0.587 |
+| fprm | composed | 48 | 0.834 0.838 0.257 |
+| gdp_hybrid | state | 17 | 0.584 0.577 0.575 |
+| gdp_hybrid | state | 80 | 0.592 0.581 0.585 |
+| gdp_hybrid | bind | 31 | 0.609 0.588 0.602 |
+| gdp_hybrid | bind | 132 | 0.598 0.603 0.583 |
+| gdp_hybrid | composed | 48 | 0.897 0.973 0.933 |
+| transformer | state | 17 | 0.169 0.174 0.163 |
+| transformer | state | 80 | 0.167 0.175 0.182 |
+| transformer | bind | 31 | 0.337 0.195 0.545 |
+| transformer | bind | 132 | 0.355 0.185 0.570 |
+| transformer | composed | 48 | 0.160 0.176 0.190 |
 
 # Verdict
 
@@ -220,13 +230,35 @@ Each cell at the length carrying the same amount of its own work: composed@48, s
 | gdp_hybrid | 1 | 0.984 (clears) | 0.953 (clears) | 1.000 (clears) |
 | gdp_hybrid | 2 | 0.219 | 0.289 | 1.000 (clears) |
 | transformer | 0 | 0.172 | 0.125 | 0.211 |
+| transformer | 1 | 0.133 | 0.156 | 0.180 |
+| transformer | 2 | 0.211 | 0.133 | 0.141 |
 
-- **fprm**: at equal state depth the composed cell clears on exactly the seeds the state component clears on (3/3 seeds agree), so the composed cell costs this architecture nothing beyond the state leg it contains. The pre-registered rule counts seeds per cell and cannot see that it is the same seeds.
-- **gdp_hybrid**: at equal state depth the composed cell clears on exactly the seeds the state component clears on (3/3 seeds agree), so the composed cell costs this architecture nothing beyond the state leg it contains. The pre-registered rule counts seeds per cell and cannot see that it is the same seeds.
-- **transformer**: at equal state depth the composed cell clears on exactly the seeds the state component clears on (1/1 seeds agree), so the composed cell costs this architecture nothing beyond the state leg it contains. The pre-registered rule counts seeds per cell and cannot see that it is the same seeds.
+- **fprm**: neither the composed cell nor its depth-matched state component clears on any of the 3 seeds, so there is no pairing to read. The cells agree because both are at floor.
+- **gdp_hybrid**: at equal state depth the composed cell clears on exactly the seeds the state component clears on (3/3 seeds agree, 2 of them clearing), so the composed cell costs this architecture nothing beyond the state leg it contains ON THE CLEARS/DOES-NOT-CLEAR AXIS. It is not a claim about the sizes: the pre-registered rule counts seeds per cell and reads neither the margin nor the direction.
+- **transformer**: neither the composed cell nor its depth-matched state component clears on any of the 3 seeds, so there is no pairing to read. The cells agree because both are at floor.
 
 ## What the checkpoint diagnostic says
 
-Each checkpoint is the whole of P and then the whole of B, k + m = 12 slots per event, and each COMPONENT cell holds one of the two maps still by construction — the state cell has no gives, so its B never moves, and the retrieval cell has no swaps, so its P never moves. A model that emits the frozen half and guesses the moving half scores 0.5 + 0.5/6 = 0.583. Measured here: bind 0.337-0.619, composed 0.160-0.973, state 0.167-0.592. Where a component sits at 0.583 the emitted trace is at chance on the half that moves, so it is not the trace that carries that cell's answer; on the composed cell neither half is frozen. The diagnostic is not a partial trace and no verdict reads it.
+Each checkpoint is the whole of P and then the whole of B, k + m = 12 slots per event, and the diagnostic scores every slot of every event. MOST SLOTS DO NOT MOVE: a swap moves 2 of them and a give moves 1, so a model that re-emits its previous checkpoint unchanged at every event is already right on 0.804-0.913 of the slots, against 1/k = 0.167. That copier is the reference, and it is what a per-slot number has to be read against.
+
+| arch | cell | L | per-seed per-slot | copy-the-previous-checkpoint | above the copier |
+|---|---|---|---|---|---|
+| fprm | bind | 31 | 0.619 0.607 0.551 | 0.901 | -0.282 -0.294 -0.349 |
+| fprm | bind | 132 | 0.593 0.605 0.587 | 0.913 | -0.320 -0.307 -0.326 |
+| fprm | composed | 48 | 0.834 0.838 0.257 | 0.887 | -0.053 -0.049 -0.630 |
+| fprm | state | 17 | 0.488 0.427 0.236 | 0.804 | -0.316 -0.377 -0.568 |
+| fprm | state | 80 | 0.499 0.423 0.213 | 0.827 | -0.328 -0.404 -0.614 |
+| gdp_hybrid | bind | 31 | 0.609 0.588 0.602 | 0.901 | -0.291 -0.313 -0.298 |
+| gdp_hybrid | bind | 132 | 0.598 0.603 0.583 | 0.913 | -0.315 -0.310 -0.330 |
+| gdp_hybrid | composed | 48 | 0.897 0.973 0.933 | 0.887 | +0.010 +0.086 +0.046 |
+| gdp_hybrid | state | 17 | 0.584 0.577 0.575 | 0.804 | -0.220 -0.226 -0.229 |
+| gdp_hybrid | state | 80 | 0.592 0.581 0.585 | 0.827 | -0.235 -0.246 -0.242 |
+| transformer | bind | 31 | 0.337 0.195 0.545 | 0.901 | -0.563 -0.705 -0.355 |
+| transformer | bind | 132 | 0.355 0.185 0.570 | 0.913 | -0.557 -0.727 -0.342 |
+| transformer | composed | 48 | 0.160 0.176 0.190 | 0.887 | -0.727 -0.712 -0.697 |
+| transformer | state | 17 | 0.169 0.174 0.163 | 0.804 | -0.635 -0.630 -0.640 |
+| transformer | state | 80 | 0.167 0.175 0.182 | 0.827 | -0.660 -0.652 -0.645 |
+
+The diagnostic is not a partial trace and no verdict reads it. What IS read is the TRACE read — the final checkpoint's value for the QUERIED slot — which is a single slot with its own floor (`validity.s5_bind_v3_trace_operative_floor`), and the copier scores 0.000 on it at every cell because the query gate requires the queried slot to move at least twice and to end different from its stated value.
 
 _A **bold** cell clears its own operative floor under the pre-registered rule. Floors are recomputed from that cell's own items: registry rows plus the admitted swept family. The fitted surface ranker is measured beside them (fit 2x2000 / scored 4000 disjoint) and is NOT in any floor — no implementation of it achieves a price the class rule admits. The composed cell's cost multiplier over each component is reported in the pre-registration record in both cost models; the matched-cost lengths in the tables above are the FORWARD-PASS match, which is this regime's cost._

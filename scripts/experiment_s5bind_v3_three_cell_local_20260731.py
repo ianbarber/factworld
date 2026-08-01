@@ -93,6 +93,7 @@ from factworld.backends import LocalBackend                                # noq
 from factworld.render import Renderer                                      # noqa: E402
 from factworld.runner import evaluate_task                                 # noqa: E402
 from factworld.tokenizer import Tokenizer                                  # noqa: E402
+from factworld import validity as V                                        # noqa: E402
 import protocol_s5bind_v3_three_cell_20260731 as P                         # noqa: E402
 
 # Stage weights over the three cells; each stage continues from the previous model's weights.
@@ -159,6 +160,24 @@ def eval_cells(backend, specs, eval_n, grid):
     return out
 
 
+def queried_slot_index(example, k, m, agents, objs):
+    """Position of the QUERIED slot inside one checkpoint block, or None.
+
+    A checkpoint is the whole of P in ``agents`` order then the whole of B in ``objs`` order, so
+    the queried slot is at ``agents.index(q_state)`` on a state query and ``k + objs.index(q_bind)``
+    on a bind query. This is the index ``validity.s5_bind_v3_trace_slot`` reads the GOLD trace at;
+    the trace read applies it to the model's OWN generated checkpoints.
+    """
+    qs, qb = example.meta.get("q_state"), example.meta.get("q_bind")
+    if example.meta.get("query_kind") == "bind" or (qs is None and qb is not None):
+        return None if qb not in objs else k + list(objs).index(qb)
+    if qs is not None and qs in agents:
+        return list(agents).index(qs)
+    if qb is not None and qb in objs:
+        return k + list(objs).index(qb)
+    return None
+
+
 def guided_free_run_batched(model, tok, spec, length, n, device, batch=128, max_answer=4):
     """GUIDED read: events teacher-forced, every checkpoint and the answer GENERATED.
 
@@ -169,25 +188,38 @@ def guided_free_run_batched(model, tok, spec, length, n, device, batch=128, max_
     positions differ (event sentences differ in width), so the loop runs once per slot ORDINAL
     with one padded batched forward per round.
 
-    Returns ``(answer_match, checkpoint_acc)``. The model runs its own state through the
+    Returns ``(answer_match, checkpoint_acc, trace)``. The model runs its own state through the
     stream, so this is the SCRATCHPAD read: the floor's W axis has no force against it, and it
     is read against the admitted end of the cell's profile like any other score.
+
+    ``trace`` is the third quantity and the one the answer channel cannot reach: the model's OWN
+    final checkpoint's value for the queried slot, scored against the same gold under the same
+    canonical metric. It is ``{"match", "n", "t1_agree"}``, where ``t1_agree`` re-measures T1 —
+    that the GOLD final checkpoint's queried slot is the gold answer — on the exact scored items,
+    because the whole read rests on the two channels scoring one quantity. It is None where the
+    queried slot is not indexable (no ``meta["trace"]``, or a query the block does not carry).
     """
     import torch
     from sweep import _interleaved_slots
 
     examples = TK.generate(spec, "test", n=n, length=length)
+    world, _r = TK.build_world(spec)
+    k, m = spec.k, spec.n_objects_active
+    agents, objs = list(world.agents[:k]), list(world.objects[:m])
+    per = k + m
     prepped = []
     for ex in examples:
         inter = ex.meta.get("interleaved_prompt")
         if inter is None:
-            return None, None
+            return None, None, None
         toks, slots = _interleaved_slots(ex.prompt, inter)
-        prepped.append((toks, slots, set(slots), [toks[s] for s in slots], ex.answer))
+        prepped.append((toks, slots, set(slots), [toks[s] for s in slots], ex.answer,
+                        queried_slot_index(ex, k, m, agents, objs)))
     n_slots = len(prepped[0][1])
     if any(len(p[1]) != n_slots for p in prepped):
-        return None, None
+        return None, None, None
     hits = ck_hits = ck_total = 0
+    tr_hits = tr_n = t1_agree = 0
     model.eval()
     with torch.no_grad():
         for b0 in range(0, len(prepped), batch):
@@ -196,7 +228,7 @@ def guided_free_run_batched(model, tok, spec, length, n, device, batch=128, max_
             cursor = [0] * len(chunk)
             gen_ck = [[] for _ in chunk]
             for ordinal in range(n_slots + 1):
-                for i, (toks, slots, slotset, _gold, _ans) in enumerate(chunk):
+                for i, (toks, slots, slotset, _gold, _ans, _qi) in enumerate(chunk):
                     limit = slots[ordinal] if ordinal < n_slots else len(toks)
                     while cursor[i] < limit:
                         if cursor[i] not in slotset:
@@ -222,14 +254,26 @@ def guided_free_run_batched(model, tok, spec, length, n, device, batch=128, max_
                     outs[i].append(tid)
                     still.append(i)
                 live = still
-            for i, (_t, _s, _ss, gold_ck, ans) in enumerate(chunk):
+            for i, (_t, _s, _ss, gold_ck, ans, qi) in enumerate(chunk):
                 pred = tok.decode(outs[i])
                 hits += bool(TK.score_relaxed(Renderer.normalize(pred),
                                               Renderer.normalize(ans)))
                 ck_hits += sum(1 for a, g in zip(gen_ck[i], gold_ck) if a == g)
                 ck_total += len(gold_ck)
+                # THE TRACE READ. The same gold, scored off the model's own final checkpoint
+                # instead of off the answer token — and T1 (that the GOLD final checkpoint's
+                # queried slot IS that gold) is re-measured here rather than assumed, because if
+                # it fails the two channels are not scoring one quantity.
+                if qi is None or len(gen_ck[i]) < per or len(gold_ck) < per:
+                    continue
+                tr_n += 1
+                tr_hits += bool(TK.score_relaxed(
+                    Renderer.normalize(f"{gen_ck[i][-per + qi]}."), Renderer.normalize(ans)))
+                t1_agree += bool(TK.score_relaxed(
+                    Renderer.normalize(f"{gold_ck[-per + qi]}."), Renderer.normalize(ans)))
     model.train()
-    return hits / max(1, len(prepped)), ck_hits / max(1, ck_total)
+    trace = None if not tr_n else {"match": tr_hits / tr_n, "n": tr_n, "t1_agree": t1_agree}
+    return hits / max(1, len(prepped)), ck_hits / max(1, ck_total), trace
 
 
 def _batched_argmax(model, id_lists, tok, device):
@@ -307,14 +351,16 @@ def evaluate_all(model, arch, specs, tok, world, grid, *, eval_n, guided_n, guid
                     else guided_lengths)
             for L in lens:
                 t1 = time.time()
-                a, ck = guided_free_run_batched(model, tok, specs[cell], L, guided_n, device,
-                                                batch=guided_batch)
-                gv[cell][str(L)] = {"match": a, "checkpoint_acc": ck}
+                a, ck, tr = guided_free_run_batched(model, tok, specs[cell], L, guided_n,
+                                                    device, batch=guided_batch)
+                gv[cell][str(L)] = {"match": a, "checkpoint_acc": ck, "trace": tr}
                 # An unevaluable guided cell is reported as UNEVALUABLE and does not abort the
                 # (arch, seed): discarding an otherwise complete run over one cell costs the
                 # whole training run, and the rule downstream already refuses to read a missing
                 # cell as a cell at floor.
-                shown = "unevaluable" if a is None else f"match={a:.3f} ck={ck:.3f}"
+                shown = ("unevaluable" if a is None else
+                         f"match={a:.3f} ck={ck:.3f}"
+                         + ("" if tr is None else f" trace={tr['match']:.3f}"))
                 print(f"     guided {cell:9s} L{L}: {shown} [{time.time() - t1:.0f}s]",
                       flush=True)
     return ev, gv
@@ -445,19 +491,32 @@ def _accuracies(rows, grid, read):
     return out
 
 
-def apply_rule(runs, floors, grid, eval_n, guided_n):
+def _floor_map(floors, grid):
+    return {cell: {int(k.split("@")[1]): v["floor"] for k, v in floors.items()
+                   if k.split("@")[0] == cell} for cell in grid}
+
+
+def apply_rule(runs, floors, grid, eval_n, guided_n, guided_floors=None):
     """The pre-registered rule, applied to the final-stage numbers of BOTH reads separately.
 
     Never mixed: judging the components on the guided read and the composed cell on the plain
     one would manufacture a composition gap out of the eval mode.
+
+    EACH READ IS JUDGED AGAINST THE FLOOR MEASURED ON ITS OWN SCORED ITEMS. The guided read
+    scores ``guided_n`` items and the plain read ``eval_n``, and the max over admitted rows
+    carries an upward selection bias that does not shrink with the score's own n: at n = 128 the
+    operative floor is 0.250 at state@80 and 0.234 at composed@48 against 0.207 and 0.204 at
+    n = 1000, on the same rows. ``guided_floors`` falls back to ``floors`` only for records
+    written before the guided floors were measured separately.
     """
     per_arch = {}
     for arch in sorted({r["arch"] for r in runs}):
         rows = [r for r in runs if r["arch"] == arch]
-        f = {cell: {int(k.split("@")[1]): v["floor"] for k, v in floors.items()
-                    if k.split("@")[0] == cell} for cell in grid}
+        fp = _floor_map(floors, grid)
+        fg = _floor_map(guided_floors or floors, grid)
         per_read = {}
         for read, n in (("plain", eval_n), ("guided", guided_n)):
+            f = fp if read == "plain" else fg
             acc = _accuracies(rows, grid, read)
             if not any(acc[c][s] for c in acc for s in acc[c]):
                 continue
@@ -554,13 +613,23 @@ def post_hoc_section(runs, floors, cfg):
             continue
         same = [s for s, c in full if c["state"][1] == c["composed"][1]]
         split = [s for s, c in full if c["state"][1] and not c["composed"][1]]
-        if len(same) == len(full):
+        cleared = [s for s, c in full if c["state"][1] or c["composed"][1]]
+        if not cleared:
+            # AGREEING AT FLOOR IS NOT A PAIRING. Reading "clears on exactly the same seeds" off
+            # a set where nothing clears turns a null into a composition result; the seeds agree
+            # because neither cell moved, which says nothing about what the composed cell costs.
+            verdict_lines.append(
+                f"- **{arch}**: neither the composed cell nor its depth-matched state component "
+                f"clears on any of the {len(full)} seeds, so there is no pairing to read. The "
+                "cells agree because both are at floor.")
+        elif len(same) == len(full):
             verdict_lines.append(
                 f"- **{arch}**: at equal state depth the composed cell clears on exactly the "
-                f"seeds the state component clears on ({len(full)}/{len(full)} seeds agree), so "
-                "the composed cell costs this architecture nothing beyond the state leg it "
-                "contains. The pre-registered rule counts seeds per cell and cannot see that it "
-                "is the same seeds.")
+                f"seeds the state component clears on ({len(full)}/{len(full)} seeds agree, "
+                f"{len(cleared)} of them clearing), so the composed cell costs this architecture "
+                "nothing beyond the state leg it contains ON THE CLEARS/DOES-NOT-CLEAR AXIS. It "
+                "is not a claim about the sizes: the pre-registered rule counts seeds per cell "
+                "and reads neither the margin nor the direction.")
         elif split:
             verdict_lines.append(
                 f"- **{arch}**: the state component clears at depth {at['state']} on seeds "
@@ -572,28 +641,64 @@ def post_hoc_section(runs, floors, cfg):
                 f"agree seed for seed (agree on {len(same)}/{len(full)}).")
     if verdict_lines:
         out += [""] + verdict_lines
-    # the checkpoint diagnostic, with every number recomputed from this run's own cells
+    out += checkpoint_diagnostic_section(runs, cfg)
+    return out
+
+
+def checkpoint_diagnostic_section(runs, cfg):
+    """What the per-slot checkpoint number does and does not say — against the RIGHT reference.
+
+    THE REFERENCE IS NOT 1/k AND NOT THE FROZEN-HALF NUMBER. Both readings have been published
+    here and both are wrong. The constant half of a COMPONENT checkpoint is UNSTATED — the state
+    cell states no holders and the retrieval cell states no pointers — so "emit the frozen half"
+    is not a policy a model can run off the prompt. And the diagnostic scores every slot of every
+    event, where most slots do not move: a swap moves 2 of the k + m and a give moves 1, so a
+    model that emits its previous checkpoint unchanged at every event is right on
+    ``1 - (2 n_swap + n_give) / ((k + m) L)`` of the slots. That is the number a per-slot score
+    has to beat, and it is 0.80-0.91 here against 1/k = 0.167.
+
+    ``validity.s5_bind_v3_ckpt_copy_per_slot`` recomputes it from each cell's own scored items.
+    """
     per_slot = {}
     for cellname in ("state", "bind", "composed"):
-        vals = [v["checkpoint_acc"]
-                for r in runs
-                for lv in [r["stages"][-1]["guided"].get(cellname, {})]
-                for v in lv.values() if v.get("checkpoint_acc") is not None]
-        if vals:
-            per_slot[cellname] = (min(vals), max(vals))
-    frozen_half = 0.5 + 0.5 / k
-    out += ["", "## What the checkpoint diagnostic says", ""]
-    if per_slot:
-        rng = ", ".join(f"{c} {lo:.3f}-{hi:.3f}" for c, (lo, hi) in sorted(per_slot.items()))
-        out += [f"Each checkpoint is the whole of P and then the whole of B, k + m = {2 * k} "
-                "slots per event, and each COMPONENT cell holds one of the two maps still by "
-                "construction — the state cell has no gives, so its B never moves, and the "
-                "retrieval cell has no swaps, so its P never moves. A model that emits the "
-                f"frozen half and guesses the moving half scores 0.5 + 0.5/{k} = "
-                f"{frozen_half:.3f}. Measured here: {rng}. Where a component sits at "
-                f"{frozen_half:.3f} the emitted trace is at chance on the half that moves, so it "
-                "is not the trace that carries that cell's answer; on the composed cell neither "
-                "half is frozen. The diagnostic is not a partial trace and no verdict reads it."]
+        for r in sorted(runs, key=lambda x: (x["arch"], x["seed"])):
+            for L, v in r["stages"][-1]["guided"].get(cellname, {}).items():
+                if v.get("checkpoint_acc") is not None:
+                    per_slot.setdefault((r["arch"], cellname, int(L)), []).append(
+                        v["checkpoint_acc"])
+    out = ["", "## What the checkpoint diagnostic says", ""]
+    if not per_slot:
+        return out
+    specs = three_cell_specs(P.TRAIN_LENGTHS)
+    world, _r = TK.build_world(specs["composed"])
+    k = cfg["k"]
+    m = specs["composed"].n_objects_active
+    agents, objs = list(world.agents[:k]), list(world.objects[:m])
+    n = cfg.get("guided_n") or P.N_GUIDED
+    ref = {}
+    for (_arch, cellname, L) in sorted(per_slot):
+        if (cellname, L) in ref:
+            continue
+        ex = TK.generate(specs[cellname], "test", n=n, length=L)
+        ref[(cellname, L)] = V.s5_bind_v3_ckpt_copy_per_slot(ex, k, m, agents, objs)
+    lo, hi = min(ref.values()), max(ref.values())
+    out += [f"Each checkpoint is the whole of P and then the whole of B, k + m = {2 * k} slots "
+            "per event, and the diagnostic scores every slot of every event. MOST SLOTS DO NOT "
+            "MOVE: a swap moves 2 of them and a give moves 1, so a model that re-emits its "
+            "previous checkpoint unchanged at every event is already right on "
+            f"{lo:.3f}-{hi:.3f} of the slots, against 1/k = {1.0 / k:.3f}. That copier is the "
+            "reference, and it is what a per-slot number has to be read against.", "",
+            "| arch | cell | L | per-seed per-slot | copy-the-previous-checkpoint | "
+            "above the copier |", "|---|---|---|---|---|---|"]
+    for (arch, cellname, L), vals in sorted(per_slot.items()):
+        r0 = ref[(cellname, L)]
+        out.append(f"| {arch} | {cellname} | {L} | " + " ".join(f"{v:.3f}" for v in vals)
+                   + f" | {r0:.3f} | " + " ".join(f"{v - r0:+.3f}" for v in vals) + " |")
+    out += ["", "The diagnostic is not a partial trace and no verdict reads it. What IS read is "
+            "the TRACE read — the final checkpoint's value for the QUERIED slot — which is a "
+            "single slot with its own floor (`validity.s5_bind_v3_trace_operative_floor`), and "
+            "the copier scores 0.000 on it at every cell because the query gate requires the "
+            "queried slot to move at least twice and to end different from its stated value."]
     return out
 
 
@@ -698,7 +803,7 @@ def cost_section(cfg, grid):
     return out
 
 
-def depth_matched_section(runs, floors, cfg):
+def depth_matched_section(runs, floors, cfg, guided_floors=None):
     """THE MEASUREMENT THE RUN EXISTS FOR: the three cells at equal component work, per seed.
 
     Pre-registered, not post-hoc — these are exactly ``P.registered_lengths`` and the floors are
@@ -721,6 +826,7 @@ def depth_matched_section(runs, floors, cfg):
     out = ["", "# The depth-matched comparison (pre-registered)", ""]
     for read, n in (("guided", cfg["guided_n"]), ("plain", cfg["eval_n"])):
         key = "eval" if read == "plain" else "guided"
+        rf = floors if read == "plain" else (guided_floors or floors)
         triples = []
         for cl in P.LOCAL_LENGTHS:
             trip = {"composed": cl, "state": P.WORK_MATCHED.get(cl, {}).get("state"),
@@ -751,13 +857,13 @@ def depth_matched_section(runs, floors, cfg):
                     for c in ("state", "composed", "bind"):
                         blk = r["stages"][-1][key].get(c, {}).get(str(trip[c]))
                         v = blk if read == "plain" else (blk or {}).get("match")
-                        f = floors.get(f"{c}@{trip[c]}", {}).get("floor")
+                        f = rf.get(f"{c}@{trip[c]}", {}).get("floor")
                         vals.append("—" if v is None else
                                     (f"**{v:.3f}**" if P.clears(v, f, n)[0] else f"{v:.3f}"))
                     out.append(f"| {arch} | {r['seed']} | " + " | ".join(vals) + " |")
             frow = []
             for c in ("state", "composed", "bind"):
-                fr = floors.get(f"{c}@{trip[c]}")
+                fr = rf.get(f"{c}@{trip[c]}")
                 frow.append("—" if fr is None else f"{fr['floor']:.3f}")
             out += ["| _floor_ | | " + " | ".join(frow) + " |", ""]
     out += ["_A **bold** cell clears its own recomputed floor under the pre-registered rule. "
@@ -767,7 +873,7 @@ def depth_matched_section(runs, floors, cfg):
     return out
 
 
-def write_markdown(runs, per_arch, floors, cfg, grid, path):
+def write_markdown(runs, per_arch, floors, cfg, grid, path, guided_floors=None):
     ch = 1.0 / (cfg["k"] - 1)
     lines = [
         "# s5_bind_v3 three-cell comparison — from-scratch arm",
@@ -799,9 +905,10 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
             rate[arch] = sum(t for t, _ in tot) / sum(s for _, s in tot)
     cfg = {**cfg, "measured_s_per_step": rate}
     lines += (recipe_section(cfg) + pilot_section(cfg) + cost_section(cfg, grid)
-              + depth_matched_section(runs, floors, cfg))
+              + depth_matched_section(runs, floors, cfg, guided_floors))
     for read, n in (("plain", cfg["eval_n"]), ("guided", cfg["guided_n"])):
         key = "eval" if read == "plain" else "guided"
+        rf = floors if read == "plain" else (guided_floors or floors)
         label = ("PLAIN read — answer off the plain prompt, no scratchpad"
                  if read == "plain" else
                  "GUIDED read — events forced, checkpoints and answer generated")
@@ -823,7 +930,7 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
                             continue
                         v = r["stages"][-1][key].get(cell, {}).get(str(L))
                         vals.append(v if read == "plain" or v is None else v["match"])
-                    fl = floors.get(f"{cell}@{L}", {}).get("floor")
+                    fl = rf.get(f"{cell}@{L}", {}).get("floor")
                     cells.append(" ".join(
                         "—" if v is None else
                         (f"**{v:.3f}**" if P.clears(v, fl, n)[0] else f"{v:.3f}")
@@ -831,7 +938,7 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
                 lines.append(f"| {arch} | " + " | ".join(cells) + " |")
             row = []
             for L in lens:
-                fr = floors.get(f"{cell}@{L}")
+                fr = rf.get(f"{cell}@{L}")
                 row.append("—" if fr is None else f"{fr['floor']:.3f} ({fr['floor'] / ch:.2f}x)")
             lines.append("| _floor_ | " + " | ".join(row) + " |")
     # The per-slot checkpoint accuracy is the diagnostic that separates the two readings a
@@ -849,12 +956,16 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
                 if vals:
                     ck_rows.append((arch, cell, L, vals))
     if ck_rows:
+        # NO CHANCE COLUMN HERE. 1/k is not the reference for a per-slot score — most slots do
+        # not move, so a model that re-emits its previous checkpoint already scores 0.80-0.91 —
+        # and printing 1/k beside these numbers is what made a score BELOW that copier read as a
+        # partial trace. The reference is computed and tabulated in the post-hoc section.
         lines += ["", "## Guided checkpoint accuracy (per-slot, diagnostic — not the metric)", "",
-                  f"| arch | cell | L | per-seed | per-slot chance |", "|---|---|---|---|---|"]
+                  "Read against the copy-the-previous-checkpoint reference, not against 1/k; "
+                  "both are in _What the checkpoint diagnostic says_ below.", "",
+                  "| arch | cell | L | per-seed |", "|---|---|---|---|"]
         for arch, cell, L, vals in ck_rows:
-            lines.append(f"| {arch} | {cell} | {L} | "
-                         + " ".join(f"{v:.3f}" for v in vals)
-                         + f" | {1.0 / cfg['k']:.3f} |")
+            lines.append(f"| {arch} | {cell} | {L} | " + " ".join(f"{v:.3f}" for v in vals) + " |")
     lines += ["", "# Verdict", ""]
     for arch, reads in sorted(per_arch.items()):
         for read, v in sorted(reads.items()):
@@ -866,7 +977,7 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
                       f"matched-cost control: {v['matched_forms']} "
                       f"(measured: {v.get('matched_measured')}); "
                       f"lengths read: {v['lengths_read']}", ""]
-    lines += post_hoc_section(runs, floors, cfg)
+    lines += post_hoc_section(runs, guided_floors or floors, cfg)
     lines += ["", "_A **bold** cell clears its own operative floor under the pre-registered "
               "rule. Floors are recomputed from that cell's own items: registry rows plus the "
               "admitted swept family. The fitted surface ranker is measured beside them "
@@ -884,6 +995,27 @@ def cell_costs(specs, tok, grid):
             for cell in grid for L in grid[cell]}
 
 
+def guided_floors_for(grid, guided_grid, guided_n, cached=None):
+    """The floor at each GUIDED cell, measured on the ``guided_n`` items that read scores.
+
+    A floor is a property of the items it is read against, and the max over admitted rows carries
+    an upward selection bias that a smaller n does not average out: the same rows give 0.250 at
+    state@80 and 0.234 at composed@48 on the 128 guided items against 0.207 and 0.204 on 1000.
+    Reading a 128-item score against the 1000-item floor is reading it against a different item
+    set. ``P.cell_floor`` keeps its own pool discipline at either n — rows on a disjoint pool and
+    on the exact scored items, operative is the larger.
+    """
+    out = dict(cached or {})
+    for cell, lengths in guided_grid.items():
+        for L in lengths:
+            key = f"{cell}@{L}"
+            if key in out:
+                continue
+            out[key] = P.cell_floor(TK.CANONICAL[P.LOCAL_CELLS[cell]], L, n_eval=guided_n)
+            print(f"  guided floor {key} = {out[key]['floor']:.4f} (n={guided_n})", flush=True)
+    return out
+
+
 def rewrite(json_path):
     """Re-render the report from a results JSON, applying the current rule and tables."""
     res = json.load(open(json_path))
@@ -894,12 +1026,16 @@ def rewrite(json_path):
         world, renderer = TK.build_world(specs["composed"])
         cfg["cell_costs"] = cell_costs(specs, Tokenizer.build([world], renderer), grid)
         res["cfg"] = cfg
-    per_arch = apply_rule(res["runs"], res["floors"], grid, cfg["eval_n"],
-                          cfg.get("guided_n", P.N_GUIDED))
+    gn = cfg.get("guided_n", P.N_GUIDED)
+    gg = {c: [int(x) for x in v] for c, v in
+          (cfg.get("guided_grid") or {c: cfg["guided_lengths"] for c in grid}).items()}
+    gf = guided_floors_for(grid, gg, gn, res.get("guided_floors"))
+    per_arch = apply_rule(res["runs"], res["floors"], grid, cfg["eval_n"], gn, gf)
     md = Path(str(json_path).replace(".json", ".md"))
     cfg = {**cfg, "sizes": {k: tuple(v) for k, v in cfg["sizes"].items()}}
-    write_markdown(res["runs"], per_arch, res["floors"], cfg, grid, md)
+    write_markdown(res["runs"], per_arch, res["floors"], cfg, grid, md, gf)
     res["verdicts"] = per_arch
+    res["guided_floors"] = gf
     Path(json_path).write_text(json.dumps(res, indent=2, default=float))
     return per_arch
 
@@ -984,6 +1120,13 @@ def main():
             floors[f"{cell}@{L}"] = P.cell_floor(TK.CANONICAL[P.LOCAL_CELLS[cell]], L)
             print(f"  floor {cell}@{L} = {floors[f'{cell}@{L}']['floor']:.4f} (measured)",
                   flush=True)
+    # THE GUIDED READ HAS ITS OWN FLOORS because it has its own items: it scores guided_n and the
+    # plain read scores eval_n, and the operative floor is a max over rows on the exact scored
+    # set. Reading a 128-item score against a 1000-item floor reads it against a different item
+    # set, and the two differ by up to 0.043 here.
+    guided_floors = guided_floors_for(grid, guided_grid, a.guided_n,
+                                      json.load(open(a.floors)).get("guided_floors")
+                                      if a.floors else None)
 
     archs = [x.strip() for x in a.archs.split(",")]
     sizes = {arch: measured_size(arch, a.d_model, a.n_layers, a.n_heads, tok.vocab_size,
@@ -1015,10 +1158,11 @@ def main():
                 f.write(json.dumps({**row, **{k: v for k, v in cfg.items()
                                               if k != "matched_lengths"}}) + "\n")
         if runs:
-            per_arch = apply_rule(runs, floors, grid, a.eval_n, a.guided_n)
-            write_markdown(runs, per_arch, floors, cfg, grid, md_path)
-            js_path.write_text(json.dumps({"cfg": cfg, "floors": floors, "runs": runs,
-                                           "verdicts": per_arch}, indent=2, default=float))
+            per_arch = apply_rule(runs, floors, grid, a.eval_n, a.guided_n, guided_floors)
+            write_markdown(runs, per_arch, floors, cfg, grid, md_path, guided_floors)
+            js_path.write_text(json.dumps(
+                {"cfg": cfg, "floors": floors, "guided_floors": guided_floors,
+                 "runs": runs, "verdicts": per_arch}, indent=2, default=float))
             for arch, reads in sorted(per_arch.items()):
                 for read, v in sorted(reads.items()):
                     print(f"  {arch} / {read}: {v['verdict']} — {v['why']}", flush=True)
@@ -1051,14 +1195,17 @@ def main():
             with log_path.open("a") as f:
                 f.write(json.dumps({**row, **{k: v for k, v in cfg.items()
                                               if k != "matched_lengths"}}) + "\n")
-            per_arch = apply_rule(runs, floors, grid, a.eval_n, a.guided_n)
-            write_markdown(runs, per_arch, floors, cfg, grid, md_path)
-            js_path.write_text(json.dumps({"cfg": cfg, "floors": floors, "runs": runs,
-                                           "verdicts": per_arch}, indent=2, default=float))
+            per_arch = apply_rule(runs, floors, grid, a.eval_n, a.guided_n, guided_floors)
+            write_markdown(runs, per_arch, floors, cfg, grid, md_path, guided_floors)
+            js_path.write_text(json.dumps(
+                {"cfg": cfg, "floors": floors, "guided_floors": guided_floors,
+                 "runs": runs, "verdicts": per_arch}, indent=2, default=float))
     if runs:
-        per_arch = apply_rule(runs, floors, grid, a.eval_n, a.guided_n)
-        write_markdown(runs, per_arch, floors, cfg, grid, md_path)
-        js_path.write_text(json.dumps({"cfg": cfg, "floors": floors, "runs": runs,
+        per_arch = apply_rule(runs, floors, grid, a.eval_n, a.guided_n, guided_floors)
+        write_markdown(runs, per_arch, floors, cfg, grid, md_path, guided_floors)
+        js_path.write_text(json.dumps({"cfg": cfg, "floors": floors,
+                                       "guided_floors": guided_floors,
+                                       "runs": runs,
                                        "verdicts": per_arch}, indent=2, default=float))
         print("\n=== verdict ===", flush=True)
         for arch, reads in sorted(per_arch.items()):

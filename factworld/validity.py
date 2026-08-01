@@ -1496,8 +1496,9 @@ def _v3_family(row: str) -> tuple[str, int] | None:
 # RAISES on it. A default — the ``1 << 30`` this replaces — silently EXCLUDES an unlabelled
 # policy, and exclusion pushes the floor DOWN, which is the direction that invalidates a "cleared
 # the floor" reading. An unpriced policy has to stop the measurement, not quietly pass it.
-S5_BIND_V3_DEPTH_0_ROWS = ("uniform", "uniform_non_initial", "initial_only")
-S5_BIND_V3_DEPTH_1_ROWS = ("last_write_1hop", "last_swap_ref", "uniform_anti_surface")
+S5_BIND_V3_DEPTH_0_ROWS = ("uniform", "uniform_non_initial", "initial_only", "ckpt_copy_prev")
+S5_BIND_V3_DEPTH_1_ROWS = ("last_write_1hop", "last_swap_ref", "uniform_anti_surface",
+                           "ckpt_last_event_operand", "ckpt_last_event_target")
 S5_BIND_V3_REPLAY_DEPTH_ROWS = ("stated_reference", "one_structure_P", "one_structure_B",
                                 "final_state")
 
@@ -1617,6 +1618,16 @@ def s5_bind_v3_row_cost(row: str, k: int, m: int, n_swap: int, n_give: int,
             return 2, 2 * min(p, L) + 3
         impl = s5_bind_v3_surface_price(k, m, n_swap, n_give, named, query, weights)
         return impl["W"], impl["S"]
+    if row == "ckpt_copy_prev":
+        # emit the previous checkpoint, so the trace never moves: one keyed read of the stated
+        # block and the answer register. The (k + m) L emission itself is protocol overhead the
+        # cell's own algorithm pays too, so it is charged to nobody (T2).
+        return 1, 2
+    if row in ("ckpt_last_event_operand", "ckpt_last_event_target"):
+        # the LAST event is located positionally and not by another event's output, so no
+        # backward scan is charged (D2): read it, resolve one symbol through the stated block,
+        # emit. This is the cheapest one-hop row available at any cell.
+        return 2, 3
     needs_p, needs_b = s5_bind_v3_needs(row, query)
     scan = 2 * _v3_scan_len(k, m, n_swap, n_give, query) + 3
     if row in ("uniform", "uniform_non_initial", "initial_only"):
@@ -2601,6 +2612,374 @@ def s5_bind_v3_block_drop(examples, width: float, pos: float) -> float:
         n += 1
         hits += int(answer_of(rec, replay(rec, drop=(lo, lo + w))) == e.answer)
     return hits / n if n else 0.0
+
+
+# ===========================================================================================
+# THE TRACE READ: the model's own FINAL-CHECKPOINT value for the queried slot
+# ===========================================================================================
+# The trace read is only defined under the GUIDED protocol, where the events are teacher-forced
+# and the model generates every per-event checkpoint — the whole of P in agent order then the
+# whole of B in object order, k + m tokens per event. The read takes the LAST checkpoint's value
+# for the queried slot. It removes the answer-emission channel, which is what it is for: a model
+# can hold the right value and emit a different token, and two published nulls were that.
+#
+# THREE FACTS FIX WHAT A FLOOR FOR IT CAN BE.
+#
+#   T1  THE FINAL CHECKPOINT'S QUERIED SLOT IS THE GOLD ANSWER, by construction of the trace
+#       (``tasks._ex_s5_bind_v3`` builds ``meta["trace"]`` from the same replay the gold comes
+#       from) and measured 1000/1000 at every registered cell by ``s5_bind_v3_trace_is_answer``.
+#       So the trace read and the answer read score the SAME quantity, and every registered row's
+#       trace score is its answer score to the item. Nothing about a floor row changes because
+#       its prediction is delivered in a checkpoint slot rather than in the answer token.
+#
+#   T2  THE PROTOCOL GRANTS THE PAD. The guided read REQUIRES the whole of P and B to be written
+#       out at every event, so the k + m live slots the one-structure bound prices are handed to
+#       every policy — the cell's own algorithm included — and the emission is charged to every
+#       policy equally, which is why steps are counted on RESOLUTION work exactly as on the
+#       answer read. A bound on live slots cannot discriminate under a read that supplies them.
+#
+#   T3  DEPTH AND STEPS SURVIVE THE PAD. Composition depth is a property of the policy under
+#       D1-D3 — the longest chain of events whose contents it resolves into its answer — and a
+#       notepad stores values rather than chaining them; a one-step updater invoked once per
+#       event still chains L events and is depth L. Steps are charged for the events a policy
+#       reads however it stores what it reads. So both axes read exactly as they do on the
+#       answer read.
+#
+#       T3 IS PROCEDURE-LEVEL AND THAT IS LOAD-BEARING. It is the same convention the swept
+#       families are priced under — ``trunc_walk_T{T}`` is depth T although each step of the walk
+#       is one hop — so it is not a rule invented for this read. Priced per FORWARD PASS instead,
+#       a guided one-step updater is depth 1 and the COMPONENT floors go with the composed one:
+#       ``trunc_walk_drop1`` costs 2(L-1)+3, one step under the state component's own minimum of
+#       2L+2, and reads 0.667 at state@17 and 0.688 at state@128 against a floor of 0.200. Both
+#       axes would then be void and no cell would be floored on this read at all.
+#
+# WHAT FOLLOWS, PER CELL KIND, AND THE TWO ANSWERS ARE DIFFERENT.
+#
+#   COMPONENT CELLS ARE FLOORED, at the answer floor unchanged. Their rule is depth <= 1 AND
+#   steps < the cell's own algorithm's MINIMUM per-item cost; its W bound (2) admits no row the
+#   other two do not already admit, so T2 removes nothing. The state component's floor is then
+#   the same admitted max, and the retrieval component's is still informed chance PROVED by the
+#   sampler's pin — a pad does not shorten a scan.
+#
+#   THE COMPOSED CELL IS NOT FLOORED. Its registered class is the one-structure bound plus a step
+#   bound the cell's own algorithm SATISFIES (a tie is allowed there, because a row holding one
+#   structure cannot be the task however long it runs). T2 removes the first; what is left admits
+#   the task. Even with the tie refused the class holds the both-maps replay with one event
+#   dropped, which ``s5_bind_v3_trace_pad_floor`` measures at n = 1000 at 0.719 / 0.742 / 0.604
+#   on the k=6 composed cells at L = 48 / 64 / 96 against registered answer floors of 0.201 /
+#   0.200 / 0.209 — 2.9x to 3.7x — and 0.826 at L = 16 against 0.516.
+#   ``s5_bind_v3_trace_operative_floor`` returns None on a composed cell rather than a max over a
+#   class that contains the answer.
+#
+# SO A TRACE SCORE ON THE COMPOSED CELL IS A WITHIN-RUN COMPARISON AND NEVER A CLEARED FLOOR.
+# The comparison is a real object — the same seeds, the same items, matched depth and matched
+# cost — and the DOWNWARD separation it carries does not need a floor, because a floor bounds
+# what a cheap policy scores and a deficit is not a claim about cheapness. What it cannot support
+# is the other direction: no "the composed cell clears its floor on the trace" reading is
+# available at any registered length.
+#
+# THE CHEAP CHECKPOINT-SHAPED POLICIES ARE PRICED HERE and none of them raises a floor:
+# ``ckpt_copy_prev`` (emit the previous checkpoint, so the trace never moves) is exactly the
+# stated initial value and the query gate — the queried slot must move at least twice and end
+# different from its stated value — forces it to 0.000 at every cell; the two one-hop reads of
+# the LAST event are at or below informed chance everywhere. The oracle-assisted rows are
+# reported and excluded: ``s5_bind_v3_ckpt_lag`` (run the algorithm and stop j events early) is
+# the copier with the true trace handed to it, and it is depth L - j on a state or composed cell
+# and costs the whole scan on a retrieval one.
+# ===========================================================================================
+S5_BIND_V3_CKPT_ROWS = ("ckpt_copy_prev", "ckpt_last_event_operand", "ckpt_last_event_target")
+S5_BIND_V3_CKPT_LAG = (1, 2, 3, 5, 9, 17, 33, 65)
+S5_BIND_V3_TRACE_PAD_WIDTHS = (0.02, 0.05, 0.10, 0.25)
+
+
+def s5_bind_v3_trace_slot(example, k: int, m: int, agents, objs) -> str | None:
+    """The FINAL checkpoint's value for the queried slot — the quantity the trace read scores.
+
+    Read off ``meta["trace"]``, which is the per-event checkpoint stream the guided protocol
+    teacher-forces the events of and the model generates the slots of: ``k + m`` tokens per
+    event, the whole of P in ``agents`` order then the whole of B in ``objs`` order. None where
+    the cell carries no trace or the queried slot is not in it.
+    """
+    tr = example.meta.get("trace")
+    if not tr:
+        return None
+    toks = tr.split()
+    per = k + m
+    if per <= 0 or len(toks) < per or len(toks) % per:
+        return None
+    final = toks[-per:]
+    qs, qb = example.meta.get("q_state"), example.meta.get("q_bind")
+    if qs is not None and qs in agents:
+        return final[list(agents).index(qs)]
+    if qb is not None and qb in objs:
+        return final[k + list(objs).index(qb)]
+    return None
+
+
+def s5_bind_v3_trace_is_answer(examples, k: int, m: int, agents, objs) -> tuple[int, int]:
+    """``(agreements, n)`` for T1: the final checkpoint's queried slot against the gold answer.
+
+    The whole trace read rests on this identity, so it is measured on the exact items rather than
+    argued from the sampler: if it ever fails, the trace read is scoring something else and its
+    floor argument is about a different quantity than the answer read's.
+    """
+    agree = n = 0
+    for e in examples:
+        v = s5_bind_v3_trace_slot(e, k, m, agents, objs)
+        if v is None:
+            continue
+        n += 1
+        agree += int(f"{v}." == e.answer)
+    return agree, n
+
+
+def s5_bind_v3_slot_moves(examples, k: int, m: int, agents, objs) -> dict:
+    """How many times the QUERIED slot moves, per item — the copier's whole story.
+
+    The query gate gives the copier its floor: a state query needs the queried agent's pointer to
+    have moved at least twice and to end different from its stated target, a bind query the same
+    of the queried object's holder. So ``ckpt_copy_prev`` — a trace that never moves — is wrong
+    on every item by construction, and the distribution below says how far from a fixpoint the
+    queried slot actually is rather than leaving it at "at least two".
+
+    Returns ``{"counts": {moves: items}, "min", "max", "mean", "median", "n"}``, counting the
+    first write off the STATED value, which is the move a copier misses first.
+    """
+    from .composition import read
+
+    counts: Counter = Counter()
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is None:
+            continue
+        v = s5_bind_v3_trace_slot(e, k, m, agents, objs)
+        if v is None:
+            continue
+        tr = e.meta["trace"].split()
+        per = k + m
+        qs, qb = e.meta.get("q_state"), e.meta.get("q_bind")
+        if qs is not None and qs in agents:
+            idx, start = list(agents).index(qs), rec["P0"].get(qs)
+        else:
+            idx, start = k + list(objs).index(qb), rec["B0"].get(qb)
+        seq = [start] + [tr[i * per + idx] for i in range(len(tr) // per)]
+        counts[sum(1 for a, b in zip(seq, seq[1:]) if a != b)] += 1
+    if not counts:
+        return {"counts": {}, "n": 0}
+    flat = sorted(x for v, c in counts.items() for x in [v] * c)
+    return {"counts": dict(sorted(counts.items())), "n": len(flat), "min": flat[0],
+            "max": flat[-1], "median": flat[len(flat) // 2],
+            "mean": round(sum(flat) / len(flat), 3)}
+
+
+def s5_bind_v3_ckpt_lag(examples, j: int) -> float | None:
+    """ORACLE-ASSISTED: the true value of the queried slot ``j`` events before the end.
+
+    This is "copy the previous checkpoint's slot" with the TRUE trace handed to the copier, which
+    is the only form of it that can score above zero — the self-referential form never moves and
+    is ``ckpt_copy_prev``. It is reported and never admitted: on a state or composed cell it
+    replays L - j events and is depth L - j, and on a retrieval cell it pays the whole scan to
+    the pinned write and then some, so it is at or above that cell's own algorithm's cost.
+
+    Its shape is the point. On the retrieval component the sampler pins the resolving write at or
+    below 0.75L, so the queried slot has been constant for the last quarter of the stream and
+    every small j reads 1.000; on the state and composed cells the gate pulls the last move into
+    the final tenth, so j = 1 already loses a quarter of the items.
+    """
+    from .composition import answer_of, read, replay
+
+    hits = n = 0
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is None:
+            continue
+        L = len(rec["events"])
+        if j >= L:
+            continue
+        n += 1
+        hits += int(answer_of(rec, replay(rec, drop=(L - j, L))) == e.answer)
+    return hits / n if n else None
+
+
+def s5_bind_v3_ckpt_preds(prompt: str) -> dict[str, str | None]:
+    """The CHECKPOINT-SHAPED cheap policies' answers for one prompt, in rendered form.
+
+    These are the policies a checkpoint-slot read makes available that an answer read does not
+    have to price, written as predictions of the same gold (T1):
+
+      ckpt_copy_prev           emit the previous checkpoint at every event, so the trace never
+                               moves; its final queried slot is the STATED initial value. Depth
+                               0, and the query gate forces it to 0.000.
+      ckpt_last_event_operand  the LAST event's second operand, resolved one hop through the
+                               stated block. The last event needs no search (D2: it is located
+                               positionally, not by another event's output), so this is the
+                               cheapest one-hop row on the cell.
+      ckpt_last_event_target   the LAST event's first operand — the slot it writes — emitted as
+                               the answer.
+    """
+    from .composition import read
+
+    rec = read(prompt)
+    if rec is None or not rec["events"]:
+        return {n: None for n in S5_BIND_V3_CKPT_ROWS}
+    kind, target = rec["query"]
+    if kind == "state":
+        init = rec["P0"].get(target)
+    elif kind == "bind":
+        init = rec["B0"].get(target)
+    else:
+        init = None
+    ekind, etgt, eref, esrc = rec["events"][-1]
+    if esrc == "N":
+        operand = eref
+    else:
+        operand = (rec["P0"] if esrc == "P" else rec["B0"]).get(eref)
+    return {"ckpt_copy_prev": None if init is None else f"{init}.",
+            "ckpt_last_event_operand": None if operand is None else f"{operand}.",
+            "ckpt_last_event_target": None if etgt is None else f"{etgt}."}
+
+
+def s5_bind_v3_ckpt_floors(examples) -> dict[str, float]:
+    """Every checkpoint-shaped row's accuracy on a cell's exact items, keyed by row name.
+
+    Merged with ``s5_bind_v3_floors`` by ``s5_bind_v3_trace_operative_floor``; each row is then
+    admitted or excluded on its own cost like any other. Kept in its own tuple rather than added
+    to ``S5_BIND_V3_ROWS`` so the ANSWER floors are untouched by a read that did not exist when
+    they were measured.
+    """
+    n = len(examples)
+    if not n:
+        return {}
+    hits: Counter = Counter()
+    defined: Counter = Counter()
+    for e in examples:
+        preds = s5_bind_v3_ckpt_preds(e.prompt)
+        for nm in S5_BIND_V3_CKPT_ROWS:
+            if preds[nm] is not None:
+                defined[nm] += 1
+                hits[nm] += int(preds[nm] == e.answer)
+    return {nm: hits[nm] / n for nm in S5_BIND_V3_CKPT_ROWS if defined[nm]}
+
+
+def s5_bind_v3_trace_admits(row: str, k: int, m: int, n_swap: int, n_give: int,
+                            named: bool = False, query: str = "state", weights=None) -> bool:
+    """Whether ONE row may set the TRACE read's floor — the class rule with the W axis removed.
+
+    T2: the guided protocol requires the whole of P and B to be emitted at every event, so a
+    bound on live slots prices a resource every policy has been handed. T3: depth and steps are
+    unchanged by a pad. So this is ``s5_bind_v3_admits`` with the first check dropped.
+
+    On a COMPONENT cell that changes nothing — every depth <= 1 row already costs W = 2 — and the
+    function is the registered rule. On a COMPOSED cell the registered class is the W bound plus
+    a step bound the task satisfies, so dropping the W bound admits everything, this returns True
+    for every row, and the floor is not a floor: see ``s5_bind_v3_trace_operative_floor``.
+    """
+    if not named:
+        return True
+    if row == "surface_ranker":
+        impl = s5_bind_v3_surface_price(k, m, n_swap, n_give, named, query, weights)
+        return (impl["S"] < s5_bind_v3_task_cost_min(k, m, n_swap, n_give, named, query)
+                and s5_bind_v3_surface_depth(weights) <= S5_BIND_V3_MAX_DEPTH)
+    _w, s = s5_bind_v3_row_cost(row, k, m, n_swap, n_give, query, named, weights)
+    depth = s5_bind_v3_row_depth(row, query, n_swap + n_give, weights)
+    return (depth <= S5_BIND_V3_MAX_DEPTH
+            and s < s5_bind_v3_task_cost_min(k, m, n_swap, n_give, named, query))
+
+
+def s5_bind_v3_trace_operative_floor(floors: dict[str, float], k: int, m: int,
+                                     n_swap: int, n_give: int, named: bool = False,
+                                     query: str = "state") -> float | None:
+    """The number a TRACE score has to clear at a COMPONENT cell, or None at a composed one.
+
+    None is not "no rows were measured": it is the composed cell's answer, and it is returned so
+    that ``clears()`` refuses the cell rather than reading a max over a class that contains the
+    task. ``s5_bind_v3_trace_floor_basis`` says which case a None is, and
+    ``s5_bind_v3_trace_pad_floor`` measures how far above the answer floor the unfloorable class
+    reaches, so the gap is a number rather than an absence.
+    """
+    if not named:
+        return None
+    ok = {nm: s5_bind_v3_trace_admits(nm, k, m, n_swap, n_give, named, query)
+          for nm in floors}
+    vals = [v for nm, v in floors.items() if ok.get(nm) and v is not None]
+    return max(vals) if vals else None
+
+
+def s5_bind_v3_trace_floor_basis(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
+                                 query: str = "state") -> str:
+    """'measured' / 'chance' / 'unfloorable' for the TRACE read at one cell.
+
+    'unfloorable' is the COMPOSED cell's case and the reason is T2 above: the read supplies the
+    live slots its floor argument is made of. The other two labels mean what they mean on the
+    answer read (``s5_bind_v3_floor_basis``), because on a component cell the trace class IS the
+    answer class — and, like that one, this label is about which REGISTERED rows the rule lets
+    set the number. The swept families and the checkpoint-shaped rows are measured beside them
+    and enter the max; they do not move the label, so the retrieval component's 'chance' stays
+    the proof it is (no admitted budget reaches the write the sampler pinned) rather than
+    flipping to 'measured' because a row that reads the stream's last event was added and came
+    out under a guess.
+    """
+    if not named:
+        return "unfloorable"
+    for row in S5_BIND_V3_ROWS:
+        if (s5_bind_v3_trace_admits(row, k, m, n_swap, n_give, named, query)
+                and row not in S5_BIND_V3_CHANCE_ROWS and row != "initial_only"):
+            return "measured"
+    return "chance"
+
+
+def s5_bind_v3_trace_pad_floor(examples, widths=S5_BIND_V3_TRACE_PAD_WIDTHS,
+                               positions=(0.0, 0.2, 0.4, 0.6, 0.8, 0.95)) -> float | None:
+    """What the UNFLOORABLE class reaches on a composed cell, measured rather than left blank.
+
+    The best member of the block-drop continuum: carry both maps, skip one block of events, play
+    the rest exactly. Every member holds W = k + m + 1 and is excluded from the answer floor on
+    exactly that; the guided read hands those slots out (T2), so every member is available to a
+    trace-read policy and each costs strictly fewer steps than the cell's own algorithm.
+
+    IT IS NOT A FLOOR AND MUST NOT BE PRINTED AS ONE — the class it comes from also contains the
+    task, so its max is 1.000 and this is a lower bound on that max. It exists so the distance
+    between the answer floor and the unfloorable class is a number.
+    """
+    if not examples:
+        return None
+    vals = [s5_bind_v3_block_drop(examples, w, p) for w in widths for p in positions]
+    return max(vals) if vals else None
+
+
+def s5_bind_v3_ckpt_copy_per_slot(examples, k: int, m: int, agents, objs) -> float | None:
+    """The per-SLOT accuracy of emitting the previous checkpoint at every event.
+
+    The reference the per-slot checkpoint diagnostic has to be read against, and it is nowhere
+    near uniform: a swap moves 2 of the k + m slots and a give moves 1, so a copier is right on
+    ``1 - (2 n_swap + n_give) / ((k + m) L)`` of them — 0.83 on a state cell, 0.92 on a
+    retrieval one and 0.89 on the k=6 composed cell, against 1/k = 0.167. A per-slot number below
+    that reference is BELOW a policy that never updates anything.
+
+    The first checkpoint has no predecessor in the emitted stream and is scored against the
+    STATED block, which is the pad a copier actually starts from; a component cell states only
+    the half it moves, so the other half's first checkpoint counts against it.
+    """
+    from .composition import read
+
+    hits = tot = 0
+    per = k + m
+    for e in examples:
+        rec = read(e.prompt)
+        tr = e.meta.get("trace")
+        if rec is None or not tr:
+            continue
+        toks = tr.split()
+        if not toks or len(toks) % per:
+            continue
+        blocks = [toks[i * per:(i + 1) * per] for i in range(len(toks) // per)]
+        stated = [rec["P0"].get(a) for a in agents] + [rec["B0"].get(o) for o in objs]
+        for i, b in enumerate(blocks):
+            prev = blocks[i - 1] if i else stated
+            for j, v in enumerate(b):
+                tot += 1
+                hits += int(prev[j] == v)
+    return hits / tot if tot else None
 
 
 if __name__ == "__main__":
