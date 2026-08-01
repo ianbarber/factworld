@@ -41,7 +41,7 @@ import os
 import re
 import sys
 from collections import Counter
-from dataclasses import fields
+from dataclasses import fields, replace
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -62,6 +62,7 @@ from factworld.validity import (  # noqa: E402
     one_structure_bound,
     s5_bind_v3_admits,
     s5_bind_v3_block_drop,
+    s5_bind_v3_carrier_hops,
     s5_bind_v3_classify,
     s5_bind_v3_family_floors,
     s5_bind_v3_family_rows,
@@ -87,10 +88,11 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_task_cost_min,
     s5_bind_v3_task_depth,
     s5_bind_v3_trunc_walk,
+    s5_bind_v3_work_match,
 )
 from factworld.world import Event  # noqa: E402
 
-COMPOSED = ("s5_bind_v3", "s5_bind_local_v3")
+COMPOSED = ("s5_bind_v3", "s5_bind_local_v3")            # the STATE-query composed cells
 COMPONENTS = ("s5_bind_v3_state", "s5_bind_v3_bind",
               "s5_bind_local_v3_state", "s5_bind_local_v3_bind")
 ALL = COMPOSED + COMPONENTS
@@ -102,18 +104,22 @@ ALL = COMPOSED + COMPONENTS
 N_FLOOR = 500
 FLOOR_RATIO_MAX = 1.35
 
+# Re-pinned when the components' grids moved to the WORK-MATCHED pairing. Every length that both
+# grids contain hashes identically (s5_bind_local_v3_state@48, s5_bind_v3_bind@128), and neither
+# composed cell moved at all, so the sampler is untouched and only the registered lengths changed.
 GOLDENS = {
     "s5_bind_v3": {128: "a3f301a6769fe938", 192: "c0b0d78567ce1b29", 256: "147f0b5a10fc916f"},
-    "s5_bind_v3_state": {128: "35d242c7be3fb858", 192: "cbd08f3ddc1223b1",
-                         256: "ee22e51b922d44ac"},
-    "s5_bind_v3_bind": {128: "1582867b26e59b3a", 192: "95ec70373bcc585a",
-                        256: "894abea4d38df4a6"},
+    "s5_bind_v3_state": {43: "22fff0151054681f", 64: "296cf3e5fc8f13a5",
+                         85: "8f2e28bebeafb168"},
+    "s5_bind_v3_bind": {85: "a605d49fe1d077f5", 128: "1582867b26e59b3a",
+                        171: "ae6827e0784bd43c"},
     "s5_bind_local_v3": {48: "f47aa0f745e19a77", 64: "571f81b8ecda65b9",
                          96: "1ef58f59227c3736"},
-    "s5_bind_local_v3_state": {48: "056763639c7c4882", 64: "3534ff1db6a1b4d1",
-                               96: "30322ddada9d71e4"},
-    "s5_bind_local_v3_bind": {48: "dac8b968e64d81ab", 64: "edd3d8fa66f270f7",
-                              96: "dbac7f64f574a409"},
+    "s5_bind_local_v3_state": {17: "ce56e584a72e3594", 23: "9777f0e1c64ee34f",
+                               34: "611fa288c1c7d3ef", 48: "056763639c7c4882",
+                               80: "7bbaa8887e2f9b49", 128: "4dc43c513befb989"},
+    "s5_bind_local_v3_bind": {31: "6a66d9d1d1b00e89", 41: "92110436351c3995",
+                              62: "f8757eb2cd008ab7"},
 }
 
 
@@ -140,12 +146,12 @@ def test_registry_contract():
         assert spec.kind == "experimental" and name not in TK.REPORTED
         assert spec.n_objects_active <= spec.k
         assert TK.spec_for(name) is spec
-    # the composed arm mixes both event kinds and renders references; each component contains
+    # the composed arms mix both event kinds and render references; each component contains
     # exactly one kind and names its operands
     for name in COMPOSED:
         spec = TK.CANONICAL[name]
         assert spec.event_kinds == "both" and not spec.named_operands
-        assert 0.0 < spec.p_cross < 1.0
+        assert 0.0 < spec.p_cross < 1.0 and spec.query_arm == "state"
     for name in COMPONENTS:
         spec = TK.CANONICAL[name]
         assert spec.named_operands and spec.event_kinds in ("swap", "give")
@@ -161,6 +167,35 @@ def test_p_swap_is_the_write_count_matching():
         k, m = spec.k, spec.n_objects_active
         want = k / (k + 2.0 * m)
         assert abs(spec.p_swap - want) < 1e-9, f"{name}: p_swap={spec.p_swap}, want {want}"
+
+
+def test_the_component_grids_are_work_matched_to_the_composed_one():
+    """THE PAIRING THE COMPARISON RESTS ON. A composed stream of length L holds p_swap L swaps
+    and (1 - p_swap) L gives, so a component read at the composed cell's OWN L carries 1/p_swap
+    (state) or 1/(1 - p_swap) (retrieval) times the work — the confound that made a 5.7-hop
+    composed cell readable against a 16-hop state cell. Each component's registered grid is
+    therefore the composed cell's own event counts, and the two are then equal on the carrier
+    chain, which is what "same depth" means here. The count is a sample mean, so the registered
+    partner is pinned to a fixed probe and matched here to within one event."""
+    P = _protocol()
+    for composed, state, bind in (("s5_bind_v3", "s5_bind_v3_state", "s5_bind_v3_bind"),
+                                  ("s5_bind_local_v3", "s5_bind_local_v3_state",
+                                   "s5_bind_local_v3_bind")):
+        cspec = TK.CANONICAL[composed]
+        for L in cspec.eval_lengths:
+            ex = TK.generate(cspec, "test", n=P.WORK_PROBE_N, length=L)
+            ns, ng = s5_bind_v3_shape(ex)
+            want = s5_bind_v3_work_match(ns, ng)
+            for key, comp in (("state", state), ("bind", bind)):
+                near = min(abs(want[key] - x) for x in TK.CANONICAL[comp].eval_lengths)
+                assert near <= 1, (composed, L, key, want[key],
+                                   TK.CANONICAL[comp].eval_lengths)
+            # and no p_swap removes the need for the pairing: both legs are strictly under L
+            assert 0 < ns < L and 0 < ng < L, (composed, L, ns, ng)
+            sex = TK.generate(TK.CANONICAL[state], "test", n=40, length=want["state"])
+            sns, _sng = s5_bind_v3_shape(sex)
+            assert abs(s5_bind_v3_carrier_hops(cspec.k, ns)
+                       - s5_bind_v3_carrier_hops(cspec.k, sns)) < 0.35, (composed, L)
 
 
 def test_source_ablation_defaults_off_everywhere_else():
@@ -620,16 +655,26 @@ def test_the_component_bound_is_one_hop_against_a_chain_of_many():
     """The gap in kind on the axis a component separates on. The state component's own algorithm
     chains the whole carrier walk — 2 n_swap / k hops — and a floor row may chain ONE, exactly as
     a composed floor row may hold one structure against two. On the retrieval component the
-    algorithm is itself one hop, so the bound is vacuous there and says so."""
+    algorithm is itself one hop, so the bound is vacuous there and says so.
+
+    Checked at EVERY registered length, because the work-matched grid puts the shallowest state
+    rung at the composed cell's own carrier chain — 5.67 hops at k=6/L=17 and 7.17 at k=12/L=43 —
+    so the gap is 5x at the shallow end rather than the 8x the composed cell's own length gave."""
     for name in COMPONENTS:
-        spec, ex = _short(name, 40)
-        ns, ng = s5_bind_v3_shape(ex)
+        spec = TK.CANONICAL[name]
         k, m = spec.k, spec.n_objects_active
-        d = s5_bind_v3_task_depth(k, m, ns, ng, True, spec.query_arm)
+        depths = []
+        for L in spec.eval_lengths:
+            ex = TK.generate(spec, "test", n=40, length=L)
+            ns, ng = s5_bind_v3_shape(ex)
+            depths.append(s5_bind_v3_task_depth(k, m, ns, ng, True, spec.query_arm))
+            if spec.query_arm == "state":
+                assert depths[-1] == round(2 * ns / k), (name, L, depths[-1])
+            else:
+                assert depths[-1] == S5_BIND_V3_MAX_DEPTH == 1, (name, L, depths[-1])
         if spec.query_arm == "state":
-            assert d == round(2 * ns / k) and d >= 8 * S5_BIND_V3_MAX_DEPTH, (name, d)
-        else:
-            assert d == S5_BIND_V3_MAX_DEPTH == 1, (name, d)
+            assert min(depths) >= 5 * S5_BIND_V3_MAX_DEPTH, (name, depths)
+            assert max(depths) >= 10 * S5_BIND_V3_MAX_DEPTH, (name, depths)
     # and on a composed cell the depth bound is not what is applied: its own rule is on W
     for name in COMPOSED:
         spec, ex = _short(name, 40)
@@ -753,7 +798,12 @@ def test_the_retrieval_floor_is_the_samplers_window_to_the_event():
 def test_the_retrieval_scan_is_priced_at_the_window_and_the_two_counters_agree():
     """``validity`` and ``composition.cost_isolated_bind`` price the same algorithm on the same
     items. The pricing this replaces read the scan as L / (n_give / m) = m and understated it
-    5.7x at L = 256 — 27 steps against a measured 152.4."""
+    5.7x at L = 256 — 27 steps against a measured 152.4.
+
+    The mean carries a ``+ m`` tail term that overshoots on the SHALLOWEST retrieval rung of each
+    grid — the work-matched partner of the shortest composed cell — so the envelope is pinned at
+    12% there and at 2% on every other rung, rather than one loose number covering both. Only the
+    MINIMUM enters admission, and it is exact."""
     for name in COMPONENTS:
         spec = TK.CANONICAL[name]
         k, m = spec.k, spec.n_objects_active
@@ -763,7 +813,8 @@ def test_the_retrieval_scan_is_priced_at_the_window_and_the_two_counters_agree()
             want = s5_bind_v3_task_cost(k, m, ns, ng, True, spec.query_arm)[1]
             cost = (C.cost_isolated_bind if spec.query_arm == "bind" else C.cost_isolated_state)
             got = sum(cost(C.read(e.prompt), k, m)[0] for e in ex) / len(ex)
-            assert abs(got - want) <= 0.03 * want, f"{name}@{L}: validity {want}, counter {got}"
+            tol = 0.12 if (spec.query_arm == "bind" and L == spec.eval_lengths[0]) else 0.02
+            assert abs(got - want) <= tol * want, f"{name}@{L}: validity {want}, counter {got}"
             assert s5_bind_v3_task_cost_min(k, m, ns, ng, True, spec.query_arm) <= want
 
 
@@ -877,23 +928,26 @@ def test_the_positive_control_is_evaluated_on_the_grid_its_read_covers_or_raises
     model at floor and voided the run.
 
     A control is now declared as (read, cell, length) pairs, evaluated only where the read covers
-    them, and it RAISES where none was measured — a raise cannot be mistaken for an abort."""
+    them, and it RAISES where none was measured — a raise cannot be mistaken for an abort.
+
+    The guided pairs are each component's WORK-MATCHED partner of the composed cell's guided
+    length, because that is the only length the guided read evaluates a component at."""
     P = _protocol()
-    grid = {"state": [16, 48], "bind": [16, 48], "composed": [16, 48]}
+    ws, wb = P.WORK_MATCHED[48]["state"], P.WORK_MATCHED[48]["bind"]
+    grid = {"state": [16, ws], "bind": [16, wb], "composed": [16, 48]}
     assert P.control_grid("plain", grid) == (("state", 16), ("bind", 16))
-    assert P.control_grid("guided", grid) == tuple(
-        (c, L) for c in P.CONTROL_CELLS for L in P.GUIDED_LENGTHS)
-    floors = {"state": {16: 0.2, 48: 0.2}, "bind": {16: 0.2, 48: 0.2},
+    assert P.control_grid("guided", grid) == (("state", ws), ("bind", wb))
+    floors = {"state": {16: 0.2, ws: 0.2}, "bind": {16: 0.2, wb: 0.2},
               "composed": {16: 0.5, 48: 0.23}}
-    # the arm this was written against: measured at 48 only, state at floor there, retrieval at
-    # 1.000. The control is a DISJUNCTION over the components, so it is the retrieval cell that
-    # licenses reading the rest — the single-cell control called the same arm void.
-    guided = {"state": {0: {48: 0.21}, 1: {48: 0.19}},
-              "bind": {0: {48: 1.0}, 1: {48: 1.0}},
+    # the arm this was written against: measured at the work-matched lengths only, state at floor
+    # there, retrieval at 1.000. The control is a DISJUNCTION over the components, so it is the
+    # retrieval cell that licenses reading the rest — the single-cell control called the arm void.
+    guided = {"state": {0: {ws: 0.21}, 1: {ws: 0.19}},
+              "bind": {0: {wb: 1.0}, 1: {wb: 1.0}},
               "composed": {0: {48: 0.49}, 1: {48: 0.35}}}
     ctrl = P.evaluate_control("guided", guided, floors, grid, P.N_GUIDED)
-    assert ctrl["seeds"] == 2 and ctrl["cleared_on"] == "bind@48", ctrl
-    assert ctrl["per_pair"]["state@48"] == 0, ctrl
+    assert ctrl["seeds"] == 2 and ctrl["cleared_on"] == f"bind@{wb}", ctrl
+    assert ctrl["per_pair"][f"state@{ws}"] == 0, ctrl
     # the same arm read against the OLD control length is not a failure, it is unevaluable
     try:
         P.evaluate_control("plain", guided, floors, grid, P.N_EVAL)
@@ -956,11 +1010,120 @@ def test_the_matched_cost_control_is_declared_and_an_unreachable_one_is_absent()
     req = P.matched_required(matched, lengths=(48, 64, 96))
     assert req["state"] == [80, 108, 160]
     assert req["bind"] == [132], "an unreachable matched length must not be substituted"
-    # and the GUIDED read buys the control at the shortest composed length, or it could never
-    # reach V1: its own grid never covers a length longer than the composed cell's.
+    # and the GUIDED read runs each component at its WORK-MATCHED partner (its registered grid)
+    # plus the token-matched control, without which it could never reach V1: its own grid would
+    # never cover a length longer than the composed cell's.
+    ws, wb = P.WORK_MATCHED[48]["state"], P.WORK_MATCHED[48]["bind"]
     gg = P.guided_grid(matched, lengths=(48,))
-    assert gg["state"] == [48, 80] and gg["bind"] == [48, 132] and gg["composed"] == [48], gg
+    assert gg["state"] == sorted([ws, 80]) and gg["bind"] == sorted([wb, 132]), gg
+    assert gg["composed"] == [48], gg
     assert max(gg["composed"]) < max(gg["state"]), "the control has to be the LONGER component"
+    assert min(gg["state"]) < min(gg["composed"]), "the work-matched partner is the SHORTER one"
+
+
+def test_the_two_pairings_answer_different_questions_and_both_are_registered():
+    """TOKEN-matching sets the multiplier to 1.00 by construction — that is what makes it a
+    control. WORK-matching leaves whatever the composed cell's extra structure costs, and that is
+    the number the depth-matched comparison is against. Reading the components at the composed
+    cell's own length reports a third number and is the one that hid the confound."""
+    P = _protocol()
+    assert P.PAIRINGS == ("work", "tokens")
+    assert P.REGISTERED_PAIRING == "work" and P.MATCHED_PAIRING == "tokens"
+    for L in P.LOCAL_LENGTHS:
+        assert P.WORK_MATCHED[L]["state"] < L < P.TOKEN_MATCHED[L]["state"], L
+    for cell in ("state", "bind"):
+        assert P.registered_lengths(cell) == tuple(
+            sorted({P.WORK_MATCHED[L][cell] for L in P.LOCAL_LENGTHS}))
+        assert set(P.registered_lengths(cell)) <= set(
+            TK.CANONICAL[P.LOCAL_CELLS[cell]].eval_lengths), cell
+    assert P.registered_lengths("composed") == P.LOCAL_LENGTHS
+    # the state component's grid also carries rungs ABOVE its work-matched ones — it is the leg
+    # with a depth axis — and those are reported, not required: requiring a ladder built to span
+    # the component's range would make V4 the standing verdict.
+    for cell in ("state", "bind"):
+        assert set(P.registered_lengths(cell)) <= set(P.PROFILE_LENGTHS[cell]), cell
+        assert tuple(P.PROFILE_LENGTHS[cell]) == TK.CANONICAL[P.LOCAL_CELLS[cell]].eval_lengths
+    assert len(P.PROFILE_LENGTHS["state"]) > len(P.registered_lengths("state"))
+    # the stored record may predate the work pairing; a flat field is the TOKEN pairing and is
+    # labelled as that rather than left unnamed
+    flat = {"48": {"state": {"L": 80}}}
+    assert P.as_pairings(flat) == {"tokens": {48: {"state": {"L": 80}}}}
+    assert P.as_pairings({"work": {}, "tokens": {}}) == {"work": {}, "tokens": {}}
+
+
+def test_the_retrieval_component_is_a_gate_at_every_setting_its_spec_can_take():
+    """WHY IT IS REGISTERED AS A GATE AND NOT AS A DIFFICULTY AXIS. Its own algorithm chains ONE
+    hop and holds ONE carrier plus a scratch register at every k, m and write density, and every
+    admitted row is a guess, so the floor is informed chance on the 'chance' basis everywhere.
+    What the knobs move is the answer space and the scan the sampler's window forces — recall
+    difficulty — and the from-scratch arm reads the cell 1.000 at every length to L = 132."""
+    seen = set()
+    for k in (6, 8, 12, 16):
+        for m in (2, 3, 4, 6, 8, 12, 16):
+            if m > k:
+                continue
+            for L in (16, 48, 96, 171):
+                assert s5_bind_v3_task_depth(k, m, 0, L, True, "bind") == S5_BIND_V3_MAX_DEPTH
+                assert s5_bind_v3_task_cost(k, m, 0, L, True, "bind")[0] == 2
+                assert s5_bind_v3_floor_basis(k, m, 0, L, True, "bind") == "chance"
+                seen.add((k, m, L))
+    assert len(seen) == 88, len(seen)
+    # and the contrast: the STATE component's own algorithm chains the whole carrier walk, so the
+    # same knobs DO move its depth — that is what makes it the leg with a range to register.
+    assert s5_bind_v3_task_depth(6, 6, 17, 0, True, "state") == 6
+    assert s5_bind_v3_task_depth(6, 6, 128, 0, True, "state") == 43
+
+
+def test_no_retrieval_query_arm_is_registrable_under_this_samplers_window():
+    """WHY THE COMPOSED QUERY IS A STATE QUERY, measured rather than argued.
+
+    The bind query does need both maps: read the SAME composed stream with a bind query and both
+    one-structure replays — P carried live against the stated holder map, and its mirror — fall to
+    informed chance by the deepest registered length, as they do on the state query at every
+    length (the B-only read decays with L: 0.370 / 0.297 / 0.257 / 0.203 at k=6/L=48/64/80/96 and
+    0.303 / 0.170 / 0.103 at k=12/L=128/192/256). What disqualifies the arm is the TAIL. The
+    sampler pins the queried object's resolving write into [0.1L, 0.75L], and that pin is what
+    PROVES the retrieval component's floor; under it no event past 0.75L can move a bind answer,
+    so a solver holding both maps and replaying only a prefix of the stream is exact. The state
+    query's own gate puts the queried agent's last move inside the final 10%, so the same
+    truncation is at chance there.
+
+    A floor-proved retrieval component needs the resolving write far from the end; a query that
+    reads the whole stream needs it near the end. One sampler cannot do both.
+    """
+    for name in COMPOSED:
+        spec = TK.CANONICAL[name]
+        chance = 1.0 / (spec.k - 1)
+        L = spec.eval_lengths[-1]
+        bindq = replace(spec, query_arm="bind", stream_name=f"{spec.stream_name}_bindq_probe")
+        state_ex = TK.generate(spec, "test", n=150, length=L)
+        bind_ex = TK.generate(bindq, "test", n=150, length=L)
+        # both maps are needed on BOTH queries at the deepest registered length
+        for ex, arm in ((state_ex, "state"), (bind_ex, "bind")):
+            assert all(C.read(e.prompt)["query"][0] == arm for e in ex), (name, arm)
+            for mode in ("P_live", "B_live"):
+                hit = sum(int(C.answer_of(C.read(e.prompt),
+                                          C.replay(C.read(e.prompt), mode=mode)) == e.answer)
+                          for e in ex)
+                assert hit / len(ex) <= 1.6 * chance, f"{name}/{arm}: {mode} {hit / len(ex):.3f}"
+
+        def prefix(ex, f):
+            hit = 0
+            for e in ex:
+                rec = C.read(e.prompt)
+                n = len(rec["events"])
+                hit += int(C.answer_of(rec, C.replay(rec, drop=(int(round(f * n)), n)))
+                           == e.answer)
+            return hit / len(ex)
+
+        # ... and only the STATE query needs the tail
+        assert prefix(bind_ex, 0.90) >= 0.99, (name, prefix(bind_ex, 0.90))
+        assert prefix(state_ex, 0.90) <= 2.0 * chance, (name, prefix(state_ex, 0.90))
+    # so no such arm is registered: every composed cell in the registry carries a state query
+    for reg in (TK.CANONICAL, TK.RETIRED):
+        for nm, sp in reg.items():
+            if sp.source_ablation and sp.event_kinds == "both" and not sp.named_operands:
+                assert sp.query_arm == "state", f"{nm}: a bind-query composed arm is registered"
 
 
 def test_reference_rows_are_dropped_on_a_component_cell():

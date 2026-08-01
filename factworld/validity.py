@@ -1433,8 +1433,16 @@ def _v3_bind_scan(m: int, L: int) -> tuple[int, int]:
 
     The earlier ``L / (n_give / m) = m`` priced the window out of existence and understated this
     cell's own algorithm 5.7x at L = 256 — 27 steps where ``composition.cost_isolated_bind``
-    measures 152.4 on the same items. Measured means: 89.3 / 120.1 / 152.4 at k=12/L=128/192/256
-    against 89 / 121 / 153 here, and 37.1 / 44.8 / 61.1 at k=6/L=48/64/96 against 37 / 45 / 61.
+    measures 152.4 on the same items.
+
+    THE MEAN IS THE APPROXIMATION AND THE MINIMUM IS EXACT, which matters because only the
+    minimum enters admission (``s5_bind_v3_task_cost_min``); the mean is reported cost. Against
+    ``composition.cost_isolated_bind`` on the registered grid the mean is within 1% everywhere
+    except the SHALLOWEST rung at each operating point, where the ``+ m`` tail overshoots: 4.1%
+    high at k=12/L=85 and 10.7% high at k=6/L=31, against -0.9% to 0.2% at every deeper rung. The
+    tail term is the gap between consecutive writes to one object, and on a short stream the
+    query gate (two writes, the resolving one inside the window) selects objects written more
+    often than 1/m of the time.
     """
     from .tasks import s5_bind_v3_bind_window
 
@@ -1535,20 +1543,47 @@ def s5_bind_v3_row_depth(row: str, query: str = "state", length: int | None = No
                    f"classified (an unpriced row would be silently excluded)")
 
 
+def s5_bind_v3_carrier_hops(k: int, n_swap: int) -> float:
+    """The STATE leg's chain length on a stream carrying ``n_swap`` swaps: ``2 n_swap / k``.
+
+    A swap moves TWO of the k pointers, so the queried agent is touched by 2 n_swap / k of them
+    and its value is carried through that many hops. It is a property of the STREAM and not of
+    the cell's name, so it is the quantity a composed cell and a state component are comparable
+    on: the composed cell at L carries p_swap L swaps and the state component at L carries L,
+    and reading the two at the same L compares chains of different lengths.
+    """
+    return 2.0 * n_swap / max(1, k)
+
+
+def s5_bind_v3_work_match(n_swap: int, n_give: int) -> dict[str, int]:
+    """The COMPONENT lengths carrying the same amount of their own work as one composed stream.
+
+    A component's stream is all of one kind, so the state component at length ``n_swap`` contains
+    exactly the swaps the composed stream contains and the retrieval component at ``n_give``
+    exactly its gives. Both are then equal on ``s5_bind_v3_carrier_hops`` and on write count.
+
+    NO p_swap MAKES THE LENGTHS THEMSELVES MATCH. A composed stream of length L holds p L swaps
+    and (1 - p) L gives, and both are strictly under L, so pairing a composed cell with components
+    at its own L compares 1/p and 1/(1-p) times the work in the two legs whatever p is. Raising
+    p_swap changes the ratio; only this pairing removes it.
+    """
+    return {"state": int(n_swap), "bind": int(n_give)}
+
+
 def s5_bind_v3_task_depth(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
                           query: str = "state") -> int:
     """THIS CELL's own algorithm's composition depth — what the one-hop bound is a gap against.
 
     The composed cell's forward pass chains every event. The STATE component's carrier walk
-    chains the carrier's hops, and a swap moves 2 of the k agents, so that is 2 n_swap / k — 21
-    at k=12/L=128 and 43 at L=256, measured 21.3 and 42.6. The RETRIEVAL component's algorithm
-    chains ONE, which is why the bound is vacuous there and that cell's floor rests on cost.
+    chains the carrier's hops (``s5_bind_v3_carrier_hops``) — 21 at k=12/L=128 and 43 at L=256,
+    measured 21.3 and 42.6. The RETRIEVAL component's algorithm chains ONE, which is why the
+    bound is vacuous there and that cell's floor rests on cost.
     """
     if not named:
         return n_swap + n_give
     if query == "bind":
         return 1
-    return int(round(2 * n_swap / max(1, k)))
+    return int(round(s5_bind_v3_carrier_hops(k, n_swap)))
 
 
 def s5_bind_v3_row_cost(row: str, k: int, m: int, n_swap: int, n_give: int,

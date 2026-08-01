@@ -2028,6 +2028,66 @@ CANONICAL = {
     # two op classes at matched read-history load rather than between two structures at
     # different ones (factworld.composition).
     #
+    # THE COMPONENT GRIDS ARE WORK-MATCHED TO THE COMPOSED ONE. A composed stream of length L
+    # holds p_swap L swaps and (1 - p_swap) L gives, so a component read at the composed cell's
+    # own L is doing 1/p_swap (state) or 1/(1 - p_swap) (retrieval) times the work: composed@48
+    # contains 17 swaps and 31 gives against a component@48's 48 of its own kind. Each
+    # component's eval_lengths are therefore the composed cell's own event counts — (17, 23, 34)
+    # and (31, 41, 62) at k=6 against composed (48, 64, 96), (43, 64, 85) and (85, 128, 171) at
+    # k=12 against composed (128, 192, 256) — which equalises the carrier chain
+    # (validity.s5_bind_v3_carrier_hops: 5.67 hops at composed@48 and at state@17) and the write
+    # count in the leg being compared. The state component's grid also carries the rungs above
+    # its work-matched ones, because it is the leg with a depth axis at all. The TOKEN-matched
+    # pairing is kept beside this one as the matched-COST control and the two give different
+    # multipliers: at k=6/L=48 the composed cell costs 3.83x the state component's forward pass
+    # at equal WORK and 1.00x at equal TOKENS, against the 1.65x that reading both at L=48
+    # reports (scripts/protocol_s5bind_v3_three_cell_20260731.py, step_multipliers).
+    #
+    # RAISING p_swap IS NOT AN ALTERNATIVE TO THAT PAIRING, and none is registered. No p_swap
+    # makes the two legs' lengths equal — both are strictly under L — so the pairing is needed at
+    # every p_swap; what p_swap moves is the composed cell's own depth per token, and that price
+    # is measured. Over p_swap = 1/3 .. 2/3 at k=6 the operative floor does not move (1.00-1.11x
+    # informed chance at L=48 and L=96) and the CROSS/SAME class balance does not move
+    # (0.49-0.51), but the WITHIN-KIND retrieval-distance gap between the two candidate pools —
+    # what the matched draw and the write-count matching exist to close — opens from 1.3% (swap)
+    # and 12% (give) at L=96 to 35% and 62%, and the B leg thins from 6.2 to 2.8 minimum writes
+    # per object. What it buys is 126 -> 72 prompt tokens per carrier hop. Depth per token is
+    # available; matched read history is the price.
+    #
+    # THE RETRIEVAL COMPONENT IS A GATE AND NOT A GRADED CELL, at every setting its spec can
+    # take. Swept over k in {6, 8, 12, 16}, m in {2..16} and L in {16, 48, 96}: the cell's own
+    # algorithm has composition depth 1 and W = 2 live slots at EVERY point and the operative
+    # floor is informed chance at every point, on the 'chance' basis. What moves is the answer
+    # space (0.200 -> 0.067), the scan the sampler's window forces (4.2 -> 35.3 events) and the
+    # writes the queried object takes (2.3 -> 18.2) — recall difficulty, not composition depth.
+    # Below m = 4 the sampler cannot fill the window (m = 2 fails at L = 48, m = 3 at L = 96) and
+    # m = 4 / L = 96 costs 224 stream restarts per item. The from-scratch arm reads the cell
+    # 1.000 at every length to L = 132 and on every seed, so it is registered as the gate the
+    # protocol's positive control uses and never as a difficulty axis.
+    #
+    # THE STATE QUERY IS THE ONLY ONE THAT REQUIRES BOTH STRUCTURES OVER THE WHOLE STREAM, and
+    # the reason is a conflict inside the sampler rather than a preference. NO RETRIEVAL-QUERY
+    # COMPOSED ARM IS REGISTERED; what was measured is below.
+    #
+    # The bind query does need both maps. On the composed stream read with a bind query BOTH
+    # one-structure replays fall to informed chance — a P-only solver reads 0.217 and a B-only
+    # one 0.203 against 0.200 at k=6/L=96, and 0.107 / 0.103 against 0.0909 at k=12/L=256 — just
+    # as they do on the state query (0.243/0.190/0.210 and 0.173/0.157/0.187 at k=6/L=48/64/96).
+    # The B-only read decays with length (0.370/0.297/0.257/0.203 at k=6/L=48/64/80/96 and
+    # 0.303/0.170/0.103 at k=12/L=128/192/256) and ``one_structure_B`` is ADMITTED on a bind
+    # query — it holds m + 1 slots there, not k + m + 1 — so it would set that cell's floor.
+    #
+    # WHAT DISQUALIFIES IT IS THE TAIL. The queried object's resolving write is pinned into
+    # [0.1L, 0.75L], and that pin is exactly what PROVES the retrieval component's floor: no
+    # bounded backward scan reaches it. On a bind query the same pin means no event after 0.75L
+    # can move the answer, so a solver carrying both maps and replaying only the first 90% of the
+    # stream scores 1.000 and one replaying the first 75% scores 0.927 (k=6) / 0.958 (k=12),
+    # against 0.097 and 0.143 for the state query on the same cell — the state query's own gate
+    # puts the queried agent's last move inside the final 10%. A floor-PROVED retrieval component
+    # needs the resolving write far from the end; a query that depends on the whole stream needs
+    # it near the end. One sampler cannot do both, and scripts/validate_suite.py flags the
+    # bind-query arm on exactly that row (prefix_90).
+    #
     # Operating point k = 12, m = 12: the answer space is the 12 agents, informed chance
     # 1/(k-1) = 0.0909. Floors are recomputed per cell by scripts/validate_suite.py from
     # factworld.validity.s5_bind_v3_floors, under the one-structure class rule.
@@ -2043,14 +2103,23 @@ CANONICAL = {
     #   s5_bind_v3                256       1.09x        uniform_anti_surface, the gate's price
     #   s5_bind_local_v3           96       1.05x        one_structure_P and last_swap_ref, the
     #                                                    admitted one-structure and surface rows
-    #   s5_bind_v3_state          256       1.00x        informed chance: last_write_1hop, the
-    #   s5_bind_local_v3_state     96       1.02x        carrier walk cut after one hop, reads
-    #                                                    0.98x and 1.03x, against the state-free
-    #                                                    surface read's 0.97x / 0.75x
-    #   s5_bind_v3_bind           256       1.00x        informed chance, PROVED: the sampler
-    #   s5_bind_local_v3_bind      96       1.00x        pins the queried object's resolving
+    #   s5_bind_v3_state           85       1.04x        informed chance: last_write_1hop, the
+    #   s5_bind_local_v3_state    128       1.00x        carrier walk cut after one hop, against
+    #                                                    the state-free surface read. The k=6
+    #                                                    grid carries the rungs above its
+    #                                                    work-matched ones (48, 80, 128 = 16.0,
+    #                                                    26.7, 42.7 hops) because that is the
+    #                                                    leg with a depth axis; the k=12 grid is
+    #                                                    a gate and stops at the pairing
+    #   s5_bind_v3_bind           171       1.00x        informed chance, PROVED: the sampler
+    #   s5_bind_local_v3_bind      62       1.00x        pins the queried object's resolving
     #                                                    write out of reach of every admitted
     #                                                    budget, and each reads exactly 0.000
+    #
+    # The state component's own grid is cut at L = 12 rather than lower: its floor is 1.26x at
+    # L = 8 (2.7 hops), where a one-hop read still has traction, and 1.00-1.09x from L = 12
+    # (4.0 hops) to L = 256 (85.3). Its cost is flat over that whole range — 1.00-1.01 stream
+    # restarts per item — so the grid is cut by the floor and not by the sampler.
     #
     # THE FITTED 25-FEATURE SURFACE RANKER IS NOT IN THOSE NUMBERS. It is measured beside them —
     # 1.04x at k=12/L=256 and 1.24x at k=6/L=96, on 4000 fit / 4000 held-out items, with a
@@ -2075,10 +2144,16 @@ CANONICAL = {
     # reaches the sampler's window. Both are excluded by the component rule — the first on depth,
     # the second on the algorithm's per-item minimum cost — and neither is a floor.
     #
-    # The k=12 grid starts at 128 and the k=6 grid at 48 because below that a short stream
-    # against k gives the queried agent too few carrier events for the second leg to matter. The
-    # step multiplier holds flat across the grid (1.92-2.39 under the stated convention), so the
-    # cut is a floor cut and not a cost cut.
+    # The k=12 COMPOSED grid starts at 128 and the k=6 one at 48 because below that a short
+    # stream against k gives the queried agent too few carrier events for the second leg to
+    # matter. The step multiplier holds flat across each grid under every convention, so the cut
+    # is a floor cut and not a cost cut. On forward-pass tokens against the state component it is
+    # 1.65/1.65/1.65 reading both cells at the composed cell's own length, 3.83/3.96/4.17 at
+    # equal WORK and 1.04/1.02/1.01 at equal tokens (k=6, L=48/64/96); against the retrieval
+    # component 2.46/2.51/2.54, 3.48/3.63/3.73 and 1.01/—/— . At k=12 the same three columns are
+    # 1.65/1.64/1.64 and 4.21/4.41/4.54 against the state component and 2.51/2.54/2.55 and
+    # 3.55/3.64/3.70 against the retrieval one. Quoting one of the three as "the step multiplier"
+    # is what hides the pairing it was computed under.
     #
     # kind=experimental until the calibration lands, so none of the six is in REPORTED.
     # q_no_surface IS SET AT k=12 AND NOT AT k=6, and the reason is measured on both. The gate
@@ -2099,12 +2174,12 @@ CANONICAL = {
                                   source_ablation=True, k=12, n_objects=12, n_objects_active=12,
                                   event_kinds="swap", named_operands=True,
                                   query_arm="state", stream_name="s5_bind_v3_state", q_tail=0.1,
-                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+                                  train_lengths=(16, 32), eval_lengths=(43, 64, 85)),
     "s5_bind_v3_bind":  TaskSpec("s5_bind_v3_bind", "s5_bind", version="3.0", kind="experimental",
                                   source_ablation=True, k=12, n_objects=12, n_objects_active=12,
                                   event_kinds="give", named_operands=True,
                                   query_arm="bind", stream_name="s5_bind_v3_bind",
-                                  train_lengths=(16, 32), eval_lengths=(128, 192, 256)),
+                                  train_lengths=(16, 32), eval_lengths=(85, 128, 171)),
     # The from-scratch operating point: k=6, m=6, shorter streams, and per-EVENT state
     # checkpoints (event_trace — the whole of P then B after every event, the supervision
     # density that formed s5 locally). A streaming model has no scratchpad, so its cost model
@@ -2121,13 +2196,14 @@ CANONICAL = {
                                   event_kinds="swap", named_operands=True, event_trace=True,
                                   query_arm="state", stream_name="s5_bind_local_v3_state",
                                   q_tail=0.1,
-                                  train_lengths=(16, 32), eval_lengths=(48, 64, 96)),
+                                  train_lengths=(16, 32),
+                                  eval_lengths=(17, 23, 34, 48, 80, 128)),
     "s5_bind_local_v3_bind": TaskSpec("s5_bind_local_v3_bind", "s5_bind", version="3.0",
                                   kind="experimental",
                                   source_ablation=True, k=6, n_objects=6, n_objects_active=6,
                                   event_kinds="give", named_operands=True, event_trace=True,
                                   query_arm="bind", stream_name="s5_bind_local_v3_bind",
-                                  train_lengths=(16, 32), eval_lengths=(48, 64, 96)),
+                                  train_lengths=(16, 32), eval_lengths=(31, 41, 62)),
 }
 
 # the scored benchmark set (controls + experimental tasks excluded from headline reporting)

@@ -111,6 +111,8 @@ seeds clearing: {'state': {48: 2}, 'bind': {48: 3}, 'composed': {48: 2}}; positi
 
 seeds clearing: {'state': {48: 0, 64: 0, 96: 0}, 'bind': {48: 3, 64: 3, 96: 3}, 'composed': {48: 0, 64: 0, 96: 0}}; positive control (some component clears on this read's grid) {'state@16': 0, 'bind@16': 3} of 3 seeds, required ['state@16', 'bind@16']; matched-cost control: {'state': False, 'bind': True} (measured: {'state': True, 'bind': True}); lengths read: [48, 64, 96]
 
+Both verdicts read each component at the composed cell's own length, which carries three times the state work and 1.5 times the retrieval work of the cell it is compared against: composed@48 contains 17 swaps and 31 gives against a component@48's 48 of its own kind. The WORK-MATCHED pairing that removes that — state@17/23/34 and bind@31/41/62 against composed@48/64/96 — is registered in `scripts/protocol_s5bind_v3_three_cell_20260731.py` and was not run here.
+
 
 # Post-hoc (not pre-registered)
 
@@ -126,6 +128,6 @@ The composed cell clears on EXACTLY the seeds where the state component clears, 
 
 ## What the checkpoint diagnostic says
 
-Each checkpoint is the whole of P and then the whole of B, k + m = 12 slots per event, and each COMPONENT cell holds one of the two maps still by construction — the state cell has no gives, so its B never moves, and the retrieval cell has no swaps, so its P never moves. A model that emits the frozen half and guesses the moving half therefore scores 0.5 + 0.5/6 = 0.583, which is where every component cell sits (0.573-0.611). On the components the emitted trace is at chance on the half that moves while the answer is 0.99-1.00, so it is not the trace that carries those answers; on the composed cell, where neither half is frozen, the trace is essentially exact (0.932-1.000). The diagnostic is not a partial trace and no verdict reads it.
+Each checkpoint is the whole of P and then the whole of B, k + m = 12 slots per event. On a COMPONENT cell one of those halves never moves — the state cell has no gives, the retrieval cell no swaps — and it is also never STATED: the state cell's prompt contains 0 `belongs to` lines and the retrieval cell's 0 `points to` lines, and that constant half takes 38 distinct values across 40 items. It is unknowable from the prompt, so a model that has the queried map exactly and guesses the other half scores (6 x 1.00 + 6 x 0.167) / 12 = 0.583 — which is where every component cell sits (0.573-0.611). The per-slot figure on those cells is therefore ~1.00 on the map the answer comes out of plus ~0.17 on one that cannot be read, so the trace DOES carry those answers; on the composed cell, where both maps are stated and both move, it is 0.932-1.000. No verdict reads it.
 
 _A **bold** cell clears its own operative floor under the pre-registered rule. Floors are recomputed from that cell's own items: registry rows plus the admitted swept family. The fitted surface ranker is measured beside them (fit 2x2000 / scored 4000 disjoint) and is NOT in any floor — no implementation of it achieves a price the class rule admits. The composed cell's cost multiplier over each component is reported in the pre-registration record in both cost models; the matched-cost lengths in the tables above are the FORWARD-PASS match, which is this regime's cost._

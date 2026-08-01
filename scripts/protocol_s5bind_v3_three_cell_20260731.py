@@ -9,6 +9,20 @@ WHAT THIS DECIDES
     regime, is the only thing the instrument is for: do the two components COMPOSE — is the
     composed cell harder than its components by more than the extra work it makes a solver do?
 
+    "The extra work it makes a solver do" is what the PAIRING fixes, and it is the reason the
+    three cells are not simply read at one length. A composed stream of length L holds p_swap L
+    swaps and (1 - p_swap) L gives, so a component read at the composed cell's own L is doing
+    1/p_swap or 1/(1 - p_swap) times the work: composed@48 contains 17 swaps and 31 gives against
+    a component@48's 48. Each component is therefore read at its WORK-MATCHED length, and also at
+    its TOKEN-MATCHED one as the cost control (see PAIRINGS).
+
+    THE COMPOSED QUERY IS A STATE QUERY ON EVERY ITEM, so retrieval enters it as an operand
+    resolver and never as the answer. That asymmetry is not fixable under this sampler and no
+    retrieval-query arm is registered: the bind query does need both maps (both one-structure
+    replays fall to informed chance on it) but not the stream's TAIL, because the pin that proves
+    the retrieval component's floor puts the resolving write at or below 0.75L. The measurement
+    and the conflict are written out where the cells are declared, below.
+
     This module is the reading rule, written before any solver number exists. It is imported by
     the runners so the verdict is applied mechanically rather than argued after the fact:
 
@@ -47,28 +61,33 @@ THE CELLS, AND WHY EACH IS READ AGAINST ITS OWN FLOOR
     Informed chance is 1/(k-1) — the stated initial answer is never the gold one — so 0.200 at
     the k=6 local operating point. Ratios below are to that.
 
-THE STEP MULTIPLIER, IN BOTH COST MODELS, because they disagree and the disagreement matters
+THE STEP MULTIPLIER IS THREE NUMBERS, NOT ONE, and which one is quoted depends on the PAIRING
     CHARGED STEPS (factworld.composition's convention, W1-W5: the stated fact block is
-    content-addressed and re-readable at one step, the event stream is not addressable) is what
-    a solver with a scratchpad pays. The composed cell costs 1.82 / 1.81 / 1.78 times the state
-    component and 5.6 / 6.1 / 6.6 times the retrieval component at L = 48 / 64 / 96.
+    content-addressed and re-readable at one step, the event stream is not addressable) is what a
+    solver with a scratchpad pays; FORWARD-PASS TOKENS is what a streaming model with no
+    scratchpad pays, and it is the cost model of the from-scratch arm. The two disagree most on
+    the retrieval component, whose ALGORITHM is a short scan to a pinned window while its PROMPT
+    is the whole stream. On tokens, at k=6 and L = 48 / 64 / 96:
 
-    FORWARD-PASS TOKENS is what a streaming model with no scratchpad pays, and it is the cost
-    model of the from-scratch arm: 1.64 / 1.66 / 1.65 against the state component and 2.45 /
-    2.51 / 2.54 against the retrieval component. The two disagree most on the retrieval
-    component, whose ALGORITHM is a short scan to a pinned window while its PROMPT is the whole
-    stream. Reporting one number and calling it "the step multiplier" would hide that, so both
-    are registered and the control is run in the cost model of the regime being measured.
+                              vs state component      vs retrieval component
+      equal length            1.65 / 1.65 / 1.65      2.46 / 2.51 / 2.54
+      equal WORK              3.83 / 3.96 / 4.17      3.48 / 3.63 / 3.73
+      equal tokens            1.04 / 1.02 / 1.01      1.01 /  —  /  —
+
+    On charged steps the same three rows are 1.82/1.81/1.78, 4.95/4.89/4.98 and 1.10/1.08/1.07
+    against the state component, and 5.62/6.09/6.61, 7.17/7.83/8.96 and 2.63/—/— against the
+    retrieval one. The EQUAL-LENGTH row is the one the previous run reported, and it is the row
+    that compares a composed cell holding 17 swaps against a state cell holding 48.
 
     The control that separates "harder because composed" from "harder because longer" is the
     MATCHED-COST read: each component is also evaluated at the length whose cost equals the
-    composed cell's at L, in that regime's cost model. On the retrieval side that control mostly
-    does not exist, and the reason is the sampler rather than a choice: the window it pins the
-    resolving write into gets exponentially harder to satisfy as the stream grows (3.1 ms per
-    item at L=96, 167 ms at L=172, no admissible item at all at L=176), so the retrieval
-    component cannot be run long enough to cost what the composed cell costs at L=64 or L=96.
-    The control is registered as ABSENT there, not approximated by a shorter length that does
-    not match the cost.
+    composed cell's at L, in that regime's cost model — the equal-tokens row, 1.00 by
+    construction. On the retrieval side that control mostly does not exist, and the reason is the
+    sampler rather than a choice: the window it pins the resolving write into gets exponentially
+    harder to satisfy as the stream grows (3.1 ms per item at L=96, 167 ms at L=172, no
+    admissible item at all at L=176), so the retrieval component cannot be run long enough to
+    cost what the composed cell costs at L=64 or L=96. The control is registered as ABSENT there,
+    not approximated by a shorter length that does not match the cost.
 
 THE TWO READS, and both are registered because they are two different regimes
     PLAIN (no scratchpad). The answer is read off the plain prompt in one token. A streaming
@@ -199,10 +218,100 @@ LOCAL_CELLS = {"state": "s5_bind_local_v3_state",
 FRONTIER_CELLS = {"state": "s5_bind_v3_state",
                   "bind": "s5_bind_v3_bind",
                   "composed": "s5_bind_v3"}
-LOCAL_LENGTHS = (48, 64, 96)              # the k=6 grid the specs register
+
+# NO RETRIEVAL-QUERY COMPOSED ARM IS REGISTERED, and the reason is measured. The three cells put
+# a STATE query on the composed stream, so retrieval enters as an operand resolver and never as
+# the answer. The same stream read with a BIND query does need both maps — both one-structure
+# replays fall to informed chance on it, 0.217 and 0.203 against 0.200 at k=6/L=96 — but its
+# answer does not depend on the stream's TAIL: the sampler pins the queried object's resolving
+# write into [0.1L, 0.75L], which is the pin that PROVES the retrieval component's floor, and
+# under it no event past 0.75L can move a bind answer. A solver carrying both maps and replaying
+# only the first 90% of the stream scores 1.000 on that arm and 0.927 replaying the first 75%,
+# against 0.097 and 0.143 on the state query, whose own gate puts the queried agent's last move
+# inside the final 10%. A floor-proved retrieval component needs the resolving write far from the
+# end; a query that reads the whole stream needs it near the end. ``scripts/validate_suite.py``
+# flags a registered bind-query arm on exactly that row.
+LOCAL_LENGTHS = (48, 64, 96)              # the k=6 grid the COMPOSED cell registers; each
+                                          # component's own grid is DERIVED from it (see PAIRINGS)
 CONTROL_LENGTH = 16                       # the in-distribution positive control (state cell)
 TRAIN_LENGTHS = (16, 32, 48, 64, 96)      # eval grid is IN distribution: this run is about
                                           # composition, not length extrapolation
+
+# THE TWO PAIRINGS, and neither is optional, because they answer different questions.
+#
+#   work    each component is read at the length that carries the SAME AMOUNT OF ITS OWN WORK as
+#           the composed stream: the composed cell at L holds p_swap L swaps and (1 - p_swap) L
+#           gives, so the state component's partner is that swap count and the retrieval
+#           component's is that give count (validity.s5_bind_v3_work_match). This is each
+#           component's REGISTERED grid — the lengths its FORMS verdict is read at — because
+#           reading a component at the composed cell's own L compares 1/p_swap times the state
+#           work and 1/(1 - p_swap) times the retrieval work, and a shallower cell scoring like a
+#           deeper one is equally consistent with zero composition cost and with a composition
+#           cost worth the depth difference.
+#   tokens  each component is read at the length whose FORWARD PASS costs what the composed cell's
+#           costs. This is the MATCHED-COST control — "harder because composed" against "harder
+#           because longer" — and it is a different question: its multiplier is 1.00 by
+#           construction, where the work pairing's is whatever the composed cell's extra structure
+#           costs.
+#
+# The step multiplier is not one number and is registered under both conventions plus the
+# equal-length one the tables print (``step_multipliers``).
+PAIRINGS = ("work", "tokens")
+REGISTERED_PAIRING = "work"               # which pairing sets each component's FORMS grid
+MATCHED_PAIRING = "tokens"                # which pairing is the matched-COST control
+
+# The two pairings AS REGISTERED, at the k=6 operating point. Both are measured — the work
+# pairing off the composed streams' own event counts, the token pairing by solving each
+# component's affine token cost for the composed cell's — and ``register()`` re-measures both and
+# RAISES on any disagreement, so a sampler change cannot silently move the comparison.
+#
+# WORK_PROBE_N IS PART OF THE REGISTRATION. The event count is a sample mean over a deterministic
+# stream, and the sampler's query gate biases it above p_swap L (the state gate needs the queried
+# agent to have moved at least twice and recently, which selects swap-heavier streams): the
+# composed cell at k=6/L=48 carries 17.0 swaps against 16.0 from p_swap alone. Its standard error
+# at n = 200 is a third of an event, so rounding it is ambiguous at a different n — k=12/L=128
+# rounds to 43 at n = 200 and 42 at n = 120. Fixing the probe makes the registered partner a
+# reproducible number rather than a draw.
+WORK_PROBE_N = 200
+WORK_MATCHED = {48: {"state": 17, "bind": 31},
+                64: {"state": 23, "bind": 41},
+                96: {"state": 34, "bind": 62}}
+TOKEN_MATCHED = {48: {"state": 80, "bind": 132},
+                 64: {"state": 108, "bind": None},
+                 96: {"state": 160, "bind": None}}
+
+
+# THE STATE COMPONENT'S DEPTH LADDER. It is the leg with a depth axis at all — the retrieval
+# component's own algorithm chains ONE hop at every (k, m, density) its spec can take — so its
+# grid carries rungs ABOVE its work-matched ones and the run reports the profile across them.
+# Carrier hops at k=6 are L/3: 5.7 / 7.7 / 11.3 / 16.0 / 26.7 / 42.7. The ladder is cut at the
+# bottom by the FLOOR and not by the sampler: 1.26x informed chance at L=8 (2.7 hops, where a
+# one-hop read still has traction) against 1.00-1.09x from L=12 to L=256, while the sampler costs
+# 1.00-1.01 stream restarts per item over that whole range. FORMS is still read at the
+# work-matched subset only — a ladder built to span a component's range necessarily contains
+# rungs it is not required to clear, and requiring them would make V4 the standing verdict.
+PROFILE_LENGTHS = {"state": (17, 23, 34, 48, 80, 128), "bind": (31, 41, 62)}
+
+
+def registered_lengths(cell, lengths=LOCAL_LENGTHS, work=None):
+    """The lengths a cell's own FORMS verdict is read at.
+
+    The composed cell's are ``lengths``; each component's are the WORK-MATCHED partners of those,
+    which is the whole point of the pairing — a component judged at the composed cell's L is
+    judged on 1/p_swap (state) or 1/(1 - p_swap) (retrieval) times the work the composed cell
+    actually makes it do.
+    """
+    work = WORK_MATCHED if work is None else work
+    if cell == "composed":
+        return tuple(lengths)
+    return tuple(sorted({work[L][cell] for L in lengths if work.get(L, {}).get(cell)}))
+
+
+def matched_lengths_for(cell, lengths=LOCAL_LENGTHS, token=None):
+    """The MATCHED-COST control lengths for one component: the token pairing, unreachable ones
+    dropped rather than replaced by a shorter cell that does not match the cost."""
+    token = TOKEN_MATCHED if token is None else token
+    return tuple(sorted({token[L][cell] for L in lengths if token.get(L, {}).get(cell)}))
 
 # The retrieval component's sampler at k=6. The window it pins the resolving write into gets
 # harder to satisfy as the stream grows, and the cost is measured, not assumed: 3.1 / 18.6 /
@@ -234,7 +343,16 @@ SEEDS_CLEAR = 2
 
 # ---- the frontier scout --------------------------------------------------------------------
 SCOUT_COMPOSED_LENGTHS = (128, 256)       # the composed cell carries the length axis
-SCOUT_COMPONENT_LENGTHS = (256,)          # a component that holds at 256 holds at 128
+# The k=12 work pairing, measured the same way as WORK_MATCHED: composed@128/192/256 carry
+# 43/64/85 swaps and 85/128/171 gives. The scout gates on the components at the partners of its
+# DEEPEST composed length, because a component that holds the work the composed cell makes it do
+# at 256 holds the smaller amount it makes it do at 128 — the old gate set the bar at state@256
+# (42.7 carrier hops) for a composed cell that never has to clear more than 14.2.
+FRONTIER_WORK_MATCHED = {128: {"state": 43, "bind": 85},
+                         192: {"state": 64, "bind": 128},
+                         256: {"state": 85, "bind": 171}}
+SCOUT_COMPONENT_LENGTHS = {c: (FRONTIER_WORK_MATCHED[max(SCOUT_COMPOSED_LENGTHS)][c],)
+                           for c in ("state", "bind")}
 SCOUT_N = 40
 SCOUT_MAX_NEW_TOKENS = 8192               # the protocol budget for every reasoning-on cell
 # three models spanning the roster's measured range, not three near neighbours: the top of the
@@ -316,6 +434,111 @@ def matched_lengths(tok, cells=LOCAL_CELLS, lengths=LOCAL_LENGTHS, axis=MATCHED_
                         "cost": None if best is None else best[1],
                         "target": target, "reachable": bool(reachable),
                         "cap": cap, "solved_candidate": cand}
+        out[L] = row
+    return out
+
+
+def work_matched_lengths(tok, cells=LOCAL_CELLS, lengths=LOCAL_LENGTHS, n_probe=WORK_PROBE_N,
+                         n_needed=N_EVAL + N_FIT + N_SCORE):
+    """For each composed length, the component length carrying the SAME AMOUNT OF ITS OWN WORK.
+
+    The composed stream at L is counted, not modelled: it holds ``n_swap`` swaps and ``n_give``
+    gives, and the component streams are all of one kind, so the partners are those two counts
+    (validity.s5_bind_v3_work_match). Both cells then have the same carrier chain
+    (``validity.s5_bind_v3_carrier_hops``) and the same write count in the leg being compared.
+
+    The row shape matches ``matched_lengths`` so the two pairings can be read side by side, and
+    feasibility is checked at the pool size the floor will ask for, for the same reason.
+    """
+    comp = TK.CANONICAL[cells["composed"]]
+    out = {}
+    for L in lengths:
+        ex = TK.generate(comp, "test", n=n_probe, length=L)
+        ns, ng = V.s5_bind_v3_shape(ex)
+        s, t = cell_cost(comp, L, tok, n_probe)
+        row = {"composed_L": L, "composed_steps": s, "composed_tokens": t, "axis": "work",
+               "composed_n_swap": ns, "composed_n_give": ng,
+               "composed_carrier_hops": round(V.s5_bind_v3_carrier_hops(comp.k, ns), 2),
+               "target_cost": None}
+        want = V.s5_bind_v3_work_match(ns, ng)
+        for key in ("state", "bind"):
+            spec = TK.CANONICAL[cells[key]]
+            cand = want[key]
+            reachable, cs, ct, hops = False, None, None, None
+            try:
+                TK.generate(spec, "test", n=n_needed, length=cand)
+                cs, ct = cell_cost(spec, cand, tok, 24)
+                cex = TK.generate(spec, "test", n=24, length=cand)
+                cns, _cng = V.s5_bind_v3_shape(cex)
+                hops = round(V.s5_bind_v3_carrier_hops(spec.k, cns), 2)
+                reachable = True
+            except Exception:            # the sampler cannot fill the pool at the matched length
+                pass
+            row[key] = {"L": cand if reachable else None, "cost": ct, "steps": cs,
+                        "carrier_hops": hops, "target": cand, "reachable": bool(reachable),
+                        "work": "swaps" if key == "state" else "gives",
+                        "work_count": ns if key == "state" else ng}
+        out[L] = row
+    return out
+
+
+def pairings(tok, cells=LOCAL_CELLS, lengths=LOCAL_LENGTHS, which=PAIRINGS):
+    """Both registered pairings, keyed by name — ``{"work": ..., "tokens": ...}``."""
+    out = {}
+    for name in which:
+        out[name] = (work_matched_lengths(tok, cells, lengths) if name == "work"
+                     else matched_lengths(tok, cells, lengths, axis=name))
+    return out
+
+
+def as_pairings(ml):
+    """Read a stored ``matched_lengths`` field under either shape.
+
+    Records written before the work pairing existed hold one flat ``{composed_L: row}`` dict; that
+    is the TOKEN pairing and is labelled as such rather than left unnamed.
+    """
+    if not ml:
+        return {}
+    if all(k in PAIRINGS for k in ml):
+        return ml
+    return {MATCHED_PAIRING: {int(k): v for k, v in ml.items()}}
+
+
+def step_multipliers(tok, paired, cells=LOCAL_CELLS, lengths=LOCAL_LENGTHS):
+    """The composed cell's cost over each component's, under every convention that is registered.
+
+    THREE numbers per (component, length), because they answer three questions and quoting one
+    as "the step multiplier" hides the other two:
+
+      equal_length  the component read at the composed cell's own L — what the flagship tables
+                    print, and the number that is confounded, since the two cells then carry
+                    different amounts of the component's work;
+      work          the component read at its WORK-MATCHED length — the extra cost the composed
+                    cell's structure imposes at equal component work, which is the multiplier the
+                    depth-matched comparison is against;
+      tokens        the component read at its TOKEN-MATCHED length — 1.00 by construction, which
+                    is what makes that pairing a control rather than a comparison.
+
+    Each in both cost models: ``steps`` is the charged-step convention a scratchpad solver pays,
+    ``tokens`` the forward pass a streaming model pays.
+    """
+    out = {}
+    for L in lengths:
+        s, t = cell_cost(TK.CANONICAL[cells["composed"]], L, tok)
+        row = {"composed_L": L, "composed_steps": s, "composed_tokens": t}
+        for key in ("state", "bind"):
+            spec = TK.CANONICAL[cells[key]]
+            row[key] = {}
+            for name, cl in (("equal_length", L),
+                             ("work", paired.get("work", {}).get(L, {}).get(key, {}).get("L")),
+                             ("tokens", paired.get("tokens", {}).get(L, {}).get(key, {})
+                              .get("L"))):
+                if cl is None:
+                    row[key][name] = {"L": None, "steps": None, "tokens": None}
+                    continue
+                cs, ct = cell_cost(spec, cl, tok, 24)
+                row[key][name] = {"L": cl, "steps": round(s / cs, 2),
+                                  "tokens": round(t / ct, 2)}
         out[L] = row
     return out
 
@@ -415,16 +638,24 @@ class ControlNotEvaluable(RuntimeError):
 CONTROL_CELLS = ("state", "bind")     # the control is a DISJUNCTION over the components
 
 
-def control_grid(read, grid, guided_lengths=GUIDED_LENGTHS, control_length=CONTROL_LENGTH):
+def control_grid(read, grid, guided_lengths=GUIDED_LENGTHS, control_length=CONTROL_LENGTH,
+                 work=None):
     """The (cell, length) pairs the positive control REQUIRES on THIS read.
 
     A read is only ever controlled on lengths it covers: the PLAIN read runs the whole grid and
-    is controlled at the shortest trained length, the GUIDED read runs GUIDED_LENGTHS and is
-    controlled there. ``grid`` is {cell: lengths this run evaluated}, so a pair that the run's
-    own grid does not contain is not required and is not silently treated as a failure either.
+    is controlled at the shortest trained length, the GUIDED read runs the composed cell's
+    ``guided_lengths`` and each component at ITS WORK-MATCHED PARTNER of those — which is where
+    the guided read evaluates that component at all, since the components' registered grid is the
+    work pairing. ``grid`` is {cell: lengths this run evaluated}, so a pair the run's own grid
+    does not contain is not required and is not silently treated as a failure either.
     """
-    lengths = tuple(guided_lengths) if read == "guided" else (control_length,)
-    return tuple((c, L) for c in CONTROL_CELLS for L in lengths
+    work = WORK_MATCHED if work is None else work
+    if read == "guided":
+        want = {c: tuple(work[L][c] for L in guided_lengths if work.get(L, {}).get(c))
+                for c in CONTROL_CELLS}
+    else:
+        want = {c: (control_length,) for c in CONTROL_CELLS}
+    return tuple((c, L) for c in CONTROL_CELLS for L in want[c]
                  if L in tuple(grid.get(c, ())))
 
 
@@ -449,7 +680,7 @@ def evaluate_control(read, acc, floors, grid, n):
         raise ControlNotEvaluable(
             f"{read}: no control cell is on this read's grid {dict(grid)}; the control is "
             f"declared over {CONTROL_CELLS} at "
-            f"{GUIDED_LENGTHS if read == 'guided' else (CONTROL_LENGTH,)}")
+            f"{ {c: registered_lengths(c) for c in CONTROL_CELLS} if read == 'guided' else (CONTROL_LENGTH,)}")
     per_pair, best = {}, None
     for cell, L in required:
         if floors.get(cell, {}).get(L) is None:
@@ -485,18 +716,23 @@ def matched_required(matched, cells=("state", "bind"), lengths=LOCAL_LENGTHS):
 
 
 def guided_grid(matched, cells=LOCAL_CELLS, lengths=GUIDED_LENGTHS,
-                matched_from=GUIDED_MATCHED_FROM):
-    """The per-cell lengths the GUIDED read runs: its own grid, plus each component's
-    matched-cost length for ``matched_from``.
+                matched_from=GUIDED_MATCHED_FROM, work=None):
+    """The per-cell lengths the GUIDED read runs.
 
-    Without this the guided read cannot reach V1 at all — the matched-cost control is a component
-    at a LONGER length than any the read covers, so "beyond the step multiplier" is unevaluable
-    there however the cells come out, which is exactly what the first run hit. The guided decode
-    is O(n L^2), so only the SHORTEST composed length's matched pair is bought: it makes the
-    control reachable at one operating point rather than at three.
+    The composed cell runs ``lengths``. Each component runs its WORK-MATCHED partner of
+    ``matched_from`` — the length its own registered grid puts against that composed cell — plus
+    its TOKEN-MATCHED length, without which the guided read cannot reach V1 at all: that control
+    is a component at a LONGER length than any the read covers, so "beyond the step multiplier"
+    would be unevaluable there however the cells came out, which is exactly what the first run
+    hit. The guided decode is O(n L^2), so only the shortest composed length's pair is bought.
     """
+    work = WORK_MATCHED if work is None else work
     out = {c: list(lengths) for c in cells}
     for c in ("state", "bind"):
+        out[c] = []                       # a component is never read at the COMPOSED cell's L
+        wl = work.get(matched_from, {}).get(c)
+        if wl and wl not in out[c]:
+            out[c].append(wl)
         ml = matched.get(matched_from, {}).get(c, {}).get("L")
         if ml and ml not in out[c]:
             out[c].append(ml)
@@ -510,9 +746,13 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured):
         control: the dict ``evaluate_control`` returns. A bare seed count is refused: it reports
             an unevaluated cell and a floored one with the same number, which is the defect this
             rule exists to remove.
-        comp_forms: {"state": bool, "bind": bool, "composed": bool} at registered lengths.
+        comp_forms: {"state": bool, "bind": bool, "composed": bool} at each cell's OWN registered
+            lengths — the composed grid for the composed cell, the WORK-MATCHED partners of it
+            for the components (``registered_lengths``). Reading a component at the composed
+            cell's own L is what made V2 unreadable: at p_swap = 1/3 that compares 3x the state
+            work and 1.5x the retrieval work.
         comp_counts: {cell: {L: seeds clearing}} for the report.
-        matched_forms: {"state": bool|None, "bind": bool|None} at the matched-cost lengths;
+        matched_forms: {"state": bool|None, "bind": bool|None} at the TOKEN-matched lengths;
             None where no matched-cost control was measured.
         matched_measured: {cell: bool} — whether a matched-cost control was measured at all.
 
@@ -538,9 +778,10 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured):
             "is available — and the dissociation between the components is the result.")
     if comp_forms["composed"]:
         return "V2_NO_GAP_HERE", (
-            "the composed cell forms wherever both components do. Composition is not a separate "
-            f"difficulty at k=6 / L<={max(LOCAL_LENGTHS)} in this regime; the lengths or k must "
-            "move before the cell is worth buying on the frontier.")
+            "the composed cell forms, and so does each component at the length carrying the same "
+            "amount of that component's own work. Composition is not a separate difficulty at "
+            f"k=6 / L<={max(LOCAL_LENGTHS)} in this regime; the lengths or k must move before the "
+            "cell is worth buying on the frontier.")
     unmatched = [c for c, ok in matched_forms.items() if ok is False]
     if unmatched:
         return "V3_GAP_IS_THE_COST", (
@@ -563,8 +804,9 @@ def scout_plan(models=SCOUT_MODELS, n=SCOUT_N):
     """The priced scout, and the decision rule for whether the roster run is worth buying.
 
     Cells: the composed k=12 cell at both scout lengths — it carries the length axis, which is
-    where separation would come from — and each component at L=256 only, because a component
-    that holds at the deepest registered length holds at the shallower one and the component
+    where separation would come from — and each component at the WORK-MATCHED partner of the
+    deepest of them (state@85, bind@171), because a component that holds the work the composed
+    cell makes it do at 256 holds the smaller amount it makes it do at 128, and the component
     reading is a GATE rather than a ranking. Reasoning ON at the protocol budget throughout.
 
     n is set at SCOUT_N because the scout has to answer a SEPARATION question, not rank the
@@ -579,7 +821,7 @@ def scout_plan(models=SCOUT_MODELS, n=SCOUT_N):
               for L in SCOUT_COMPOSED_LENGTHS]
              + [{"task": FRONTIER_CELLS[c], "length": L, "n": n,
                  "settings": {"effort": "high", "max_new_tokens": SCOUT_MAX_NEW_TOKENS}}
-                for c in ("state", "bind") for L in SCOUT_COMPONENT_LENGTHS])
+                for c in ("state", "bind") for L in SCOUT_COMPONENT_LENGTHS[c]])
     rows, total = [], 0.0
     for slug in models:
         if slug not in MODELS:
@@ -588,13 +830,14 @@ def scout_plan(models=SCOUT_MODELS, n=SCOUT_N):
         est = cost_estimate(slug, cells, assumed_output_tokens=4000)
         total += est["cost_usd"]
         rows.append({"model": slug, **est})
-    # what the scout is gating: the same three cells over the whole registered grid and the
-    # whole roster, at the n a ranking needs. Both numbers belong in the decision, because the
-    # scout is only worth its own price against what it stops.
+    # what the scout is gating: the same three cells over their OWN registered grids — the
+    # composed cell's lengths and each component's work-matched partners of them — and the whole
+    # roster, at the n a ranking needs. Both numbers belong in the decision, because the scout is
+    # only worth its own price against what it stops.
     roster_cells = [{"task": FRONTIER_CELLS[c], "length": L, "n": ROSTER_N,
                      "settings": {"effort": "high", "max_new_tokens": SCOUT_MAX_NEW_TOKENS}}
                     for c in ("state", "bind", "composed")
-                    for L in TK.CANONICAL[FRONTIER_CELLS["composed"]].eval_lengths]
+                    for L in TK.CANONICAL[FRONTIER_CELLS[c]].eval_lengths]
     roster, roster_total = [], 0.0
     for slug in MODELS:
         est = cost_estimate(slug, roster_cells, assumed_output_tokens=4000)
@@ -634,52 +877,64 @@ def scout_plan(models=SCOUT_MODELS, n=SCOUT_N):
 
 # ---- registration ---------------------------------------------------------------------------
 def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
-    """Write the pre-registration record: cells, lengths, costs, matched lengths, floors and
-    every threshold, before any solver number exists."""
+    """Write the pre-registration record: cells, both pairings, costs, floors and every
+    threshold, before any solver number exists.
+
+    Both pairings are re-measured here and checked against the registered constants; a
+    disagreement RAISES rather than being written, because a sampler change that moved the
+    work-matched partner would silently move what the composition comparison compares.
+    """
     from factworld.tokenizer import Tokenizer
 
     base = TK.CANONICAL[LOCAL_CELLS["composed"]]
     w, r = TK.build_world(base)
     tok = Tokenizer.build([w], r)
+    paired = pairings(tok)
+    for name, want in (("work", WORK_MATCHED), ("tokens", TOKEN_MATCHED)):
+        got = {L: {c: paired[name][L][c]["L"] for c in ("state", "bind")} for L in LOCAL_LENGTHS}
+        if got != {L: want[L] for L in LOCAL_LENGTHS}:
+            raise ValueError(f"{name} pairing drifted from the registered constants: "
+                             f"measured {got}, registered {want}")
+    ml = paired[MATCHED_PAIRING]
+    grid = {"composed": [CONTROL_LENGTH, *LOCAL_LENGTHS]}
+    for c in ("state", "bind"):
+        grid[c] = sorted({CONTROL_LENGTH, *registered_lengths(c), *PROFILE_LENGTHS[c],
+                          *matched_lengths_for(c)})
     costs = {}
     for key, nm in LOCAL_CELLS.items():
         spec = TK.CANONICAL[nm]
-        for L in (CONTROL_LENGTH,) + LOCAL_LENGTHS:
+        for L in grid[key]:
             s, t = cell_cost(spec, L, tok)
             costs[f"{key}@{L}"] = {"charged_steps": s, "prompt_tokens": t}
-    ml = matched_lengths(tok, axis=axis)
+    mult = step_multipliers(tok, paired)
     floors = {}
     if with_floors:
-        wanted = {("state", CONTROL_LENGTH)}
-        for L in LOCAL_LENGTHS:
-            for key in LOCAL_CELLS:
-                wanted.add((key, L))
-            for key in ("state", "bind"):
-                mlen = ml[L][key]["L"]
-                if mlen:
-                    wanted.add((key, mlen))
+        wanted = {(c, L) for c in grid for L in grid[c]}
         for key, L in sorted(wanted):
             spec = TK.CANONICAL[LOCAL_CELLS[key]]
             floors[f"{key}@{L}"] = cell_floor(spec, L)
             print(f"  floor {key}@{L}: {floors[f'{key}@{L}']['floor']:.4f} "
                   f"({floors[f'{key}@{L}']['floor'] / floors[f'{key}@{L}']['chance']:.2f}x chance)",
                   flush=True)
-    grid = {c: [CONTROL_LENGTH, *LOCAL_LENGTHS] for c in LOCAL_CELLS}
-    for L in LOCAL_LENGTHS:
-        for c in ("state", "bind"):
-            mlen = ml[L][c]["L"]
-            if mlen and mlen not in grid[c]:
-                grid[c].append(mlen)
     rec = {
         "written_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "protocol": os.path.basename(__file__),
         "local_cells": LOCAL_CELLS, "frontier_cells": FRONTIER_CELLS,
         "local_lengths": LOCAL_LENGTHS, "control_length": CONTROL_LENGTH,
         "train_lengths": TRAIN_LENGTHS,
+        "registered_lengths": {c: list(registered_lengths(c)) for c in LOCAL_CELLS},
+        "profile_lengths": {c: list(v) for c, v in PROFILE_LENGTHS.items()},
         "thresholds": {"n_eval": N_EVAL, "n_guided": N_GUIDED, "z_clear": Z_CLEAR,
                        "margin": MARGIN, "seeds_clear": SEEDS_CLEAR, "n_fit": N_FIT,
                        "n_fit_blocks": N_FIT_BLOCKS, "n_score": N_SCORE},
-        "costs": costs, "matched_lengths": ml, "matched_axis": axis,
+        "costs": costs,
+        # BOTH PAIRINGS, side by side, because they answer different questions: the work pairing
+        # is what each component's FORMS verdict is read at, the token pairing is the
+        # matched-COST control. The multiplier is different under each and both are printed.
+        "pairings": paired, "registered_pairing": REGISTERED_PAIRING,
+        "matched_pairing": MATCHED_PAIRING, "step_multipliers": mult,
+        "matched_lengths": ml, "matched_axis": axis,
+        "guided_grid": guided_grid(ml),
         # THE TWO CONTROLS, declared as the (read, cell, length) pairs they require. A control
         # applied where its arm has no cell RAISES; it never abstains and never aborts.
         "controls": {
@@ -687,7 +942,8 @@ def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
                                                          "the grid the read covers",
                          "required": {r: [f"{c}@{L}" for c, L in control_grid(r, grid)]
                                       for r in ("plain", "guided")}},
-            "matched_cost": {"axis": axis, "required": matched_required(ml),
+            "matched_cost": {"axis": axis, "pairing": MATCHED_PAIRING,
+                             "required": matched_required(ml),
                              "rule": "V1 is unavailable where a matched-cost control was never "
                                      "measured; the verdict is V1_UNCONTROLLED"},
         },
