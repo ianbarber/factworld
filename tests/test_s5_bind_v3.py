@@ -54,6 +54,8 @@ from factworld.validity import (  # noqa: E402
     S5_BIND_V3_REFERENCE_ROWS,
     S5_BIND_V3_ROWS,
     S5_BIND_V3_SURFACE_FEATURES,
+    S5_BIND_V3_SURFACE_FEATURE_ACC,
+    S5_BIND_V3_SURFACE_FEATURE_DEPTH,
     S5_BIND_V3_TRUNCATION_ROWS,
     S5_BIND_V3_MAX_DEPTH,
     floor_eligible,
@@ -77,6 +79,10 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_shape,
     s5_bind_v3_slot_profile,
     s5_bind_v3_surface_bound,
+    s5_bind_v3_surface_depth,
+    s5_bind_v3_surface_impls,
+    s5_bind_v3_surface_loaded,
+    s5_bind_v3_surface_price,
     s5_bind_v3_task_cost,
     s5_bind_v3_task_cost_min,
     s5_bind_v3_task_depth,
@@ -761,6 +767,202 @@ def test_the_retrieval_scan_is_priced_at_the_window_and_the_two_counters_agree()
             assert s5_bind_v3_task_cost_min(k, m, ns, ng, True, spec.query_arm) <= want
 
 
+def test_depth_is_a_property_of_the_policy_and_an_unpriced_row_raises():
+    """THE DEFAULT WAS THE DEFECT. ``s5_bind_v3_row_depth`` used to be a name table with
+    ``return 1 << 30`` as its fallback, so any row the table did not list was silently EXCLUDED —
+    and exclusion lowers a floor, which is the direction that invalidates a "cleared the floor"
+    reading. An unpriced policy now stops the classification instead of quietly passing it.
+
+    Every registered row and every swept family member still gets a depth, so the raise cannot
+    fire on the registry itself."""
+    for row in ("a_policy_nobody_priced", "trunc_walk", "give_scan", "window_", "surface"):
+        try:
+            s5_bind_v3_row_depth(row, "state", 64)
+        except KeyError:
+            continue
+        raise AssertionError(f"{row!r} was given a depth it has no basis for")
+    for name in ALL:
+        spec = TK.CANONICAL[name]
+        L = spec.eval_lengths[0]
+        ex = TK.generate(spec, "test", n=20, length=L)
+        k, m = spec.k, spec.n_objects_active
+        ns, ng = s5_bind_v3_shape(ex)
+        named, q = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
+        rows = tuple(s5_bind_v3_floors(ex, k, m)) + \
+            s5_bind_v3_family_rows(k, m, ns, ng, named, q) + ("surface_ranker",)
+        for row in rows:
+            assert s5_bind_v3_row_depth(row, q, ns + ng) >= 0, (name, row)
+    # and the depth ordering is the policies', not the names': a full replay chains the stream,
+    # a half-window chains half of it, the one-hop read chains one, a guess chains none.
+    assert s5_bind_v3_row_depth("uniform", "state", 64) == 0
+    assert s5_bind_v3_row_depth("last_write_1hop", "state", 64) == 1
+    assert s5_bind_v3_row_depth("window_50", "state", 64) == 32
+    assert s5_bind_v3_row_depth("one_structure_P", "state", 64) == 64
+
+
+def test_mutating_the_rankers_feature_tuple_moves_its_verdict_through_the_rule():
+    """The ranker's DEPTH and REGISTERS are read off the features its weights load on, so the
+    verdict has to move when the feature set does. Priced by the row NAME it could not: the name
+    is constant while the policy is not.
+
+    Three feature sets at one composed cell and one component cell: the whole registered set
+    (six per-candidate accumulators — excluded), the landmark-and-stated subset (no accumulator
+    — admitted), and the stated-only subset (which is also depth 0)."""
+    feats = S5_BIND_V3_SURFACE_FEATURES
+
+    def only(names):
+        return {n: (1.0 if n in names else 0.0) for n in feats}
+
+    landmarks = [n for n, a in zip(feats, S5_BIND_V3_SURFACE_FEATURE_ACC) if a is None]
+    stated = [n for n, d in zip(feats, S5_BIND_V3_SURFACE_FEATURE_DEPTH) if d == 0]
+    assert len(feats) == len(S5_BIND_V3_SURFACE_FEATURE_DEPTH) == \
+        len(S5_BIND_V3_SURFACE_FEATURE_ACC)
+    assert s5_bind_v3_surface_depth() == 1 and s5_bind_v3_surface_depth(only(stated)) == 0
+    assert len(s5_bind_v3_surface_loaded(only(landmarks))) == len(landmarks)
+    for name, want in (("s5_bind_local_v3", True), ("s5_bind_local_v3_state", True)):
+        spec = TK.CANONICAL[name]
+        L = spec.eval_lengths[0]
+        ex = TK.generate(spec, "test", n=20, length=L)
+        k, m = spec.k, spec.n_objects_active
+        ns, ng = s5_bind_v3_shape(ex)
+        named, q = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
+        full = s5_bind_v3_admits("surface_ranker", k, m, ns, ng, named, q)
+        lean = s5_bind_v3_admits("surface_ranker", k, m, ns, ng, named, q, only(landmarks))
+        assert not full, f"{name}: the 25-feature ranker is admitted"
+        assert lean is want, f"{name}: the landmark-only ranker verdict is {lean}"
+        # the cost moves with the feature set too, not only the verdict
+        w_full, s_full = s5_bind_v3_row_cost("surface_ranker", k, m, ns, ng, q, named)
+        w_lean, s_lean = s5_bind_v3_row_cost("surface_ranker", k, m, ns, ng, q, named,
+                                             only(landmarks))
+        assert (w_full, s_full) != (w_lean, s_lean), name
+
+
+def test_the_fitted_ranker_is_not_admitted_at_any_cell_and_the_price_says_why():
+    """The row was priced W = 2 and one backward scan while holding six k-entry accumulators and
+    argmaxing over k candidates. Neither end of its register/pass trade-off is admitted anywhere:
+    one pass holds 1 + 7k registers, over the one-structure bound on a composed cell and over 2
+    on a component one, and the register-lean implementation pays 2kL steps, over the composed
+    task's own cost and over each component's per-item minimum."""
+    for name in ALL:
+        spec = TK.CANONICAL[name]
+        for L in spec.eval_lengths:
+            ex = TK.generate(spec, "test", n=20, length=L)
+            k, m = spec.k, spec.n_objects_active
+            ns, ng = s5_bind_v3_shape(ex)
+            named, q = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
+            price = s5_bind_v3_surface_price(k, m, ns, ng, named, q)
+            impls = s5_bind_v3_surface_impls(k, m, ns, ng, q)
+            assert not price["admitted"], f"{name}@{L}: {price}"
+            assert price["A"] == 6, (name, L, price["A"])
+            one_pass = max(impls, key=lambda d: d["W"])
+            lean = min(impls, key=lambda d: d["W"])
+            assert one_pass["W"] == 1 + k * 7 and one_pass["passes"] == 1
+            assert lean["passes"] == k and lean["S"] == 2 * k * (ns + ng)
+            assert one_pass["W"] > price["W_max"] and lean["S"] >= price["S_max"]
+            # and it is out on REGISTERS/STEPS, never on depth — the surface set chains one hop
+            assert price["depth"] == 1
+
+
+def _protocol():
+    sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
+    import protocol_s5bind_v3_three_cell_20260731 as P
+    return P
+
+
+def test_the_positive_control_is_evaluated_on_the_grid_its_read_covers_or_raises():
+    """THE DEFECT THIS CLOSES. The control was "the state component at L=16" and it was applied
+    to the GUIDED read, whose grid is GUIDED_LENGTHS and does not contain 16. The guided arm
+    never evaluated that cell, so the seed count was 0 and the rule reported a MISSING CELL as a
+    model at floor and voided the run.
+
+    A control is now declared as (read, cell, length) pairs, evaluated only where the read covers
+    them, and it RAISES where none was measured — a raise cannot be mistaken for an abort."""
+    P = _protocol()
+    grid = {"state": [16, 48], "bind": [16, 48], "composed": [16, 48]}
+    assert P.control_grid("plain", grid) == (("state", 16), ("bind", 16))
+    assert P.control_grid("guided", grid) == tuple(
+        (c, L) for c in P.CONTROL_CELLS for L in P.GUIDED_LENGTHS)
+    floors = {"state": {16: 0.2, 48: 0.2}, "bind": {16: 0.2, 48: 0.2},
+              "composed": {16: 0.5, 48: 0.23}}
+    # the arm this was written against: measured at 48 only, state at floor there, retrieval at
+    # 1.000. The control is a DISJUNCTION over the components, so it is the retrieval cell that
+    # licenses reading the rest — the single-cell control called the same arm void.
+    guided = {"state": {0: {48: 0.21}, 1: {48: 0.19}},
+              "bind": {0: {48: 1.0}, 1: {48: 1.0}},
+              "composed": {0: {48: 0.49}, 1: {48: 0.35}}}
+    ctrl = P.evaluate_control("guided", guided, floors, grid, P.N_GUIDED)
+    assert ctrl["seeds"] == 2 and ctrl["cleared_on"] == "bind@48", ctrl
+    assert ctrl["per_pair"]["state@48"] == 0, ctrl
+    # the same arm read against the OLD control length is not a failure, it is unevaluable
+    try:
+        P.evaluate_control("plain", guided, floors, grid, P.N_EVAL)
+    except P.ControlNotEvaluable:
+        pass
+    else:
+        raise AssertionError("a control at a length the arm never ran must raise")
+    # and a control whose cells are not on the run's grid at all raises too
+    try:
+        P.evaluate_control("guided", guided, floors, {"composed": [48]}, P.N_GUIDED)
+    except P.ControlNotEvaluable:
+        pass
+    else:
+        raise AssertionError("a control with no cell on the grid must raise")
+
+
+def test_the_verdict_refuses_a_bare_control_count_and_v1_needs_the_matched_control():
+    """Two clauses, both of which the run showed do not say what they were meant to say.
+
+    A bare seed count reports "at floor" and "never measured" with the same 0, so ``verdict``
+    takes the evaluated control and refuses an int. And V1's whole claim is "beyond the step
+    multiplier", which is exactly what the matched-cost control establishes — so an ABSENT
+    matched control is not a pass, it is V1_UNCONTROLLED."""
+    P = _protocol()
+    ctrl = {"seeds": 2, "cleared_on": "bind@48", "per_pair": {"bind@48": 2}, "required": []}
+    forms = {"state": True, "bind": True, "composed": False}
+    counts = {c: {48: 2} for c in forms}
+    try:
+        P.verdict(2, forms, counts, {"state": None, "bind": None}, {})
+    except P.ControlNotEvaluable:
+        pass
+    else:
+        raise AssertionError("verdict() must refuse a bare seed count")
+    code, _why = P.verdict(ctrl, forms, counts, {"state": None, "bind": None},
+                           {"state": False, "bind": False})
+    assert code == "V1_UNCONTROLLED", code
+    code, _why = P.verdict(ctrl, forms, counts, {"state": True, "bind": True},
+                           {"state": True, "bind": True})
+    assert code == "V1_COMPOSITION_GAP", code
+    code, _why = P.verdict(ctrl, forms, counts, {"state": True, "bind": False},
+                           {"state": True, "bind": True})
+    assert code == "V3_GAP_IS_THE_COST", code
+    # the control is a DISJUNCTION over the components, and it gates everything
+    code, _why = P.verdict({**ctrl, "seeds": 0}, forms, counts, {"state": True, "bind": True},
+                           {"state": True, "bind": True})
+    assert code == "V5_HARNESS_NULL", code
+
+
+def test_the_matched_cost_control_is_declared_and_an_unreachable_one_is_absent():
+    """The matched-cost control is a first-class requirement with named lengths, so "the composed
+    cell is harder beyond the step multiplier" is testable. Where the sampler cannot build the
+    matched length the requirement is ABSENT rather than approximated by a shorter cell."""
+    P = _protocol()
+    matched = {48: {"state": {"L": 80, "reachable": True}, "bind": {"L": 132,
+                                                                    "reachable": True}},
+               64: {"state": {"L": 108, "reachable": True}, "bind": {"L": None,
+                                                                     "reachable": False}},
+               96: {"state": {"L": 160, "reachable": True}, "bind": {"L": None,
+                                                                     "reachable": False}}}
+    req = P.matched_required(matched, lengths=(48, 64, 96))
+    assert req["state"] == [80, 108, 160]
+    assert req["bind"] == [132], "an unreachable matched length must not be substituted"
+    # and the GUIDED read buys the control at the shortest composed length, or it could never
+    # reach V1: its own grid never covers a length longer than the composed cell's.
+    gg = P.guided_grid(matched, lengths=(48,))
+    assert gg["state"] == [48, 80] and gg["bind"] == [48, 132] and gg["composed"] == [48], gg
+    assert max(gg["composed"]) < max(gg["state"]), "the control has to be the LONGER component"
+
+
 def test_reference_rows_are_dropped_on_a_component_cell():
     for name in COMPONENTS:
         spec = TK.CANONICAL[name]
@@ -827,6 +1029,13 @@ def test_the_surface_bound_is_fitted_on_one_sample_and_scored_on_a_disjoint_one(
     assert a["n_fit"] == 300 and a["n_held_out"] == 300
     assert a["in_sample"] >= a["held_out"] - 0.05, (a["in_sample"], a["held_out"])
     assert set(a["weights"]) == set(S5_BIND_V3_SURFACE_FEATURES)
+    # THE FIT BUDGET SHIPS WITH THE NUMBER. 300 items is inside the range where the held-out
+    # curve is still climbing, so the estimate says so, and a blocked fit reports the spread its
+    # budget leaves rather than one figure that hides it.
+    assert a["fit_at_least_min"] is False and a["n_fit"] < 2000
+    c = s5_bind_v3_surface_bound(fit, spec.k, held_out=ho, blocks=2)
+    assert len(c["blocks"]) == 2 and c["n_per_block"] == 150
+    assert c["block_spread"] == max(c["blocks"]) - min(c["blocks"])
 
 
 def test_the_profile_is_a_curve_over_slots_with_the_bound_drawn_across_it():
@@ -919,7 +1128,7 @@ def test_the_statistic_is_registered_in_the_package():
     assert abs(wx - wz) / max(wx, wz) < 0.10
 
 
-def test_the_primary_statistic_is_stratified_and_its_mass_columns_are_raw():
+def test_the_diagnostic_is_stratified_and_its_mass_columns_are_raw():
     """Within an event kind the class IS the reference clause — CROSS is "belongs to" on a swap
     and "points to" on a give — so a solver that is simply worse at one clause slips on
     swap-CROSS and give-SAME, which is the ANTI-symmetric combination of the two kinds' class
@@ -932,7 +1141,8 @@ def test_the_primary_statistic_is_stratified_and_its_mass_columns_are_raw():
 
     THE CONTRAST IS PRECISION-WEIGHTED, which makes it exactly uncorrelated with every
     anti-symmetric combination of the per-stratum differences."""
-    assert C.PRIMARY_STAT == "T_kind" and C.STATS["T_kind"] == ((), 1)
+    assert C.DIAGNOSTIC_STAT == "T_kind" and C.STATS["T_kind"] == ((), 1)
+    assert not hasattr(C, "PRIMARY_STAT"), "the contrast is a diagnostic, not a primary"
     spec = TK.CANONICAL["s5_bind_local_v3"]
     ex = TK.generate(spec, "test", n=120, length=48)
     ops = [C.op_slice(C.read(e.prompt), draws=1) for e in ex]
@@ -980,10 +1190,12 @@ def test_the_nuisance_columns_run_over_both_classes():
         assert cov["W"] > sum(op["sens"] * op["w"] for op in reads if op["cls"] == "cross")
 
 
-def test_a_cell_reports_the_statistic_alongside_match():
+def test_a_cell_reports_the_structure_switch_diagnostic_alongside_match():
     """Registered in factworld, not in a script: evaluating a source-structure cell returns
     theta_cross - theta_same next to the canonical match, with the class balance and the
-    write-count matching that make it valid."""
+    write-count matching that make it valid. It is reported under ``structure_switch`` and
+    NOT under ``composition``: within a kind the class label is the printed clause, so the
+    key a caller reads has to say what a rejection licenses."""
     from factworld.runner import evaluate_task
 
     spec = TK.CANONICAL["s5_bind_local_v3"]
@@ -997,16 +1209,18 @@ def test_a_cell_reports_the_statistic_alongside_match():
             return [gold[p] if j % 4 else "g0." for j, p in enumerate(prompts)]
 
     out = evaluate_task(_Backend(), spec, n=40, length=48, composition_draws=1)
-    assert "composition" in out and out["composition"]["n"] == 40
-    assert out["composition"]["stat"] == C.PRIMARY_STAT
-    assert out["composition"]["acc"] == out["overall"]
-    assert isinstance(out["composition"]["reject"], bool)
+    assert "composition" not in out, "the key must not read as a composition measure"
+    assert "structure_switch" in out and out["structure_switch"]["n"] == 40
+    assert out["structure_switch"]["stat"] == C.DIAGNOSTIC_STAT
+    assert out["structure_switch"]["identifies"] == "structure_switch"
+    assert out["structure_switch"]["acc"] == out["overall"]
+    assert isinstance(out["structure_switch"]["reject"], bool)
     # a component arm has no cross class, so it reports match alone
     comp = TK.CANONICAL["s5_bind_local_v3_state"]
     ex2 = TK.generate(comp, "test", n=20, length=48)
     gold = {e.prompt: e.answer for e in ex2}
     out2 = evaluate_task(_Backend(), comp, n=20, length=48, composition_draws=1)
-    assert out2["composition"]["slice_cross"] == 0.0
+    assert out2["structure_switch"]["slice_cross"] == 0.0
 
 
 def test_the_slice_carries_both_classes_on_every_item():

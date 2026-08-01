@@ -79,7 +79,11 @@ def profile_block(name, L, n):
               f"{'yes' if r['admitted'] else 'NO':>9}  {r['row']}")
     sb = V.s5_bind_v3_surface_bound(ex, k)
     if sb is not None:
-        print(f"   fitted surface ranker (W=2): held out {sb['held_out']:.4f} "
+        ns_, ng_ = V.s5_bind_v3_shape(ex)
+        sp = V.s5_bind_v3_surface_price(k, m, ns_, ng_, named, query, sb["weights"])
+        print(f"   fitted surface ranker (DIAGNOSTIC, admitted={sp['admitted']}: best "
+              f"implementation W={sp['W']} vs {sp['W_max']}, S={sp['S']} vs {sp['S_max']}, "
+              f"{sp['A']} per-candidate accumulators): held out {sb['held_out']:.4f} "
               f"({sb['held_out'] / ch:.2f}x) on {sb['n_held_out']} items, "
               f"fit on {sb['n_fit']}, in-sample {sb['in_sample']:.4f}")
     if not named:

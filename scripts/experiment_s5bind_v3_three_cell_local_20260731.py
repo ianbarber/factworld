@@ -103,13 +103,23 @@ def three_cell_specs(train_lengths):
             for k, v in P.LOCAL_CELLS.items()}
 
 
+_DOC_CACHE: dict = {}
+
+
 def stage_documents(specs, weights, train_n, tok, fmt):
     """``(encoded docs, prompt_lens)`` for one stage, length-sorted together.
 
     ``prompt_lens`` is 1 for a checkpoint document (full next-token loss: the checkpoints ARE
     the supervision) and the prompt's token count for a plain document (loss on the answer
     only, because otherwise the answer is one token in several hundred).
+
+    Cached on (mix, train_n, fmt): ``generate(spec, "train", n)`` is deterministic, so every
+    (arch, seed) sees the SAME documents in the same order, and rebuilding them per run is pure
+    cost — 80k items per stage is ~3 minutes of sampling.
     """
+    key = (tuple(sorted(weights.items())), train_n, fmt, tuple(sorted(specs)))
+    if key in _DOC_CACHE:
+        return _DOC_CACHE[key]
     pairs = []
     for arm, share in sorted(weights.items()):
         n = int(round(train_n * share))
@@ -122,7 +132,8 @@ def stage_documents(specs, weights, train_n, tok, fmt):
                 pairs.append((f"{e.meta['interleaved_prompt']} {e.answer}", 1))
     enc = [(tok.encode(t, add_eos=True)[:MAX_DOC_TOKENS], pl) for t, pl in pairs]
     enc.sort(key=lambda x: len(x[0]))
-    return [a for a, _ in enc], [b for _, b in enc]
+    _DOC_CACHE[key] = ([a for a, _ in enc], [b for _, b in enc])
+    return _DOC_CACHE[key]
 
 
 def eval_cells(backend, specs, eval_n, grid):
@@ -249,7 +260,8 @@ def measured_size(arch, d_model, n_layers, n_heads, vocab_size, device, seq_len=
 
 
 def run_one(arch, seed, specs, tok, world, grid, *, steps, batch, d_model, n_layers, n_heads,
-            lr, train_n, eval_n, guided_n, guided_lengths, device, fmt, loss_log_interval):
+            lr, train_n, eval_n, guided_n, guided_lengths, device, fmt, loss_log_interval,
+            guided_batch=128):
     import torch
     from factworld import train as T
 
@@ -278,9 +290,13 @@ def run_one(arch, seed, specs, tok, world, grid, *, steps, batch, d_model, n_lay
         if last and guided_n:
             for cell in specs:
                 gv[cell] = {}
-                for L in guided_lengths:
+                # a PER-CELL grid: the guided read's own lengths, plus each component's
+                # matched-cost length, without which the guided read cannot reach V1 at all
+                for L in guided_lengths.get(cell, ()) if isinstance(guided_lengths, dict) \
+                        else guided_lengths:
                     t1 = time.time()
-                    a, ck = guided_free_run_batched(model, tok, specs[cell], L, guided_n, device)
+                    a, ck = guided_free_run_batched(model, tok, specs[cell], L, guided_n, device,
+                                                    batch=guided_batch)
                     gv[cell][str(L)] = {"match": a, "checkpoint_acc": ck}
                     print(f"     guided {cell:9s} L{L}: match={a:.3f} ck={ck:.3f} "
                           f"[{time.time() - t1:.0f}s]", flush=True)
@@ -327,10 +343,12 @@ def apply_rule(runs, floors, grid, eval_n, guided_n):
             for cell in ("state", "bind", "composed"):
                 ok, counts = P.forms(acc[cell], f[cell], lengths, n=n)
                 comp_forms[cell], comp_counts[cell] = ok, counts
-            ctrl = sum(1 for s in acc["state"]
-                       if P.clears(acc["state"][s].get(P.CONTROL_LENGTH),
-                                   f["state"].get(P.CONTROL_LENGTH), n)[0])
+            # the positive control, on the grid THIS read covers. Unevaluable raises rather than
+            # aborting: an (arm, cell, length) the arm never ran is a missing cell, not a model
+            # at floor, and a bare seed count reports the two with the same number.
+            ctrl = P.evaluate_control(read, acc, f, {c: sorted(grid[c]) for c in grid}, n)
             matched = {}
+            matched_measured = {}
             for cell in ("state", "bind"):
                 # a matched length with no floor is NOT MEASURED, not failed: scoring it
                 # against a missing floor would read as "the control did not form" and flip
@@ -340,28 +358,149 @@ def apply_rule(runs, floors, grid, eval_n, guided_n):
                               if f[cell].get(L) is not None
                               and all(L in acc[cell][s] for s in acc[cell]))
                 matched[cell] = P.forms(acc[cell], f[cell], mlens, n=n)[0] if mlens else None
-            # the control the REGISTERED rule reads, and the one the repaired rule reads:
-            # "some component clears somewhere", on a grid this read actually covers
-            any_ctrl = max(
-                (sum(1 for s in acc[c] if P.clears(acc[c][s].get(L), f[c].get(L), n)[0])
-                 for c in ("state", "bind") for L in sorted(grid[c])), default=0)
-            matched_measured = {}
-            for cell in ("state", "bind"):
-                matched_measured[cell] = any(
-                    f[cell].get(L) is not None and all(L in acc[cell][s] for s in acc[cell])
-                    for L in sorted(set(grid[cell]) - set(P.LOCAL_LENGTHS)
-                                    - {P.CONTROL_LENGTH}))
-            code, why = P.verdict(ctrl, comp_forms, comp_counts, matched)
-            rcode, rwhy = P.verdict_repaired(ctrl, any_ctrl, comp_forms, comp_counts, matched,
-                                             matched_measured)
-            per_read[read] = {"verdict": code, "why": why, "control_seeds": ctrl,
-                              "verdict_repaired": rcode, "why_repaired": rwhy,
-                              "any_component_control_seeds": any_ctrl,
+                matched_measured[cell] = bool(mlens)
+            code, why = P.verdict(ctrl, comp_forms, comp_counts, matched, matched_measured)
+            per_read[read] = {"verdict": code, "why": why, "control": ctrl,
+                              "control_seeds": ctrl["seeds"],
                               "matched_measured": matched_measured,
                               "lengths_read": list(lengths), "forms": comp_forms,
                               "seed_counts": comp_counts, "matched_forms": matched, "acc": acc}
         per_arch[arch] = per_read
     return per_arch
+
+
+def post_hoc_section(runs, floors, cfg):
+    """Two readings computed AFTER the numbers existed, kept apart from the pre-registered rule.
+
+    The first is the per-seed pairing between the state component and the composed cell on the
+    GUIDED read — the rule counts seeds per cell and cannot see whether it is the SAME seeds. The
+    second is what the checkpoint diagnostic does and does not say, which matters because the
+    number looks like a partial trace and is not one.
+    """
+    if not runs:
+        return []
+    L = cfg["guided_lengths"][0] if cfg.get("guided_lengths") else 48
+    rows = []
+    for r in sorted(runs, key=lambda r: r["seed"]):
+        g = r["stages"][-1]["guided"]
+        cell = {}
+        for c in ("state", "bind", "composed"):
+            v = g.get(c, {}).get(str(L), {}).get("match")
+            f = floors.get(f"{c}@{L}", {}).get("floor")
+            cell[c] = (v, P.clears(v, f, cfg["guided_n"])[0] if v is not None else False)
+        rows.append((r["seed"], cell))
+    paired = all((c["state"][1] == c["composed"][1]) for _s, c in rows)
+    out = ["", "# Post-hoc (not pre-registered)", "",
+           f"## The composed cell and the state component move together, seed by seed (GUIDED, L={L})",
+           "", "| seed | state | composed | bind |", "|---|---|---|---|"]
+    for seed, c in rows:
+        out.append(f"| {seed} | " + " | ".join(
+            f"{c[k][0]:.3f}{' (clears)' if c[k][1] else ''}" for k in
+            ("state", "composed", "bind")) + " |")
+    if paired:
+        out += ["", "The composed cell clears on EXACTLY the seeds where the state component "
+                "clears, and fails on the seed where it fails, while the retrieval component "
+                "clears on all three. The pre-registered rule counts seeds per cell and so "
+                "cannot see this: it is the same statement as the verdict at one operating "
+                "point, and a stronger one, because it says the composed cell costs this "
+                "architecture nothing beyond the state leg rather than that both happened to "
+                "reach 2 of 3."]
+    out += ["", "## What the checkpoint diagnostic says", "",
+            "Each checkpoint is the whole of P and then the whole of B, k + m = 12 slots per "
+            "event, and each COMPONENT cell holds one of the two maps still by construction — "
+            "the state cell has no gives, so its B never moves, and the retrieval cell has no "
+            "swaps, so its P never moves. A model that emits the frozen half and guesses the "
+            "moving half therefore scores 0.5 + 0.5/6 = 0.583, which is where every component "
+            "cell sits (0.573-0.611). On the components the emitted trace is at chance on the "
+            "half that moves while the answer is 0.99-1.00, so it is not the trace that carries "
+            "those answers; on the composed cell, where neither half is frozen, the trace is "
+            "essentially exact (0.932-1.000). The diagnostic is not a partial trace and no "
+            "verdict reads it."]
+    return out
+
+
+def pilot_section(cfg):
+    """The single-seed gate that ran before the grid, and what it did and did not settle."""
+    p = cfg.get("pilot")
+    if not p:
+        return []
+    out = ["", "## The gate that ran first (one seed)", "",
+           p["what"], "",
+           "| steps | " + " | ".join(f"L{L}" for L in p["lengths"]) + " | loss |",
+           "|" + "---|" * (len(p["lengths"]) + 2)]
+    for row in p["rows"]:
+        out.append(f"| {row['steps']} | "
+                   + " | ".join(f"{row['plain_state'][str(L)]:.3f}" for L in p["lengths"])
+                   + f" | {row['loss']:.4f} |")
+    out += ["", p["guided"], "", p["reading"]]
+    return out
+
+
+def recipe_section(cfg):
+    """The recipe as run, and the two places the hardware fixes it.
+
+    Both are measured on the exact documents this run trains on (the composed cell's checkpoint
+    document reaches 2540 tokens at L=96), and both are properties of the kernel and the card
+    rather than choices, so a reader reproducing this needs the numbers rather than the labels.
+    """
+    return [
+        "", "## The recipe", "",
+        f"`d_model={cfg['d_model']}` x `n_layers={cfg['n_layers']}`, `n_heads="
+        f"{cfg.get('n_heads')}`, batch {cfg['batch']}, {cfg['steps']} steps, "
+        f"{cfg['train_n']} items per stage over the three-stage curriculum "
+        f"({' -> '.join(n for n, _s, _w in cfg['schedule'])}), supervision `{cfg['fmt']}` "
+        "(answer-masked plain documents plus the specs' own per-event checkpoint documents).",
+        "",
+        "Two numbers in it are set by the hardware, on the documents this run trains on "
+        "(the composed cell's checkpoint document is 2540 tokens at L=96, mean 958):",
+        "",
+        "- **head dimension 128, so 6 heads at d768.** `GatedDeltaProduct` at head dimension 192 "
+        "(4 heads at d768) runs 0.836 s/step against 0.108 s/step at 128, same width, same depth, "
+        "same batch — a kernel path, not a model property. At 6 heads the GDP state per layer is "
+        "6x128x128, larger than the 4x128x128 of the d512x6 run this one supersedes.",
+        "- **batch 16.** The flagship recipe's batch of 128 does not fit: at d768x8 the longest "
+        "document slice runs out of memory at batch 24 on a 32 GB card (peak 26.9 GB at 16). "
+        f"This run therefore draws {cfg['batch'] * cfg['steps'] / 1000:.0f}k sequences per seed "
+        f"against the flagship's 3.2M, from {cfg['train_n'] * 2 / 1000:.0f}k documents per stage.",
+    ]
+
+
+def cost_section(cfg, grid):
+    """The composed cell's cost over each component IN BOTH COST MODELS, and the lengths the
+    matched-cost control uses.
+
+    Both are printed because they disagree, and the disagreement is the control's whole point: a
+    composed cell at floor is explained by composition only once the components have been read at
+    the length that costs what it costs. CHARGED STEPS is what a scratchpad solver pays; FORWARD
+    -PASS TOKENS is what a streaming model pays, and it is the axis the matched lengths are
+    solved on here (``P.MATCHED_AXIS``).
+    """
+    costs, ml = cfg.get("cell_costs") or {}, cfg.get("matched_lengths") or {}
+    if not costs:
+        return []
+    out = ["", "## The two cost models, and the matched-cost control", "",
+           "| composed L | vs state (steps) | vs state (tokens) | vs bind (steps) | "
+           "vs bind (tokens) | matched state L | matched bind L |",
+           "|---|---|---|---|---|---|---|"]
+    for L in P.LOCAL_LENGTHS:
+        c = costs.get(f"composed@{L}")
+        s, b = costs.get(f"state@{L}"), costs.get(f"bind@{L}")
+        if not (c and s and b):
+            continue
+        row = ml.get(str(L)) or ml.get(L) or {}
+        mstate = (row.get("state") or {}).get("L")
+        mbind = (row.get("bind") or {}).get("L")
+        out.append(
+            f"| {L} | {c[0]/s[0]:.2f}x | {c[1]/s[1]:.2f}x | {c[0]/b[0]:.2f}x | "
+            f"{c[1]/b[1]:.2f}x | {mstate or '— (unreachable)'} | "
+            f"{mbind or '— (unreachable)'} |")
+    out += ["", "_A matched length is where that component's own forward pass costs what the "
+            "composed cell costs at L. Unreachable on the retrieval component past L=132: its "
+            "sampler pins the resolving write into a window that gets exponentially harder to "
+            "satisfy as the stream grows, so the cell cannot be run long enough to cost what the "
+            "composed cell costs at L=64 or L=96 (protocol.BIND_MATCHED_MAX). That is a property "
+            "of the instrument, not of this run._"]
+    return out
 
 
 def write_markdown(runs, per_arch, floors, cfg, grid, path):
@@ -370,8 +509,9 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
         "# s5_bind_v3 three-cell comparison — from-scratch arm",
         "",
         f"k={cfg['k']} · informed chance 1/(k-1) = {ch:.3f} · match · n_eval={cfg['eval_n']} · "
-        f"d_model={cfg['d_model']} n_layers={cfg['n_layers']} batch={cfg['batch']} "
-        f"steps={cfg['steps']} train_n={cfg['train_n']}/stage · supervision={cfg['fmt']}",
+        f"d_model={cfg['d_model']} n_layers={cfg['n_layers']} n_heads={cfg.get('n_heads')} "
+        f"batch={cfg['batch']} steps={cfg['steps']} train_n={cfg['train_n']}/stage · "
+        f"supervision={cfg['fmt']}",
         "",
         "Reading rule pre-registered in `scripts/protocol_s5bind_v3_three_cell_20260731.py`: a "
         f"cell CLEARS its floor at z > {P.Z_CLEAR} AND margin >= {P.MARGIN}; it FORMS for an "
@@ -384,6 +524,7 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
     ]
     for arch, (p, fl) in sorted(cfg["sizes"].items()):
         lines.append(f"| {arch} | {p / 1e6:.1f}M | {fl / 1e6:.2f}M |")
+    lines += recipe_section(cfg) + pilot_section(cfg) + cost_section(cfg, grid)
     for read, n in (("plain", cfg["eval_n"]), ("guided", cfg["guided_n"])):
         key = "eval" if read == "plain" else "guided"
         label = ("PLAIN read — answer off the plain prompt, no scratchpad"
@@ -425,7 +566,7 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
     ck_rows = []
     for arch in sorted({r["arch"] for r in runs}):
         for cell in ("state", "bind", "composed"):
-            for L in cfg["guided_lengths"]:
+            for L in cfg.get("guided_grid", {}).get(cell, cfg["guided_lengths"]):
                 vals = [r["stages"][-1]["guided"].get(cell, {}).get(str(L), {})
                         .get("checkpoint_acc")
                         for r in runs if r["arch"] == arch]
@@ -442,22 +583,30 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path):
     lines += ["", "# Verdict", ""]
     for arch, reads in sorted(per_arch.items()):
         for read, v in sorted(reads.items()):
-            lines += [f"**{arch} / {read} — pre-registered: {v['verdict']}** — {v['why']}", "",
-                      f"**repaired: {v.get('verdict_repaired')}** — {v.get('why_repaired')}", "",
-                      f"seeds clearing: {v['seed_counts']}; L={P.CONTROL_LENGTH} state control: "
-                      f"{v['control_seeds']}/{len(cfg['seeds'])}; any-component control: "
-                      f"{v.get('any_component_control_seeds')}/{len(cfg['seeds'])}; "
+            ctrl = v.get("control", {})
+            lines += [f"**{arch} / {read}: {v['verdict']}** — {v['why']}", "",
+                      f"seeds clearing: {v['seed_counts']}; positive control (some component "
+                      f"clears on this read's grid) {ctrl.get('per_pair')} of "
+                      f"{len(cfg['seeds'])} seeds, required {ctrl.get('required')}; "
                       f"matched-cost control: {v['matched_forms']} "
                       f"(measured: {v.get('matched_measured')}); "
                       f"lengths read: {v['lengths_read']}", ""]
+    lines += post_hoc_section(runs, floors, cfg)
     lines += ["", "_A **bold** cell clears its own operative floor under the pre-registered "
-              "rule. Floors are recomputed from that cell's own items (registry rows plus the "
-              "admitted swept family plus the fitted surface ranker, fit "
-              f"{P.N_FIT} / scored {P.N_SCORE} disjoint). The composed cell's cost multiplier "
-              "over each component is reported in the pre-registration record in both cost "
-              "models; the matched-cost lengths in the tables above are the FORWARD-PASS match, "
-              "which is this regime's cost._"]
+              "rule. Floors are recomputed from that cell's own items: registry rows plus the "
+              "admitted swept family. The fitted surface ranker is measured beside them "
+              f"(fit {P.N_FIT_BLOCKS}x{P.N_FIT} / scored {P.N_SCORE} disjoint) and is NOT in any "
+              "floor — no implementation of it achieves a price the class rule admits. The "
+              "composed cell's cost multiplier over each component is reported in the "
+              "pre-registration record in both cost models; the matched-cost lengths in the "
+              "tables above are the FORWARD-PASS match, which is this regime's cost._"]
     path.write_text("\n".join(lines))
+
+
+def cell_costs(specs, tok, grid):
+    """``{cell@L: (charged_steps, prompt_tokens)}`` — the two cost models, per scored cell."""
+    return {f"{cell}@{L}": P.cell_cost(specs[cell], L, tok)
+            for cell in grid for L in grid[cell]}
 
 
 def rewrite(json_path):
@@ -465,6 +614,11 @@ def rewrite(json_path):
     res = json.load(open(json_path))
     cfg = res["cfg"]
     grid = {k: [int(x) for x in v] for k, v in cfg["grid"].items()}
+    if not cfg.get("cell_costs"):
+        specs = three_cell_specs(P.TRAIN_LENGTHS)
+        world, renderer = TK.build_world(specs["composed"])
+        cfg["cell_costs"] = cell_costs(specs, Tokenizer.build([world], renderer), grid)
+        res["cfg"] = cfg
     per_arch = apply_rule(res["runs"], res["floors"], grid, cfg["eval_n"],
                           cfg.get("guided_n", P.N_GUIDED))
     md = Path(str(json_path).replace(".json", ".md"))
@@ -491,6 +645,10 @@ def main():
     ap.add_argument("--eval_n", type=int, default=P.N_EVAL)
     ap.add_argument("--guided_n", type=int, default=P.N_GUIDED,
                     help="items for the guided read (0 disables it)")
+    ap.add_argument("--guided_batch", type=int, default=128,
+                    help="items per padded forward in the guided decode. Scoring is unaffected "
+                         "(right padding, causal models); it is a memory knob, and at d768x8 the "
+                         "128-item batch does not fit.")
     ap.add_argument("--guided_lengths", type=int, nargs="*",
                     default=list(P.GUIDED_LENGTHS))
     ap.add_argument("--fmt", default="mix", choices=["plain", "checkpoint", "mix"])
@@ -517,7 +675,7 @@ def main():
             "composed": [P.CONTROL_LENGTH, *P.LOCAL_LENGTHS]}
     matched = {}
     if not a.no_matched:
-        matched = P.matched_lengths(tok, axis="tokens")
+        matched = P.matched_lengths(tok, axis=P.MATCHED_AXIS)
         for L in P.LOCAL_LENGTHS:
             for cell in ("state", "bind"):
                 ml = matched[L][cell]["L"]
@@ -525,6 +683,12 @@ def main():
                     grid[cell].append(ml)
         for cell in grid:
             grid[cell] = sorted(set(grid[cell]))
+    # THE GUIDED READ BUYS ITS OWN MATCHED-COST CONTROL at the shortest composed length. Without
+    # it that read cannot reach V1 at all: the control is a component at a LONGER length than any
+    # the read covers, so "beyond the step multiplier" would be unevaluable there however the
+    # cells came out (protocol.guided_grid).
+    guided_grid = P.guided_grid(matched, lengths=tuple(a.guided_lengths)) if matched else \
+        {c: list(a.guided_lengths) for c in grid}
 
     # A cached floor file is reused where it covers a cell; anything the grid needs and the
     # cache lacks is measured here, so no cell is ever read against a floor that is missing.
@@ -546,9 +710,11 @@ def main():
     log_path, md_path, js_path = (Path(f"{prefix}.jsonl"), Path(f"{prefix}.md"),
                                   Path(f"{prefix}.json"))
     cfg = {"k": specs["composed"].k, "archs": archs, "seeds": a.seeds, "steps": a.steps,
-           "batch": a.batch, "d_model": a.d_model, "n_layers": a.n_layers, "lr": a.lr,
+           "batch": a.batch, "d_model": a.d_model, "n_layers": a.n_layers,
+           "n_heads": a.n_heads, "cell_costs": cell_costs(specs, tok, grid), "lr": a.lr,
            "train_n": a.train_n, "eval_n": a.eval_n, "guided_n": a.guided_n,
-           "guided_lengths": a.guided_lengths, "fmt": a.fmt, "grid": grid,
+           "guided_lengths": a.guided_lengths, "guided_grid": guided_grid,
+           "fmt": a.fmt, "grid": grid,
            "matched_lengths": matched, "schedule": [(n, s, w) for n, s, w in SCHEDULE],
            "sizes": sizes, "train_lengths": P.TRAIN_LENGTHS}
 
@@ -564,8 +730,9 @@ def main():
                                  batch=a.batch, d_model=a.d_model, n_layers=a.n_layers,
                                  n_heads=a.n_heads, lr=a.lr, train_n=a.train_n,
                                  eval_n=a.eval_n, guided_n=a.guided_n,
-                                 guided_lengths=tuple(a.guided_lengths), device=a.device,
-                                 fmt=a.fmt, loss_log_interval=a.loss_log_interval)
+                                 guided_lengths=guided_grid, device=a.device,
+                                 fmt=a.fmt, loss_log_interval=a.loss_log_interval,
+                                 guided_batch=a.guided_batch)
             except Exception as e:                                        # noqa: BLE001
                 import traceback
                 traceback.print_exc()

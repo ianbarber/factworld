@@ -27,15 +27,22 @@ THE CELLS, AND WHY EACH IS READ AGAINST ITS OWN FLOOR
     admits at that cell's own shape (factworld.validity.s5_bind_v3_operative_floor), recomputed
     from that cell's own items:
 
-      state component     the one-hop read, the state-free surface read, and the fitted
-                          25-feature surface ranker; the truncated carrier walk is excluded on
-                          composition DEPTH (one hop against the carrier chain's 2*n_swap/k)
+      state component     the one-hop read and the state-free surface reads; the truncated
+                          carrier walk is excluded on composition DEPTH (one hop against the
+                          carrier chain's 2*n_swap/k)
       retrieval component every admitted give-scan resolves nothing, because the sampler pins
                           the queried object's resolving write into [L/10, 0.75L] and no budget
                           under the algorithm's per-item minimum reaches it; the floor is
                           informed chance, proved rather than defined
-      composed cell       the one-structure bound W <= max(k,m)+1 = 7 against the task's 13; the
-                          fitted surface ranker sets the number
+      composed cell       the one-structure bound W <= max(k,m)+1 = 7 against the task's 13;
+                          ``last_swap_ref`` and the uniform rows set the number
+
+    THE FITTED 25-FEATURE SURFACE RANKER IS NOT IN ANY OF THESE FLOORS. Six of its features are
+    per-candidate accumulators, so one pass over the k candidates holds W = 1 + 7k registers (43
+    at k=6) and the register-lean implementation pays k passes, S = 2kL — over the composed
+    cell's own algorithm at every registered length. No implementation is admitted at any cell
+    (validity.s5_bind_v3_surface_impls), so it is measured, printed and read as a DIAGNOSTIC: it
+    says what the state-free surface information supports, not what a cheap policy can extract.
 
     Informed chance is 1/(k-1) — the stated initial answer is never the gold one — so 0.200 at
     the k=6 local operating point. Ratios below are to that.
@@ -79,8 +86,8 @@ THE TWO READS, and both are registered because they are two different regimes
 
     Both reads score the SAME items against the SAME floors. The scratchpad caveat is stated
     where it bites: against the GUIDED read the W axis of the floor profile has no force, so
-    that read is against the ADMITTED END of the profile, which at k=6 is 1.00-1.02x informed
-    chance on the components and 1.16-1.21x on the composed cell — i.e. the two reads happen to
+    that read is against the ADMITTED END of the profile, which at k=6 is 1.00-1.05x informed
+    chance on the components and 1.02-1.05x on the composed cell — i.e. the two reads happen to
     be read against nearly the same numbers here, and the difference is in what clearing means.
 
     A composition claim requires the components and the composed cell to be judged on the SAME
@@ -99,23 +106,45 @@ THE READING RULE (pre-registered; every threshold below is fixed before any resu
     0.04 is already z = 3.2, and a policy 0.04 above the floor is a policy the floor did not
     price, not a formed circuit; conversely a 0.15 lift on 50 items is noise. The margin is set
     at 0.15 = three quarters of informed chance, which is the smallest gap that cannot be
-    produced by any surface family measured on this rung (the widest is the fitted ranker at
-    1.14x chance, i.e. 0.028 over the floor).
+    produced by any surface family measured on this rung — including the ones the class rule
+    EXCLUDES, whose readings a floor does not cover: the widest is the fitted 25-feature ranker
+    at 1.21x chance on the k=6 composed cell, i.e. 0.042 over informed chance.
 
     FORMS. A cell forms for an arch iff it CLEARS on at least SEEDS_CLEAR (= 2) of the seeds at
     every registered length. Seeds are counted, never averaged: this family is bimodal at the
     emergence threshold and a mean over one converged and two floored seeds is a number no seed
     produced. Per-seed values are reported in every table.
 
-    POSITIVE CONTROL, and it gates the whole run. Every model is also read on the state
-    component at L = 16 — the shortest TRAINED length, in distribution. If that is at floor the
-    run is void: the harness is not training this family at this width and budget, and no cell
-    downstream is interpretable. This is the one result that is about the harness rather than
-    about the instrument, and it is checked first.
+    POSITIVE CONTROL, and it gates the whole run. It is a DISJUNCTION over the components —
+    some component clears somewhere on the grid THIS READ COVERS — and the (read, cell, length)
+    pairs it requires are declared by ``control_grid()`` and evaluated by ``evaluate_control()``.
+    If no required pair was measured the control RAISES (``ControlNotEvaluable``) and no verdict
+    is returned at all.
 
-THE VERDICT TABLE (mechanical; ``verdict()`` returns exactly one of these)
-    V5 HARNESS NULL          the L=16 state control is at floor. Nothing is claimable. Next move
-                             is the training recipe, not the instrument.
+    WHY A DISJUNCTION AND WHY A RAISE, both measured rather than chosen. A single-cell control on
+    the state component voids a run in which the RETRIEVAL component reads 1.000 at every length
+    on the same models — so the harness demonstrably trains and "the harness is not training this
+    family" is false where such an abort fires. And a control fixed at L=16 is not on the GUIDED
+    read's grid at all, so a bare seed count of 0 there reports an unevaluated cell and a floored
+    one with the same number. A missing cell is not a failed control, and the difference is the
+    whole verdict.
+
+    MATCHED-COST CONTROL, and V1 is not available without it. Each component is also evaluated at
+    the length whose FORWARD-PASS cost equals the composed cell's at L (``matched_lengths`` on
+    MATCHED_AXIS), so "harder than its components beyond the step multiplier" is tested rather
+    than assumed: without it, a composed cell at floor is equally explained by the cells being
+    longer. ``matched_required()`` declares the (cell, length) pairs; where the sampler cannot
+    reach one it is registered ABSENT, and an absent control is NOT a pass — V1 becomes
+    V1_UNCONTROLLED. On the retrieval side the control mostly does not exist and the reason is
+    the sampler (see BIND_MATCHED_MAX above), so V1 is unreachable at L=64 and L=96 by
+    construction and the run should be read knowing that before it starts. The GUIDED read buys
+    the control at GUIDED_MATCHED_FROM only (``guided_grid``): its decode is O(n L^2), so one
+    operating point is affordable and three are not, and without that one purchase the guided
+    read cannot reach V1 at all — every matched-cost cell is LONGER than any length it covers.
+
+THE VERDICT TABLE (mechanical; ``verdict()`` returns exactly one of these, or raises)
+    V5 HARNESS NULL          no component clears anywhere on this read's grid. Nothing is
+                             claimable. Next move is the training recipe, not the instrument.
     V4 COMPONENT UNREADABLE  a component does not FORM at its own registered lengths. The
                              composed cell cannot be read against it, because a composed failure
                              is then explained by the component that failed. Next move is that
@@ -124,6 +153,10 @@ THE VERDICT TABLE (mechanical; ``verdict()`` returns exactly one of these)
                              floor at its matched-cost length. The composed cell's failure is
                              accounted for by how much longer it is, and no composition claim is
                              available from this run.
+    V1 UNCONTROLLED          both components FORM and the composed cell clears nowhere — the V1
+                             pattern — but a matched-cost control was never measured, so "beyond
+                             the step multiplier" is not established. The cells separate; the
+                             cause does not.
     V1 COMPOSITION GAP       both components FORM, including at their matched-cost lengths, and
                              the composed cell does not clear at any registered length. The
                              composed cell is harder than its components beyond the multiplier.
@@ -186,8 +219,15 @@ BIND_MATCHED_MAX = 144
 N_EVAL = 1000                             # PLAIN read
 N_GUIDED = 128                            # GUIDED read: ~(k+m)*L batched forwards per item
 GUIDED_LENGTHS = (48,)                    # its decode is O(n L^2); the full grid is the PLAIN read
-N_FIT = 2000                              # surface-ranker fit sample; the attack showed the
-N_SCORE = 4000                            # published 1.14x was a fit-budget artifact at 500
+GUIDED_MATCHED_FROM = 48                  # the one composed length whose MATCHED-COST control the
+                                          # guided read also buys (``guided_grid``), so V1 is
+                                          # reachable on that read at one operating point
+MATCHED_AXIS = "tokens"                   # the FORWARD-PASS cost model, which is the from-scratch
+                                          # regime's; "steps" is the scratchpad solver's
+N_FIT = 2000                              # surface-ranker fit sample PER BLOCK: its held-out
+N_FIT_BLOCKS = V.S5_BIND_V3_SURFACE_BLOCKS  # curve has flattened by 1000 and the fit runs on
+N_SCORE = 4000                            # N_FIT_BLOCKS * N_FIT pooled, with the block-to-block
+                                          # spread at N_FIT reported beside it
 Z_CLEAR = 3.0
 MARGIN = 0.15
 SEEDS_CLEAR = 2
@@ -226,7 +266,7 @@ def cell_cost(spec, L, tok=None, n_probe=200):
     return s, ptok
 
 
-def matched_lengths(tok, cells=LOCAL_CELLS, lengths=LOCAL_LENGTHS, axis="tokens",
+def matched_lengths(tok, cells=LOCAL_CELLS, lengths=LOCAL_LENGTHS, axis=MATCHED_AXIS,
                     n_needed=N_EVAL + N_FIT + N_SCORE):
     """For each composed length, the component length whose cost matches it, in one cost model.
 
@@ -281,7 +321,7 @@ def matched_lengths(tok, cells=LOCAL_CELLS, lengths=LOCAL_LENGTHS, axis="tokens"
 
 
 # ---- floors ---------------------------------------------------------------------------------
-def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE):
+def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE, n_blocks=N_FIT_BLOCKS):
     """The operative floor at (cell, length), and everything needed to audit it.
 
     Measured on ``n_score`` items drawn from the SAME deterministic test stream as the items a
@@ -290,10 +330,19 @@ def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE):
     at n=500 and is 0.98x at n=4000) and because the fitted ranker has to be scored out of
     sample. The same rows on the exact scored items are reported beside it as the house-rule
     check; where the two differ the larger is the number a score must clear.
+
+    THE FITTED RANKER IS MEASURED AND REPORTED BUT NEVER ADDED TO THE FLOOR: no implementation of
+    it achieves a price the class rule admits at any cell (validity.s5_bind_v3_surface_price),
+    and its price is recomputed here from the weights the fit actually produced, so the exclusion
+    is a property of the measured policy rather than of the row's name. It is fitted on
+    ``n_blocks * n_fit`` items pooled and refitted on each ``n_fit`` block, so the number ships
+    with the spread its fit budget leaves.
     """
     k, m = spec.k, spec.n_objects_active
-    pool = TK.generate(spec, "test", n=n_eval + n_fit + n_score, length=L)
-    scored, fit, big = pool[:n_eval], pool[n_eval:n_eval + n_fit], pool[n_eval + n_fit:]
+    n_fit_total = n_fit * max(1, n_blocks)
+    pool = TK.generate(spec, "test", n=n_eval + n_fit_total + n_score, length=L)
+    scored, fit = pool[:n_eval], pool[n_eval:n_eval + n_fit_total]
+    big = pool[n_eval + n_fit_total:]
     named = V.s5_bind_v3_is_named(big)
     query = V.s5_bind_v3_query_kind(big)
     ns, ng = V.s5_bind_v3_shape(big)
@@ -302,10 +351,10 @@ def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE):
     fl = dict(V.s5_bind_v3_floors(big, k, m))
     fl.update(V.s5_bind_v3_family_floors(big, k, m, named, query, rows=keep))
     op = V.s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query)
-    sb = V.s5_bind_v3_surface_bound(fit, k, held_out=big)
-    if sb is not None and not V.s5_bind_v3_admits("surface_ranker", k, m, ns, ng, named, query):
-        sb = None
-    if sb is not None and (op is None or sb["held_out"] > op):
+    sb = V.s5_bind_v3_surface_bound(fit, k, held_out=big, blocks=max(1, n_blocks))
+    price = V.s5_bind_v3_surface_price(k, m, ns, ng, named, query,
+                                       None if sb is None else sb["weights"])
+    if price["admitted"] and sb is not None and (op is None or sb["held_out"] > op):
         op = sb["held_out"]
     nss, ngs = V.s5_bind_v3_shape(scored)
     keeps = tuple(r for r in V.s5_bind_v3_family_rows(k, m, nss, ngs, named, query)
@@ -319,6 +368,10 @@ def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE):
             "chance": 1.0 / (k - 1), "floor": floor,
             "floor_disjoint": op, "floor_on_scored_items": op_scored,
             "surface_held_out": None if sb is None else sb["held_out"],
+            "surface_n_fit": None if sb is None else sb["n_fit"],
+            "surface_block_spread": None if sb is None else sb["block_spread"],
+            "surface_blocks": None if sb is None else sb["blocks"],
+            "surface_price": price, "surface_in_floor": bool(price["admitted"]),
             "basis": V.s5_bind_v3_floor_basis(k, m, ns, ng, named, query),
             "admitted_rows": {r: round(v, 4) for r, v in
                               sorted(fl.items(), key=lambda x: -x[1])
@@ -350,80 +403,132 @@ def forms(per_seed, floors, lengths, n=N_EVAL, seeds_clear=SEEDS_CLEAR):
     return bool(lengths) and all(c >= seeds_clear for c in counts.values()), counts
 
 
-def verdict(state_ctrl, comp_forms, comp_counts, matched_forms):
-    """The verdict table, applied mechanically.
+class ControlNotEvaluable(RuntimeError):
+    """A control was applied at an (arm, cell, length) the arm never evaluated.
+
+    It is deliberately not a verdict. A control that was not measured says nothing about the
+    model, and folding it into an abort — as a bare seed count of 0 does — reports a MISSING CELL
+    as a model at floor. Raising stops the read at the arm whose grid is wrong.
+    """
+
+
+CONTROL_CELLS = ("state", "bind")     # the control is a DISJUNCTION over the components
+
+
+def control_grid(read, grid, guided_lengths=GUIDED_LENGTHS, control_length=CONTROL_LENGTH):
+    """The (cell, length) pairs the positive control REQUIRES on THIS read.
+
+    A read is only ever controlled on lengths it covers: the PLAIN read runs the whole grid and
+    is controlled at the shortest trained length, the GUIDED read runs GUIDED_LENGTHS and is
+    controlled there. ``grid`` is {cell: lengths this run evaluated}, so a pair that the run's
+    own grid does not contain is not required and is not silently treated as a failure either.
+    """
+    lengths = tuple(guided_lengths) if read == "guided" else (control_length,)
+    return tuple((c, L) for c in CONTROL_CELLS for L in lengths
+                 if L in tuple(grid.get(c, ())))
+
+
+def evaluate_control(read, acc, floors, grid, n):
+    """Evaluate the positive control on the pairs ``control_grid`` requires, or RAISE.
 
     Args:
-        state_ctrl: seed count clearing the state component at CONTROL_LENGTH.
+        acc: {cell: {seed: {L: accuracy}}} for this read.
+        floors: {cell: {L: floor}}.
+        grid: {cell: lengths this run evaluated}.
+        n: the items behind each accuracy on this read.
+
+    Returns:
+        {"seeds": the most seeds any required pair clears, "cleared_on": that pair,
+         "required": every required pair, "per_pair": {(cell, L): seeds}}.
+
+    Raises:
+        ControlNotEvaluable: no required pair has both a floor and an accuracy for every seed.
+    """
+    required = control_grid(read, grid)
+    if not required:
+        raise ControlNotEvaluable(
+            f"{read}: no control cell is on this read's grid {dict(grid)}; the control is "
+            f"declared over {CONTROL_CELLS} at "
+            f"{GUIDED_LENGTHS if read == 'guided' else (CONTROL_LENGTH,)}")
+    per_pair, best = {}, None
+    for cell, L in required:
+        if floors.get(cell, {}).get(L) is None:
+            continue
+        if not acc.get(cell) or not all(L in acc[cell][s] for s in acc[cell]):
+            continue
+        seeds = sum(1 for s in acc[cell] if clears(acc[cell][s].get(L), floors[cell][L], n)[0])
+        per_pair[f"{cell}@{L}"] = seeds
+        if best is None or seeds > best[0]:
+            best = (seeds, f"{cell}@{L}")
+    if best is None:
+        raise ControlNotEvaluable(
+            f"{read}: the control requires one of {[f'{c}@{L}' for c, L in required]} and this "
+            "arm evaluated none of them. A missing cell is not a model at floor.")
+    return {"seeds": best[0], "cleared_on": best[1], "per_pair": per_pair,
+            "required": [f"{c}@{L}" for c, L in required]}
+
+
+def matched_required(matched, cells=("state", "bind"), lengths=LOCAL_LENGTHS):
+    """The (cell, length) pairs the MATCHED-COST control requires, from ``matched_lengths``.
+
+    Returns {cell: [lengths]}. A cell whose list is empty has NO matched-cost control anywhere on
+    the grid — the sampler cannot build it (BIND_MATCHED_MAX) — and V1 is then unreachable for
+    that cell by construction rather than by how the run came out.
+    """
+    out = {c: [] for c in cells}
+    for L in lengths:
+        for c in cells:
+            ml = matched.get(L, {}).get(c, {}).get("L")
+            if ml and ml not in out[c]:
+                out[c].append(ml)
+    return {c: sorted(v) for c, v in out.items()}
+
+
+def guided_grid(matched, cells=LOCAL_CELLS, lengths=GUIDED_LENGTHS,
+                matched_from=GUIDED_MATCHED_FROM):
+    """The per-cell lengths the GUIDED read runs: its own grid, plus each component's
+    matched-cost length for ``matched_from``.
+
+    Without this the guided read cannot reach V1 at all — the matched-cost control is a component
+    at a LONGER length than any the read covers, so "beyond the step multiplier" is unevaluable
+    there however the cells come out, which is exactly what the first run hit. The guided decode
+    is O(n L^2), so only the SHORTEST composed length's matched pair is bought: it makes the
+    control reachable at one operating point rather than at three.
+    """
+    out = {c: list(lengths) for c in cells}
+    for c in ("state", "bind"):
+        ml = matched.get(matched_from, {}).get(c, {}).get("L")
+        if ml and ml not in out[c]:
+            out[c].append(ml)
+    return {c: sorted(v) for c, v in out.items()}
+
+
+def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured):
+    """The verdict table, applied mechanically. Raises rather than aborting on a missing control.
+
+    Args:
+        control: the dict ``evaluate_control`` returns. A bare seed count is refused: it reports
+            an unevaluated cell and a floored one with the same number, which is the defect this
+            rule exists to remove.
         comp_forms: {"state": bool, "bind": bool, "composed": bool} at registered lengths.
         comp_counts: {cell: {L: seeds clearing}} for the report.
         matched_forms: {"state": bool|None, "bind": bool|None} at the matched-cost lengths;
-            None where the sampler cannot reach the matched length.
-    """
-    if state_ctrl < SEEDS_CLEAR:
-        return "V5_HARNESS_NULL", (
-            f"the state component is at floor at the shortest trained length L={CONTROL_LENGTH} "
-            f"({state_ctrl}/{SEEDS_CLEAR} seeds). The harness is not training this family at "
-            f"this width and budget; no cell downstream is interpretable.")
-    if not comp_forms["state"] or not comp_forms["bind"]:
-        bad = [c for c in ("state", "bind") if not comp_forms[c]]
-        return "V4_COMPONENT_UNREADABLE", (
-            f"component(s) {bad} do not form at their own registered lengths "
-            f"{ {c: comp_counts[c] for c in bad} }. A composed failure would be explained by the "
-            f"component that failed, so no composition claim is available.")
-    if comp_forms["composed"]:
-        return "V2_NO_GAP_HERE", (
-            "the composed cell forms. Composition is not a separate difficulty at k=6 / "
-            f"L<={max(LOCAL_LENGTHS)} in this regime; the lengths or k must move before the cell "
-            "is worth buying on the frontier.")
-    unmatched = [c for c, ok in matched_forms.items() if ok is False]
-    if unmatched:
-        return "V3_GAP_IS_THE_COST", (
-            f"the composed cell is at floor, but component(s) {unmatched} are also at floor at "
-            "their matched-cost lengths. The composed cell's failure is accounted for by cost, "
-            "not by composition.")
-    return "V1_COMPOSITION_GAP", (
-        "both components form, including at the matched-cost lengths, and the composed cell "
-        "clears nowhere. The composition is harder than its components beyond the step "
-        "multiplier.")
-
-
-def verdict_repaired(state_ctrl, any_ctrl, comp_forms, comp_counts, matched_forms,
-                     matched_measured):
-    """THE SAME RULE WITH THREE PRE-REGISTRATION DEFECTS REPAIRED, reported BESIDE ``verdict()``
-    and never in place of it.
-
-    The registered rule was run first and its answer stands as the pre-registered answer. What
-    the run showed is that three of its clauses do not say what they were meant to say, and each
-    was found by a result the clause mislabels rather than by taste:
-
-    D1  THE POSITIVE CONTROL IS ONE COMPONENT, AND IT SHOULD BE A DISJUNCTION. ``verdict``
-        voids the run when the STATE component is at floor at L=16, on the reasoning that a
-        harness which cannot train the shortest in-distribution cell cannot be read. The
-        retrieval component reads 1.000 at every length on the same models. So the harness
-        trains, the run is readable, and V5's sentence — "the harness is not training this
-        family" — is false where it fires. The control has to be "SOME component clears
-        somewhere", which is what actually licenses reading the rest.
-
-    D2  THE CONTROL LENGTH IS NOT IN EVERY READ'S GRID. The GUIDED read is registered at
-        GUIDED_LENGTHS = (48,), which does not contain CONTROL_LENGTH = 16, so on that read the
-        control is not at floor — it is not measured, and V5 fires on an absence. A control has
-        to be evaluated on a grid the read covers.
-
-    D3  V1 TREATS AN ABSENT MATCHED-COST CONTROL AS A PASS. Its branch is "no component FAILED
-        at its matched length", and a control that was never measured does not fail. But V1's
-        whole claim is "beyond the step multiplier", and that claim is exactly what the matched
-        control establishes. Where the control is absent the claim is not available, however the
-        cells came out, so the repaired rule returns V1_UNCONTROLLED instead.
-
-    Args:
-        any_ctrl: seeds clearing ANY component at ANY registered length (D1/D2).
+            None where no matched-cost control was measured.
         matched_measured: {cell: bool} — whether a matched-cost control was measured at all.
+
+    Raises:
+        ControlNotEvaluable: ``control`` is not an evaluated control.
     """
-    if any_ctrl < SEEDS_CLEAR:
+    if not isinstance(control, dict) or "seeds" not in control:
+        raise ControlNotEvaluable(
+            "verdict() takes the control evaluate_control() returns, not a seed count: a count "
+            "cannot distinguish a cell at floor from a cell the arm never ran.")
+    if control["seeds"] < SEEDS_CLEAR:
         return "V5_HARNESS_NULL", (
-            f"no component clears anywhere ({any_ctrl} seeds). Nothing downstream is "
-            "interpretable; the next move is the training recipe, not the instrument.")
+            f"no component clears on this read's control grid {control['per_pair']} "
+            f"({control['seeds']}/{SEEDS_CLEAR} seeds at best, on {control['cleared_on']}). "
+            "Nothing downstream is interpretable; the next move is the training recipe, not the "
+            "instrument.")
     if not comp_forms["state"] or not comp_forms["bind"]:
         bad = [c for c in ("state", "bind") if not comp_forms[c]]
         return "V4_COMPONENT_UNREADABLE", (
@@ -434,21 +539,23 @@ def verdict_repaired(state_ctrl, any_ctrl, comp_forms, comp_counts, matched_form
     if comp_forms["composed"]:
         return "V2_NO_GAP_HERE", (
             "the composed cell forms wherever both components do. Composition is not a separate "
-            "difficulty at this operating point.")
+            f"difficulty at k=6 / L<={max(LOCAL_LENGTHS)} in this regime; the lengths or k must "
+            "move before the cell is worth buying on the frontier.")
     unmatched = [c for c, ok in matched_forms.items() if ok is False]
     if unmatched:
         return "V3_GAP_IS_THE_COST", (
             f"the composed cell is at floor and component(s) {unmatched} are also at floor at "
-            "their matched-cost lengths. The failure is accounted for by cost.")
-    if not all(matched_measured.get(c) for c in ("state", "bind")):
-        missing = [c for c in ("state", "bind") if not matched_measured.get(c)]
+            "their matched-cost lengths. The failure is accounted for by cost, not composition.")
+    missing = [c for c in ("state", "bind") if not matched_measured.get(c)]
+    if missing:
         return "V1_UNCONTROLLED", (
             "both components form and the composed cell does not — the V1 pattern — but the "
             f"matched-cost control is absent for {missing}, so 'beyond the step multiplier' is "
             "not established. The cells separate; the cause does not.")
     return "V1_COMPOSITION_GAP", (
         "both components form, including at the matched-cost lengths, and the composed cell "
-        "clears nowhere. The composition is harder than its components beyond the multiplier.")
+        "clears nowhere. The composition is harder than its components beyond the step "
+        "multiplier.")
 
 
 # ---- the frontier scout ----------------------------------------------------------------------
@@ -526,7 +633,7 @@ def scout_plan(models=SCOUT_MODELS, n=SCOUT_N):
 
 
 # ---- registration ---------------------------------------------------------------------------
-def register(out_prefix, axis="tokens", with_floors=True):
+def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
     """Write the pre-registration record: cells, lengths, costs, matched lengths, floors and
     every threshold, before any solver number exists."""
     from factworld.tokenizer import Tokenizer
@@ -557,18 +664,37 @@ def register(out_prefix, axis="tokens", with_floors=True):
             print(f"  floor {key}@{L}: {floors[f'{key}@{L}']['floor']:.4f} "
                   f"({floors[f'{key}@{L}']['floor'] / floors[f'{key}@{L}']['chance']:.2f}x chance)",
                   flush=True)
+    grid = {c: [CONTROL_LENGTH, *LOCAL_LENGTHS] for c in LOCAL_CELLS}
+    for L in LOCAL_LENGTHS:
+        for c in ("state", "bind"):
+            mlen = ml[L][c]["L"]
+            if mlen and mlen not in grid[c]:
+                grid[c].append(mlen)
     rec = {
         "written_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "protocol": os.path.basename(__file__),
         "local_cells": LOCAL_CELLS, "frontier_cells": FRONTIER_CELLS,
         "local_lengths": LOCAL_LENGTHS, "control_length": CONTROL_LENGTH,
         "train_lengths": TRAIN_LENGTHS,
-        "thresholds": {"n_eval": N_EVAL, "z_clear": Z_CLEAR, "margin": MARGIN,
-                       "seeds_clear": SEEDS_CLEAR, "n_fit": N_FIT, "n_score": N_SCORE},
+        "thresholds": {"n_eval": N_EVAL, "n_guided": N_GUIDED, "z_clear": Z_CLEAR,
+                       "margin": MARGIN, "seeds_clear": SEEDS_CLEAR, "n_fit": N_FIT,
+                       "n_fit_blocks": N_FIT_BLOCKS, "n_score": N_SCORE},
         "costs": costs, "matched_lengths": ml, "matched_axis": axis,
+        # THE TWO CONTROLS, declared as the (read, cell, length) pairs they require. A control
+        # applied where its arm has no cell RAISES; it never abstains and never aborts.
+        "controls": {
+            "positive": {"cells": CONTROL_CELLS, "rule": "some component clears somewhere on "
+                                                         "the grid the read covers",
+                         "required": {r: [f"{c}@{L}" for c, L in control_grid(r, grid)]
+                                      for r in ("plain", "guided")}},
+            "matched_cost": {"axis": axis, "required": matched_required(ml),
+                             "rule": "V1 is unavailable where a matched-cost control was never "
+                                     "measured; the verdict is V1_UNCONTROLLED"},
+        },
+        "eval_grid": grid,
         "floors": floors,
         "verdicts": ["V5_HARNESS_NULL", "V4_COMPONENT_UNREADABLE", "V3_GAP_IS_THE_COST",
-                     "V1_COMPOSITION_GAP", "V2_NO_GAP_HERE"],
+                     "V1_UNCONTROLLED", "V1_COMPOSITION_GAP", "V2_NO_GAP_HERE"],
         "scout": scout_plan(),
     }
     with open(f"{out_prefix}.json", "w") as f:
@@ -599,7 +725,7 @@ def main():
     ap.add_argument("--read", default=None, help="re-apply the rule to a runner results JSON")
     ap.add_argument("--read_floors", default=None, help="floors JSON to re-read --read against")
     ap.add_argument("--no_floors", action="store_true", help="skip the floor pass (fast)")
-    ap.add_argument("--axis", default="tokens", choices=["tokens", "steps"])
+    ap.add_argument("--axis", default=MATCHED_AXIS, choices=["tokens", "steps"])
     ap.add_argument("--scout", action="store_true", help="print the priced frontier scout")
     ap.add_argument("--out_prefix",
                     default="results/s5bind_v3_three_cell_preregistration_20260731")
@@ -611,8 +737,9 @@ def main():
         for arch, reads in sorted(read_results(a.read, a.read_floors).items()):
             for read, v in sorted(reads.items()):
                 print(f"{arch} / {read}: {v['verdict']} — {v['why']}")
-                print(f"    seeds clearing {v['seed_counts']}; control "
-                      f"{v['control_seeds']}; matched {v['matched_forms']}")
+                print(f"    seeds clearing {v['seed_counts']}; positive control "
+                      f"{v.get('control', {}).get('per_pair')}; matched "
+                      f"{v['matched_forms']} (measured {v.get('matched_measured')})")
     if a.register:
         os.makedirs(os.path.dirname(a.out_prefix) or ".", exist_ok=True)
         register(a.out_prefix, axis=a.axis, with_floors=not a.no_floors)

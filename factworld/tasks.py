@@ -25,10 +25,13 @@ defect-documentation tests, but are never scored.
 The ``s5_bind`` family is the COMPOSED task: two structures over one event stream, each event
 naming its second operand LIVE through one of them, so the composed query cannot be answered by
 either component's algorithm. The registered version ablates the SOURCE STRUCTURE a reference
-reads (``TaskSpec.source_ablation``), and its composition statistic is a within-cell op-type
-contrast (``factworld.composition``). The temporal version, which ablated the time index instead,
-is RETIRED: its composition class was by construction the overwritten-cell class, so a
-composition-free read-history failure loaded on the contrast as hard as a real deficit.
+reads (``TaskSpec.source_ablation``); its within-cell op-type contrast is a STRUCTURE-SWITCH
+diagnostic and not a composition measure — within a kind the class label IS the printed clause,
+so a solver holding one structure is invisible to it at any n (``factworld.composition``).
+Composition evidence comes from the three-cell comparison: the state component, the retrieval
+component and the composed cell, each read against its own floor. The temporal version, which
+ablated the time index instead, is RETIRED: its class was by construction the overwritten-cell
+class, so a read-history failure loaded on the contrast as hard as a real deficit.
 
   from factworld.tasks import CANONICAL, generate, score_exact
   spec = CANONICAL["composite_copy_v2"]
@@ -326,10 +329,13 @@ class TaskSpec:
     # class IS the reference clause, so a solver that is simply worse at one clause slips on
     # swap-CROSS and give-SAME. The clause-to-class map FLIPS between the kinds, so the effect
     # lives entirely in the ANTI-symmetric combination of the two kinds' class differences, and
-    # the registered primary (factworld.composition.PRIMARY_STAT) is built to be uncorrelated
-    # with that direction: one RAW mass column per stratum, so any hazard that is a function of
-    # the stratum sits in the model's span with a zero contrast, and a precision-weighted
-    # contrast column, so the clause direction projects onto it at zero.
+    # the diagnostic's default form (factworld.composition.DIAGNOSTIC_STAT) is built to be
+    # uncorrelated with that direction: one RAW mass column per stratum, so any hazard that is a
+    # function of the stratum sits in the model's span with a zero contrast, and a
+    # precision-weighted contrast column, so the clause direction projects onto it at zero. That
+    # is a statement about the COLUMNS; a solver that holds one structure and not the other still
+    # fails on exactly the antisymmetric direction the kind-balancing annihilates, which is why
+    # the contrast is a structure-SWITCH diagnostic and never a composition measure.
     #
     #   p_cross       P(an event's reference reads the OTHER structure).
     #                 The per-slot cross coin is drawn BEFORE the operands and both candidate
@@ -354,7 +360,7 @@ class TaskSpec:
     #                 candidate draws a slot takes the best of, or 0 for no matching.
     #
     #                 WHAT IT FIXES. p_swap = 1/3 equalises the two structures' write RATES, so
-    #                 the two classes are matched when pooled — but the primary is KIND-BALANCED,
+    #                 the two classes are matched when pooled — but the diagnostic is KIND-BALANCED,
     #                 and within a kind they were not. Measured on the shipped stream at
     #                 k=6/L=64, a swap's CROSS read was 28.5% staler than its SAME read (age
     #                 10.16 vs 7.91) with 13.0% fewer writes behind it; at k=12/L=192, 20.0%
@@ -2035,20 +2041,28 @@ CANONICAL = {
     #
     #   cell                        L   operative floor   what sets it
     #   s5_bind_v3                256       1.09x        uniform_anti_surface, the gate's price
-    #   s5_bind_local_v3           96       1.14x        the fitted surface ranker
+    #   s5_bind_local_v3           96       1.05x        one_structure_P and last_swap_ref, the
+    #                                                    admitted one-structure and surface rows
     #   s5_bind_v3_state          256       1.00x        informed chance: last_write_1hop, the
     #   s5_bind_local_v3_state     96       1.02x        carrier walk cut after one hop, reads
-    #                                                    0.98x and 1.03x, the state-free surface
-    #                                                    read 0.97x / 0.75x and the fitted ranker
-    #                                                    0.89x / 1.01x (n=4000)
+    #                                                    0.98x and 1.03x, against the state-free
+    #                                                    surface read's 0.97x / 0.75x
     #   s5_bind_v3_bind           256       1.00x        informed chance, PROVED: the sampler
     #   s5_bind_local_v3_bind      96       1.00x        pins the queried object's resolving
     #                                                    write out of reach of every admitted
     #                                                    budget, and each reads exactly 0.000
     #
-    # The surface entry is a RANKER over 25 state-free features fitted on one sample and scored
-    # on a disjoint one, so it is neither a selection statistic nor the weakest member of the
-    # family; it moves with the FIT budget, and these are at 500 fitted / 4000 scored.
+    # THE FITTED 25-FEATURE SURFACE RANKER IS NOT IN THOSE NUMBERS. It is measured beside them —
+    # 1.04x at k=12/L=256 and 1.24x at k=6/L=96, on 4000 fit / 4000 held-out items, with a
+    # block-to-block spread of 0.000-0.013 between two disjoint 2000-item fits — but no
+    # implementation of it achieves a price the class rule admits, because six of its features
+    # are per-candidate accumulators: one pass over the k candidates costs W = 1 + 7k live slots
+    # and the register-lean implementation costs k passes, S = 2kL
+    # (validity.s5_bind_v3_surface_impls). It is a DIAGNOSTIC of what the state-free surface
+    # information supports, not a bound on what a cheap policy extracts. Pricing it W = 2 put the
+    # k=6 composed floor at 1.14x; the corrected number is 1.05x, and the k=12 composed floor
+    # does not move because the ranker never set it there. Its held-out accuracy is still
+    # climbing below ~1000 fit items, so the fit budget is registered at 2000 per block.
     #
     # What the class rule EXCLUDES is measured beside it, since the exclusion is a cost argument.
     # The partial-carry family (carry P and j of the m holder cells, W = k+j+1) climbs to 6.12x

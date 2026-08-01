@@ -38,8 +38,10 @@ For every canonical task, certify that no shallow baseline clears floor on the h
     below the table, and each cell's floor is then printed AS A PROFILE — over W on a composed
     cell, over STEPS on a component one, with both swept families (truncated walk, truncated
     give-scan) plotted on it, since a single number hides exactly the continuum that has to be
-    visible. The surface family enters as a FITTED RANKER scored out of sample rather than as a
-    max over one-at-a-time rules, which is a selection statistic.
+    visible. The state-free surface family is measured as a FITTED RANKER scored out of sample
+    rather than as a max over one-at-a-time rules, which is a selection statistic; it is a
+    DIAGNOSTIC and not a floor row, because six of its features are per-candidate accumulators
+    and no point on its register/pass trade-off is admitted at any cell.
 A task PASSES if majority, recency, first-position and (where defined) strong-recency accuracy are
 all well below 0.5 (near the 1/#answers floor). The pointer-map families answer over a much larger
 space than 2, so their column is gated against their own chance level instead: no shallow policy
@@ -75,6 +77,7 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_shape,
     s5_bind_v3_slot_profile,
     s5_bind_v3_surface_bound,
+    s5_bind_v3_surface_price,
     s5_bind_v3_width_profile,
     s5_bind_v3_is_named,
     S5_BIND_CHANCE_ROWS,
@@ -98,9 +101,16 @@ N = 500
 # s5_bind_v3_state@256 and 0.98x at n = 4000. The floor number is therefore re-measured on a
 # larger held-out sample, and only for the rows the rule ADMITS — the deep excluded walks are
 # diagnostics and stay at n = 500, where they are already an order of magnitude off chance. The
-# fitted surface ranker keeps its n = 500 FIT (the expensive half) and is scored on the large
-# sample, since scoring a fitted ranker is a pass and the fit sample is what biases it down.
+# fitted surface ranker is fitted on its OWN pool, disjoint from both, because n = 500 is inside
+# the range where its held-out curve is still moving.
 N_FLOOR = 4000
+# THE RANKER'S FIT BUDGET. Its held-out accuracy is still climbing at a few hundred items — 1.12x
+# / 1.21x / 1.23x informed chance at 250 / 500 / 1000 on the k=6 composed cell at L=48 — and flat
+# from 1000 on, so it is fitted at N_SURFACE_FIT per block over N_SURFACE_BLOCKS disjoint blocks
+# and the block-to-block spread is printed with the number. The fit pool sits past the scored and
+# floor samples in the same deterministic stream, so it overlaps neither.
+N_SURFACE_FIT = 2000
+N_SURFACE_BLOCKS = 2
 
 # The strong recency baseline only has a defined prediction on the give-stream families.
 STRONG_REC_FAMILIES = ("binding", "composite")
@@ -211,18 +221,20 @@ def main():
             allfl.update(fam)
             cls = s5_bind_v3_classify(spec.k, m, ns, ng, named, query, rows=tuple(allfl))
             gated = [n for n in S5_BIND_V3_SHORTCUTS if n in fl and cls[n]]
-            # the surface family enters as a FITTED bound scored out of sample, not as a max
-            # over one-at-a-time rules — see validity.s5_bind_v3_surface_bound. The fit runs on
-            # the scored split and the scoring on items N..N+N_FLOOR-1, which are disjoint from
-            # it and deterministic, so the estimate is out of sample and the fit gets the whole
-            # N. It is a W=2, one-hop, one-pass policy and is admitted by the same rule as any
-            # row — on a component cell it pays 2L against an algorithm whose minimum is 2L+2.
-            big = TK.generate(spec, "test", n=N + N_FLOOR,
-                              length=spec.eval_lengths[-1])[N:]
-            sb = s5_bind_v3_surface_bound(test, spec.k, held_out=big)
-            if sb is not None and not s5_bind_v3_admits("surface_ranker", spec.k, m, ns, ng,
-                                                        named, query):
-                sb = None
+            # the surface family is measured as a FITTED ranker scored out of sample, not as a
+            # max over one-at-a-time rules — see validity.s5_bind_v3_surface_bound. Items
+            # N..N+N_FLOOR-1 score it and the N_SURFACE_BLOCKS * N_SURFACE_FIT items past those
+            # fit it, both disjoint from the scored split and from each other. It is a
+            # DIAGNOSTIC: its price is recomputed here from the weights the fit produced
+            # (s5_bind_v3_surface_price) and no implementation of it is admitted at any cell, so
+            # it never enters the operative floor.
+            pool = TK.generate(spec, "test", n=N + N_FLOOR + N_SURFACE_BLOCKS * N_SURFACE_FIT,
+                               length=spec.eval_lengths[-1])
+            big, fitpool = pool[N:N + N_FLOOR], pool[N + N_FLOOR:]
+            sb = s5_bind_v3_surface_bound(fitpool, spec.k, held_out=big,
+                                          blocks=N_SURFACE_BLOCKS)
+            sprice = s5_bind_v3_surface_price(spec.k, m, ns, ng, named, query,
+                                              None if sb is None else sb["weights"])
             # the floor itself, re-measured at N_FLOOR on the rows the rule admits
             nsb, ngb = s5_bind_v3_shape(big)
             keep = tuple(r for r in s5_bind_v3_family_rows(spec.k, m, nsb, ngb, named, query)
@@ -230,7 +242,7 @@ def main():
             bigfl = dict(s5_bind_v3_floors(big, spec.k, m))
             bigfl.update(s5_bind_v3_family_floors(big, spec.k, m, named, query, rows=keep))
             op = s5_bind_v3_operative_floor(bigfl, spec.k, m, nsb, ngb, named, query)
-            if sb is not None and (op is None or sb["held_out"] > op):
+            if sprice["admitted"] and sb is not None and (op is None or sb["held_out"] > op):
                 op = sb["held_out"]
             strongrec = op or 0.0
             ok &= strongrec < 0.5
@@ -247,7 +259,7 @@ def main():
                 ok &= all(fl[n] < lim for n in S5_BIND_V3_TRUNCATION_ROWS if n in fl)
             bind_v3_rows[name] = (fl, op, gated, spec.eval_lengths[-1], spec.k, sb,
                                   s5_bind_v3_floor_basis(spec.k, m, ns, ng, named, query),
-                                  (test, m, named, query), fam, cls, bigfl)
+                                  (test, m, named, query), fam, cls, bigfl, sprice)
         elif spec.family in S5_BIND_FAMILIES:
             # mutual-reference rung: every registered policy, recomputed from these exact items.
             fl = s5_bind_floors(test, spec.k)
@@ -293,11 +305,16 @@ def main():
               f"'†' = class-excluded — on a composed cell it holds both structures or pays more "
               f"steps than the task, on a component cell it composes more than one hop or pays "
               f"what that cell's own algorithm pays; 'op/ch' = op over the informed chance "
-              f"1/(k-1), 'basis' = whether any admitted REGISTERED row is a measured policy)")
+              f"1/(k-1), 'basis' = whether any admitted REGISTERED row is a measured policy. "
+              f"'surf' is the fitted state-free ranker, a DIAGNOSTIC: it is fitted at "
+              f"{N_SURFACE_BLOCKS}x{N_SURFACE_FIT} and scored on the same n={N_FLOOR} sample, "
+              f"and no implementation of it achieves a price the class rule admits, so it never "
+              f"enters 'op' — its price and the block-to-block spread are printed below)")
         print("    " + f"{'task':<26}{'L':>5}"
               + "".join(f"{r[:10]:>11}" for r in S5_BIND_V3_ROWS)
-              + f"{'surf.fit':>10}{'op':>9}{'op/ch':>8}  basis")
-        for name, (fl, op, gated, L, k, sb, basis, _ctx, _fam, _cls, _big) in bind_v3_rows.items():
+              + f"{'surf†':>10}{'op':>9}{'op/ch':>8}  basis")
+        for name, (fl, op, gated, L, k, sb, basis, _ctx, _fam, _cls, _big, sp) \
+                in bind_v3_rows.items():
             cells = "".join((f"{fl[r]:>10.3f}{'*' if r in gated else '†'}"
                              if r in fl else f"{'—':>11}") for r in S5_BIND_V3_ROWS)
             ratio = op / fl["uniform_non_initial"] if "uniform_non_initial" in fl else None
@@ -305,6 +322,18 @@ def main():
             print(f"    {name:<26}{L:>5}" + cells + sbc + f"{op:>9.3f}"
                   + (f"{ratio:>8.2f}" if ratio is not None else f"{'—':>8}")
                   + f"  {basis}")
+        print("\n  the fitted surface ranker, priced from the weights each fit produced "
+              "(admitted -> it would enter 'op'):")
+        for name, (fl, _op, _g, L, k, sb, _b, _ctx, _f, _c, _bg, sp) in bind_v3_rows.items():
+            ch = 1.0 / max(1, k - 1)
+            if sb is None:
+                print(f"    {name:<26}L{L:<5} — (no state query on this cell)")
+                continue
+            print(f"    {name:<26}L{L:<5} held-out {sb['held_out']:.4f} ({sb['held_out']/ch:.2f}x)"
+                  f"  n_fit {sb['n_fit']} in {len(sb['blocks'])} blocks of {sb['n_per_block']}, "
+                  f"block spread {sb['block_spread']:.4f} {sb['blocks']}"
+                  f"  |  admitted={sp['admitted']} at best (W={sp['W']}<={sp['W_max']}, "
+                  f"S={sp['S']} vs {sp['S_max']}, {sp['A']} accumulators, {sp['passes']} passes)")
         print(f"\n  s5_bind_v3 FLOOR PROFILES (n={N}). A cell's floor is not one number: it is "
               f"what each budget buys,\n  along the resource that cell separates on — LIVE SLOTS "
               f"on the composed cell (the one-structure bound\n  W <= max(k,m)+1 is the last "
@@ -317,7 +346,8 @@ def main():
               f"of the\n  profile, not the admitted max. The DEPTH axis does bind there: a "
               f"scratchpad does not make a\n  truncated walk correct, it only makes it "
               f"affordable.")
-        for name, (fl, op, gated, L, k, sb, basis, ctx, fam, cls, bigfl) in bind_v3_rows.items():
+        for name, (fl, op, gated, L, k, sb, basis, ctx, fam, cls, bigfl, sp) \
+                in bind_v3_rows.items():
             test, m, named, query = ctx
             prof = s5_bind_v3_slot_profile(test, k, m, named, query)
             ch = 1.0 / max(1, k - 1)
@@ -344,10 +374,12 @@ def main():
                     f":{fam[r] / ch:.2f}{'' if cls[r] else '*'}"
                     for r in sorted(fam, key=lambda r: fam[r])))
             if sb is not None:
-                print(f"      fitted surface ranker (W=2, {len(sb['weights'])} features, "
-                      f"fit {sb['n_fit']} / held out {sb['n_held_out']}): "
-                      f"{sb['held_out']:.4f} ({sb['held_out'] / ch:.2f}x), "
-                      f"in-sample {sb['in_sample']:.4f}")
+                print(f"      fitted surface ranker, NOT a floor row ({len(sb['weights'])} "
+                      f"features, {sp['A']} of them per-candidate accumulators, so its cheapest "
+                      f"admissible-W implementation pays {sp['passes']} passes at S={sp['S']} "
+                      f"against {sp['S_max']}; fit {sb['n_fit']} / held out "
+                      f"{sb['n_held_out']}): {sb['held_out']:.4f} "
+                      f"({sb['held_out'] / ch:.2f}x), in-sample {sb['in_sample']:.4f}")
         print("    (* = not admitted. On a COMPOSED cell that means the row holds both "
               "structures. On a COMPONENT cell\n     the W bound is vacuous — its own algorithm "
               "already holds none — so the profile runs along STEPS\n     and a row is admitted "

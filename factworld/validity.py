@@ -1309,11 +1309,14 @@ def _fmt(report: dict) -> str:
 #                        the queried agent, take its named partner, read that agent's stated
 #                        pointer — is one hop and pays 2k + 3 against a minimum of 2L + 2, so it
 #                        is ADMITTED, and it reads 0.98x informed chance at k=12/L=256 and 1.03x
-#                        at k=6/L=96 (n = 4000). Every other one-hop row measured there is at or
-#                        below chance: the state-free surface read 0.97x / 0.75x, the fitted
-#                        25-feature ranker 0.89x / 1.01x on 4000 held-out items, the truncated
-#                        walk 0.10x-1.18x over absolute budgets. The operative floor is then
-#                        1.00x and 1.02x. The whole c-drop continuum is excluded on DEPTH.
+#                        at k=6/L=96 (n = 4000). Every other admitted one-hop row measured there
+#                        is at or below chance: the state-free surface read 0.97x / 0.75x, the
+#                        truncated walk 0.10x-1.18x over absolute budgets. The operative floor is
+#                        then 1.00x and 1.02x, and it is informed chance only to within the
+#                        selection bias a max over rows carries: one row's standard error alone
+#                        is 0.05x of chance at k=12 and n = 4000, so the number is pool-dependent
+#                        at that size (1.00x-1.09x across pools and lengths) and is re-measured
+#                        per pool. The whole c-drop continuum is excluded on DEPTH.
 #   retrieval component: the depth bound is VACUOUS — that cell's own algorithm is itself one hop
 #                        (a named give's recipient IS the answer), so there is nothing to hold at
 #                        most one of, and the floor rests entirely on the cost half. It closes
@@ -1329,6 +1332,29 @@ def _fmt(report: dict) -> str:
 #                        now a proof rather than a definition; ``s5_bind_v3_floor_basis`` still
 #                        returns 'chance' there, because no admitted row that reads the item
 #                        beats a guess.
+#
+# ===========================================================================================
+# THE FITTED SURFACE RANKER IS NOT A FLOOR ROW, AT ANY CELL
+# ===========================================================================================
+# ``s5_bind_v3_surface_bound`` fits a multinomial logit over the 25 state-free features and
+# scores it out of sample. It was priced W = 2 and one backward scan, and it set the published
+# floor on the composed cells. That price is wrong, and it is wrong in both directions at once:
+# ``s5_bind_v3_surface_features`` holds SIX per-candidate accumulators (mention counts, the first
+# and last mention positions, and the three naming counts) and argmaxes over the k candidates, so
+#   * one pass over the whole candidate set costs W = 1 + 7k live slots — 43 at k=6 and 85 at
+#     k=12 — against the composed cells' one-structure bound of 7 and 13 and the component
+#     cells' W = 2; and
+#   * the register-lean implementation scores ONE candidate per pass, so it pays k passes,
+#     S = 2 k L: 576 against the k=6/L=48 composed task's 208, and 6144 against the k=12/L=256
+#     composed task's 1048.
+# ``s5_bind_v3_surface_impls`` prices the whole trade-off between those two ends, generously (the
+# landmark registers folded into the scratch register, later passes charged only their events),
+# and NO point on it is admitted at any of the six cells. So the row is measured and printed as a
+# DIAGNOSTIC — what the state-free surface information supports — beside the block-drop family,
+# and it never enters ``s5_bind_v3_operative_floor``. Its price is recomputed from the weights
+# each fit produces, so a leaner feature set is admitted where this one is not: with no
+# accumulator feature carrying weight the policy IS the W = 2 one-scan read it was priced as, and
+# the rule admits it on the composed cells and on the state component.
 #
 # ===========================================================================================
 # THE DEPTH CONVENTION  (D1-D3, stated so "one hop" can be applied by reading a policy's code)
@@ -1456,13 +1482,35 @@ def _v3_family(row: str) -> tuple[str, int] | None:
     return None
 
 
-def s5_bind_v3_row_depth(row: str, query: str = "state", length: int | None = None) -> int:
-    """The row's COMPOSITION DEPTH under D1-D3: the MOST events whose contents it can chain.
+# DEPTH IS A PROPERTY OF THE POLICY, so it is read off what the policy does and never off what
+# the row is called. The three groups below are the registry's policies written out; a name that
+# is in none of them and matches no swept family has no depth here and ``s5_bind_v3_row_depth``
+# RAISES on it. A default — the ``1 << 30`` this replaces — silently EXCLUDES an unlabelled
+# policy, and exclusion pushes the floor DOWN, which is the direction that invalidates a "cleared
+# the floor" reading. An unpriced policy has to stop the measurement, not quietly pass it.
+S5_BIND_V3_DEPTH_0_ROWS = ("uniform", "uniform_non_initial", "initial_only")
+S5_BIND_V3_DEPTH_1_ROWS = ("last_write_1hop", "last_swap_ref", "uniform_anti_surface")
+S5_BIND_V3_REPLAY_DEPTH_ROWS = ("stated_reference", "one_structure_P", "one_structure_B",
+                                "final_state")
 
-    A guess chains none; the one-hop read and the state-free surface read chain one and stop; a
-    walk given T events can chain up to T. The bound is the policy's, not the stream's, which is
-    what makes it independent of how the parameter is written: at one cell ``trunc_walk_T{L-c}``
-    and ``trunc_walk_drop{c}`` are the same policy and get the same depth.
+
+def s5_bind_v3_row_depth(row: str, query: str = "state", length: int | None = None,
+                         weights=None) -> int:
+    """The POLICY's COMPOSITION DEPTH under D1-D3: the MOST events whose contents it can chain.
+
+    A guess chains none; the one-hop read chains one and stops; a walk given T events can chain
+    up to T; a replay chains the whole stream. The bound is the policy's, not the stream's, which
+    is what makes it independent of how the parameter is written: at one cell
+    ``trunc_walk_T{L-c}`` and ``trunc_walk_drop{c}`` are the same policy and get the same depth.
+
+    The FITTED RANKER's depth is the max over the features its weights actually load on
+    (``s5_bind_v3_surface_depth``), read off ``S5_BIND_V3_SURFACE_FEATURE_DEPTH`` rather than off
+    the row name, so mutating the feature set moves the verdict. ``weights`` omitted prices the
+    whole registered feature set.
+
+    Raises:
+        KeyError: the row names no policy this module prices. Returning a sentinel instead
+            excludes it, and an excluded row cannot raise the floor.
     """
     fam = _v3_family(row)
     if fam is not None:
@@ -1471,12 +1519,20 @@ def s5_bind_v3_row_depth(row: str, query: str = "state", length: int | None = No
             return p if length is None else min(p, length)
         if kind == "trunc_walk_drop":
             return (1 << 30) if length is None else max(0, length - p)
-        return 1                                 # give_scan_d / surface_ranker: one event each
-    if row in ("uniform", "uniform_non_initial", "uniform_anti_surface", "initial_only"):
+        if kind == "give_scan_d":
+            return 1                             # one give, and its recipient IS the answer
+        return s5_bind_v3_surface_depth(weights)
+    if row in S5_BIND_V3_DEPTH_0_ROWS:
         return 0
-    if row in ("last_write_1hop", "last_swap_ref"):
+    if row in S5_BIND_V3_DEPTH_1_ROWS:
         return 1
-    return 1 << 30                               # every replay row chains the whole stream
+    if row in S5_BIND_V3_REPLAY_DEPTH_ROWS:
+        return (1 << 30) if length is None else length
+    if row.startswith(("window_", "prefix_")) and row.split("_")[1].isdigit():
+        f = int(row.split("_")[1]) / 100.0   # a replay of f*L events chains that many
+        return (1 << 30) if length is None else max(1, int(round(f * length)))
+    raise KeyError(f"{row!r} names no policy with a registered depth; price it before it is "
+                   f"classified (an unpriced row would be silently excluded)")
 
 
 def s5_bind_v3_task_depth(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
@@ -1496,7 +1552,8 @@ def s5_bind_v3_task_depth(k: int, m: int, n_swap: int, n_give: int, named: bool 
 
 
 def s5_bind_v3_row_cost(row: str, k: int, m: int, n_swap: int, n_give: int,
-                        query: str = "state") -> tuple[int, int]:
+                        query: str = "state", named: bool = False,
+                        weights=None) -> tuple[int, int]:
     """``(W, S)`` for one row — registry or swept family member — under the W convention above
     and the step convention in ``factworld.composition``.
 
@@ -1507,6 +1564,11 @@ def s5_bind_v3_row_cost(row: str, k: int, m: int, n_swap: int, n_give: int,
     A swept family member is priced at the BUDGET it declares, which is exact on every member the
     rule admits: an admitted truncated walk reads its whole budget, and an admitted truncated
     give-scan never finds the write the sampler pinned, so it reads its whole budget too.
+
+    ``surface_ranker`` has no single price: it is an ALGORITHM with a register/pass trade-off, so
+    it is priced over its implementations (``s5_bind_v3_surface_impls``) and this returns the one
+    the cell admits if any implementation is admitted, and the cheapest-W one otherwise.
+    ``named`` and ``weights`` are only read for that row.
     """
     L = n_swap + n_give
     fam = _v3_family(row)
@@ -1518,8 +1580,8 @@ def s5_bind_v3_row_cost(row: str, k: int, m: int, n_swap: int, n_give: int,
             return 2, 2 * max(0, L - p) + 3
         if kind == "give_scan_d":                 # read the last p events, then fall back
             return 2, 2 * min(p, L) + 3
-        # surface_ranker: one forward pass over the stream, O(1) live slots
-        return 2, 2 * L
+        impl = s5_bind_v3_surface_price(k, m, n_swap, n_give, named, query, weights)
+        return impl["W"], impl["S"]
     needs_p, needs_b = s5_bind_v3_needs(row, query)
     scan = 2 * _v3_scan_len(k, m, n_swap, n_give, query) + 3
     if row in ("uniform", "uniform_non_initial", "initial_only"):
@@ -1611,14 +1673,21 @@ def s5_bind_v3_task_cost_min(k: int, m: int, n_swap: int, n_give: int, named: bo
 
 
 def s5_bind_v3_admits(row: str, k: int, m: int, n_swap: int, n_give: int, named: bool = False,
-                      query: str = "state") -> bool:
-    """Whether ONE row — registry or swept family member — may set this cell's floor."""
-    w, s = s5_bind_v3_row_cost(row, k, m, n_swap, n_give, query)
+                      query: str = "state", weights=None) -> bool:
+    """Whether ONE row — registry or swept family member — may set this cell's floor.
+
+    ``weights`` is read only by ``surface_ranker``, whose depth and register cost are properties
+    of the features its fit loads on; omitted, that row is priced over the whole registered
+    feature set, which is what the fitted ranker uses.
+    """
+    if row == "surface_ranker":
+        return s5_bind_v3_surface_price(k, m, n_swap, n_give, named, query, weights)["admitted"]
+    w, s = s5_bind_v3_row_cost(row, k, m, n_swap, n_give, query, named, weights)
     wt, st = s5_bind_v3_task_cost(k, m, n_swap, n_give, named, query)
     if not named:
         return floor_eligible(w, s, one_structure_bound(k, m), st)
     return floor_eligible(w, s, wt, s5_bind_v3_task_cost_min(k, m, n_swap, n_give, named, query),
-                          s5_bind_v3_row_depth(row, query, n_swap + n_give),
+                          s5_bind_v3_row_depth(row, query, n_swap + n_give, weights),
                           S5_BIND_V3_MAX_DEPTH)
 
 
@@ -2041,13 +2110,135 @@ S5_BIND_V3_SURFACE_FEATURES = (
     "last_fact_agent", "mention_count", "agent_index", "end_distance",
 )
 
+# THE RANKER'S PRICE, PER FEATURE, in the same order — so the row's depth and its registers are
+# read off the features a fit loads on and not off the row's name.
+#
+# DEPTH under D1-D3. A stated-block read is depth 0 (D3: content-addressed, reads no event). A
+# feature that reads ONE event located by a key the policy already holds — the query, or "the
+# last swap", or "the end of the stream" — is depth 1 (D2). A count or a position over the whole
+# stream is also depth 1: it reads many events and CHAINS none, and depth is the longest chain,
+# not the number of reads. Nothing in this set is deeper, which is why the row's exclusion below
+# is a REGISTER argument and not a depth one.
+S5_BIND_V3_SURFACE_FEATURE_DEPTH = (
+    0, 0, 1, 1, 1,
+    1, 1, 1, 1,
+    0, 0, 1, 1,
+    1, 1, 1, 1, 1,
+    1, 1, 1,
+    0, 1, 0, 1,
+)
+# REGISTERS. The name of the PER-CANDIDATE accumulator a feature has to keep live for the whole
+# pass, or None where the feature is a stated read or a landmark event that O(1) shared registers
+# cover. ``end_distance`` is an affine function of ``last_mention_pos`` and shares its
+# accumulator, so the count below is over DISTINCT accumulators and never double-counts.
+S5_BIND_V3_SURFACE_FEATURE_ACC = (
+    None, None, None, None, None,
+    None, None, None, None,
+    None, None, None, None,
+    "n_named", "n_ref", "n_give_ref", "last_pos", "first_pos",
+    None, None, None,
+    None, "count", None, "last_pos",
+)
+
+
+def s5_bind_v3_surface_loaded(weights=None) -> tuple[str, ...]:
+    """The features a fit actually loads on: those with NON-ZERO weight, in registered order.
+
+    ``weights`` may be the dict ``s5_bind_v3_surface_bound`` returns or a sequence in feature
+    order; omitted, every registered feature counts, which is what the fitted ranker uses.
+    """
+    if weights is None:
+        return tuple(S5_BIND_V3_SURFACE_FEATURES)
+    if isinstance(weights, dict):
+        vals = [weights.get(n, 0.0) for n in S5_BIND_V3_SURFACE_FEATURES]
+    else:
+        vals = list(weights)
+    if len(vals) != len(S5_BIND_V3_SURFACE_FEATURES):
+        raise ValueError(f"{len(vals)} weights for {len(S5_BIND_V3_SURFACE_FEATURES)} features")
+    return tuple(n for n, w in zip(S5_BIND_V3_SURFACE_FEATURES, vals) if w)
+
+
+def s5_bind_v3_surface_depth(weights=None) -> int:
+    """The ranker row's composition depth: the MAX over the features it loads on."""
+    idx = {n: i for i, n in enumerate(S5_BIND_V3_SURFACE_FEATURES)}
+    return max((S5_BIND_V3_SURFACE_FEATURE_DEPTH[idx[n]]
+                for n in s5_bind_v3_surface_loaded(weights)), default=0)
+
+
+def s5_bind_v3_surface_impls(k: int, m: int, n_swap: int, n_give: int, query: str = "state",
+                             weights=None) -> list[dict]:
+    """EVERY IMPLEMENTATION of the fitted ranker, priced. The row has no single ``(W, S)``.
+
+    Scoring the k candidates needs, per candidate, one register per DISTINCT accumulator the
+    weighted features use plus one for its running score. A pass can therefore carry ``c``
+    candidates in ``1 + c (A + 1)`` registers, and ``ceil(k / c)`` passes cover them all, each
+    pass one E and one C per event: ``S = ceil(k / c) * 2 L``. ``c = k`` is the one-pass
+    implementation (``W = 1 + k (A + 1)``, up to 7k + 1 at the full feature set) and ``c = 1`` is
+    the register-lean one (``W = A + 2``, ``S = 2 k L``). Nothing in between is cheaper on both.
+
+    Where the fit loads on NO accumulator feature (``A = 0``) the trade-off disappears: every
+    feature is then a stated read or a landmark event, so one backward scan to the last event
+    naming the queried slot — the scan ``last_write_1hop`` pays — plus one comparison per
+    candidate covers it, at ``W = 2``. That IS the "W = 2 and one backward scan" price, and it is
+    what the fitted 25-feature ranker was asserted to pay. It does not: that fit loads on six
+    accumulators, where one pass costs ``W >= k + 1`` and the ``W = 2`` implementation costs k
+    passes. Every price here is the generous reading — the landmark registers are folded into the
+    scratch register and the later passes are charged only their events — because under-pricing a
+    row ADMITS it and raises the floor, while over-pricing it lowers the floor.
+    """
+    L = n_swap + n_give
+    idx = {n: i for i, n in enumerate(S5_BIND_V3_SURFACE_FEATURES)}
+    accs = {S5_BIND_V3_SURFACE_FEATURE_ACC[idx[n]] for n in s5_bind_v3_surface_loaded(weights)}
+    accs.discard(None)
+    a = len(accs)
+    if a == 0:
+        scan = 2 * _v3_scan_len(k, m, n_swap, n_give, query) + 3
+        return [{"c": k, "W": 2, "S": scan + k, "A": 0, "passes": 1,
+                 "label": "landmarks only: one backward scan, one comparison per candidate"}]
+    out = []
+    for c in range(1, max(1, k) + 1):
+        passes = -(-k // c)
+        out.append({"c": c, "W": 1 + c * (a + 1), "S": passes * 2 * L, "A": a, "passes": passes,
+                    "label": f"{c} candidate(s) per pass, {passes} pass(es)"})
+    return out
+
+
+def s5_bind_v3_surface_price(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
+                             query: str = "state", weights=None) -> dict:
+    """The implementation of the fitted ranker THIS CELL admits, or the cheapest-W one if none is.
+
+    The row is admitted iff SOME implementation is, because a policy may choose how to run; it is
+    excluded when every point on its register/pass trade-off is out. On both cell kinds every
+    point is out at the full feature set — see the module header — so the row is measured and
+    printed as a diagnostic and never enters the operative floor.
+    """
+    depth = s5_bind_v3_surface_depth(weights)
+    impls = s5_bind_v3_surface_impls(k, m, n_swap, n_give, query, weights)
+    if not named:
+        w_max = one_structure_bound(k, m)
+        s_max = s5_bind_v3_task_cost(k, m, n_swap, n_give, named, query)[1]
+        d_max = None
+    else:
+        w_max = s5_bind_v3_task_cost(k, m, n_swap, n_give, named, query)[0]
+        s_max = s5_bind_v3_task_cost_min(k, m, n_swap, n_give, named, query)
+        d_max = S5_BIND_V3_MAX_DEPTH
+    for impl in sorted(impls, key=lambda d: (d["S"], d["W"])):
+        if floor_eligible(impl["W"], impl["S"], w_max, s_max, depth, d_max):
+            return {**impl, "depth": depth, "admitted": True,
+                    "W_max": w_max, "S_max": s_max, "depth_max": d_max}
+    cheap = min(impls, key=lambda d: (d["W"], d["S"]))
+    return {**cheap, "depth": depth, "admitted": False,
+            "W_max": w_max, "S_max": s_max, "depth_max": d_max}
+
 
 def s5_bind_v3_surface_features(rec, agents) -> dict[str, list[float]]:
     """Per-candidate surface features for one item — the whole state-free candidate set at once.
 
-    Every feature is a stated-block read, a count or a position: nothing here carries a map, so
-    the policy any weighting of them defines costs W = 2 and one backward scan. Named in
-    ``S5_BIND_V3_SURFACE_FEATURES``, in this order.
+    Every feature is a stated-block read, a count or a position, so nothing here carries a MAP —
+    but six of them are per-candidate accumulators, and a policy that argmaxes over the k
+    candidates in one pass holds all of them live. The row's price is therefore a register/pass
+    trade-off rather than a number, and it is computed in ``s5_bind_v3_surface_impls`` off the
+    two tables beside ``S5_BIND_V3_SURFACE_FEATURES``, in this order.
     """
     from .composition import GIVE, SWAP
 
@@ -2117,32 +2308,47 @@ def s5_bind_v3_surface_features(rec, agents) -> dict[str, list[float]]:
     return out
 
 
+S5_BIND_V3_SURFACE_FIT_MIN = 2000        # below this the held-out curve is still moving
+S5_BIND_V3_SURFACE_BLOCKS = 2            # disjoint fit blocks whose spread is reported; a caller
+                                         # passing a fit pool of BLOCKS * S5_BIND_V3_SURFACE_FIT_MIN
+                                         # gets the spread AT the registered budget
+
+
 def s5_bind_v3_surface_bound(examples, k: int, held_out=None, epochs: int = 250,
-                             lr: float = 1.0, l2: float = 1e-3) -> dict | None:
-    """THE SURFACE FAMILY'S FLOOR CONTRIBUTION, as a FITTED RANKER scored out of sample.
+                             lr: float = 1.0, l2: float = 1e-3,
+                             blocks: int = S5_BIND_V3_SURFACE_BLOCKS) -> dict | None:
+    """THE STATE-FREE SURFACE FAMILY, as a FITTED RANKER scored out of sample. A DIAGNOSTIC.
 
     A multinomial logit over ``S5_BIND_V3_SURFACE_FEATURES`` is fitted on ``examples`` and scored
     on ``held_out``, a DISJOINT list of items from the same cell; with ``held_out`` omitted the
-    given items are split in half. Returns the held-out accuracy, the in-sample one and the two
-    sample sizes, or None where the cell has no state query.
+    given items are split in half. Returns the held-out accuracy, the in-sample one, the two
+    sample sizes and the block-to-block spread, or None where the cell has no state query.
 
-    THE FIT SAMPLE IS THE BINDING CONSTRAINT, not the scored one. Fitting 25 features on 250
-    items leaves the estimate biased DOWN — the weights are poor, so the ranker scores below the
-    best policy in the span. Measured on the composed cells at 1200 fit / 1200 scored the bound
-    reads 1.13x/1.05x/1.28x informed chance at k=12/L=128/192/256 ungated and 1.11x/1.04x/1.04x
-    gated, and 1.22x/1.29x/1.21x at k=6/L=48/64/96 ungated against 1.35x/1.32x/1.33x gated. Read
-    a small-sample reading as a lower bound on the family.
+    IT IS NOT A FLOOR ROW. No implementation of it achieves a price the class rule admits, at
+    either cell kind: six of its features are per-candidate accumulators, so one pass over the k
+    candidates holds ``1 + 7k`` registers and the register-lean implementation pays k passes,
+    ``S = 2 k L`` (``s5_bind_v3_surface_impls``). It is measured and printed beside the profile
+    for the same reason the block-drop family is — so what the excluded policy actually reads is
+    visible — and it never enters ``s5_bind_v3_operative_floor``.
 
-    WHY THIS AND NOT A SWEEP. Running candidate rules one at a time and reporting the largest is
+    THE FIT SAMPLE IS THE BINDING CONSTRAINT, not the scored one, and it has to be at least
+    ``S5_BIND_V3_SURFACE_FIT_MIN``: fitting 25 features on a few hundred items leaves the estimate
+    biased DOWN, because the weights are poor and the ranker then scores below the best policy in
+    the span. Measured against a fixed 4000-item held-out sample, the held-out accuracy climbs and
+    then flattens — 1.12x / 1.21x / 1.23x / 1.21x / 1.21x informed chance at 250 / 500 / 1000 /
+    2000 / 4000 fit items on the k=6/L=48 composed cell, and 1.10x / 1.13x / 1.18x / 1.12x /
+    1.12x on the k=12/L=256 one. From 1000 on the movement is inside the spread of a fit at that
+    budget, which is what ``blocks`` measures: it refits on that many DISJOINT equal blocks of
+    the fit sample, scores each on the same held-out items, and reports the block-to-block spread
+    beside the pooled number rather than shipping one figure that hides it.
+
+    WHY A FIT AND NOT A SWEEP. Running candidate rules one at a time and reporting the largest is
     a selection statistic over an exchangeable family — the same trap the fixed-offset partition
     documents for the pointer-map family — and it is also weak: the ~40-rule sweep that preceded
     this reported a best of 1.08x chance and did not contain ``last_swap_ref``, which reads 1.41x
     conditional. A ranker fitted on one sample and scored on another is neither selected nor
     weak: it is an estimate of the best policy IN THE SPAN of these features, and the span is the
     whole state-free candidate set rather than one rule.
-
-    It costs W = 2 and one backward scan, so it is admitted by the class rule wherever the named
-    surface rows are, and a cell's floor has to be read against it as well as against them.
     """
     from .composition import read
 
@@ -2166,10 +2372,22 @@ def s5_bind_v3_surface_bound(examples, k: int, held_out=None, epochs: int = 250,
         ho_rows, ho_golds = prep(held_out)
     if len(rows) < 40 or len(ho_rows) < 40:
         return None
-    w = _v3_fit_ranker(rows, golds, len(S5_BIND_V3_SURFACE_FEATURES), epochs, lr, l2)
+    n_feat = len(S5_BIND_V3_SURFACE_FEATURES)
+    w = _v3_fit_ranker(rows, golds, n_feat, epochs, lr, l2)
+    per_block = []
+    b = max(1, int(blocks))
+    if b > 1 and len(rows) // b >= 40:
+        step = len(rows) // b
+        for i in range(b):
+            lo, hi = i * step, (i + 1) * step
+            wb = _v3_fit_ranker(rows[lo:hi], golds[lo:hi], n_feat, epochs, lr, l2)
+            per_block.append(_v3_rank_acc(wb, ho_rows, ho_golds))
     return {"held_out": _v3_rank_acc(w, ho_rows, ho_golds),
             "in_sample": _v3_rank_acc(w, rows, golds),
             "n_fit": len(rows), "n_held_out": len(ho_rows),
+            "fit_at_least_min": len(rows) >= S5_BIND_V3_SURFACE_FIT_MIN,
+            "blocks": per_block, "n_per_block": (len(rows) // b) if per_block else None,
+            "block_spread": (max(per_block) - min(per_block)) if per_block else None,
             "weights": dict(zip(S5_BIND_V3_SURFACE_FEATURES, w)),
             "chance": 1.0 / max(1, k - 1)}
 

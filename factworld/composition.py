@@ -1,4 +1,4 @@
-"""The source-structure composition statistic, and the cost convention it is priced against.
+"""The source-structure STRUCTURE-SWITCH diagnostic, and the cost convention it is priced against.
 
 Two things live here, both for the ``s5_bind_v3`` family (TaskSpec.source_ablation):
 
@@ -127,7 +127,8 @@ every other executor measured there sits at 0.046-0.065. The raw ``T_cross`` rea
 clause slip at k=12 and 0.29 at k=6. Six cells and twelve are not the same instrument: the k=6
 pools are six cells wide, which is what leaves the residual the matched draw cannot close.
 
-SO IT IS NOT YET A VALID PRIMARY, and the live leaks are named rather than absorbed. The
+THE LIVE LEAKS ARE NAMED RATHER THAN ABSORBED, and they bound what the diagnostic reading can
+say even about a structure SWITCH. The
 DERIVATION DEPTH of the value a reference reads is not matched between the classes and cannot be
 matched by choosing cells — a P cell's value is deep because swaps chain, a B cell's because
 gives chain (-22.8% on swaps and +29.4% on gives at k=12), so a solver that degrades with
@@ -720,18 +721,21 @@ def fit(X, y, ridge=1e-6, iters=60):
 
 CHI2_1_90 = 2.70554          # one-sided alpha = 0.05 on a single contrast
 
-# The registered statistics, each ``(free nuisance columns, retrieval-distance bins)``. The
-# design is always those columns, then one MASS column per stratum, then the CONTRAST column;
-# the statistic is the coefficient on that last column and the test drops it.
-#   T_kind     THE PRIMARY: strata are the two event kinds. Any hazard that is a function of the
-#              event kind is in the span with a zero contrast, and the precision weighting makes
-#              the contrast orthogonal to the surface-clause direction (see _stratum_columns).
+# The registered forms of the diagnostic, each ``(free nuisance columns, retrieval-distance
+# bins)``. The design is always those columns, then one MASS column per stratum, then the
+# CONTRAST column; the statistic is the coefficient on that last column and the test drops it.
+# NONE of them is a primary: no form of this contrast identifies composition on this rendering,
+# because within a kind the class label IS the printed clause (module docstring). What varies
+# between them is only which composition-free hazards they are blind to.
+#   T_kind     THE DEFAULT FORM: strata are the two event kinds. Any hazard that is a function of
+#              the event kind is in the span with a zero contrast, and the precision weighting
+#              makes the contrast orthogonal to the surface-clause direction (_stratum_columns).
 #   T_strat    strata are kind x retrieval-distance quartile — the same argument extended to any
 #              hazard that is a function of the distance, at the resolution of the bins.
 #   T_kindWD   T_kind with the item's read-history load entered as free nuisances as well.
-#   T_cross    THE DIAGNOSTIC, and the shape the family carried before: the two raw class columns
-#              tested against each other, with no stratification. Kept measured so what the
-#              stratified design buys is visible rather than asserted.
+#   T_cross    the shape the family carried before: the two raw class columns tested against each
+#              other, with no stratification. Kept measured so what the stratified design buys is
+#              visible rather than asserted.
 STATS = {
     "T_kind": ((), 1),
     "T_strat": ((), 4),
@@ -740,7 +744,7 @@ STATS = {
 TWO_CLASS_STATS = {
     "T_cross": ("nw", "nz", "nx"),
 }
-PRIMARY_STAT = "T_kind"
+DIAGNOSTIC_STAT = "T_kind"       # the default form of the structure-switch diagnostic
 
 
 def lrt(cols, y, i_hi, i_lo):
@@ -766,7 +770,8 @@ def lrt_drop(cols, y, i):
     return th[i], bool(th[i] > 0 and 2 * (ll1 - ll0) > CHI2_1_90)
 
 
-def contrast(examples, correct, draws: int = 2, seed: int = 0, stat: str = PRIMARY_STAT) -> dict:
+def contrast(examples, correct, draws: int = 2, seed: int = 0,
+             stat: str = DIAGNOSTIC_STAT) -> dict:
     """THE STRUCTURE-SWITCH DIAGNOSTIC for one cell: ``theta_cross - theta_same``, within item.
 
     NOT a composition measure. Within a kind the class label is the printed clause, so a solver
@@ -830,7 +835,7 @@ def contrast(examples, correct, draws: int = 2, seed: int = 0, stat: str = PRIMA
         "mean_write_count_same": bal["wz"] / max(1, bal["cz"]),
         "mean_distance_cross": bal["dx"] / max(1, bal["cx"]),
         "mean_distance_same": bal["dz"] / max(1, bal["cz"]),
-        # WITHIN KIND is what the primary strata are, and pooling hides it: the two kinds carry
+        # WITHIN KIND is what the default strata are, and pooling hides it: the two kinds carry
         # the two clauses in opposite directions, so a class imbalance inside one kind can cancel
         # in the pooled column and still load on the contrast at full size.
         "within_kind": {kd: within_kind_matching(row) for kd, row in sorted(per_kind.items())},
