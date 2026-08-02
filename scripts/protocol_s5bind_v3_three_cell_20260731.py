@@ -32,8 +32,9 @@ WHAT THIS DECIDES
     thresholds, verdict table) BEFORE the run. Run ``--read PATH`` afterwards to re-apply the
     rule to a runner's results file — the verdict is a function of (accuracies, floors,
     thresholds) and nothing else, so a verdict that moves because a floor was re-measured is
-    visible as that. Run ``--scout`` to price the frontier scout, the roster run it gates, and
-    the stop rules.
+    visible as that. Run ``--add_trace_read PATH`` to write the trace read's declaration into an
+    existing record without redrawing the rest of it. Run ``--scout`` to price the frontier
+    scout, the roster run it gates, and the stop rules.
 
 THE CELLS, AND WHY EACH IS READ AGAINST ITS OWN FLOOR
     Every one of the three has a DIFFERENT chance-level policy available, so a single shared
@@ -49,7 +50,11 @@ THE CELLS, AND WHY EACH IS READ AGAINST ITS OWN FLOOR
                           under the algorithm's per-item minimum reaches it; the floor is
                           informed chance, proved rather than defined
       composed cell       the one-structure bound W <= max(k,m)+1 = 7 against the task's 13;
-                          ``last_swap_ref`` and the uniform rows set the number
+                          ``last_swap_ref`` and the uniform rows set the number. THIS FLOOR IS
+                          THE PLAIN PROTOCOL'S ONLY. The bound prices live slots, and the GUIDED
+                          protocol's format hands out k + m of them at every event, so the cell
+                          is UNFLOORABLE there on both channels and the run reports ``pad_reach``
+                          — what the excluded both-maps class actually scores — in its place.
 
     THE FITTED 25-FEATURE SURFACE RANKER IS NOT IN ANY OF THESE FLOORS. Six of its features are
     per-candidate accumulators, so one pass over the k candidates holds W = 1 + 7k registers (43
@@ -103,11 +108,15 @@ THE TWO READS, and both are registered because they are two different regimes
     floors in distribution)". A protocol whose only read is one that is already known to floor
     would confirm a prior rather than measure the composition.
 
-    Both reads score the SAME items against the SAME floors. The scratchpad caveat is stated
-    where it bites: against the GUIDED read the W axis of the floor profile has no force, so
-    that read is against the ADMITTED END of the profile, which at k=6 is 1.00-1.05x informed
-    chance on the components and 1.02-1.05x on the composed cell — i.e. the two reads happen to
-    be read against nearly the same numbers here, and the difference is in what clearing means.
+    THE TWO READS SCORE THE SAME ITEMS AND NOT THE SAME FLOORS, because the GUIDED protocol
+    voids the profile's W axis: its format requires the whole of P then B at every event, which
+    hands out the k + m live slots the one-structure bound prices. The rule that applies there is
+    ``validity.s5_bind_v3_slot_profile``'s — a model under a scratchpad protocol must clear the
+    TOP of the profile, not its admitted end. On the COMPONENT cells nothing moves, since their
+    class is depth <= 1 and cost under the cell's own algorithm's minimum and a pad buys neither.
+    On the COMPOSED cell the W bound is the whole of the class's first conjunct, so the surviving
+    class contains the task and the cell is UNFLOORABLE on both of that protocol's channels;
+    ``cell_floor(..., guided=True)`` returns no floor and reports ``pad_reach`` instead.
 
     A composition claim requires the components and the composed cell to be judged on the SAME
     read. Mixing them — components on GUIDED, composed on PLAIN — would manufacture a gap out
@@ -127,22 +136,24 @@ THE TRACE READ IS A FROM-SCRATCH-ARM INSTRUMENT AND IS NOT SCORED ON THE FRONTIE
     is prose it chose to write, under its own budget, and reading a slot out of it would score a
     different object per model. FRONTIER CELLS ARE SCORED ON THE ANSWER AND MUST STAY SO.
 
-    WHAT IT IS FLOORED BY, and the two cell kinds differ (factworld.validity, "THE TRACE READ"):
+    WHAT IT IS FLOORED BY, and the two cell kinds differ (factworld.validity, "THE GUIDED
+    PROTOCOL"). The floors are the GUIDED protocol's, so they are the same numbers the guided
+    ANSWER read is judged against — the discriminator is the protocol, not the channel:
       * the final checkpoint's queried slot IS the gold answer — 4000/4000 on the disjoint pool
         and 128/128 on the scored items at every registered cell — so a floor row's trace score
         is its answer score and the numbers transfer;
-      * the COMPONENT cells are floored, at the answer floor: their rule is depth <= 1 and cost
-        under the cell's own algorithm's minimum, and a scratchpad buys neither;
+      * the COMPONENT cells are floored, at the plain protocol's floor: their rule is depth <= 1
+        and cost under the cell's own algorithm's minimum, and a scratchpad buys neither;
       * the COMPOSED cell is NOT floored. Its registered class is the one-structure bound plus a
         step bound its own algorithm satisfies, and the guided protocol REQUIRES the whole of P
         and B to be written out at every event — so the k + m live slots that bound prices are
-        handed to every policy. ``s5_bind_v3_trace_operative_floor`` returns None there.
-        ``s5_bind_v3_trace_pad_floor`` measures how far the unfloorable class reaches: 0.719 on
-        the 128 scored composed@48 items and 0.734 on the disjoint pool, against an answer floor
-        of 0.234 and 0.200.
-    So a composed-cell trace score is a WITHIN-RUN COMPARISON — same seeds, same items, matched
-    depth and matched cost — and never a cleared floor. The DOWNWARD separation it carries does
-    not need one; the other direction is not available at any registered length.
+        handed to every policy. ``s5_bind_v3_operative_floor(..., guided=True)`` returns None
+        there on both channels. ``s5_bind_v3_pad_reach`` measures how far the unfloorable class
+        reaches: 0.719 on the 128 scored composed@48 items and 0.734 on the disjoint pool,
+        against the plain protocol's floor of 0.234 and 0.200.
+    So a composed-cell score under this protocol is a WITHIN-RUN COMPARISON — same seeds, same
+    items, matched depth and matched cost — and never a cleared floor. The DOWNWARD separation it
+    carries does not need one; the other direction is not available at any registered length.
 
 THE READING RULE (pre-registered; every threshold below is fixed before any result exists)
     Metric: match, the canonical evaluator, on N_EVAL held-out items per (cell, length) for the
@@ -195,6 +206,15 @@ THE READING RULE (pre-registered; every threshold below is fixed before any resu
 THE VERDICT TABLE (mechanical; ``verdict()`` returns exactly one of these, or raises)
     V5 HARNESS NULL          no component clears anywhere on this read's grid. Nothing is
                              claimable. Next move is the training recipe, not the instrument.
+    V0 COMPOSED UNFLOORABLE  both components form, and the composed cell has NO FLOOR under this
+                             protocol, so neither "clears" nor "does not clear" is available for
+                             it. It is not a null and must never be read as one: the composed
+                             cell's floor argument is a bound on live slots and this protocol's
+                             format hands those slots out. The number reported in its place is
+                             ``pad_reach``, what the excluded both-maps class scores on the exact
+                             items, and it is a lower bound on that class's max rather than a
+                             floor. The verdict this replaces is V2_NO_GAP_HERE, which the
+                             GUIDED read reached off that floor.
     V4 COMPONENT UNREADABLE  a component does not FORM at its own registered lengths. The
                              composed cell cannot be read against it, because a composed failure
                              is then explained by the component that failed. Next move is that
@@ -213,7 +233,9 @@ THE VERDICT TABLE (mechanical; ``verdict()`` returns exactly one of these, or ra
                              This is the reading the instrument was built to produce.
     V2 NO GAP HERE           the composed cell FORMS. Composition is not a separate difficulty
                              at this operating point; the registered lengths or k must move
-                             before the cell is worth buying on the frontier.
+                             before the cell is worth buying on the frontier. Reachable on the
+                             PLAIN read only — a formed composed cell needs a floor it cleared,
+                             and the guided protocol leaves it none.
 
     Nothing in this table is derived from the within-cell statistic. theta_c is an
     identification impossibility on this rendering — within a kind the class label IS the
@@ -618,8 +640,9 @@ def step_multipliers(tok, paired, cells=LOCAL_CELLS, lengths=LOCAL_LENGTHS):
 
 
 # ---- floors ---------------------------------------------------------------------------------
-def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE, n_blocks=N_FIT_BLOCKS):
-    """The operative floor at (cell, length), and everything needed to audit it.
+def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE, n_blocks=N_FIT_BLOCKS,
+               guided=False):
+    """The operative floor at (cell, length) under one PROTOCOL, and everything needed to audit it.
 
     Measured on ``n_score`` items drawn from the SAME deterministic test stream as the items a
     solver is scored on and DISJOINT from them, because the max over admitted rows carries an
@@ -627,6 +650,16 @@ def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE, n_blocks=N_
     at n=500 and is 0.98x at n=4000) and because the fitted ranker has to be scored out of
     sample. The same rows on the exact scored items are reported beside it as the house-rule
     check; where the two differ the larger is the number a score must clear.
+
+    ``guided=True`` prices the SCRATCHPAD protocol, which is the one both the guided answer read
+    and the trace read decode under. It drops the live-slot conjunct, because the format hands
+    out the k + m slots that conjunct prices, and it adds the checkpoint-shaped rows, which that
+    format makes available. On a COMPONENT cell the floor is unchanged in kind and can only rise
+    (one extra family of admitted rows). On the COMPOSED cell there is no floor at all: ``floor``
+    is None, ``basis`` is 'unfloorable', and ``pad_reach`` carries what the excluded both-maps
+    class scores on the exact items, so the retraction leaves a number. ``floor_plain`` keeps the
+    plain protocol's number beside it as the reference it is — it is what the PLAIN read scores
+    against, and it must never be read as a bar the guided score cleared.
 
     THE FITTED RANKER IS MEASURED AND REPORTED BUT NEVER ADDED TO THE FLOOR: no implementation of
     it achieves a price the class rule admits at any cell (validity.s5_bind_v3_surface_price),
@@ -642,42 +675,64 @@ def cell_floor(spec, L, n_eval=N_EVAL, n_fit=N_FIT, n_score=N_SCORE, n_blocks=N_
     big = pool[n_eval + n_fit_total:]
     named = V.s5_bind_v3_is_named(big)
     query = V.s5_bind_v3_query_kind(big)
-    ns, ng = V.s5_bind_v3_shape(big)
-    keep = tuple(r for r in V.s5_bind_v3_family_rows(k, m, ns, ng, named, query)
-                 if V.s5_bind_v3_admits(r, k, m, ns, ng, named, query))
-    fl = dict(V.s5_bind_v3_floors(big, k, m))
-    fl.update(V.s5_bind_v3_family_floors(big, k, m, named, query, rows=keep))
-    op = V.s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query)
+    unfloorable = bool(guided) and not named
+    admits = V.s5_bind_v3_guided_admits if guided else V.s5_bind_v3_admits
+
+    def rows_on(items, adm, ckpt):
+        ns, ng = V.s5_bind_v3_shape(items)
+        keep = tuple(r for r in V.s5_bind_v3_family_rows(k, m, ns, ng, named, query)
+                     if adm(r, k, m, ns, ng, named, query))
+        fl = dict(V.s5_bind_v3_floors(items, k, m))
+        fl.update(V.s5_bind_v3_family_floors(items, k, m, named, query, rows=keep))
+        if ckpt:
+            fl.update(V.s5_bind_v3_ckpt_floors(items))
+        return fl, ns, ng
+
+    fl, ns, ng = rows_on(big, admits, guided)
+    op = V.s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query, guided=guided)
     sb = V.s5_bind_v3_surface_bound(fit, k, held_out=big, blocks=max(1, n_blocks))
     price = V.s5_bind_v3_surface_price(k, m, ns, ng, named, query,
                                        None if sb is None else sb["weights"])
-    if price["admitted"] and sb is not None and (op is None or sb["held_out"] > op):
+    # the ranker can only ever RAISE a floor that exists; where the protocol leaves none it has
+    # nothing to raise, and adding it would put a number back where the retraction removed one.
+    if (price["admitted"] and sb is not None and not unfloorable
+            and (op is None or sb["held_out"] > op)):
         op = sb["held_out"]
-    nss, ngs = V.s5_bind_v3_shape(scored)
-    keeps = tuple(r for r in V.s5_bind_v3_family_rows(k, m, nss, ngs, named, query)
-                  if V.s5_bind_v3_admits(r, k, m, nss, ngs, named, query))
-    fls = dict(V.s5_bind_v3_floors(scored, k, m))
-    fls.update(V.s5_bind_v3_family_floors(scored, k, m, named, query, rows=keeps))
-    op_scored = V.s5_bind_v3_operative_floor(fls, k, m, nss, ngs, named, query)
-    floor = max(x for x in (op, op_scored) if x is not None)
+    fls, nss, ngs = rows_on(scored, admits, guided)
+    op_scored = V.s5_bind_v3_operative_floor(fls, k, m, nss, ngs, named, query, guided=guided)
+    have = [x for x in (op, op_scored) if x is not None]
+    floor = max(have) if have else None
     _w, s = V.s5_bind_v3_task_cost(k, m, ns, ng, named, query)
+    if guided:
+        pb, _ns, _ng = rows_on(big, V.s5_bind_v3_admits, False)
+        ps, _ns, _ng = rows_on(scored, V.s5_bind_v3_admits, False)
+        plain = max(x for x in
+                    (V.s5_bind_v3_operative_floor(pb, k, m, ns, ng, named, query),
+                     V.s5_bind_v3_operative_floor(ps, k, m, nss, ngs, named, query))
+                    if x is not None)
+    else:
+        plain = floor
     return {"cell": spec.name, "L": L, "k": k, "m": m, "query": query, "named": named,
+            "protocol": "guided" if guided else "plain",
             "chance": 1.0 / (k - 1), "floor": floor,
             "floor_disjoint": op, "floor_on_scored_items": op_scored,
+            "floor_plain": plain,
+            "pad_reach": (V.s5_bind_v3_pad_reach(scored) if guided and not named else None),
             "surface_held_out": None if sb is None else sb["held_out"],
             "surface_n_fit": None if sb is None else sb["n_fit"],
             "surface_block_spread": None if sb is None else sb["block_spread"],
             "surface_blocks": None if sb is None else sb["blocks"],
             "surface_price": price, "surface_in_floor": bool(price["admitted"]),
-            "basis": V.s5_bind_v3_floor_basis(k, m, ns, ng, named, query),
+            "basis": V.s5_bind_v3_floor_basis(k, m, ns, ng, named, query, guided=guided),
             "admitted_rows": {r: round(v, 4) for r, v in
                               sorted(fl.items(), key=lambda x: -x[1])
-                              if V.s5_bind_v3_admits(r, k, m, ns, ng, named, query)},
+                              if admits(r, k, m, ns, ng, named, query)},
             "charged_steps": s, "n_swap": ns, "n_give": ng}
 
 
 def trace_floor(spec, L, n_scored=N_GUIDED, n_big=N_SCORE, arm="local"):
-    """The TRACE read's floor at (cell, length), and the answer floor on the same items.
+    """The GUIDED protocol's floor at (cell, length), for BOTH of its channels, plus the
+    plain protocol's number as a reference and the checkpoint diagnostics.
 
     Same pool discipline as ``cell_floor`` — rows measured on a DISJOINT pool because the max
     over rows carries an upward selection bias at small n, and on the exact scored items because
@@ -685,11 +740,14 @@ def trace_floor(spec, L, n_scored=N_GUIDED, n_big=N_SCORE, arm="local"):
     operative. ``n_scored`` defaults to the GUIDED read's own sample, since that is the only
     protocol the trace read is defined under.
 
-    ``trace_floor`` is None on the COMPOSED cell and that is the cell's answer, not a missing
-    measurement: the guided protocol hands out the k + m live slots the one-structure bound
-    prices, and what is left of the class contains the task. ``pad_reach`` measures how far the
+    ``answer_floor`` AND ``trace_floor`` ARE THE SAME NUMBER, and both are None on the COMPOSED
+    cell. That is the cell's answer and not a missing measurement: the guided protocol hands out
+    the k + m live slots the one-structure bound prices, whichever token the prediction is finally
+    read from, and what is left of the class contains the task. ``pad_reach`` measures how far the
     unfloorable class gets (the best both-maps policy strictly cheaper than the task) so the
-    distance from the answer floor is a number rather than a blank.
+    distance from the plain protocol's floor is a number rather than a blank, and
+    ``answer_floor_plain`` carries that plain number — as a reference, never as a bar the guided
+    score cleared.
     """
     assert_trace_read(arm)
     k, m = spec.k, spec.n_objects_active
@@ -702,25 +760,25 @@ def trace_floor(spec, L, n_scored=N_GUIDED, n_big=N_SCORE, arm="local"):
         query = V.s5_bind_v3_query_kind(items)
         fam = tuple(r for r in V.s5_bind_v3_family_rows(k, m, ns, ng, named, query)
                     if V.s5_bind_v3_admits(r, k, m, ns, ng, named, query)
-                    or V.s5_bind_v3_trace_admits(r, k, m, ns, ng, named, query))
+                    or V.s5_bind_v3_guided_admits(r, k, m, ns, ng, named, query))
         fl = dict(V.s5_bind_v3_floors(items, k, m))
         fl.update(V.s5_bind_v3_family_floors(items, k, m, named, query, rows=fam))
         return fl, V.s5_bind_v3_ckpt_floors(items), (ns, ng, named, query)
 
     fs, cs, sh_s = rows_on(scored)
     fb, cb, sh_b = rows_on(big)
-    ans = max(x for x in (V.s5_bind_v3_operative_floor(fs, k, m, *sh_s),
-                          V.s5_bind_v3_operative_floor(fb, k, m, *sh_b)) if x is not None)
-    tr = [V.s5_bind_v3_trace_operative_floor({**fs, **cs}, k, m, *sh_s),
-          V.s5_bind_v3_trace_operative_floor({**fb, **cb}, k, m, *sh_b)]
-    trace = None if all(x is None for x in tr) else max(x for x in tr if x is not None)
+    plain = max(x for x in (V.s5_bind_v3_operative_floor(fs, k, m, *sh_s),
+                            V.s5_bind_v3_operative_floor(fb, k, m, *sh_b)) if x is not None)
+    gd = [V.s5_bind_v3_operative_floor({**fs, **cs}, k, m, *sh_s, guided=True),
+          V.s5_bind_v3_operative_floor({**fb, **cb}, k, m, *sh_b, guided=True)]
+    guided = None if all(x is None for x in gd) else max(x for x in gd if x is not None)
     world, _r = TK.build_world(spec)
     agents, objs = list(world.agents[:k]), list(world.objects[:m])
     agree_s, n_s = V.s5_bind_v3_trace_is_answer(scored, k, m, agents, objs)
     agree_b, n_b = V.s5_bind_v3_trace_is_answer(big, k, m, agents, objs)
     return {"cell": spec.name, "L": L, "k": k, "m": m, "chance": 1.0 / (k - 1),
-            "n_scored": n_scored, "n_disjoint": n_big,
-            "answer_floor": ans, "trace_floor": trace,
+            "n_scored": n_scored, "n_disjoint": n_big, "protocol": "guided",
+            "answer_floor": guided, "trace_floor": guided, "answer_floor_plain": plain,
             "trace_basis": V.s5_bind_v3_trace_floor_basis(k, m, *sh_s),
             "slot_is_gold_scored": f"{agree_s}/{n_s}",
             "slot_is_gold_disjoint": f"{agree_b}/{n_b}",
@@ -730,10 +788,10 @@ def trace_floor(spec, L, n_scored=N_GUIDED, n_big=N_SCORE, arm="local"):
             "slot_moves": V.s5_bind_v3_slot_moves(scored, k, m, agents, objs),
             "ckpt_lag": {j: V.s5_bind_v3_ckpt_lag(scored, j)
                          for j in V.S5_BIND_V3_CKPT_LAG if j < L},
-            "pad_reach": (None if sh_s[2] else V.s5_bind_v3_trace_pad_floor(scored)),
+            "pad_reach": (None if sh_s[2] else V.s5_bind_v3_pad_reach(scored)),
             "trace_admitted": {r: round(v, 4) for r, v in
                                sorted({**fs, **cs}.items(), key=lambda x: -x[1])
-                               if V.s5_bind_v3_trace_admits(r, k, m, *sh_s)}}
+                               if V.s5_bind_v3_guided_admits(r, k, m, *sh_s)}}
 
 
 def trace_floor_table(cells=LOCAL_CELLS, lengths=None, n_scored=N_GUIDED):
@@ -752,11 +810,13 @@ def trace_floor_table(cells=LOCAL_CELLS, lengths=None, n_scored=N_GUIDED):
         for L in grid.get(key, ()):
             out[f"{key}@{L}"] = trace_floor(TK.CANONICAL[cells[key]], L, n_scored=n_scored)
             row = out[f"{key}@{L}"]
-            tf = "unfloorable" if row["trace_floor"] is None else f"{row['trace_floor']:.4f}"
-            print(f"  {key}@{L}: answer {row['answer_floor']:.4f} "
-                  f"({row['answer_floor'] / row['chance']:.2f}x) | trace {tf} "
-                  f"[{row['trace_basis']}]  slot==gold {row['slot_is_gold_scored']} / "
-                  f"{row['slot_is_gold_disjoint']}", flush=True)
+            gf = ("unfloorable (pad reach "
+                  + (f"{row['pad_reach']:.4f})" if row.get("pad_reach") is not None else "—)")
+                  ) if row["trace_floor"] is None else f"{row['trace_floor']:.4f}"
+            print(f"  {key}@{L}: guided (both channels) {gf} [{row['trace_basis']}] | plain "
+                  f"{row['answer_floor_plain']:.4f} "
+                  f"({row['answer_floor_plain'] / row['chance']:.2f}x)  slot==gold "
+                  f"{row['slot_is_gold_scored']} / {row['slot_is_gold_disjoint']}", flush=True)
     return out
 
 
@@ -776,12 +836,20 @@ def forms(per_seed, floors, lengths, n=N_EVAL, seeds_clear=SEEDS_CLEAR):
     ``per_seed`` is {seed: {L: accuracy}}; ``floors`` is {L: floor}. Returns the verdict and the
     per-length seed counts, so a cell that clears at 48 and not at 96 is visible as that rather
     than as a bare False.
+
+    A LENGTH WITH NO FLOOR COUNTS None, NOT 0. Where the protocol leaves the cell unfloorable
+    there is nothing for a seed to clear, and a 0 there would report an unfloorable cell and a
+    floored one with the same number — the same substitution ``evaluate_control`` refuses for a
+    missing cell. FORMS is False either way, and the caller reads the None: a False whose counts
+    are None is not a null.
     """
     counts = {}
     for L in lengths:
-        counts[L] = sum(1 for s in per_seed
-                        if clears(per_seed[s].get(L), floors.get(L), n)[0])
-    return bool(lengths) and all(c >= seeds_clear for c in counts.values()), counts
+        counts[L] = (None if floors.get(L) is None else
+                     sum(1 for s in per_seed
+                         if clears(per_seed[s].get(L), floors.get(L), n)[0]))
+    return (bool(lengths) and all(c is not None and c >= seeds_clear
+                                  for c in counts.values()), counts)
 
 
 class ControlNotEvaluable(RuntimeError):
@@ -897,7 +965,8 @@ def guided_grid(matched, cells=LOCAL_CELLS, lengths=GUIDED_LENGTHS,
     return {c: sorted(v) for c, v in out.items()}
 
 
-def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured):
+def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
+            composed_floored=True, pad_reach=None):
     """The verdict table, applied mechanically. Raises rather than aborting on a missing control.
 
     Args:
@@ -913,6 +982,14 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured):
         matched_forms: {"state": bool|None, "bind": bool|None} at the TOKEN-matched lengths;
             None where no matched-cost control was measured.
         matched_measured: {cell: bool} — whether a matched-cost control was measured at all.
+        composed_floored: whether the composed cell HAS a floor at every registered length on
+            this read's protocol. False under a scratchpad protocol, where the format hands out
+            the live slots the composed cell's floor argument is made of. It gates a verdict of
+            its own rather than falling through: with no floor the cell cannot clear, and letting
+            a cannot-clear reach V1 would read "the composition is harder than its components"
+            off a number that was never measured.
+        pad_reach: what the excluded both-maps class scores on the exact items, printed with the
+            V0 reason so the retraction leaves a number. Not a floor.
 
     Raises:
         ControlNotEvaluable: ``control`` is not an evaluated control.
@@ -934,6 +1011,18 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured):
             f"{ {c: comp_counts[c] for c in bad} }, while the other one does. A composed "
             "failure would be explained by the component that failed, so no composition claim "
             "is available — and the dissociation between the components is the result.")
+    if not composed_floored:
+        pr = "not measured" if pad_reach is None else f"{pad_reach:.3f}"
+        return "V0_COMPOSED_UNFLOORABLE", (
+            "both components form at their own registered lengths, and the composed cell has NO "
+            "FLOOR on this read's protocol: its floor argument is the one-structure bound "
+            "W <= max(k, m) + 1, and this protocol's format requires the whole of P then B at "
+            "every event, which hands those k + m slots to every policy including the task's own "
+            "algorithm. Neither 'clears' nor 'does not clear' is available for the composed cell "
+            f"here, so no composition verdict is. What the excluded both-maps class reaches on "
+            f"the exact scored items is {pr}, and it is a lower bound on that class's max rather "
+            "than a floor. The comparison this read does support is WITHIN-RUN — the composed "
+            "cell against its work-matched component on the same seeds and items.")
     if comp_forms["composed"]:
         return "V2_NO_GAP_HERE", (
             "the composed cell forms, and so does each component at the length carrying the same "
@@ -1034,6 +1123,31 @@ def scout_plan(models=SCOUT_MODELS, n=SCOUT_N):
 
 
 # ---- registration ---------------------------------------------------------------------------
+def trace_read_block(matched, with_floors=True):
+    """The TRACE READ's declaration for the pre-registration record: its arm restriction, stated
+    as data rather than described in prose, and the GUIDED protocol's floors.
+
+    THOSE FLOORS ARE BOTH CHANNELS'. The trace read and this protocol's answer read are scored
+    against one number per cell, because what a floor is priced against is the protocol: the
+    components' are the plain protocol's floors unchanged, and the composed cell's is None, since
+    the format hands out the live slots that cell's floor argument is made of. ``pad_reach``
+    carries what the excluded both-maps class reaches there, so the record holds a number where
+    the floor was retracted.
+    """
+    return {
+        "read": TRACE_READ, "arms": list(TRACE_READ_ARMS),
+        "requires": TRACE_READ_REQUIRES, "frontier_reads": list(FRONTIER_READS),
+        "rule": "the model's own FINAL CHECKPOINT's value for the queried slot; a frontier cell "
+                "is scored on the answer and assert_trace_read() raises on any other arm",
+        "floors_are": "the GUIDED protocol's, for BOTH of its channels: answer_floor == "
+                      "trace_floor at every cell, None on the composed cell, with pad_reach "
+                      "beside it and answer_floor_plain as the plain protocol's reference",
+        "floors": (trace_floor_table(
+            lengths={**guided_grid(matched), "composed": list(GUIDED_LENGTHS)})
+            if with_floors else {}),
+    }
+
+
 def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
     """Write the pre-registration record: cells, both pairings, costs, floors and every
     threshold, before any solver number exists.
@@ -1107,22 +1221,10 @@ def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
         },
         "eval_grid": grid,
         "floors": floors,
-        # THE TRACE READ, declared with its arm restriction rather than described in prose. The
-        # floors it carries are its own (validity.s5_bind_v3_trace_*): the components' are the
-        # answer floors unchanged, and the composed cell's is None because the guided protocol
-        # hands out the live slots that cell's floor argument is made of.
-        "trace_read": {
-            "read": TRACE_READ, "arms": list(TRACE_READ_ARMS),
-            "requires": TRACE_READ_REQUIRES, "frontier_reads": list(FRONTIER_READS),
-            "rule": "the model's own FINAL CHECKPOINT's value for the queried slot; a frontier "
-                    "cell is scored on the answer and assert_trace_read() raises on any other "
-                    "arm",
-            "floors": (trace_floor_table(
-                lengths={**guided_grid(ml), "composed": list(GUIDED_LENGTHS)})
-                if with_floors else {}),
-        },
-        "verdicts": ["V5_HARNESS_NULL", "V4_COMPONENT_UNREADABLE", "V3_GAP_IS_THE_COST",
-                     "V1_UNCONTROLLED", "V1_COMPOSITION_GAP", "V2_NO_GAP_HERE"],
+        "trace_read": trace_read_block(ml, with_floors=with_floors),
+        "verdicts": ["V5_HARNESS_NULL", "V4_COMPONENT_UNREADABLE", "V0_COMPOSED_UNFLOORABLE",
+                     "V3_GAP_IS_THE_COST", "V1_UNCONTROLLED", "V1_COMPOSITION_GAP",
+                     "V2_NO_GAP_HERE"],
         "scout": scout_plan(),
     }
     with open(f"{out_prefix}.json", "w") as f:
@@ -1131,12 +1233,41 @@ def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
     return rec
 
 
+def add_trace_read(record_path):
+    """Write the ``trace_read`` declaration into an EXISTING pre-registration record.
+
+    The record was written before the trace read existed, and re-running ``--register`` to add one
+    block would redraw every other block with it. This adds exactly that key, stamps it with its
+    own ``written_utc`` so the record says when each part of it was declared, and leaves the rest
+    byte-identical. It declares a reading rule and carries no result.
+    """
+    from factworld.tokenizer import Tokenizer
+
+    rec = json.load(open(record_path))
+    base = TK.CANONICAL[LOCAL_CELLS["composed"]]
+    w, r = TK.build_world(base)
+    ml = pairings(Tokenizer.build([w], r))[MATCHED_PAIRING]
+    rec["trace_read"] = {
+        **trace_read_block(ml),
+        "written_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    with open(record_path, "w") as f:
+        json.dump(rec, f, indent=2)
+    print(f"wrote trace_read into {record_path}")
+    return rec["trace_read"]
+
+
 def read_results(path, floors_path=None):
     """Re-apply the rule to a runner's results JSON — e.g. after a floor is re-measured.
 
     The verdict is a function of (accuracies, floors, thresholds) and nothing else, so it can
     always be recomputed; a verdict that changed because a floor moved should be visible as
     that, not buried in a stale results file.
+
+    THE GUIDED FLOORS ARE PASSED TOO, and that is not optional: each read is judged under its own
+    protocol, and omitting them here read the guided score against the plain protocol's floor —
+    which is how the retracted V2_NO_GAP_HERE survived in this entry point after the runner's own
+    had dropped it.
     """
     import experiment_s5bind_v3_three_cell_local_20260731 as E
 
@@ -1144,7 +1275,8 @@ def read_results(path, floors_path=None):
     floors = json.load(open(floors_path))["floors"] if floors_path else res["floors"]
     cfg = res["cfg"]
     grid = {k: [int(x) for x in v] for k, v in cfg["grid"].items()}
-    return E.apply_rule(res["runs"], floors, grid, cfg["eval_n"], cfg.get("guided_n", N_GUIDED))
+    return E.apply_rule(res["runs"], floors, grid, cfg["eval_n"], cfg.get("guided_n", N_GUIDED),
+                        res.get("guided_floors"))
 
 
 def main():
@@ -1155,6 +1287,9 @@ def main():
     ap.add_argument("--no_floors", action="store_true", help="skip the floor pass (fast)")
     ap.add_argument("--axis", default=MATCHED_AXIS, choices=["tokens", "steps"])
     ap.add_argument("--scout", action="store_true", help="print the priced frontier scout")
+    ap.add_argument("--add_trace_read", default=None,
+                    help="write the trace_read declaration into an existing pre-registration "
+                         "record (JSON path), leaving every other block untouched")
     ap.add_argument("--trace_floors", default=None,
                     help="write the TRACE read's floor table (JSON path) and exit; the guided "
                          "grid only, since the trace read is defined under no other protocol")
@@ -1164,6 +1299,8 @@ def main():
     if a.scout:
         p = scout_plan()
         print(json.dumps(p, indent=2))
+    if a.add_trace_read:
+        add_trace_read(a.add_trace_read)
     if a.trace_floors:
         os.makedirs(os.path.dirname(a.trace_floors) or ".", exist_ok=True)
         tbl = trace_floor_table()

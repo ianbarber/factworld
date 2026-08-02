@@ -1372,14 +1372,26 @@ def _fmt(report: dict) -> str:
 # a walk truncated to T events is depth T (its budget bounds its hops), and the forward pass a
 # composed cell needs is depth L.
 #
-# THE W AXIS HAS NO FORCE IN THE FRONTIER REGIME. A model with a scratchpad is not register
-# bounded: it can write both maps down and replay. Every row of the profile is available to it,
-# so the floor a frontier score is read against is the TOP of the profile — the block-drop
-# continuum, 6.47x chance at the composed k=12/L=128 cell — and not the admitted max. What the
-# profile bounds there is what can be answered WITHOUT writing both maps down, which is a claim
-# about the cheapest solution and not about the model. In that regime the composition evidence
-# has to come from the within-cell contrast (``factworld.composition``), not from the floor. The
-# profile has force in the FROM-SCRATCH regime, where a streaming model's state IS its W.
+# THE W AXIS HAS NO FORCE UNDER A SCRATCHPAD PROTOCOL, AND IT IS THE PROTOCOL THAT DECIDES THAT,
+# NOT THE READ. A protocol under which both maps can be — or must be — written down and replayed
+# hands out the k + m live slots the one-structure bound prices, to every policy, with the task's
+# own algorithm among them. Two protocols do it here: a frontier model's own scratchpad, and this
+# repo's GUIDED protocol, whose format REQUIRES the whole of P then the whole of B at every event.
+# Under either, every row of the profile is available, so the number a score is read against is
+# the TOP of the profile — the block-drop continuum, 6.47x chance at the composed k=12/L=128
+# cell — and not the admitted max. What the profile bounds there is what can be answered WITHOUT
+# writing both maps down, which is a claim about the cheapest solution and not about the model.
+#
+# IT FOLLOWS ON BOTH CHANNELS. The trace read and the answer read differ only in which token
+# carries the prediction, and the voided bound is not about tokens: a guided decode accumulates
+# the generated checkpoints into the same context the answer is decoded from, so an answer
+# emitted under that protocol is emitted by a policy that has both maps written down.
+# ``s5_bind_v3_operative_floor(..., guided=True)`` therefore returns None on a composed cell,
+# exactly as the trace read's wrapper does, and ``s5_bind_v3_pad_reach`` measures what the
+# unfloorable class reaches so the retracted floor leaves a number rather than a blank. In that
+# regime the composition evidence has to come from the within-cell contrast
+# (``factworld.composition``) or from a within-run comparison, never from the floor. The profile
+# has force under the PLAIN protocol, where a streaming model's state IS its W.
 #
 # Steps are counted by ``factworld.composition`` against the convention stated there (one step =
 # a keyed header read, an event read, a map resolution, a map write, or a comparison — and a
@@ -1754,22 +1766,31 @@ def s5_bind_v3_classify(k: int, m: int, n_swap: int, n_give: int, named: bool = 
 
 
 def s5_bind_v3_floor_basis(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
-                           query: str = "state") -> str:
-    """Whether this cell's operative floor is MEASURED or DEFINITIONAL.
+                           query: str = "state", guided: bool = False) -> str:
+    """Whether this cell's operative floor is MEASURED, DEFINITIONAL, or absent.
 
-    'measured' — some REGISTERED row is a policy that reads the item, is admitted, and could
-                 have come out anywhere; the floor is whatever it scored.
-    'chance'   — every admitted registered row holds nothing and reads nothing (the guess rows),
-                 so the max over them is the family's own chance level however the items fall.
-                 Printing the resulting 1.00x as though a policy had been measured up to it is
-                 what this exists to stop. It is the retrieval component's case: the row that
-                 would bound it is that cell's own one-hop algorithm, which no admitted row may
-                 pay for, and the swept give-scan family — which IS admitted below the sampler's
-                 window — resolves nothing there and measures 0.000 at every admitted budget.
+    'measured'    — some REGISTERED row is a policy that reads the item, is admitted, and could
+                    have come out anywhere; the floor is whatever it scored.
+    'chance'      — every admitted registered row holds nothing and reads nothing (the guess
+                    rows), so the max over them is the family's own chance level however the
+                    items fall. Printing the resulting 1.00x as though a policy had been measured
+                    up to it is what this exists to stop. It is the retrieval component's case:
+                    the row that would bound it is that cell's own one-hop algorithm, which no
+                    admitted row may pay for, and the swept give-scan family — which IS admitted
+                    below the sampler's window — resolves nothing there and measures 0.000 at
+                    every admitted budget.
+    'unfloorable' — the COMPOSED cell under a scratchpad protocol (``guided=True``). Not a
+                    missing measurement: the surviving class contains the task, so no number
+                    bounds a cheap policy there. ``s5_bind_v3_pad_reach`` prices what that class
+                    reaches.
     The swept families are measured separately (``s5_bind_v3_family_floors``) and printed in the
     profile; this label is about which REGISTERED rows the rule lets set the number.
     """
-    cls = s5_bind_v3_classify(k, m, n_swap, n_give, named, query)
+    if guided and not named:
+        return "unfloorable"
+    cls = ({r: s5_bind_v3_guided_admits(r, k, m, n_swap, n_give, named, query)
+            for r in S5_BIND_V3_ROWS} if guided
+           else s5_bind_v3_classify(k, m, n_swap, n_give, named, query))
     for row, ok in cls.items():
         if ok and row not in S5_BIND_V3_CHANCE_ROWS and row != "initial_only":
             return "measured"
@@ -2008,15 +2029,32 @@ def s5_bind_v3_query_kind(examples) -> str:
 
 def s5_bind_v3_operative_floor(floors: dict[str, float], k: int, m: int,
                                n_swap: int, n_give: int, named: bool = False,
-                               query: str = "state") -> float | None:
-    """The number a source-structure cell has to clear: the max over the rows the class rule
-    ADMITS at this cell's shape. A row holding more than one structure, composing more than one
-    hop, or paying what the cell's own algorithm pays, is a diagnostic and never enters this max.
+                               query: str = "state", guided: bool = False) -> float | None:
+    """The number a source-structure cell has to clear under one PROTOCOL, or None where that
+    protocol leaves the cell unfloorable.
+
+    Under the PLAIN protocol (``guided=False``) it is the max over the rows the class rule ADMITS
+    at this cell's shape: a row holding more than one structure, composing more than one hop, or
+    paying what the cell's own algorithm pays, is a diagnostic and never enters the max.
+
+    Under a SCRATCHPAD protocol (``guided=True``) the live-slot conjunct is void, because the
+    format hands out the k + m slots it prices. On a COMPONENT cell that removes nothing — its
+    rule is depth <= 1 and cost under the cell's own algorithm's minimum, and a pad substitutes
+    for registers, not for chaining — so the number is unchanged. On a COMPOSED cell the live-slot
+    conjunct is the whole of the registered class's first half and the step half is a bound the
+    task itself satisfies, so what survives admits the task and there is no floor: this returns
+    None, and ``s5_bind_v3_pad_reach`` measures how far the unfloorable class reaches.
 
     ``floors`` may carry swept family members as well as registry rows — every key is classified
     on its own cost, so a family enters the floor exactly where its members are admitted.
     """
-    ok = s5_bind_v3_classify(k, m, n_swap, n_give, named, query, rows=tuple(floors))
+    if guided:
+        if not named:
+            return None
+        ok = {nm: s5_bind_v3_guided_admits(nm, k, m, n_swap, n_give, named, query)
+              for nm in floors}
+    else:
+        ok = s5_bind_v3_classify(k, m, n_swap, n_give, named, query, rows=tuple(floors))
     vals = [v for nm, v in floors.items() if ok.get(nm) and v is not None]
     return max(vals) if vals else None
 
@@ -2548,12 +2586,16 @@ def s5_bind_v3_slot_profile(examples, k: int, m: int, named: bool = False,
     it. The operative floor is the last admitted row of the profile; everything above it is what
     the bound excludes, and it is printed so the exclusion can be judged rather than believed.
 
-    READ IT IN THE FROM-SCRATCH REGIME. A streaming model's state IS its W, so the profile says
-    what each state budget buys. IT HAS NO FORCE IN THE FRONTIER REGIME: a model with a
-    scratchpad can write both maps down, every row is available to it, and the number its score
-    must clear is the TOP of the profile rather than the admitted max. There the floor bounds the
-    cheapest solution, not the model, and the composition evidence has to come from the
-    within-cell contrast instead (``factworld.composition``).
+    READ IT UNDER THE PLAIN PROTOCOL. A streaming model with no scratchpad has W for its state, so
+    the profile says what each state budget buys. IT HAS NO FORCE UNDER A SCRATCHPAD PROTOCOL, and
+    what decides that is the PROTOCOL and not the model or the channel: where both maps can be —
+    or, under this repo's guided format, must be — written down and replayed, every row is
+    available to every policy and the number a score must clear is the TOP of the profile rather
+    than the admitted max. On a COMPOSED cell that top is the task itself, so there is no floor at
+    all and ``s5_bind_v3_operative_floor(..., guided=True)`` returns None on both of that
+    protocol's reads. There the floor bounds the cheapest solution, not the model, and the
+    composition evidence has to come from the within-cell contrast (``factworld.composition``) or
+    from a within-run comparison instead.
     """
     if query is None:
         query = s5_bind_v3_query_kind(examples)
@@ -2615,15 +2657,25 @@ def s5_bind_v3_block_drop(examples, width: float, pos: float) -> float:
 
 
 # ===========================================================================================
-# THE TRACE READ: the model's own FINAL-CHECKPOINT value for the queried slot
+# THE GUIDED PROTOCOL: what it does to a floor, on BOTH channels
 # ===========================================================================================
-# The trace read is only defined under the GUIDED protocol, where the events are teacher-forced
-# and the model generates every per-event checkpoint — the whole of P in agent order then the
-# whole of B in object order, k + m tokens per event. The read takes the LAST checkpoint's value
-# for the queried slot. It removes the answer-emission channel, which is what it is for: a model
-# can hold the right value and emit a different token, and two published nulls were that.
+# Under the GUIDED protocol the events are teacher-forced and the model generates every per-event
+# checkpoint — the whole of P in agent order then the whole of B in object order, k + m tokens per
+# event — and then the answer. It carries TWO reads of one gold. The TRACE read takes the LAST
+# checkpoint's value for the queried slot; it removes the answer-emission channel, which is what
+# it is for, since a model can hold the right value and emit a different token and two published
+# nulls were that. The ANSWER read takes the emitted token.
 #
-# THREE FACTS FIX WHAT A FLOOR FOR IT CAN BE.
+# THE PROTOCOL IS THE DISCRIMINATOR, NOT THE READ. T2 below is a statement about the FORMAT: it
+# holds for every policy decoding under it, whichever token the prediction is finally written to.
+# The guided decode accumulates the generated checkpoints into the same context the answer comes
+# out of, so the answer read under this protocol is an answer emitted by a policy that has both
+# maps written down. Both reads therefore get the same treatment — ``s5_bind_v3_operative_floor``
+# takes ``guided`` and returns None on a composed cell under it, and the trace entry points below
+# are that call with ``guided=True`` fixed. An earlier revision voided the composed cell's floor
+# on the trace channel only, which put a floor that does not hold beside the guided ANSWER score.
+#
+# THREE FACTS FIX WHAT A FLOOR UNDER IT CAN BE.
 #
 #   T1  THE FINAL CHECKPOINT'S QUERIED SLOT IS THE GOLD ANSWER, by construction of the trace
 #       (``tasks._ex_s5_bind_v3`` builds ``meta["trace"]`` from the same replay the gold comes
@@ -2632,11 +2684,12 @@ def s5_bind_v3_block_drop(examples, width: float, pos: float) -> float:
 #       trace score is its answer score to the item. Nothing about a floor row changes because
 #       its prediction is delivered in a checkpoint slot rather than in the answer token.
 #
-#   T2  THE PROTOCOL GRANTS THE PAD. The guided read REQUIRES the whole of P and B to be written
-#       out at every event, so the k + m live slots the one-structure bound prices are handed to
-#       every policy — the cell's own algorithm included — and the emission is charged to every
-#       policy equally, which is why steps are counted on RESOLUTION work exactly as on the
-#       answer read. A bound on live slots cannot discriminate under a read that supplies them.
+#   T2  THE PROTOCOL GRANTS THE PAD. The guided format REQUIRES the whole of P and B to be
+#       written out at every event, so the k + m live slots the one-structure bound prices are
+#       handed to every policy — the cell's own algorithm included — and the emission is charged
+#       to every policy equally, which is why steps are counted on RESOLUTION work exactly as on
+#       the plain protocol. A bound on live slots cannot discriminate under a format that
+#       supplies them, and the format is the same whichever token the prediction is read from.
 #
 #   T3  DEPTH AND STEPS SURVIVE THE PAD. Composition depth is a property of the policy under
 #       D1-D3 — the longest chain of events whose contents it resolves into its answer — and a
@@ -2651,32 +2704,35 @@ def s5_bind_v3_block_drop(examples, width: float, pos: float) -> float:
 #       a guided one-step updater is depth 1 and the COMPONENT floors go with the composed one:
 #       ``trunc_walk_drop1`` costs 2(L-1)+3, one step under the state component's own minimum of
 #       2L+2, and reads 0.667 at state@17 and 0.688 at state@128 against a floor of 0.200. Both
-#       axes would then be void and no cell would be floored on this read at all.
+#       axes would then be void and no cell would be floored under this protocol at all.
 #
 # WHAT FOLLOWS, PER CELL KIND, AND THE TWO ANSWERS ARE DIFFERENT.
 #
-#   COMPONENT CELLS ARE FLOORED, at the answer floor unchanged. Their rule is depth <= 1 AND
-#   steps < the cell's own algorithm's MINIMUM per-item cost; its W bound (2) admits no row the
-#   other two do not already admit, so T2 removes nothing. The state component's floor is then
-#   the same admitted max, and the retrieval component's is still informed chance PROVED by the
-#   sampler's pin — a pad does not shorten a scan.
+#   COMPONENT CELLS ARE FLOORED, at the plain protocol's floor unchanged, on BOTH channels. Their
+#   rule is depth <= 1 AND steps < the cell's own algorithm's MINIMUM per-item cost; its W bound
+#   (2) admits no row the other two do not already admit, so T2 removes nothing. The state
+#   component's floor is then the same admitted max, and the retrieval component's is still
+#   informed chance PROVED by the sampler's pin — a pad substitutes for REGISTERS, not for
+#   CHAINING, and it does not shorten a scan.
 #
-#   THE COMPOSED CELL IS NOT FLOORED. Its registered class is the one-structure bound plus a step
-#   bound the cell's own algorithm SATISFIES (a tie is allowed there, because a row holding one
-#   structure cannot be the task however long it runs). T2 removes the first; what is left admits
-#   the task. Even with the tie refused the class holds the both-maps replay with one event
-#   dropped, which ``s5_bind_v3_trace_pad_floor`` measures at n = 1000 at 0.719 / 0.742 / 0.604
-#   on the k=6 composed cells at L = 48 / 64 / 96 against registered answer floors of 0.201 /
-#   0.200 / 0.209 — 2.9x to 3.7x — and 0.826 at L = 16 against 0.516.
-#   ``s5_bind_v3_trace_operative_floor`` returns None on a composed cell rather than a max over a
-#   class that contains the answer.
+#   THE COMPOSED CELL IS NOT FLOORED, ON EITHER CHANNEL. Its registered class is the one-structure
+#   bound plus a step bound the cell's own algorithm SATISFIES (a tie is allowed there, because a
+#   row holding one structure cannot be the task however long it runs). T2 removes the first; what
+#   is left admits the task. Even with the tie refused the class holds the both-maps replay with
+#   one event dropped, which ``s5_bind_v3_pad_reach`` measures at n = 1000 at 0.719 / 0.742 /
+#   0.604 on the k=6 composed cells at L = 48 / 64 / 96 against plain-protocol floors of 0.201 /
+#   0.200 / 0.209 — 2.9x to 3.7x — and 0.826 at L = 16 against 0.516. On the exact 128 items the
+#   guided read scores it is 0.719 / 0.758 / 0.562 against 0.234 / 0.227 / 0.211, and the
+#   partial-carry member at W = 12, exactly the k + m slots the format forces the model to write,
+#   reads 0.609 at composed@48. ``s5_bind_v3_operative_floor(..., guided=True)`` returns None
+#   there rather than a max over a class that contains the task.
 #
-# SO A TRACE SCORE ON THE COMPOSED CELL IS A WITHIN-RUN COMPARISON AND NEVER A CLEARED FLOOR.
-# The comparison is a real object — the same seeds, the same items, matched depth and matched
-# cost — and the DOWNWARD separation it carries does not need a floor, because a floor bounds
-# what a cheap policy scores and a deficit is not a claim about cheapness. What it cannot support
-# is the other direction: no "the composed cell clears its floor on the trace" reading is
-# available at any registered length.
+# SO A COMPOSED-CELL SCORE UNDER THIS PROTOCOL IS A WITHIN-RUN COMPARISON AND NEVER A CLEARED
+# FLOOR, on the trace channel and on the answer channel alike. The comparison is a real object —
+# the same seeds, the same items, matched depth and matched cost — and the DOWNWARD separation it
+# carries does not need a floor, because a floor bounds what a cheap policy scores and a deficit
+# is not a claim about cheapness. What it cannot support is the other direction: no "the composed
+# cell clears its floor" reading is available under this protocol at any registered length.
 #
 # THE CHEAP CHECKPOINT-SHAPED POLICIES ARE PRICED HERE and none of them raises a floor:
 # ``ckpt_copy_prev`` (emit the previous checkpoint, so the trace never moves) is exactly the
@@ -2689,7 +2745,7 @@ def s5_bind_v3_block_drop(examples, width: float, pos: float) -> float:
 # ===========================================================================================
 S5_BIND_V3_CKPT_ROWS = ("ckpt_copy_prev", "ckpt_last_event_operand", "ckpt_last_event_target")
 S5_BIND_V3_CKPT_LAG = (1, 2, 3, 5, 9, 17, 33, 65)
-S5_BIND_V3_TRACE_PAD_WIDTHS = (0.02, 0.05, 0.10, 0.25)
+S5_BIND_V3_PAD_WIDTHS = (0.02, 0.05, 0.10, 0.25)
 
 
 def s5_bind_v3_trace_slot(example, k: int, m: int, agents, objs) -> str | None:
@@ -2842,10 +2898,10 @@ def s5_bind_v3_ckpt_preds(prompt: str) -> dict[str, str | None]:
 def s5_bind_v3_ckpt_floors(examples) -> dict[str, float]:
     """Every checkpoint-shaped row's accuracy on a cell's exact items, keyed by row name.
 
-    Merged with ``s5_bind_v3_floors`` by ``s5_bind_v3_trace_operative_floor``; each row is then
+    Merged with ``s5_bind_v3_floors`` by every caller measuring a GUIDED floor; each row is then
     admitted or excluded on its own cost like any other. Kept in its own tuple rather than added
-    to ``S5_BIND_V3_ROWS`` so the ANSWER floors are untouched by a read that did not exist when
-    they were measured.
+    to ``S5_BIND_V3_ROWS`` so the PLAIN protocol's floors are untouched by rows that were added
+    for a protocol which did not exist when they were measured.
     """
     n = len(examples)
     if not n:
@@ -2861,9 +2917,11 @@ def s5_bind_v3_ckpt_floors(examples) -> dict[str, float]:
     return {nm: hits[nm] / n for nm in S5_BIND_V3_CKPT_ROWS if defined[nm]}
 
 
-def s5_bind_v3_trace_admits(row: str, k: int, m: int, n_swap: int, n_give: int,
-                            named: bool = False, query: str = "state", weights=None) -> bool:
-    """Whether ONE row may set the TRACE read's floor — the class rule with the W axis removed.
+def s5_bind_v3_guided_admits(row: str, k: int, m: int, n_swap: int, n_give: int,
+                             named: bool = False, query: str = "state", weights=None) -> bool:
+    """Whether ONE row may set a floor under a SCRATCHPAD protocol — the class rule with the W
+    axis removed. It is the class for BOTH of that protocol's reads, because what removes the axis
+    is the format and not the channel the prediction is read from.
 
     T2: the guided protocol requires the whole of P and B to be emitted at every event, so a
     bound on live slots prices a resource every policy has been handed. T3: depth and steps are
@@ -2872,7 +2930,8 @@ def s5_bind_v3_trace_admits(row: str, k: int, m: int, n_swap: int, n_give: int,
     On a COMPONENT cell that changes nothing — every depth <= 1 row already costs W = 2 — and the
     function is the registered rule. On a COMPOSED cell the registered class is the W bound plus
     a step bound the task satisfies, so dropping the W bound admits everything, this returns True
-    for every row, and the floor is not a floor: see ``s5_bind_v3_trace_operative_floor``.
+    for every row, and the floor is not a floor: ``s5_bind_v3_operative_floor(..., guided=True)``
+    returns None there.
     """
     if not named:
         return True
@@ -2891,55 +2950,50 @@ def s5_bind_v3_trace_operative_floor(floors: dict[str, float], k: int, m: int,
                                      query: str = "state") -> float | None:
     """The number a TRACE score has to clear at a COMPONENT cell, or None at a composed one.
 
+    The trace read exists under no protocol but the guided one, so this is
+    ``s5_bind_v3_operative_floor`` with ``guided=True`` fixed and is kept as a named entry point
+    rather than as a second rule. The guided ANSWER read is the same call with the same flag.
+
     None is not "no rows were measured": it is the composed cell's answer, and it is returned so
     that ``clears()`` refuses the cell rather than reading a max over a class that contains the
-    task. ``s5_bind_v3_trace_floor_basis`` says which case a None is, and
-    ``s5_bind_v3_trace_pad_floor`` measures how far above the answer floor the unfloorable class
-    reaches, so the gap is a number rather than an absence.
+    task. ``s5_bind_v3_trace_floor_basis`` says which case a None is, and ``s5_bind_v3_pad_reach``
+    measures how far above the plain protocol's floor the unfloorable class reaches, so the gap is
+    a number rather than an absence.
     """
-    if not named:
-        return None
-    ok = {nm: s5_bind_v3_trace_admits(nm, k, m, n_swap, n_give, named, query)
-          for nm in floors}
-    vals = [v for nm, v in floors.items() if ok.get(nm) and v is not None]
-    return max(vals) if vals else None
+    return s5_bind_v3_operative_floor(floors, k, m, n_swap, n_give, named, query, guided=True)
 
 
 def s5_bind_v3_trace_floor_basis(k: int, m: int, n_swap: int, n_give: int, named: bool = False,
                                  query: str = "state") -> str:
-    """'measured' / 'chance' / 'unfloorable' for the TRACE read at one cell.
+    """'measured' / 'chance' / 'unfloorable' for the TRACE read at one cell —
+    ``s5_bind_v3_floor_basis`` with ``guided=True`` fixed, for the same reason the floor above is.
 
-    'unfloorable' is the COMPOSED cell's case and the reason is T2 above: the read supplies the
-    live slots its floor argument is made of. The other two labels mean what they mean on the
-    answer read (``s5_bind_v3_floor_basis``), because on a component cell the trace class IS the
-    answer class — and, like that one, this label is about which REGISTERED rows the rule lets
-    set the number. The swept families and the checkpoint-shaped rows are measured beside them
-    and enter the max; they do not move the label, so the retrieval component's 'chance' stays
-    the proof it is (no admitted budget reaches the write the sampler pinned) rather than
-    flipping to 'measured' because a row that reads the stream's last event was added and came
-    out under a guess.
+    'unfloorable' is the COMPOSED cell's case and the reason is T2 above: the protocol supplies
+    the live slots its floor argument is made of. The other two labels mean what they mean under
+    the plain protocol, because on a component cell the guided class IS the plain class — and,
+    like that one, this label is about which REGISTERED rows the rule lets set the number. The
+    swept families and the checkpoint-shaped rows are measured beside them and enter the max; they
+    do not move the label, so the retrieval component's 'chance' stays the proof it is (no
+    admitted budget reaches the write the sampler pinned) rather than flipping to 'measured'
+    because a row that reads the stream's last event was added and came out under a guess.
     """
-    if not named:
-        return "unfloorable"
-    for row in S5_BIND_V3_ROWS:
-        if (s5_bind_v3_trace_admits(row, k, m, n_swap, n_give, named, query)
-                and row not in S5_BIND_V3_CHANCE_ROWS and row != "initial_only"):
-            return "measured"
-    return "chance"
+    return s5_bind_v3_floor_basis(k, m, n_swap, n_give, named, query, guided=True)
 
 
-def s5_bind_v3_trace_pad_floor(examples, widths=S5_BIND_V3_TRACE_PAD_WIDTHS,
-                               positions=(0.0, 0.2, 0.4, 0.6, 0.8, 0.95)) -> float | None:
+def s5_bind_v3_pad_reach(examples, widths=S5_BIND_V3_PAD_WIDTHS,
+                         positions=(0.0, 0.2, 0.4, 0.6, 0.8, 0.95)) -> float | None:
     """What the UNFLOORABLE class reaches on a composed cell, measured rather than left blank.
 
     The best member of the block-drop continuum: carry both maps, skip one block of events, play
-    the rest exactly. Every member holds W = k + m + 1 and is excluded from the answer floor on
-    exactly that; the guided read hands those slots out (T2), so every member is available to a
-    trace-read policy and each costs strictly fewer steps than the cell's own algorithm.
+    the rest exactly. Every member holds W = k + m + 1 and is excluded from the plain protocol's
+    floor on exactly that; a scratchpad protocol hands those slots out (T2), so every member is
+    available to a policy decoding under it and each costs strictly fewer steps than the cell's
+    own algorithm. It is the same number on both of that protocol's reads, because the policies
+    it maxes over are the same policies.
 
     IT IS NOT A FLOOR AND MUST NOT BE PRINTED AS ONE — the class it comes from also contains the
     task, so its max is 1.000 and this is a lower bound on that max. It exists so the distance
-    between the answer floor and the unfloorable class is a number.
+    between the plain protocol's floor and the unfloorable class is a number.
     """
     if not examples:
         return None

@@ -1898,8 +1898,18 @@
               "48": 1.0
             }
           }
-        }
+        },
+        "retracted": true,
+        "retracted_why": "the composed cell has no floor under the guided protocol: the one-structure bound W <= max(k,m)+1 prices live slots and the guided format writes the whole of P then B at every event, handing those k+m slots to every policy on both channels. The pad reach at composed@48 on its own 128 items is 0.71875 against the plain protocol's 0.234375.",
+        "replaced_by": "results/s5bind_v3_three_cell_depthmatched_20260801.json"
       }
     }
+  },
+  "retracted": {
+    "verdict": "gdp_hybrid/guided V2_NO_GAP_HERE",
+    "why": "the composed cell has no floor under the guided protocol: the one-structure bound W <= max(k,m)+1 prices live slots and the guided format writes the whole of P then B at every event, handing those k+m slots to every policy on both channels. The pad reach at composed@48 on its own 128 items is 0.71875 against the plain protocol's 0.234375.",
+    "recomputable_here": false,
+    "recompute_blocked_by": "this run evaluated each component at the composed cell's own length; the rule reads them at the work-matched partners state@17/23/34 and bind@31/41/62, which this run never scored",
+    "superseded_by": "results/s5bind_v3_three_cell_depthmatched_20260801.json"
   }
 }

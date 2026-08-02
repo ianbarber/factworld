@@ -340,12 +340,17 @@ def main():
               f"admitted row; everything above it holds both structures and is doing\n  the "
               f"composition at a discount) and STEPS on a component one, where the bound is ONE "
               f"HOP and the\n  excluded end is the cell's own algorithm with a few events "
-              f"dropped, sitting one step under it.\n  THE W AXIS HAS NO FORCE IN THE FRONTIER "
-              f"REGIME — a model with a scratchpad is not register-bounded,\n  so every row "
-              f"below is available to it and the number a frontier score must clear is the TOP "
-              f"of the\n  profile, not the admitted max. The DEPTH axis does bind there: a "
-              f"scratchpad does not make a\n  truncated walk correct, it only makes it "
-              f"affordable.")
+              f"dropped, sitting one step under it.\n  EVERY FLOOR PRINTED HERE IS THE PLAIN "
+              f"PROTOCOL'S. The W axis has no force under a SCRATCHPAD\n  protocol — a frontier "
+              f"model's own, or this repo's guided format, which requires both maps to be\n  "
+              f"written out at every event — so there every row below is available to every "
+              f"policy and the\n  number a score must clear is the TOP of the profile, not the "
+              f"admitted max; on a COMPOSED cell that\n  top is the task, so the cell is "
+              f"UNFLOORABLE there on both of that protocol's channels\n  "
+              f"(validity.s5_bind_v3_operative_floor(..., guided=True)). The DEPTH axis does "
+              f"bind there: a\n  scratchpad substitutes for REGISTERS, not for CHAINING — it "
+              f"does not make a truncated walk correct,\n  only affordable — which is why the "
+              f"COMPONENT floors below hold under either protocol.")
         for name, (fl, op, gated, L, k, sb, basis, ctx, fam, cls, bigfl, sp) \
                 in bind_v3_rows.items():
             test, m, named, query = ctx

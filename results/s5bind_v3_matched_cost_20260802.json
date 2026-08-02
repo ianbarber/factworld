@@ -1,11 +1,63 @@
 {
-  "written_utc": "2026-08-01T22:35:47+00:00",
+  "written_utc": "2026-08-02T05:01:52+00:00",
   "ckpt_dir": "results/s5bind_v3_three_cell_depthmatched_20260801_ckpt",
   "n": 128,
-  "read": [
-    "answer",
-    "trace"
+  "read": "trace",
+  "matched_rungs": [
+    [
+      48,
+      80,
+      132
+    ],
+    [
+      64,
+      108,
+      null
+    ],
+    [
+      96,
+      160,
+      null
+    ]
   ],
+  "cell_costs": {
+    "composed@48": [
+      208,
+      717
+    ],
+    "composed@64": [
+      274,
+      930
+    ],
+    "composed@96": [
+      403,
+      1348
+    ],
+    "state@17": [
+      42,
+      187
+    ],
+    "state@23": [
+      56,
+      235
+    ],
+    "state@34": [
+      81,
+      323
+    ],
+    "state@80": [
+      189,
+      691
+    ],
+    "state@108": [
+      254,
+      915
+    ],
+    "state@160": [
+      375,
+      1331
+    ]
+  },
   "floors": {
     "bind@31": {
       "cell": "s5_bind_local_v3_bind",
@@ -820,6 +872,175 @@
         "initial_only": 0.0,
         "ckpt_copy_prev": 0.0
       }
+    },
+    "state@108": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 108,
+      "k": 6,
+      "m": 6,
+      "chance": 0.2,
+      "n_scored": 128,
+      "n_disjoint": 4000,
+      "protocol": "guided",
+      "answer_floor": 0.2421875,
+      "trace_floor": 0.2421875,
+      "answer_floor_plain": 0.21875,
+      "trace_basis": "measured",
+      "slot_is_gold_scored": "128/128",
+      "slot_is_gold_disjoint": "4000/4000",
+      "ckpt_rows_scored": {
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_operand": 0.1562,
+        "ckpt_last_event_target": 0.2422
+      },
+      "ckpt_rows_disjoint": {
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_operand": 0.161,
+        "ckpt_last_event_target": 0.176
+      },
+      "copy_per_slot": 0.8287037037037037,
+      "slot_moves": {
+        "counts": {
+          "20": 1,
+          "22": 1,
+          "24": 2,
+          "26": 1,
+          "27": 1,
+          "28": 4,
+          "29": 4,
+          "30": 6,
+          "31": 11,
+          "32": 8,
+          "33": 8,
+          "34": 13,
+          "35": 10,
+          "36": 4,
+          "37": 15,
+          "38": 7,
+          "39": 6,
+          "40": 8,
+          "41": 7,
+          "42": 3,
+          "43": 3,
+          "44": 1,
+          "46": 1,
+          "49": 3
+        },
+        "n": 128,
+        "min": 20,
+        "max": 49,
+        "median": 35,
+        "mean": 35.172
+      },
+      "ckpt_lag": {
+        "1": 0.609375,
+        "2": 0.4375,
+        "3": 0.3359375,
+        "5": 0.2578125,
+        "9": 0.1796875,
+        "17": 0.1640625,
+        "33": 0.15625,
+        "65": 0.1640625
+      },
+      "pad_reach": null,
+      "trace_admitted": {
+        "ckpt_last_event_target": 0.2422,
+        "last_swap_ref": 0.2188,
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1797,
+        "uniform": 0.1667,
+        "ckpt_last_event_operand": 0.1562,
+        "trunc_walk_T1": 0.0938,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
+      }
+    },
+    "state@160": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 160,
+      "k": 6,
+      "m": 6,
+      "chance": 0.2,
+      "n_scored": 128,
+      "n_disjoint": 4000,
+      "protocol": "guided",
+      "answer_floor": 0.203125,
+      "trace_floor": 0.203125,
+      "answer_floor_plain": 0.2,
+      "trace_basis": "measured",
+      "slot_is_gold_scored": "128/128",
+      "slot_is_gold_disjoint": "4000/4000",
+      "ckpt_rows_scored": {
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_operand": 0.1953,
+        "ckpt_last_event_target": 0.2031
+      },
+      "ckpt_rows_disjoint": {
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_operand": 0.164,
+        "ckpt_last_event_target": 0.1732
+      },
+      "copy_per_slot": 0.8302083333333333,
+      "slot_moves": {
+        "counts": {
+          "36": 1,
+          "38": 2,
+          "40": 1,
+          "41": 1,
+          "43": 2,
+          "44": 1,
+          "46": 2,
+          "47": 8,
+          "48": 4,
+          "49": 9,
+          "50": 6,
+          "51": 11,
+          "52": 3,
+          "53": 10,
+          "54": 9,
+          "55": 11,
+          "56": 5,
+          "57": 8,
+          "58": 6,
+          "59": 4,
+          "60": 7,
+          "61": 4,
+          "62": 3,
+          "63": 2,
+          "64": 2,
+          "65": 1,
+          "66": 2,
+          "67": 2,
+          "69": 1
+        },
+        "n": 128,
+        "min": 36,
+        "max": 69,
+        "median": 54,
+        "mean": 53.797
+      },
+      "ckpt_lag": {
+        "1": 0.6328125,
+        "2": 0.4453125,
+        "3": 0.375,
+        "5": 0.25,
+        "9": 0.171875,
+        "17": 0.1328125,
+        "33": 0.1796875,
+        "65": 0.1328125
+      },
+      "pad_reach": null,
+      "trace_admitted": {
+        "ckpt_last_event_target": 0.2031,
+        "uniform_non_initial": 0.2,
+        "ckpt_last_event_operand": 0.1953,
+        "last_write_1hop": 0.1719,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1094,
+        "trunc_walk_T1": 0.0547,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
+      }
     }
   },
   "rows": [
@@ -1033,6 +1254,44 @@
       "utc": "2026-08-01T20:01:09+00:00"
     },
     {
+      "phase": "matched_cost",
+      "arch": "fprm",
+      "seed": 0,
+      "cell": "state",
+      "L": 108,
+      "answer": 0.1796875,
+      "checkpoint_acc": 0.4900716145833333,
+      "trace": {
+        "match": 0.8046875,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 361,
+      "final_loss": 0.20653888583183289,
+      "utc": "2026-08-02T02:38:12+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "fprm",
+      "seed": 0,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.1484375,
+      "checkpoint_acc": 0.48361002604166664,
+      "trace": {
+        "match": 0.40625,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 797,
+      "final_loss": 0.20653888583183289,
+      "utc": "2026-08-02T02:51:33+00:00"
+    },
+    {
       "phase": "ladder",
       "arch": "fprm",
       "seed": 1,
@@ -1240,6 +1499,44 @@
       "decode_s": 197,
       "final_loss": 0.21503649652004242,
       "utc": "2026-08-01T20:12:06+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "fprm",
+      "seed": 1,
+      "cell": "state",
+      "L": 108,
+      "answer": 0.1171875,
+      "checkpoint_acc": 0.40227141203703703,
+      "trace": {
+        "match": 0.6015625,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 360,
+      "final_loss": 0.21503649652004242,
+      "utc": "2026-08-02T02:57:33+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "fprm",
+      "seed": 1,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.171875,
+      "checkpoint_acc": 0.3695556640625,
+      "trace": {
+        "match": 0.1953125,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 797,
+      "final_loss": 0.21503649652004242,
+      "utc": "2026-08-02T03:10:51+00:00"
     },
     {
       "phase": "ladder",
@@ -1451,6 +1748,44 @@
       "utc": "2026-08-01T20:23:03+00:00"
     },
     {
+      "phase": "matched_cost",
+      "arch": "fprm",
+      "seed": 2,
+      "cell": "state",
+      "L": 108,
+      "answer": 0.1484375,
+      "checkpoint_acc": 0.2314332561728395,
+      "trace": {
+        "match": 0.265625,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 360,
+      "final_loss": 0.2159484326839447,
+      "utc": "2026-08-02T03:16:51+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "fprm",
+      "seed": 2,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.171875,
+      "checkpoint_acc": 0.2254638671875,
+      "trace": {
+        "match": 0.1640625,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 797,
+      "final_loss": 0.2159484326839447,
+      "utc": "2026-08-02T03:30:08+00:00"
+    },
+    {
       "phase": "ladder",
       "arch": "gdp_hybrid",
       "seed": 0,
@@ -1658,6 +1993,44 @@
       "decode_s": 240,
       "final_loss": 0.19409741461277008,
       "utc": "2026-08-01T19:22:24+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "cell": "state",
+      "L": 108,
+      "answer": 1.0,
+      "checkpoint_acc": 0.5774558738425926,
+      "trace": {
+        "match": 1.0,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 839,
+      "final_loss": 0.19409741461277008,
+      "utc": "2026-08-02T00:01:38+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.9921875,
+      "checkpoint_acc": 0.5805908203125,
+      "trace": {
+        "match": 0.9921875,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 2315,
+      "final_loss": 0.19409741461277008,
+      "utc": "2026-08-02T00:40:17+00:00"
     },
     {
       "phase": "ladder",
@@ -1869,6 +2242,44 @@
       "utc": "2026-08-01T19:35:33+00:00"
     },
     {
+      "phase": "matched_cost",
+      "arch": "gdp_hybrid",
+      "seed": 1,
+      "cell": "state",
+      "L": 108,
+      "answer": 0.9921875,
+      "checkpoint_acc": 0.5808738425925926,
+      "trace": {
+        "match": 1.0,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 6619,
+      "final_loss": 0.2028479278087616,
+      "utc": "2026-08-02T02:30:36+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "gdp_hybrid",
+      "seed": 1,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.984375,
+      "checkpoint_acc": 0.5735677083333334,
+      "trace": {
+        "match": 0.984375,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 936,
+      "final_loss": 0.2028479278087616,
+      "utc": "2026-08-02T03:46:14+00:00"
+    },
+    {
       "phase": "ladder",
       "arch": "gdp_hybrid",
       "seed": 2,
@@ -2076,6 +2487,44 @@
       "decode_s": 240,
       "final_loss": 0.19424667954444885,
       "utc": "2026-08-01T19:48:43+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "gdp_hybrid",
+      "seed": 2,
+      "cell": "state",
+      "L": 108,
+      "answer": 0.28125,
+      "checkpoint_acc": 0.5852864583333334,
+      "trace": {
+        "match": 1.0,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 432,
+      "final_loss": 0.19424667954444885,
+      "utc": "2026-08-02T03:53:30+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "gdp_hybrid",
+      "seed": 2,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.2734375,
+      "checkpoint_acc": 0.5697591145833333,
+      "trace": {
+        "match": 1.0,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 934,
+      "final_loss": 0.19424667954444885,
+      "utc": "2026-08-02T04:09:04+00:00"
     },
     {
       "phase": "ladder",
@@ -2287,6 +2736,44 @@
       "utc": "2026-08-01T20:33:43+00:00"
     },
     {
+      "phase": "matched_cost",
+      "arch": "transformer",
+      "seed": 0,
+      "cell": "state",
+      "L": 108,
+      "answer": 0.1484375,
+      "checkpoint_acc": 0.17974778163580246,
+      "trace": {
+        "match": 0.1875,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 329,
+      "final_loss": 0.3284805417060852,
+      "utc": "2026-08-02T04:14:34+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "transformer",
+      "seed": 0,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.109375,
+      "checkpoint_acc": 0.16186930338541666,
+      "trace": {
+        "match": 0.1640625,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 727,
+      "final_loss": 0.3284805417060852,
+      "utc": "2026-08-02T04:26:40+00:00"
+    },
+    {
       "phase": "ladder",
       "arch": "transformer",
       "seed": 1,
@@ -2496,6 +2983,44 @@
       "utc": "2026-08-01T20:43:44+00:00"
     },
     {
+      "phase": "matched_cost",
+      "arch": "transformer",
+      "seed": 1,
+      "cell": "state",
+      "L": 108,
+      "answer": 0.140625,
+      "checkpoint_acc": 0.15958960262345678,
+      "trace": {
+        "match": 0.1875,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 329,
+      "final_loss": 0.38397741317749023,
+      "utc": "2026-08-02T04:32:09+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "transformer",
+      "seed": 1,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.1484375,
+      "checkpoint_acc": 0.16798909505208334,
+      "trace": {
+        "match": 0.2109375,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 727,
+      "final_loss": 0.38397741317749023,
+      "utc": "2026-08-02T04:44:16+00:00"
+    },
+    {
       "phase": "ladder",
       "arch": "transformer",
       "seed": 2,
@@ -2703,6 +3228,44 @@
       "decode_s": 180,
       "final_loss": 0.2877711057662964,
       "utc": "2026-08-01T20:53:44+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "transformer",
+      "seed": 2,
+      "cell": "state",
+      "L": 108,
+      "answer": 0.1484375,
+      "checkpoint_acc": 0.16183207947530864,
+      "trace": {
+        "match": 0.1640625,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 329,
+      "final_loss": 0.2877711057662964,
+      "utc": "2026-08-02T04:49:45+00:00"
+    },
+    {
+      "phase": "matched_cost",
+      "arch": "transformer",
+      "seed": 2,
+      "cell": "state",
+      "L": 160,
+      "answer": 0.140625,
+      "checkpoint_acc": 0.17189534505208334,
+      "trace": {
+        "match": 0.171875,
+        "n": 128,
+        "t1_agree": 128
+      },
+      "n": 128,
+      "guided_batch": 32,
+      "decode_s": 726,
+      "final_loss": 0.2877711057662964,
+      "utc": "2026-08-02T05:01:52+00:00"
     }
   ]
 }

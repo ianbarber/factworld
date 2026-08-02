@@ -4,6 +4,8 @@ k=6 · informed chance 1/(k-1) = 0.200 · match · n_eval=1000 · d_model=768 n_
 
 Reading rule pre-registered in `scripts/protocol_s5bind_v3_three_cell_20260731.py`: a cell CLEARS its floor at z > 3.0 AND margin >= 0.15; it FORMS for an architecture on >= 2 of the seeds at every registered length. Per-seed values only — this family is bimodal at the emergence threshold.
 
+**The composed cell has no floor on the GUIDED read, on either channel.** That floor is the one-structure bound `W <= max(k, m) + 1` against the task's `k + m + 1`, and the guided format requires the whole of P then the whole of B at every event — so the k + m slots the bound prices are handed to every policy, the task's own algorithm included, and the class that survives contains the task. It is a property of the PROTOCOL and not of the read: the guided decode accumulates the generated checkpoints into the same context the answer token comes out of. Guided composed cells are reported UNFLOORABLE with the pad reach — what the excluded both-maps class scores on the exact items — beside them. **The previous `gdp_hybrid / guided: V2_NO_GAP_HERE` was read off that floor and is RETRACTED**; the verdict below is what the rule returns without it. The PLAIN read is unaffected: a streaming model with no scratchpad is the class the bound prices.
+
 ## Size (compute-matched: shared d_model and depth; `fprm` is weight-tied)
 
 | arch | params | FLOPs/token |
@@ -11,6 +13,9 @@ Reading rule pre-registered in `scripts/protocol_s5bind_v3_three_cell_20260731.p
 | fprm | 10.3M | 165.32M |
 | gdp_hybrid | 101.4M | 205.67M |
 | transformer | 76.4M | 165.28M |
+
+**`gdp_hybrid` IS NOT FLOPs-MATCHED.** It runs 205.67M FLOPs/token against `fprm`'s 165.32M, `transformer`'s 165.28M — a 24% advantage, against this repo's own compute-matching convention (match on FLOPs/token, not on parameters). Every comparison in which `gdp_hybrid` is ahead carries it, and it is the more load-bearing here because `gdp_hybrid` is the only architecture this run reads on the ANSWER channel at all.
+
 
 ## The recipe
 
@@ -51,13 +56,13 @@ _The work-matched length is the composed stream's own count of that component's 
 | fprm | 0 | 0.188 | 0.133 | 0.188 |
 | fprm | 1 | 0.148 | 0.203 | 0.148 |
 | fprm | 2 | 0.180 | 0.125 | 0.148 |
-| gdp_hybrid | 0 | **1.000** | **0.836** | **1.000** |
-| gdp_hybrid | 1 | **0.984** | **0.953** | **1.000** |
+| gdp_hybrid | 0 | **1.000** | 0.836 | **1.000** |
+| gdp_hybrid | 1 | **0.984** | 0.953 | **1.000** |
 | gdp_hybrid | 2 | 0.219 | 0.289 | **1.000** |
 | transformer | 0 | 0.172 | 0.125 | 0.211 |
 | transformer | 1 | 0.133 | 0.156 | 0.180 |
 | transformer | 2 | 0.211 | 0.133 | 0.141 |
-| _floor_ | | 0.200 | 0.234 | 0.200 |
+| _floor_ | | 0.219 | unfloorable (pad 0.719) | 0.200 |
 
 ## PLAIN read (n=1000)
 
@@ -146,7 +151,7 @@ _A **bold** cell clears its own recomputed floor under the pre-registered rule. 
 | fprm | 0.188 0.148 0.180 | 0.156 0.180 0.211 |
 | gdp_hybrid | **1.000** **0.984** 0.219 | **0.992** **0.992** 0.156 |
 | transformer | 0.172 0.133 0.211 | 0.164 0.125 0.180 |
-| _floor_ | 0.200 (1.00x) | 0.250 (1.25x) |
+| _floor_ | 0.219 (1.09x) | 0.250 (1.25x) |
 
 ## bind cell — `s5_bind_local_v3_bind`
 
@@ -162,9 +167,9 @@ _A **bold** cell clears its own recomputed floor under the pre-registered rule. 
 | arch | L48 per-seed |
 |---|---|
 | fprm | 0.133 0.203 0.125 |
-| gdp_hybrid | **0.836** **0.953** 0.289 |
+| gdp_hybrid | 0.836 0.953 0.289 |
 | transformer | 0.125 0.156 0.133 |
-| _floor_ | 0.234 (1.17x) |
+| _floor_ | unfloorable (pad 0.719) |
 
 ## Guided checkpoint accuracy (per-slot, diagnostic — not the metric)
 
@@ -190,17 +195,19 @@ Read against the copy-the-previous-checkpoint reference, not against 1/k; both a
 
 # Verdict
 
+The GUIDED read's composed cell is unfloorable, so the verdict for `gdp_hybrid` is **V0_COMPOSED_UNFLOORABLE**. It REPLACES the previously published **V2_NO_GAP_HERE**, which was reached by scoring the composed cell against a floor that does not hold under this protocol; that verdict is retracted. V0 is not a null and not a gap — with no floor the cell can neither clear nor fail to clear, and the reading this protocol does support is the within-run comparison against the work-matched component below.
+
 **fprm / guided: V5_HARNESS_NULL** — no component clears on this read's control grid {'state@17': 0, 'bind@31': 0} (0/2 seeds at best, on state@17). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.
 
-seeds clearing: {'state': {17: 0}, 'bind': {31: 0}, 'composed': {48: 0}}; positive control (some component clears on this read's grid) {'state@17': 0, 'bind@31': 0} of 3 seeds, required ['state@17', 'bind@31']; matched-cost control: {'state': False, 'bind': False} (measured: {'state': True, 'bind': True}); lengths read: {'state': [17], 'bind': [31], 'composed': [48]}
+seeds clearing: {'state': {17: 0}, 'bind': {31: 0}, 'composed': {48: None}} (a `None` is a length with no floor on this protocol, not a length where no seed cleared); positive control (some component clears on this read's grid) {'state@17': 0, 'bind@31': 0} of 3 seeds, required ['state@17', 'bind@31']; matched-cost control: {'state': False, 'bind': False} (measured: {'state': True, 'bind': True}); composed pad reach: 0.719; lengths read: {'state': [17], 'bind': [31], 'composed': [48]}
 
 **fprm / plain: V5_HARNESS_NULL** — no component clears on this read's control grid {'state@16': 0, 'bind@16': 0} (0/2 seeds at best, on state@16). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.
 
 seeds clearing: {'state': {17: 0, 23: 0, 34: 0}, 'bind': {31: 0, 41: 0, 62: 0}, 'composed': {48: 0, 64: 0, 96: 0}}; positive control (some component clears on this read's grid) {'state@16': 0, 'bind@16': 0} of 3 seeds, required ['state@16', 'bind@16']; matched-cost control: {'state': False, 'bind': False} (measured: {'state': True, 'bind': True}); lengths read: {'state': [17, 23, 34], 'bind': [31, 41, 62], 'composed': [48, 64, 96]}
 
-**gdp_hybrid / guided: V2_NO_GAP_HERE** — the composed cell forms, and so does each component at the length carrying the same amount of that component's own work. Composition is not a separate difficulty at k=6 / L<=96 in this regime; the lengths or k must move before the cell is worth buying on the frontier.
+**gdp_hybrid / guided: V0_COMPOSED_UNFLOORABLE** — both components form at their own registered lengths, and the composed cell has NO FLOOR on this read's protocol: its floor argument is the one-structure bound W <= max(k, m) + 1, and this protocol's format requires the whole of P then B at every event, which hands those k + m slots to every policy including the task's own algorithm. Neither 'clears' nor 'does not clear' is available for the composed cell here, so no composition verdict is. What the excluded both-maps class reaches on the exact scored items is 0.719, and it is a lower bound on that class's max rather than a floor. The comparison this read does support is WITHIN-RUN — the composed cell against its work-matched component on the same seeds and items.
 
-seeds clearing: {'state': {17: 2}, 'bind': {31: 3}, 'composed': {48: 2}}; positive control (some component clears on this read's grid) {'state@17': 2, 'bind@31': 3} of 3 seeds, required ['state@17', 'bind@31']; matched-cost control: {'state': True, 'bind': True} (measured: {'state': True, 'bind': True}); lengths read: {'state': [17], 'bind': [31], 'composed': [48]}
+seeds clearing: {'state': {17: 2}, 'bind': {31: 3}, 'composed': {48: None}} (a `None` is a length with no floor on this protocol, not a length where no seed cleared); positive control (some component clears on this read's grid) {'state@17': 2, 'bind@31': 3} of 3 seeds, required ['state@17', 'bind@31']; matched-cost control: {'state': True, 'bind': True} (measured: {'state': True, 'bind': True}); composed pad reach: 0.719; lengths read: {'state': [17], 'bind': [31], 'composed': [48]}
 
 **gdp_hybrid / plain: V4_COMPONENT_UNREADABLE** — component(s) ['state'] do not form at their own registered lengths {'state': {17: 0, 23: 0, 34: 0}}, while the other one does. A composed failure would be explained by the component that failed, so no composition claim is available — and the dissociation between the components is the result.
 
@@ -208,7 +215,7 @@ seeds clearing: {'state': {17: 0, 23: 0, 34: 0}, 'bind': {31: 3, 41: 3, 62: 3}, 
 
 **transformer / guided: V5_HARNESS_NULL** — no component clears on this read's control grid {'state@17': 0, 'bind@31': 0} (0/2 seeds at best, on state@17). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.
 
-seeds clearing: {'state': {17: 0}, 'bind': {31: 0}, 'composed': {48: 0}}; positive control (some component clears on this read's grid) {'state@17': 0, 'bind@31': 0} of 3 seeds, required ['state@17', 'bind@31']; matched-cost control: {'state': False, 'bind': False} (measured: {'state': True, 'bind': True}); lengths read: {'state': [17], 'bind': [31], 'composed': [48]}
+seeds clearing: {'state': {17: 0}, 'bind': {31: 0}, 'composed': {48: None}} (a `None` is a length with no floor on this protocol, not a length where no seed cleared); positive control (some component clears on this read's grid) {'state@17': 0, 'bind@31': 0} of 3 seeds, required ['state@17', 'bind@31']; matched-cost control: {'state': False, 'bind': False} (measured: {'state': True, 'bind': True}); composed pad reach: 0.719; lengths read: {'state': [17], 'bind': [31], 'composed': [48]}
 
 **transformer / plain: V5_HARNESS_NULL** — no component clears on this read's control grid {'state@16': 0, 'bind@16': 0} (0/2 seeds at best, on state@16). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.
 
@@ -223,19 +230,21 @@ Each cell at the length carrying the same amount of its own work: composed@48, s
 
 | arch | seed | state@17 | composed@48 | bind@31 |
 |---|---|---|---|---|
-| fprm | 0 | 0.188 | 0.133 | 0.188 |
-| fprm | 1 | 0.148 | 0.203 | 0.148 |
-| fprm | 2 | 0.180 | 0.125 | 0.148 |
-| gdp_hybrid | 0 | 1.000 (clears) | 0.836 (clears) | 1.000 (clears) |
-| gdp_hybrid | 1 | 0.984 (clears) | 0.953 (clears) | 1.000 (clears) |
-| gdp_hybrid | 2 | 0.219 | 0.289 | 1.000 (clears) |
-| transformer | 0 | 0.172 | 0.125 | 0.211 |
-| transformer | 1 | 0.133 | 0.156 | 0.180 |
-| transformer | 2 | 0.211 | 0.133 | 0.141 |
+| fprm | 0 | 0.188 | 0.133† | 0.188 |
+| fprm | 1 | 0.148 | 0.203† | 0.148 |
+| fprm | 2 | 0.180 | 0.125† | 0.148 |
+| gdp_hybrid | 0 | 1.000 (clears) | 0.836† | 1.000 (clears) |
+| gdp_hybrid | 1 | 0.984 (clears) | 0.953† | 1.000 (clears) |
+| gdp_hybrid | 2 | 0.219 | 0.289† | 1.000 (clears) |
+| transformer | 0 | 0.172 | 0.125† | 0.211 |
+| transformer | 1 | 0.133 | 0.156† | 0.180 |
+| transformer | 2 | 0.211 | 0.133† | 0.141 |
 
-- **fprm**: neither the composed cell nor its depth-matched state component clears on any of the 3 seeds, so there is no pairing to read. The cells agree because both are at floor.
-- **gdp_hybrid**: at equal state depth the composed cell clears on exactly the seeds the state component clears on (3/3 seeds agree, 2 of them clearing), so the composed cell costs this architecture nothing beyond the state leg it contains ON THE CLEARS/DOES-NOT-CLEAR AXIS. It is not a claim about the sizes: the pre-registered rule counts seeds per cell and reads neither the margin nor the direction.
-- **transformer**: neither the composed cell nor its depth-matched state component clears on any of the 3 seeds, so there is no pairing to read. The cells agree because both are at floor.
+A † marks a cell with NO FLOOR on this protocol. The composed cell's floor argument is the one-structure bound, and the guided format writes the whole of P then B at every event — so the k + m slots it prices are handed to every policy, on the answer channel as much as on the trace channel. What the excluded both-maps class reaches on these exact items is 0.719, against a plain-protocol floor of 0.234; it is a lower bound on that class's max and not a bar.
+
+- **fprm**: the composed cell is UNFLOORABLE on this read and its depth-matched state component is at floor on all 3 seeds, so there is nothing to compare it with. The two columns agree because neither cell moved.
+- **gdp_hybrid**: the composed cell is UNFLOORABLE on this read, so there is no clears/does-not-clear pairing to read. On the 2 of 3 seeds whose state component is off its own floor, the composed cell is BELOW it on 2, within the run and on the same items: seed 0 -0.164, seed 1 -0.031. The excluded both-maps class reaches 0.719 on those items, so the composed cell scores from a cheap-policy baseline far above the state component's.
+- **transformer**: the composed cell is UNFLOORABLE on this read and its depth-matched state component is at floor on all 3 seeds, so there is nothing to compare it with. The two columns agree because neither cell moved.
 
 ## What the checkpoint diagnostic says
 
@@ -259,6 +268,6 @@ Each checkpoint is the whole of P and then the whole of B, k + m = 12 slots per 
 | transformer | state | 17 | 0.169 0.174 0.163 | 0.804 | -0.635 -0.630 -0.640 |
 | transformer | state | 80 | 0.167 0.175 0.182 | 0.827 | -0.660 -0.652 -0.645 |
 
-The diagnostic is not a partial trace and no verdict reads it. What IS read is the TRACE read — the final checkpoint's value for the QUERIED slot — which is a single slot with its own floor (`validity.s5_bind_v3_trace_operative_floor`), and the copier scores 0.000 on it at every cell because the query gate requires the queried slot to move at least twice and to end different from its stated value.
+The diagnostic is not a partial trace and no verdict reads it. What IS read is the TRACE read — the final checkpoint's value for the QUERIED slot — a single slot scored against the same gold and against the same floors as this protocol's answer channel (`validity.s5_bind_v3_operative_floor(..., guided=True)`: the component cells floored, the composed cell unfloorable). The copier scores 0.000 on it at every cell because the query gate requires the queried slot to move at least twice and to end different from its stated value.
 
-_A **bold** cell clears its own operative floor under the pre-registered rule. Floors are recomputed from that cell's own items: registry rows plus the admitted swept family. The fitted surface ranker is measured beside them (fit 2x2000 / scored 4000 disjoint) and is NOT in any floor — no implementation of it achieves a price the class rule admits. The composed cell's cost multiplier over each component is reported in the pre-registration record in both cost models; the matched-cost lengths in the tables above are the FORWARD-PASS match, which is this regime's cost._
+_A **bold** cell clears its own operative floor under the pre-registered rule; a cell marked `unfloorable` has no floor on that read's protocol and can never be bold, and the `pad` beside it is what the excluded both-maps class scores on the exact items — a lower bound on that class's max, not a bar. Floors are recomputed from that cell's own items and under that read's own protocol: registry rows plus the admitted swept family. The fitted surface ranker is measured beside them (fit 2x2000 / scored 4000 disjoint) and is NOT in any floor — no implementation of it achieves a price the class rule admits. The composed cell's cost multiplier over each component is reported in the pre-registration record in both cost models; the matched-cost lengths in the tables above are the FORWARD-PASS match, which is this regime's cost._

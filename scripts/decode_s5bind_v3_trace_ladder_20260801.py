@@ -20,14 +20,18 @@ TWO READS, NEVER COLLAPSED.
           correct value on 100% of two state cells and emits a different token on 81% and 86% of
           them, and two published nulls were that.
 
-FLOORS ARE RECOMPUTED FROM THE ITEMS THEY ARE READ AGAINST. Both reads score ``--guided_n`` items,
-so both floors are measured at that n (``protocol.trace_floor``), not at the 1000 the plain grid
-uses — the operative floor is a max over admitted rows and that max carries an upward selection
-bias which a smaller n does not average out. The trace floor is the answer floor on a COMPONENT
-cell (the class rule's W axis is the only thing a scratchpad removes, and no component row needed
-it) and is None on the COMPOSED cell, where the guided protocol hands out the live slots the
-one-structure bound prices. A None is printed as "unfloorable" and no cell is ever marked as
-clearing it.
+FLOORS ARE RECOMPUTED FROM THE ITEMS THEY ARE READ AGAINST, AND UNDER THE PROTOCOL THEY ARE READ
+UNDER. Both reads score ``--guided_n`` items, so both floors are measured at that n
+(``protocol.trace_floor``), not at the 1000 the plain grid uses — the operative floor is a max over
+admitted rows and that max carries an upward selection bias which a smaller n does not average out.
+
+AND BOTH READS GET THE SAME FLOOR, because both decode under the same protocol. What a scratchpad
+protocol removes is the class rule's live-slot axis, and it removes it from the format rather than
+from a channel: the generated checkpoints accumulate into the same context the answer token comes
+out of. On a COMPONENT cell nothing moves — no component row needed that axis. On the COMPOSED cell
+there is no floor on EITHER channel, and both are printed "unfloorable" with the pad reach beside
+them; no cell is ever marked as clearing one. The earlier revision of this decode floored the
+ANSWER column of the composed cell at 0.234 and bolded two cells against it; that is retracted.
 
 PER SEED, NEVER A MEAN. This family is bimodal at the emergence threshold.
 
@@ -85,9 +89,14 @@ def plan_rows(phases, archs, seeds):
 def floors_for(cells_lengths, n_scored, cache_path=None):
     """``{cell@L: trace_floor record}``, measured at the read's OWN n and cached on disk.
 
-    ``protocol.trace_floor`` carries both numbers — the ANSWER floor and the TRACE floor on the
-    same items — plus the T1 agreement, the copier's per-slot reference and the queried slot's
-    move distribution, so every number a cell is read against comes from one record.
+    ``protocol.trace_floor`` carries the GUIDED protocol's floor — one number for both of its
+    channels — plus the plain protocol's number as a reference, the T1 agreement, the copier's
+    per-slot reference and the queried slot's move distribution, so every number a cell is read
+    against comes from one record.
+
+    A cached record written before the guided answer floor was retracted has no ``protocol`` key
+    and is RECOMPUTED rather than reused: it carries a composed-cell answer floor that does not
+    hold under this protocol.
     """
     cache = {}
     if cache_path and Path(cache_path).exists():
@@ -98,15 +107,19 @@ def floors_for(cells_lengths, n_scored, cache_path=None):
         key = f"{cell}@{L}"
         if key in out:
             continue
-        if key in cache and cache[key].get("n_scored") == n_scored:
+        if (key in cache and cache[key].get("n_scored") == n_scored
+                and cache[key].get("protocol") == "guided"):
             out[key] = cache[key]
             continue
         t0 = time.time()
         out[key] = P.trace_floor(TK.CANONICAL[P.LOCAL_CELLS[cell]], L, n_scored=n_scored)
         row = out[key]
-        tf = "unfloorable" if row["trace_floor"] is None else f"{row['trace_floor']:.4f}"
-        print(f"  floor {key}: answer {row['answer_floor']:.4f} | trace {tf} "
-              f"[{row['trace_basis']}] slot==gold {row['slot_is_gold_scored']} "
+        gf = ("unfloorable"
+              + (f" (pad reach {row['pad_reach']:.4f})" if row.get("pad_reach") is not None
+                 else "")
+              if row["trace_floor"] is None else f"{row['trace_floor']:.4f}")
+        print(f"  floor {key}: guided (both channels) {gf} [{row['trace_basis']}] | plain "
+              f"{row['answer_floor_plain']:.4f} slot==gold {row['slot_is_gold_scored']} "
               f"[{time.time() - t0:.0f}s]", flush=True)
     return out
 
@@ -233,6 +246,27 @@ def _cell(v, floor, n, bold=True):
     return s
 
 
+def flops_note(done, floors, args):
+    """The compute-match caveat, off the training run's own measured sizes.
+
+    This report compares architectures in every section, so the caveat sits above them rather
+    than in a footnote: the roster is NOT FLOPs-matched, and the architecture carrying the extra
+    compute is the one that is ahead. "Readable on the answer channel" is the pre-registered
+    clears rule applied to the ANSWER column, so the clause it gates is measured here.
+    """
+    path = Path(args.sizes_from or "")
+    if not path.exists():
+        return []
+    sizes = (json.load(open(path)).get("cfg") or {}).get("sizes") or {}
+    if not sizes:
+        return []
+    readable = sorted({a for (a, _s, c, x), r in done.items()
+                       if clears(r["answer"], floors.get(f"{c}@{x}", {}).get("answer_floor"),
+                                 args.guided_n)[0]})
+    return ["## The roster is not FLOPs-matched", ""] + [
+        ln for ln in E.flops_caveat({"sizes": sizes}, readable) if ln] + [""]
+
+
 def findings_section(done, floors, args):
     """What the decode settles, with every number recomputed from the rows below it."""
     def tr(arch, seed, cell, x):
@@ -335,19 +369,26 @@ def write_report(done, floors, args):
           "(events teacher-forced, every per-event checkpoint and the answer generated) · "
           f"decoded from `{args.ckpt_dir}`, nothing trained.",
           "",
-          "Two reads of the same gold. **ANSWER** is the emitted answer token — what every "
-          "registered floor prices and what the frontier arm is scored on. **TRACE** is the "
-          "model's own final checkpoint's value for the queried slot. They score one quantity "
-          "through two channels (T1, re-measured on the exact scored items in every row below), "
-          "so a disagreement between them is a disagreement IN A CHANNEL and is reported as "
-          "that.",
+          "Two reads of the same gold, both decoded under the GUIDED protocol. **ANSWER** is the "
+          "emitted answer token — the channel the frontier arm is scored on, though it is scored "
+          "there under the PLAIN protocol and not this one. **TRACE** is the model's own final "
+          "checkpoint's value for the queried slot. They score one quantity through two channels "
+          "(T1, re-measured on the exact scored items in every row below), so a disagreement "
+          "between them is a disagreement IN A CHANNEL and is reported as that — and, because "
+          "the protocol is what a floor is priced against, they are read against ONE floor.",
           "",
           f"A **bold** cell clears its own floor under the pre-registered rule (z > {P.Z_CLEAR} "
-          f"and margin >= {P.MARGIN}, at this read's own n). A † marks a cell with NO FLOOR "
-          "on that read: the composed cell's trace is unfloorable, because the guided protocol "
-          "hands out the k + m live slots the one-structure bound prices. Per-seed values only — "
-          "this family is bimodal at the emergence threshold, and a mean over one converged and "
-          "two floored seeds is a number no seed produced.",
+          f"and margin >= {P.MARGIN}, at this read's own n). A † marks a cell with NO FLOOR: the "
+          "composed cell is unfloorable under this protocol on BOTH channels, because the guided "
+          "format writes the whole of P then B at every event and so hands out the k + m live "
+          "slots the one-structure bound prices — to every policy, the task's own algorithm "
+          "included. It is a property of the protocol, not of the channel: the generated "
+          "checkpoints accumulate into the same context the answer token is decoded from. "
+          "**The composed cell's ANSWER floor of 0.234 / 0.227 / 0.211 published in the previous "
+          "revision of this table is RETRACTED**, along with the bold on the two cells that were "
+          "read as clearing it. Per-seed values only — this family is bimodal at the emergence "
+          "threshold, and a mean over one converged and two floored seeds is a number no seed "
+          "produced.",
           "",
           "**Provenance.** The ANSWER read here reproduces "
           "`results/s5bind_v3_three_cell_depthmatched_20260801.json` exactly on all 45 cells the "
@@ -369,30 +410,42 @@ def write_report(done, floors, args):
              f"{sorted({r['guided_batch'] for r in done.values()})[0]}."),
           ""]
 
+    L += flops_note(done, floors, args)
     L += findings_section(done, floors, args)
 
     # ---- the floors, both reads, on the items they are read against
     L += ["## The floors, recomputed at n = %d from each cell's own scored items" % n, "",
-          "| cell | answer floor | trace floor | basis | pad reach | slot==gold (T1) | "
-          "copier per-slot | queried slot moves (min/median/max) |",
+          "One floor per cell, for BOTH channels, because both decode under the same protocol. "
+          "The plain protocol's number is beside it as a reference — it is what the PLAIN read "
+          "scores against and it is NOT a bar a guided score cleared.", "",
+          "| cell | guided floor (answer & trace) | basis | pad reach | plain-protocol floor | "
+          "slot==gold (T1) | copier per-slot | queried slot moves (min/median/max) |",
           "|---|---|---|---|---|---|---|---|"]
     for key in sorted(floors, key=lambda k: (k.split("@")[0], int(k.split("@")[1]))):
         f = floors[key]
-        tf = ("**unfloorable**" if f["trace_floor"] is None else f"{f['trace_floor']:.3f}")
+        gf = ("**unfloorable**" if f["trace_floor"] is None
+              else f"{f['trace_floor']:.3f} ({f['trace_floor'] / ch:.2f}x)")
         mv = f.get("slot_moves", {})
         pr = "—" if f.get("pad_reach") is None else f"{f['pad_reach']:.3f}"
-        L.append(f"| {key} | {f['answer_floor']:.3f} ({f['answer_floor'] / ch:.2f}x) | {tf} | "
-                 f"{f['trace_basis']} | {pr} | {f['slot_is_gold_scored']} | "
+        pf = f.get("answer_floor_plain")
+        L.append(f"| {key} | {gf} | {f['trace_basis']} | {pr} | "
+                 + ("—" if pf is None else f"{pf:.3f} ({pf / ch:.2f}x)")
+                 + f" | {f['slot_is_gold_scored']} | "
                  f"{f.get('copy_per_slot', 0):.3f} | "
                  f"{mv.get('min')}/{mv.get('median')}/{mv.get('max')} |")
     L += ["",
-          "The trace floor equals the answer floor on every COMPONENT cell and that is the "
+          "The guided floor equals the plain one on every COMPONENT cell and that is the "
           "argument, not a coincidence: a component's class rule is depth <= 1 AND cost under "
-          "that cell's own algorithm's minimum, and a scratchpad buys neither. What a scratchpad "
-          "does buy is the W axis, and no component row needed it. On the COMPOSED cell the W "
-          "axis is the whole of the registered class's first conjunct, so the class that survives "
-          "contains the task and there is no floor to clear — the trace read there is a "
-          "WITHIN-RUN comparison and never a cleared floor.",
+          "that cell's own algorithm's minimum, and a scratchpad buys neither — a pad substitutes "
+          "for REGISTERS, not for CHAINING. What a scratchpad does buy is the W axis, and no "
+          "component row needed it. On the COMPOSED cell the W axis is the whole of the "
+          "registered class's first conjunct and the step conjunct is one the task itself "
+          "satisfies, so the class that survives contains the task and there is no floor to "
+          "clear on either channel — a composed-cell score under this protocol is a WITHIN-RUN "
+          "comparison and never a cleared floor. The pad reach column is what the excluded "
+          "both-maps class (carry both maps, drop one block of events, replay the rest) scores "
+          "on the exact items: a lower bound on that class's max, printed so the retracted floor "
+          "leaves a number rather than a blank.",
           "",
           "`ckpt_copy_prev` — emit the previous checkpoint, so the trace never moves — scores "
           "**0.000** on the trace at every cell above, because the query gate requires the "
@@ -448,9 +501,10 @@ def write_report(done, floors, args):
             frow = []
             for c, x in (("state", sl), ("composed", cl), ("bind", bl)):
                 f = floors.get(f"{c}@{x}", {})
-                frow.append("—" if f.get("answer_floor") is None else f"{f['answer_floor']:.3f}")
-                frow.append("unfloorable" if f.get("trace_floor") is None
-                            else f"{f['trace_floor']:.3f}")
+                pad = f.get("pad_reach")
+                for key in ("answer_floor", "trace_floor"):
+                    frow.append(f"{f[key]:.3f}" if f.get(key) is not None else
+                                "unfloorable" + (f" (pad {pad:.3f})" if pad is not None else ""))
             L += ["| _floor_ | | " + " | ".join(frow) + " |", ""]
 
     # ---- does the separation grow with depth?
@@ -626,6 +680,10 @@ def main():
     ap.add_argument("--teacher_forced",
                     default="results/s5bind_v3_teacher_forced_slots_20260801.json",
                     help="the teacher-forced slot probe, folded in as a diagnostic section")
+    ap.add_argument("--sizes_from",
+                    default="results/s5bind_v3_three_cell_depthmatched_20260801.json",
+                    help="the training run whose measured params/FLOPs-per-token this decode "
+                         "reports the compute match from")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--report_only", action="store_true")
     a = ap.parse_args()
@@ -638,7 +696,14 @@ def main():
                 rows[(r["arch"], r["seed"], r["cell"], r["L"])] = r
         cl = sorted({(c, L) for _p, _a, _s, c, L in
                      plan_rows(PHASES, [x.strip() for x in a.archs.split(",")], a.seeds)})
-        write_report(rows, floors_for(cl, a.guided_n, a.floor_cache), a)
+        floors = floors_for(cl, a.guided_n, a.floor_cache)
+        # the cache is rewritten here too, so a re-render leaves the same record on disk the
+        # decode would have written; otherwise a stale cache is silently recomputed every time.
+        Path(a.floor_cache).write_text(json.dumps(
+            {"written_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+             "read": P.TRACE_READ, "n_scored": a.guided_n, "floors": floors},
+            indent=2, default=float))
+        write_report(rows, floors, a)
         print(f"=== report: {a.out_prefix}.md ===")
         return
     decode(a)

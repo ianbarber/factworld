@@ -188,9 +188,12 @@ def guided_free_run_batched(model, tok, spec, length, n, device, batch=128, max_
     positions differ (event sentences differ in width), so the loop runs once per slot ORDINAL
     with one padded batched forward per round.
 
-    Returns ``(answer_match, checkpoint_acc, trace)``. The model runs its own state through the
-    stream, so this is the SCRATCHPAD read: the floor's W axis has no force against it, and it
-    is read against the admitted end of the cell's profile like any other score.
+    Returns ``(answer_match, checkpoint_acc, trace)``. THIS IS A SCRATCHPAD PROTOCOL, and both of
+    the quantities it returns come out of it: the generated checkpoints accumulate into ``ids``,
+    which is the same context the answer is then decoded from. So the floor's W axis has no force
+    against either, and the rule is ``validity.s5_bind_v3_slot_profile``'s — a model under this
+    protocol is read against the TOP of the cell's profile, not its admitted end. On the composed
+    cell that leaves no floor at all on either channel (``P.cell_floor(..., guided=True)``).
 
     ``trace`` is the third quantity and the one the answer channel cannot reach: the model's OWN
     final checkpoint's value for the queried slot, scored against the same gold under the same
@@ -491,9 +494,33 @@ def _accuracies(rows, grid, read):
     return out
 
 
-def _floor_map(floors, grid):
-    return {cell: {int(k.split("@")[1]): v["floor"] for k, v in floors.items()
+def _floor_map(floors, grid, key="floor"):
+    return {cell: {int(k.split("@")[1]): v.get(key) for k, v in floors.items()
                    if k.split("@")[0] == cell} for cell in grid}
+
+
+def _guided_records(guided_floors, floors):
+    """The floor records the GUIDED read is judged against, with no path back to a plain floor on
+    the composed cell.
+
+    A record written before the guided floors were measured separately has none, and the old
+    fallback was the PLAIN floors — which floor the composed cell at the one-structure bound, the
+    exact number this protocol voids. So the fallback keeps the component records (a component's
+    class is the same under either protocol) and returns the composed cell UNFLOORABLE, which is
+    what the guided protocol leaves it. Any record already measured under ``guided`` is used as
+    is; a stale one is not silently mixed in.
+    """
+    if guided_floors and all(v.get("protocol") == "guided" for v in guided_floors.values()):
+        return guided_floors
+    out = {}
+    for key, rec in (guided_floors or floors or {}).items():
+        if key.split("@")[0] == "composed":
+            out[key] = {**rec, "floor": None, "floor_plain": rec.get("floor"),
+                        "pad_reach": rec.get("pad_reach"), "basis": "unfloorable",
+                        "protocol": "guided_fallback"}
+        else:
+            out[key] = {**rec, "protocol": "guided_fallback"}
+    return out
 
 
 def apply_rule(runs, floors, grid, eval_n, guided_n, guided_floors=None):
@@ -506,14 +533,21 @@ def apply_rule(runs, floors, grid, eval_n, guided_n, guided_floors=None):
     scores ``guided_n`` items and the plain read ``eval_n``, and the max over admitted rows
     carries an upward selection bias that does not shrink with the score's own n: at n = 128 the
     operative floor is 0.250 at state@80 and 0.234 at composed@48 against 0.207 and 0.204 at
-    n = 1000, on the same rows. ``guided_floors`` falls back to ``floors`` only for records
-    written before the guided floors were measured separately.
+    n = 1000, on the same rows. Where a record predates the separately-measured guided floors,
+    ``_guided_records`` keeps the component numbers and returns the composed cell UNFLOORABLE —
+    it never falls back to the plain floor there, which is the one this protocol voids.
+
+    AND EACH READ AGAINST ITS OWN PROTOCOL'S CLASS RULE. A guided floor is None on the composed
+    cell — the format hands out the live slots that cell's floor argument prices — so the composed
+    cell reaches ``verdict`` as UNFLOORABLE and not as a cell at floor.
     """
     per_arch = {}
     for arch in sorted({r["arch"] for r in runs}):
         rows = [r for r in runs if r["arch"] == arch]
+        gf = _guided_records(guided_floors, floors)
         fp = _floor_map(floors, grid)
-        fg = _floor_map(guided_floors or floors, grid)
+        fg = _floor_map(gf, grid)
+        pads = _floor_map(gf, grid, "pad_reach")
         per_read = {}
         for read, n in (("plain", eval_n), ("guided", guided_n)):
             f = fp if read == "plain" else fg
@@ -554,10 +588,18 @@ def apply_rule(runs, floors, grid, eval_n, guided_n, guided_floors=None):
                               and all(L in acc[cell][s] for s in acc[cell]))
                 matched[cell] = P.forms(acc[cell], f[cell], mlens, n=n)[0] if mlens else None
                 matched_measured[cell] = bool(mlens)
-            code, why = P.verdict(ctrl, comp_forms, comp_counts, matched, matched_measured)
+            # UNFLOORABLE IS NOT FLOORED. Where this read's protocol leaves the composed cell no
+            # floor at any registered length, the cell cannot clear and cannot fail to clear, and
+            # the verdict says so instead of reading a null off an absent number.
+            floored = all(f["composed"].get(L) is not None for L in lengths["composed"])
+            pad = next((pads["composed"][L] for L in lengths["composed"]
+                        if pads["composed"].get(L) is not None), None) if read == "guided" else None
+            code, why = P.verdict(ctrl, comp_forms, comp_counts, matched, matched_measured,
+                                  composed_floored=floored, pad_reach=pad)
             per_read[read] = {"verdict": code, "why": why, "control": ctrl,
                               "control_seeds": ctrl["seeds"],
                               "matched_measured": matched_measured,
+                              "composed_floored": floored, "composed_pad_reach": pad,
                               "lengths_read": {c: list(v) for c, v in lengths.items()},
                               "forms": comp_forms,
                               "seed_counts": comp_counts, "matched_forms": matched, "acc": acc}
@@ -585,6 +627,9 @@ def post_hoc_section(runs, floors, cfg):
     k = cfg["k"]
     at = {"composed": L, "state": P.WORK_MATCHED.get(L, {}).get("state"),
           "bind": P.WORK_MATCHED.get(L, {}).get("bind")}
+    cfl = floors.get(f"composed@{L}", {})
+    unfloorable = cfl.get("floor") is None
+    pad = cfl.get("pad_reach")
     out = ["", "# Post-hoc (not pre-registered)", "",
            "## The composed cell and its depth-matched components, seed by seed (GUIDED)", "",
            f"Each cell at the length carrying the same amount of its own work: composed@{L}, "
@@ -605,11 +650,41 @@ def post_hoc_section(runs, floors, cfg):
             rows.append((r["seed"], cell))
             out.append(f"| {arch} | {r['seed']} | " + " | ".join(
                 ("—" if cell[c][0] is None else
-                 f"{cell[c][0]:.3f}{' (clears)' if cell[c][1] else ''}")
+                 f"{cell[c][0]:.3f}"
+                 + (" (clears)" if cell[c][1] else
+                    ("†" if c == "composed" and unfloorable else "")))
                 for c in ("state", "composed", "bind")) + " |")
         full = [(s, c) for s, c in rows
                 if all(c[x][0] is not None for x in ("state", "bind", "composed"))]
         if not full:
+            continue
+        if unfloorable:
+            # THE CLEARS AXIS IS NOT AVAILABLE HERE. The composed cell has no floor under this
+            # protocol, so "clears on exactly the seeds the state component does" is a comparison
+            # with one side missing. What the same seeds and the same items do support is the
+            # DIRECTION, per seed — but only on the seeds whose STATE leg is off its own floor.
+            # Differencing two cells that are both at floor reports noise as a composition cost,
+            # which is the same substitution the floored branch below refuses.
+            live = [(s, c) for s, c in full if c["state"][1]]
+            if not live:
+                verdict_lines.append(
+                    f"- **{arch}**: the composed cell is UNFLOORABLE on this read and its "
+                    f"depth-matched state component is at floor on all {len(full)} seeds, so "
+                    "there is nothing to compare it with. The two columns agree because neither "
+                    "cell moved.")
+                continue
+            deficits = [(s, c["composed"][0] - c["state"][0]) for s, c in live]
+            below = sum(1 for _s, d in deficits if d < 0)
+            verdict_lines.append(
+                f"- **{arch}**: the composed cell is UNFLOORABLE on this read, so there is no "
+                "clears/does-not-clear pairing to read. On the "
+                f"{len(live)} of {len(full)} seeds whose state component is off its own floor, "
+                f"the composed cell is BELOW it on {below}, within the run and on the same "
+                "items: "
+                + ", ".join(f"seed {s} {d:+.3f}" for s, d in deficits)
+                + (f". The excluded both-maps class reaches {pad:.3f} on those items, so the "
+                   "composed cell scores from a cheap-policy baseline far above the state "
+                   "component's." if pad is not None else "."))
             continue
         same = [s for s, c in full if c["state"][1] == c["composed"][1]]
         split = [s for s, c in full if c["state"][1] and not c["composed"][1]]
@@ -639,6 +714,16 @@ def post_hoc_section(runs, floors, cfg):
             verdict_lines.append(
                 f"- **{arch}**: the composed cell and its depth-matched state component do not "
                 f"agree seed for seed (agree on {len(same)}/{len(full)}).")
+    if unfloorable:
+        out += ["", "A † marks a cell with NO FLOOR on this protocol. The composed cell's floor "
+                "argument is the one-structure bound, and the guided format writes the whole of "
+                "P then B at every event — so the k + m slots it prices are handed to every "
+                "policy, on the answer channel as much as on the trace channel."
+                + (f" What the excluded both-maps class reaches on these exact items is "
+                   f"{pad:.3f}, against a plain-protocol floor of "
+                   f"{cfl.get('floor_plain'):.3f}; it is a lower bound on that class's max and "
+                   "not a bar." if pad is not None and cfl.get("floor_plain") is not None
+                   else "")]
     if verdict_lines:
         out += [""] + verdict_lines
     out += checkpoint_diagnostic_section(runs, cfg)
@@ -695,10 +780,12 @@ def checkpoint_diagnostic_section(runs, cfg):
         out.append(f"| {arch} | {cellname} | {L} | " + " ".join(f"{v:.3f}" for v in vals)
                    + f" | {r0:.3f} | " + " ".join(f"{v - r0:+.3f}" for v in vals) + " |")
     out += ["", "The diagnostic is not a partial trace and no verdict reads it. What IS read is "
-            "the TRACE read — the final checkpoint's value for the QUERIED slot — which is a "
-            "single slot with its own floor (`validity.s5_bind_v3_trace_operative_floor`), and "
-            "the copier scores 0.000 on it at every cell because the query gate requires the "
-            "queried slot to move at least twice and to end different from its stated value."]
+            "the TRACE read — the final checkpoint's value for the QUERIED slot — a single slot "
+            "scored against the same gold and against the same floors as this protocol's answer "
+            "channel (`validity.s5_bind_v3_operative_floor(..., guided=True)`: the component "
+            "cells floored, the composed cell unfloorable). The copier scores 0.000 on it at "
+            "every cell because the query gate requires the queried slot to move at least twice "
+            "and to end different from its stated value."]
     return out
 
 
@@ -803,6 +890,23 @@ def cost_section(cfg, grid):
     return out
 
 
+def _floor_cell(fr, chance=None):
+    """One floor cell, with an UNFLOORABLE cell carrying its pad reach rather than a blank.
+
+    A blank would read as "not measured". The cell was measured; what does not exist is a bar it
+    could clear, and the pad reach — what the excluded both-maps class scores on the exact items —
+    is the number that says how far the unfloorable class gets. It is not a floor and is never
+    used to bold a cell.
+    """
+    if fr is None:
+        return "—"
+    if fr.get("floor") is not None:
+        return (f"{fr['floor']:.3f}" if chance is None
+                else f"{fr['floor']:.3f} ({fr['floor'] / chance:.2f}x)")
+    pad = fr.get("pad_reach")
+    return "unfloorable" + (f" (pad {pad:.3f})" if pad is not None else "")
+
+
 def depth_matched_section(runs, floors, cfg, guided_floors=None):
     """THE MEASUREMENT THE RUN EXISTS FOR: the three cells at equal component work, per seed.
 
@@ -826,7 +930,7 @@ def depth_matched_section(runs, floors, cfg, guided_floors=None):
     out = ["", "# The depth-matched comparison (pre-registered)", ""]
     for read, n in (("guided", cfg["guided_n"]), ("plain", cfg["eval_n"])):
         key = "eval" if read == "plain" else "guided"
-        rf = floors if read == "plain" else (guided_floors or floors)
+        rf = floors if read == "plain" else _guided_records(guided_floors, floors)
         triples = []
         for cl in P.LOCAL_LENGTHS:
             trip = {"composed": cl, "state": P.WORK_MATCHED.get(cl, {}).get("state"),
@@ -863,14 +967,47 @@ def depth_matched_section(runs, floors, cfg, guided_floors=None):
                     out.append(f"| {arch} | {r['seed']} | " + " | ".join(vals) + " |")
             frow = []
             for c in ("state", "composed", "bind"):
-                fr = rf.get(f"{c}@{trip[c]}")
-                frow.append("—" if fr is None else f"{fr['floor']:.3f}")
+                frow.append(_floor_cell(rf.get(f"{c}@{trip[c]}")))
             out += ["| _floor_ | | " + " | ".join(frow) + " |", ""]
     out += ["_A **bold** cell clears its own recomputed floor under the pre-registered rule. "
             "Every column of a row costs the same amount of that column's own work; the "
             "TOKEN-matched pairing (state@80, bind@132 against composed@48) is the "
             "matched-COST control and is in the tables below._"]
     return out
+
+
+def flops_caveat(cfg, readable=None, sizes=None):
+    """The compute match, checked against the run's own measured numbers rather than asserted.
+
+    The repo's convention matches on FLOPs/token, not on parameters. Where a run's measured
+    FLOPs/token do NOT match, the comparison is not compute-matched and the caveat travels with
+    every reading that compares the architectures — the more so where the architecture that is
+    ahead is the one carrying the extra compute.
+
+    ``readable`` is the list of architectures that clear anything at all on the ANSWER channel;
+    the "and it is the only one readable there" clause is printed only where the run's own
+    numbers say so, never as a standing claim.
+    """
+    sz = sizes if sizes is not None else cfg.get("sizes") or {}
+    fl = {a: v[1] for a, v in sz.items() if v and v[1]}
+    if len(fl) < 2:
+        return []
+    top = max(fl, key=lambda a: fl[a])
+    rest = {a: v for a, v in fl.items() if a != top}
+    gap = fl[top] / min(rest.values()) - 1.0
+    if gap < 0.02:
+        return ["", "_Per-token FLOPs match to within "
+                f"{gap * 100:.1f}% across the roster, which is the axis this repo matches on._",
+                ""]
+    only = (readable is not None and list(readable) == [top])
+    return ["", f"**`{top}` IS NOT FLOPs-MATCHED.** It runs {fl[top] / 1e6:.2f}M FLOPs/token "
+            "against " + ", ".join(f"`{a}`'s {v / 1e6:.2f}M" for a, v in sorted(rest.items()))
+            + f" — a {gap * 100:.0f}% advantage, against this repo's own compute-matching "
+            f"convention (match on FLOPs/token, not on parameters). Every comparison in which "
+            f"`{top}` is ahead carries it"
+            + (f", and it is the more load-bearing here because `{top}` is the only architecture "
+               "this run reads on the ANSWER channel at all." if only else "."),
+            ""]
 
 
 def write_markdown(runs, per_arch, floors, cfg, grid, path, guided_floors=None):
@@ -888,12 +1025,32 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path, guided_floors=None):
         f"architecture on >= {P.SEEDS_CLEAR} of the seeds at every registered length. Per-seed "
         "values only — this family is bimodal at the emergence threshold.",
         "",
+        "**The composed cell has no floor on the GUIDED read, on either channel.** That floor is "
+        "the one-structure bound `W <= max(k, m) + 1` against the task's `k + m + 1`, and the "
+        "guided format requires the whole of P then the whole of B at every event — so the k + m "
+        "slots the bound prices are handed to every policy, the task's own algorithm included, "
+        "and the class that survives contains the task. It is a property of the PROTOCOL and not "
+        "of the read: the guided decode accumulates the generated checkpoints into the same "
+        "context the answer token comes out of. Guided composed cells are reported UNFLOORABLE "
+        "with the pad reach — what the excluded both-maps class scores on the exact items — "
+        "beside them. **The previous `gdp_hybrid / guided: V2_NO_GAP_HERE` was read off that "
+        "floor and is RETRACTED**; the verdict below is what the rule returns without it. The "
+        "PLAIN read is unaffected: a streaming model with no scratchpad is the class the bound "
+        "prices.",
+        "",
         "## Size (compute-matched: shared d_model and depth; `fprm` is weight-tied)",
         "",
         "| arch | params | FLOPs/token |", "| --- | --- | --- |",
     ]
     for arch, (p, fl) in sorted(cfg["sizes"].items()):
         lines.append(f"| {arch} | {p / 1e6:.1f}M | {fl / 1e6:.2f}M |")
+    # the answer channel is the PLAIN read; an architecture is "readable" there if any cell of
+    # its own registered grid clears on any seed. Measured off this run, not assumed.
+    readable = sorted(a for a, reads in per_arch.items()
+                      if any(n for per_len in
+                             (reads.get("plain", {}).get("seed_counts") or {}).values()
+                             for n in per_len.values()))
+    lines += flops_caveat(cfg, readable)
     # measured from this run's own stages, so the compute-matched claim is checkable rather than
     # asserted: matched FLOPs/token does not imply matched wall clock and both are printed.
     rate = {}
@@ -908,7 +1065,7 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path, guided_floors=None):
               + depth_matched_section(runs, floors, cfg, guided_floors))
     for read, n in (("plain", cfg["eval_n"]), ("guided", cfg["guided_n"])):
         key = "eval" if read == "plain" else "guided"
-        rf = floors if read == "plain" else (guided_floors or floors)
+        rf = floors if read == "plain" else _guided_records(guided_floors, floors)
         label = ("PLAIN read — answer off the plain prompt, no scratchpad"
                  if read == "plain" else
                  "GUIDED read — events forced, checkpoints and answer generated")
@@ -936,10 +1093,7 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path, guided_floors=None):
                         (f"**{v:.3f}**" if P.clears(v, fl, n)[0] else f"{v:.3f}")
                         for v in vals))
                 lines.append(f"| {arch} | " + " | ".join(cells) + " |")
-            row = []
-            for L in lens:
-                fr = rf.get(f"{cell}@{L}")
-                row.append("—" if fr is None else f"{fr['floor']:.3f} ({fr['floor'] / ch:.2f}x)")
+            row = [_floor_cell(rf.get(f"{cell}@{L}"), ch) for L in lens]
             lines.append("| _floor_ | " + " | ".join(row) + " |")
     # The per-slot checkpoint accuracy is the diagnostic that separates the two readings a
     # floored GUIDED answer is otherwise ambiguous between: no state is tracked at all, or
@@ -967,19 +1121,41 @@ def write_markdown(runs, per_arch, floors, cfg, grid, path, guided_floors=None):
         for arch, cell, L, vals in ck_rows:
             lines.append(f"| {arch} | {cell} | {L} | " + " ".join(f"{v:.3f}" for v in vals) + " |")
     lines += ["", "# Verdict", ""]
+    retracted = [a for a, reads in sorted(per_arch.items())
+                 if reads.get("guided", {}).get("verdict") == "V0_COMPOSED_UNFLOORABLE"]
+    if retracted:
+        lines += ["The GUIDED read's composed cell is unfloorable, so the verdict for "
+                  + ", ".join(f"`{a}`" for a in retracted)
+                  + " is **V0_COMPOSED_UNFLOORABLE**. It REPLACES the previously published "
+                  "**V2_NO_GAP_HERE**, which was reached by scoring the composed cell against a "
+                  "floor that does not hold under this protocol; that verdict is retracted. V0 "
+                  "is not a null and not a gap — with no floor the cell can neither clear nor "
+                  "fail to clear, and the reading this protocol does support is the within-run "
+                  "comparison against the work-matched component below.", ""]
     for arch, reads in sorted(per_arch.items()):
         for read, v in sorted(reads.items()):
             ctrl = v.get("control", {})
+            pad = v.get("composed_pad_reach")
+            unfl = any(n is None for per_len in v["seed_counts"].values()
+                       for n in per_len.values())
             lines += [f"**{arch} / {read}: {v['verdict']}** — {v['why']}", "",
-                      f"seeds clearing: {v['seed_counts']}; positive control (some component "
-                      f"clears on this read's grid) {ctrl.get('per_pair')} of "
+                      f"seeds clearing: {v['seed_counts']}"
+                      + (" (a `None` is a length with no floor on this protocol, not a length "
+                         "where no seed cleared)" if unfl else "")
+                      + "; positive control "
+                      f"(some component clears on this read's grid) {ctrl.get('per_pair')} of "
                       f"{len(cfg['seeds'])} seeds, required {ctrl.get('required')}; "
                       f"matched-cost control: {v['matched_forms']} "
                       f"(measured: {v.get('matched_measured')}); "
-                      f"lengths read: {v['lengths_read']}", ""]
-    lines += post_hoc_section(runs, guided_floors or floors, cfg)
+                      + (f"composed pad reach: {pad:.3f}; " if pad is not None else "")
+                      + f"lengths read: {v['lengths_read']}", ""]
+    lines += post_hoc_section(runs, _guided_records(guided_floors, floors), cfg)
     lines += ["", "_A **bold** cell clears its own operative floor under the pre-registered "
-              "rule. Floors are recomputed from that cell's own items: registry rows plus the "
+              "rule; a cell marked `unfloorable` has no floor on that read's protocol and can "
+              "never be bold, and the `pad` beside it is what the excluded both-maps class "
+              "scores on the exact items — a lower bound on that class's max, not a bar. "
+              "Floors are recomputed from that cell's own items and under that read's own "
+              "protocol: registry rows plus the "
               "admitted swept family. The fitted surface ranker is measured beside them "
               f"(fit {P.N_FIT_BLOCKS}x{P.N_FIT} / scored {P.N_SCORE} disjoint) and is NOT in any "
               "floor — no implementation of it achieves a price the class rule admits. The "
@@ -996,7 +1172,8 @@ def cell_costs(specs, tok, grid):
 
 
 def guided_floors_for(grid, guided_grid, guided_n, cached=None):
-    """The floor at each GUIDED cell, measured on the ``guided_n`` items that read scores.
+    """The floor at each GUIDED cell, measured on the ``guided_n`` items that read scores and
+    under the GUIDED protocol's own class rule.
 
     A floor is a property of the items it is read against, and the max over admitted rows carries
     an upward selection bias that a smaller n does not average out: the same rows give 0.250 at
@@ -1004,15 +1181,27 @@ def guided_floors_for(grid, guided_grid, guided_n, cached=None):
     Reading a 128-item score against the 1000-item floor is reading it against a different item
     set. ``P.cell_floor`` keeps its own pool discipline at either n — rows on a disjoint pool and
     on the exact scored items, operative is the larger.
+
+    It is ALSO a property of the protocol, and that is what ``guided=True`` carries: the guided
+    format writes the whole of P then B at every event, so the live-slot conjunct of the class
+    rule prices a resource every policy has. Components are unmoved; the composed cell has no
+    floor and reports ``pad_reach`` instead. A cached record from before that rule — one with no
+    ``protocol`` key — is DISCARDED rather than reused, because it carries the retracted number.
     """
-    out = dict(cached or {})
+    out = {k: v for k, v in (cached or {}).items() if v.get("protocol") == "guided"}
     for cell, lengths in guided_grid.items():
         for L in lengths:
             key = f"{cell}@{L}"
             if key in out:
                 continue
-            out[key] = P.cell_floor(TK.CANONICAL[P.LOCAL_CELLS[cell]], L, n_eval=guided_n)
-            print(f"  guided floor {key} = {out[key]['floor']:.4f} (n={guided_n})", flush=True)
+            out[key] = P.cell_floor(TK.CANONICAL[P.LOCAL_CELLS[cell]], L, n_eval=guided_n,
+                                    guided=True)
+            fl = out[key]["floor"]
+            pad = out[key].get("pad_reach")
+            print(f"  guided floor {key} = "
+                  + (f"{fl:.4f}" if fl is not None else
+                     "unfloorable" + (f" (pad reach {pad:.4f})" if pad is not None else ""))
+                  + f" (n={guided_n})", flush=True)
     return out
 
 

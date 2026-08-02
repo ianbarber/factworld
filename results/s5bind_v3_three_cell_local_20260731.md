@@ -4,6 +4,10 @@ k=6 · informed chance 1/(k-1) = 0.200 · match · n_eval=1000 · d_model=512 n_
 
 Reading rule pre-registered in `scripts/protocol_s5bind_v3_three_cell_20260731.py`: a cell CLEARS its floor at z > 3.0 AND margin >= 0.15; it FORMS for an architecture on >= 2 of the seeds at every registered length. Per-seed values only — this family is bimodal at the emergence threshold.
 
+**The GUIDED read's composed-cell floor of 0.232 is RETRACTED, and with it the bold on `gdp_hybrid` seed 0 (0.492).** That floor is the one-structure bound `W <= max(k, m) + 1`, and the guided format writes the whole of P then the whole of B at every event, so the k + m slots the bound prices are handed to every policy — the task's own algorithm included — on the answer channel as much as on the trace channel. The composed cell is UNFLOORABLE there. The verdicts on this run are V5_HARNESS_NULL throughout and do not depend on it; the PLAIN read's floors are unaffected, since a streaming model with no scratchpad is the class the bound prices. The run that carries the current verdict is `results/s5bind_v3_three_cell_depthmatched_20260801.md`.
+
+**`gdp_hybrid` is not FLOPs-matched here either**: 68.33M FLOPs/token against `fprm`'s 57.78M and the `transformer`'s 57.76M, an 18% advantage, against this repo's own compute-matching convention (match on FLOPs/token, not on parameters).
+
 ## Size (compute-matched: shared d_model and depth; `fprm` is weight-tied)
 
 | arch | params | FLOPs/token |

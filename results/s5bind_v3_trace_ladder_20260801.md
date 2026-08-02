@@ -2,13 +2,17 @@
 
 k=6 · informed chance 1/(k-1) = 0.200 · match · n=128 per cell · GUIDED protocol (events teacher-forced, every per-event checkpoint and the answer generated) · decoded from `results/s5bind_v3_three_cell_depthmatched_20260801_ckpt`, nothing trained.
 
-Two reads of the same gold. **ANSWER** is the emitted answer token — what every registered floor prices and what the frontier arm is scored on. **TRACE** is the model's own final checkpoint's value for the queried slot. They score one quantity through two channels (T1, re-measured on the exact scored items in every row below), so a disagreement between them is a disagreement IN A CHANNEL and is reported as that.
+Two reads of the same gold, both decoded under the GUIDED protocol. **ANSWER** is the emitted answer token — the channel the frontier arm is scored on, though it is scored there under the PLAIN protocol and not this one. **TRACE** is the model's own final checkpoint's value for the queried slot. They score one quantity through two channels (T1, re-measured on the exact scored items in every row below), so a disagreement between them is a disagreement IN A CHANNEL and is reported as that — and, because the protocol is what a floor is priced against, they are read against ONE floor.
 
-A **bold** cell clears its own floor under the pre-registered rule (z > 3.0 and margin >= 0.15, at this read's own n). A † marks a cell with NO FLOOR on that read: the composed cell's trace is unfloorable, because the guided protocol hands out the k + m live slots the one-structure bound prices. Per-seed values only — this family is bimodal at the emergence threshold, and a mean over one converged and two floored seeds is a number no seed produced.
+A **bold** cell clears its own floor under the pre-registered rule (z > 3.0 and margin >= 0.15, at this read's own n). A † marks a cell with NO FLOOR: the composed cell is unfloorable under this protocol on BOTH channels, because the guided format writes the whole of P then B at every event and so hands out the k + m live slots the one-structure bound prices — to every policy, the task's own algorithm included. It is a property of the protocol, not of the channel: the generated checkpoints accumulate into the same context the answer token is decoded from. **The composed cell's ANSWER floor of 0.234 / 0.227 / 0.211 published in the previous revision of this table is RETRACTED**, along with the bold on the two cells that were read as clearing it. Per-seed values only — this family is bimodal at the emergence threshold, and a mean over one converged and two floored seeds is a number no seed produced.
 
 **Provenance.** The ANSWER read here reproduces `results/s5bind_v3_three_cell_depthmatched_20260801.json` exactly on all 45 cells the two cover, so the decoder is the committed one and the TRACE column is the only new quantity. Where these trace numbers differ from the ad-hoc decode quoted in the previous round's commit message (composed@48 0.836 / 0.953 / 0.867 here against 0.844 / 0.906 / 0.844 there), these are the numbers to use: they come from a decoder that is in the repo, records its batch per row, and re-measures T1 on every scored item — 12672 of 12672 across the 99 cells.
 
 Decode batch is recorded per row. The rows below were scored at guided_batch [32, 128]: the padded batch is a memory knob and not a scoring one (right padding, causal models), and it was measured on one cell at both sizes — bind@62 reads answer 1.000 and trace 1.000 at 32 and at 128, at 127 s against 295 s.
+
+## The roster is not FLOPs-matched
+
+**`gdp_hybrid` IS NOT FLOPs-MATCHED.** It runs 205.67M FLOPs/token against `fprm`'s 165.32M, `transformer`'s 165.28M — a 24% advantage, against this repo's own compute-matching convention (match on FLOPs/token, not on parameters). Every comparison in which `gdp_hybrid` is ahead carries it, and it is the more load-bearing here because `gdp_hybrid` is the only architecture this run reads on the ANSWER channel at all.
 
 ## What this decode settles
 
@@ -24,21 +28,23 @@ Decode batch is recorded per row. The rows below were scored at guided_batch [32
 
 ## The floors, recomputed at n = 128 from each cell's own scored items
 
-| cell | answer floor | trace floor | basis | pad reach | slot==gold (T1) | copier per-slot | queried slot moves (min/median/max) |
-|---|---|---|---|---|---|---|---|
-| bind@31 | 0.200 (1.00x) | 0.200 | chance | — | 128/128 | 0.901 | 2/4/9 |
-| bind@41 | 0.200 (1.00x) | 0.200 | chance | — | 128/128 | 0.904 | 2/5/12 |
-| bind@62 | 0.200 (1.00x) | 0.200 | chance | — | 128/128 | 0.909 | 2/7/14 |
-| bind@132 | 0.200 (1.00x) | 0.200 | chance | — | 128/128 | 0.913 | 6/17/27 |
-| composed@48 | 0.234 (1.17x) | **unfloorable** | unfloorable | 0.719 | 128/128 | 0.887 | 2/6/14 |
-| composed@64 | 0.227 (1.13x) | **unfloorable** | unfloorable | 0.758 | 128/128 | 0.887 | 3/8/17 |
-| composed@96 | 0.211 (1.05x) | **unfloorable** | unfloorable | 0.562 | 128/128 | 0.887 | 5/12/23 |
-| state@17 | 0.200 (1.00x) | 0.219 | measured | — | 128/128 | 0.804 | 3/6/11 |
-| state@23 | 0.206 (1.03x) | 0.206 | measured | — | 128/128 | 0.812 | 3/8/15 |
-| state@34 | 0.200 (1.00x) | 0.200 | measured | — | 128/128 | 0.819 | 5/11/18 |
-| state@80 | 0.250 (1.25x) | 0.250 | measured | — | 128/128 | 0.827 | 15/26/39 |
+One floor per cell, for BOTH channels, because both decode under the same protocol. The plain protocol's number is beside it as a reference — it is what the PLAIN read scores against and it is NOT a bar a guided score cleared.
 
-The trace floor equals the answer floor on every COMPONENT cell and that is the argument, not a coincidence: a component's class rule is depth <= 1 AND cost under that cell's own algorithm's minimum, and a scratchpad buys neither. What a scratchpad does buy is the W axis, and no component row needed it. On the COMPOSED cell the W axis is the whole of the registered class's first conjunct, so the class that survives contains the task and there is no floor to clear — the trace read there is a WITHIN-RUN comparison and never a cleared floor.
+| cell | guided floor (answer & trace) | basis | pad reach | plain-protocol floor | slot==gold (T1) | copier per-slot | queried slot moves (min/median/max) |
+|---|---|---|---|---|---|---|---|
+| bind@31 | 0.200 (1.00x) | chance | — | 0.200 (1.00x) | 128/128 | 0.901 | 2/4/9 |
+| bind@41 | 0.200 (1.00x) | chance | — | 0.200 (1.00x) | 128/128 | 0.904 | 2/5/12 |
+| bind@62 | 0.200 (1.00x) | chance | — | 0.200 (1.00x) | 128/128 | 0.909 | 2/7/14 |
+| bind@132 | 0.200 (1.00x) | chance | — | 0.200 (1.00x) | 128/128 | 0.913 | 6/17/27 |
+| composed@48 | **unfloorable** | unfloorable | 0.719 | 0.234 (1.17x) | 128/128 | 0.887 | 2/6/14 |
+| composed@64 | **unfloorable** | unfloorable | 0.758 | 0.227 (1.13x) | 128/128 | 0.887 | 3/8/17 |
+| composed@96 | **unfloorable** | unfloorable | 0.562 | 0.211 (1.05x) | 128/128 | 0.887 | 5/12/23 |
+| state@17 | 0.219 (1.09x) | measured | — | 0.200 (1.00x) | 128/128 | 0.804 | 3/6/11 |
+| state@23 | 0.206 (1.03x) | measured | — | 0.206 (1.03x) | 128/128 | 0.812 | 3/8/15 |
+| state@34 | 0.200 (1.00x) | measured | — | 0.200 (1.00x) | 128/128 | 0.819 | 5/11/18 |
+| state@80 | 0.250 (1.25x) | measured | — | 0.250 (1.25x) | 128/128 | 0.827 | 15/26/39 |
+
+The guided floor equals the plain one on every COMPONENT cell and that is the argument, not a coincidence: a component's class rule is depth <= 1 AND cost under that cell's own algorithm's minimum, and a scratchpad buys neither — a pad substitutes for REGISTERS, not for CHAINING. What a scratchpad does buy is the W axis, and no component row needed it. On the COMPOSED cell the W axis is the whole of the registered class's first conjunct and the step conjunct is one the task itself satisfies, so the class that survives contains the task and there is no floor to clear on either channel — a composed-cell score under this protocol is a WITHIN-RUN comparison and never a cleared floor. The pad reach column is what the excluded both-maps class (carry both maps, drop one block of events, replay the rest) scores on the exact items: a lower bound on that class's max, printed so the retracted floor leaves a number rather than a blank.
 
 `ckpt_copy_prev` — emit the previous checkpoint, so the trace never moves — scores **0.000** on the trace at every cell above, because the query gate requires the queried slot to have moved at least twice and to end different from its stated value. The move column is that gate measured rather than asserted: the minimum over the 128 scored items is 2 or more at every cell.
 
@@ -50,46 +56,46 @@ Every column of a row is the same carrier chain: the composed cell at L against 
 
 | arch | seed | state@17 answer | state@17 trace | composed@48 answer | composed@48 trace | bind@31 answer | bind@31 trace |
 |---|---|---|---|---|---|---|---|
-| gdp_hybrid | 0 | **1.000** | **1.000** | **0.836** | 0.836† | **1.000** | **1.000** |
-| gdp_hybrid | 1 | **0.984** | **0.992** | **0.953** | 0.953† | **1.000** | **1.000** |
-| gdp_hybrid | 2 | 0.219 | **1.000** | 0.289 | 0.867† | **1.000** | **1.000** |
-| fprm | 0 | 0.188 | **0.828** | 0.133 | 0.688† | 0.188 | **1.000** |
-| fprm | 1 | 0.148 | **0.648** | 0.203 | 0.703† | 0.148 | **1.000** |
-| fprm | 2 | 0.180 | 0.336 | 0.125 | 0.203† | 0.148 | **1.000** |
-| transformer | 0 | 0.172 | 0.195 | 0.125 | 0.164† | 0.211 | **0.516** |
-| transformer | 1 | 0.133 | 0.195 | 0.156 | 0.172† | 0.180 | 0.109 |
-| transformer | 2 | 0.211 | 0.172 | 0.133 | 0.164† | 0.141 | **1.000** |
-| _floor_ | | 0.200 | 0.219 | 0.234 | unfloorable | 0.200 | 0.200 |
+| gdp_hybrid | 0 | **1.000** | **1.000** | 0.836† | 0.836† | **1.000** | **1.000** |
+| gdp_hybrid | 1 | **0.984** | **0.992** | 0.953† | 0.953† | **1.000** | **1.000** |
+| gdp_hybrid | 2 | 0.219 | **1.000** | 0.289† | 0.867† | **1.000** | **1.000** |
+| fprm | 0 | 0.188 | **0.828** | 0.133† | 0.688† | 0.188 | **1.000** |
+| fprm | 1 | 0.148 | **0.648** | 0.203† | 0.703† | 0.148 | **1.000** |
+| fprm | 2 | 0.180 | 0.336 | 0.125† | 0.203† | 0.148 | **1.000** |
+| transformer | 0 | 0.172 | 0.195 | 0.125† | 0.164† | 0.211 | **0.516** |
+| transformer | 1 | 0.133 | 0.195 | 0.156† | 0.172† | 0.180 | 0.109 |
+| transformer | 2 | 0.211 | 0.172 | 0.133† | 0.164† | 0.141 | **1.000** |
+| _floor_ | | 0.219 | 0.219 | unfloorable (pad 0.719) | unfloorable (pad 0.719) | 0.200 | 0.200 |
 
 ## composed@64 vs state@23 and bind@41 — 7.7 carrier hops
 
 | arch | seed | state@23 answer | state@23 trace | composed@64 answer | composed@64 trace | bind@41 answer | bind@41 trace |
 |---|---|---|---|---|---|---|---|
-| gdp_hybrid | 0 | **1.000** | **1.000** | **0.742** | 0.742† | **1.000** | **1.000** |
-| gdp_hybrid | 1 | **1.000** | **1.000** | **0.930** | 0.930† | **1.000** | **1.000** |
-| gdp_hybrid | 2 | 0.250 | **1.000** | 0.336 | 0.898† | **0.992** | **1.000** |
-| fprm | 0 | 0.195 | **0.805** | 0.141 | 0.609† | 0.148 | **1.000** |
-| fprm | 1 | 0.133 | **0.664** | 0.195 | 0.625† | 0.164 | **1.000** |
-| fprm | 2 | 0.133 | 0.312 | 0.203 | 0.219† | 0.164 | **1.000** |
-| transformer | 0 | 0.148 | 0.219 | 0.133 | 0.109† | 0.188 | **0.578** |
-| transformer | 1 | 0.164 | 0.164 | 0.188 | 0.164† | 0.141 | 0.148 |
-| transformer | 2 | 0.172 | 0.141 | 0.141 | 0.148† | 0.156 | **1.000** |
-| _floor_ | | 0.206 | 0.206 | 0.227 | unfloorable | 0.200 | 0.200 |
+| gdp_hybrid | 0 | **1.000** | **1.000** | 0.742† | 0.742† | **1.000** | **1.000** |
+| gdp_hybrid | 1 | **1.000** | **1.000** | 0.930† | 0.930† | **1.000** | **1.000** |
+| gdp_hybrid | 2 | 0.250 | **1.000** | 0.336† | 0.898† | **0.992** | **1.000** |
+| fprm | 0 | 0.195 | **0.805** | 0.141† | 0.609† | 0.148 | **1.000** |
+| fprm | 1 | 0.133 | **0.664** | 0.195† | 0.625† | 0.164 | **1.000** |
+| fprm | 2 | 0.133 | 0.312 | 0.203† | 0.219† | 0.164 | **1.000** |
+| transformer | 0 | 0.148 | 0.219 | 0.133† | 0.109† | 0.188 | **0.578** |
+| transformer | 1 | 0.164 | 0.164 | 0.188† | 0.164† | 0.141 | 0.148 |
+| transformer | 2 | 0.172 | 0.141 | 0.141† | 0.148† | 0.156 | **1.000** |
+| _floor_ | | 0.206 | 0.206 | unfloorable (pad 0.758) | unfloorable (pad 0.758) | 0.200 | 0.200 |
 
 ## composed@96 vs state@34 and bind@62 — 11.3 carrier hops
 
 | arch | seed | state@34 answer | state@34 trace | composed@96 answer | composed@96 trace | bind@62 answer | bind@62 trace |
 |---|---|---|---|---|---|---|---|
-| gdp_hybrid | 0 | **1.000** | **1.000** | **0.836** | 0.836† | **1.000** | **1.000** |
-| gdp_hybrid | 1 | **0.984** | **0.984** | **0.961** | 0.969† | **0.977** | **1.000** |
-| gdp_hybrid | 2 | 0.250 | **0.992** | **0.375** | 0.930† | **1.000** | **1.000** |
-| fprm | 0 | 0.125 | **0.812** | 0.188 | 0.703† | 0.125 | **1.000** |
-| fprm | 1 | 0.188 | **0.703** | 0.141 | 0.656† | 0.203 | **1.000** |
-| fprm | 2 | 0.219 | **0.367** | 0.164 | 0.195† | 0.203 | **1.000** |
-| transformer | 0 | 0.094 | 0.242 | 0.188 | 0.148† | 0.172 | **0.453** |
-| transformer | 1 | 0.172 | 0.188 | 0.141 | 0.172† | 0.258 | 0.148 |
-| transformer | 2 | 0.141 | 0.195 | 0.164 | 0.148† | 0.133 | **0.992** |
-| _floor_ | | 0.200 | 0.200 | 0.211 | unfloorable | 0.200 | 0.200 |
+| gdp_hybrid | 0 | **1.000** | **1.000** | 0.836† | 0.836† | **1.000** | **1.000** |
+| gdp_hybrid | 1 | **0.984** | **0.984** | 0.961† | 0.969† | **0.977** | **1.000** |
+| gdp_hybrid | 2 | 0.250 | **0.992** | 0.375† | 0.930† | **1.000** | **1.000** |
+| fprm | 0 | 0.125 | **0.812** | 0.188† | 0.703† | 0.125 | **1.000** |
+| fprm | 1 | 0.188 | **0.703** | 0.141† | 0.656† | 0.203 | **1.000** |
+| fprm | 2 | 0.219 | **0.367** | 0.164† | 0.195† | 0.203 | **1.000** |
+| transformer | 0 | 0.094 | 0.242 | 0.188† | 0.148† | 0.172 | **0.453** |
+| transformer | 1 | 0.172 | 0.188 | 0.141† | 0.172† | 0.258 | 0.148 |
+| transformer | 2 | 0.141 | 0.195 | 0.164† | 0.148† | 0.133 | **0.992** |
+| _floor_ | | 0.200 | 0.200 | unfloorable (pad 0.562) | unfloorable (pad 0.562) | 0.200 | 0.200 |
 
 # The matched-COST control
 
@@ -99,16 +105,16 @@ Each component at the length whose FORWARD PASS costs what composed@48 costs —
 
 | arch | seed | state@80 answer | state@80 trace | composed@48 answer | composed@48 trace | bind@132 answer | bind@132 trace |
 |---|---|---|---|---|---|---|---|
-| gdp_hybrid | 0 | **0.992** | **0.992** | **0.836** | 0.836† | **0.992** | **1.000** |
-| gdp_hybrid | 1 | **0.992** | **0.992** | **0.953** | 0.953† | **0.984** | **1.000** |
-| gdp_hybrid | 2 | 0.156 | **1.000** | 0.289 | 0.867† | **1.000** | **1.000** |
-| fprm | 0 | 0.156 | **0.766** | 0.133 | 0.688† | 0.141 | **1.000** |
-| fprm | 1 | 0.180 | **0.633** | 0.203 | 0.703† | 0.219 | **1.000** |
-| fprm | 2 | 0.211 | 0.273 | 0.125 | 0.203† | 0.219 | **0.938** |
-| transformer | 0 | 0.164 | 0.203 | 0.125 | 0.164† | 0.203 | **0.414** |
-| transformer | 1 | 0.125 | 0.102 | 0.156 | 0.172† | 0.125 | 0.148 |
-| transformer | 2 | 0.180 | 0.203 | 0.133 | 0.164† | 0.180 | **0.961** |
-| _floor_ | | 0.250 | 0.250 | 0.234 | unfloorable | 0.200 | 0.200 |
+| gdp_hybrid | 0 | **0.992** | **0.992** | 0.836† | 0.836† | **0.992** | **1.000** |
+| gdp_hybrid | 1 | **0.992** | **0.992** | 0.953† | 0.953† | **0.984** | **1.000** |
+| gdp_hybrid | 2 | 0.156 | **1.000** | 0.289† | 0.867† | **1.000** | **1.000** |
+| fprm | 0 | 0.156 | **0.766** | 0.133† | 0.688† | 0.141 | **1.000** |
+| fprm | 1 | 0.180 | **0.633** | 0.203† | 0.703† | 0.219 | **1.000** |
+| fprm | 2 | 0.211 | 0.273 | 0.125† | 0.203† | 0.219 | **0.938** |
+| transformer | 0 | 0.164 | 0.203 | 0.125† | 0.164† | 0.203 | **0.414** |
+| transformer | 1 | 0.125 | 0.102 | 0.156† | 0.172† | 0.125 | 0.148 |
+| transformer | 2 | 0.180 | 0.203 | 0.133† | 0.164† | 0.180 | **0.961** |
+| _floor_ | | 0.250 | 0.250 | unfloorable (pad 0.719) | unfloorable (pad 0.719) | 0.200 | 0.200 |
 
 # Does the separation grow with depth?
 

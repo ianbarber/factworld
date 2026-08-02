@@ -96,13 +96,17 @@ def profile_block(name, L, n):
         print("     w    " + "".join(f"{w:>6.2f}" for w in WIDTHS))
         print("     x    " + "".join(f"{wp[w] / ch:>6.2f}" for w in WIDTHS))
     if axis == "W":
-        print("   THE W AXIS HAS NO FORCE IN THE FRONTIER REGIME: a model with a scratchpad is")
-        print("   not register-bounded, so every row above is available to it and the number its")
-        print("   score must clear is the TOP of this profile, not the admitted max.")
+        print("   THE W AXIS HAS NO FORCE UNDER A SCRATCHPAD PROTOCOL — a frontier model's own, or")
+        print("   this repo's guided format, which requires both maps to be written out at every")
+        print("   event. Every row above is then available to every policy and the number a score")
+        print("   must clear is the TOP of this profile, not the admitted max; on this cell that")
+        print("   top is the task, so the cell is UNFLOORABLE there on BOTH of that protocol's")
+        print("   channels. The floor printed above is the PLAIN protocol's.")
     else:
-        print("   THE DEPTH BOUND DOES BIND IN THE FRONTIER REGIME: a scratchpad makes a")
-        print("   truncated walk affordable, not correct, so the excluded rows above are what a")
-        print("   score on this cell has to beat and the admitted max is what it has to clear.")
+        print("   THE DEPTH BOUND DOES BIND UNDER A SCRATCHPAD PROTOCOL: a pad substitutes for")
+        print("   REGISTERS, not for CHAINING — it makes a truncated walk affordable, not correct")
+        print("   — so the excluded rows above are what a score on this cell has to beat and the")
+        print("   admitted max is what it has to clear, under either protocol.")
 
 
 # --- the surface read ----------------------------------------------------------------------

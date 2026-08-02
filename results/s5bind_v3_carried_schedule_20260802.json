@@ -1,0 +1,2648 @@
+{
+  "cfg": {
+    "k": 6,
+    "archs": [
+      "transformer"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "steps": 25000,
+    "batch": 16,
+    "d_model": 768,
+    "n_layers": 8,
+    "n_heads": 6,
+    "cell_costs": {
+      "state@16": [
+        39,
+        179
+      ],
+      "state@17": [
+        42,
+        187
+      ],
+      "state@23": [
+        56,
+        235
+      ],
+      "state@34": [
+        81,
+        323
+      ],
+      "state@48": [
+        114,
+        435
+      ],
+      "state@80": [
+        189,
+        691
+      ],
+      "state@108": [
+        254,
+        915
+      ],
+      "state@128": [
+        301,
+        1075
+      ],
+      "state@160": [
+        375,
+        1331
+      ],
+      "bind@16": [
+        21,
+        131
+      ],
+      "bind@31": [
+        29,
+        206
+      ],
+      "bind@41": [
+        35,
+        256
+      ],
+      "bind@62": [
+        45,
+        361
+      ],
+      "bind@132": [
+        79,
+        711
+      ],
+      "composed@16": [
+        79,
+        305
+      ],
+      "composed@48": [
+        208,
+        717
+      ],
+      "composed@64": [
+        274,
+        930
+      ],
+      "composed@96": [
+        403,
+        1348
+      ]
+    },
+    "lr": 0.001,
+    "train_n": 80000,
+    "eval_n": 1000,
+    "guided_n": 128,
+    "guided_lengths": [
+      48
+    ],
+    "guided_grid": {
+      "state": [
+        17,
+        80
+      ],
+      "bind": [
+        31,
+        132
+      ],
+      "composed": [
+        48
+      ]
+    },
+    "fmt": "mix",
+    "grid": {
+      "state": [
+        16,
+        17,
+        23,
+        34,
+        48,
+        80,
+        108,
+        128,
+        160
+      ],
+      "bind": [
+        16,
+        31,
+        41,
+        62,
+        132
+      ],
+      "composed": [
+        16,
+        48,
+        64,
+        96
+      ]
+    },
+    "matched_lengths": {
+      "48": {
+        "composed_L": 48,
+        "composed_steps": 208,
+        "composed_tokens": 717,
+        "axis": "tokens",
+        "target_cost": 717,
+        "state": {
+          "L": 80,
+          "cost": 691,
+          "target": 717,
+          "reachable": true,
+          "cap": 768,
+          "solved_candidate": 80
+        },
+        "bind": {
+          "L": 132,
+          "cost": 711,
+          "target": 717,
+          "reachable": true,
+          "cap": 144,
+          "solved_candidate": 132
+        }
+      },
+      "64": {
+        "composed_L": 64,
+        "composed_steps": 274,
+        "composed_tokens": 930,
+        "axis": "tokens",
+        "target_cost": 930,
+        "state": {
+          "L": 108,
+          "cost": 915,
+          "target": 930,
+          "reachable": true,
+          "cap": 1024,
+          "solved_candidate": 108
+        },
+        "bind": {
+          "L": null,
+          "cost": null,
+          "target": 930,
+          "reachable": false,
+          "cap": 144,
+          "solved_candidate": 144
+        }
+      },
+      "96": {
+        "composed_L": 96,
+        "composed_steps": 403,
+        "composed_tokens": 1348,
+        "axis": "tokens",
+        "target_cost": 1348,
+        "state": {
+          "L": 160,
+          "cost": 1331,
+          "target": 1348,
+          "reachable": true,
+          "cap": 1536,
+          "solved_candidate": 160
+        },
+        "bind": {
+          "L": null,
+          "cost": null,
+          "target": 1348,
+          "reachable": false,
+          "cap": 144,
+          "solved_candidate": 144
+        }
+      }
+    },
+    "schedule": [
+      [
+        "stage1_components",
+        0.35,
+        {
+          "state": 0.5,
+          "bind": 0.5
+        }
+      ],
+      [
+        "stage2_add_composed",
+        0.3,
+        {
+          "state": 0.25,
+          "bind": 0.25,
+          "composed": 0.5
+        }
+      ],
+      [
+        "stage3_composition",
+        0.35,
+        {
+          "state": 0.15,
+          "bind": 0.15,
+          "composed": 0.7
+        }
+      ]
+    ],
+    "sizes": {
+      "transformer": [
+        76363776,
+        165284352
+      ]
+    },
+    "train_lengths": [
+      16,
+      32,
+      48,
+      64,
+      96
+    ],
+    "ckpt_dir": "results/s5bind_v3_carried_schedule_20260802_ckpt",
+    "decoded_from": null
+  },
+  "floors": {
+    "bind@16": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 16,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 192,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 11,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d3": 0.0
+      },
+      "charged_steps": 21,
+      "n_swap": 0,
+      "n_give": 16
+    },
+    "bind@31": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 31,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 372,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 19,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d7": 0.0
+      },
+      "charged_steps": 29,
+      "n_swap": 0,
+      "n_give": 31
+    },
+    "bind@41": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 41,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 492,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 25,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d10": 0.0
+      },
+      "charged_steps": 35,
+      "n_swap": 0,
+      "n_give": 41
+    },
+    "bind@62": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 62,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 744,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 35,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d15": 0.0
+      },
+      "charged_steps": 45,
+      "n_swap": 0,
+      "n_give": 62
+    },
+    "bind@132": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 132,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1584,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 69,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d16": 0.0,
+        "give_scan_d32": 0.0
+      },
+      "charged_steps": 79,
+      "n_swap": 0,
+      "n_give": 132
+    },
+    "composed@16": {
+      "cell": "s5_bind_local_v3",
+      "L": 16,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.52125,
+      "floor_disjoint": 0.52125,
+      "floor_on_scored_items": 0.516,
+      "surface_held_out": 0.227,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.002250000000000002,
+      "surface_blocks": [
+        0.2295,
+        0.22725
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 192,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 79,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "one_structure_P": 0.5212,
+        "stated_reference": 0.313,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1628,
+        "last_write_1hop": 0.157,
+        "initial_only": 0.0
+      },
+      "charged_steps": 79,
+      "n_swap": 6,
+      "n_give": 10
+    },
+    "composed@48": {
+      "cell": "s5_bind_local_v3",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.2045,
+      "floor_disjoint": 0.2045,
+      "floor_on_scored_items": 0.201,
+      "surface_held_out": 0.233,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.002250000000000002,
+      "surface_blocks": [
+        0.231,
+        0.23325
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 576,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 208,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.2045,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1975,
+        "last_write_1hop": 0.1718,
+        "stated_reference": 0.1685,
+        "uniform": 0.1667,
+        "initial_only": 0.0
+      },
+      "charged_steps": 208,
+      "n_swap": 17,
+      "n_give": 31
+    },
+    "composed@64": {
+      "cell": "s5_bind_local_v3",
+      "L": 64,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.20925,
+      "floor_disjoint": 0.20925,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.24075,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.0040000000000000036,
+      "surface_blocks": [
+        0.2465,
+        0.2425
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 768,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 274,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.2092,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1945,
+        "uniform": 0.1667,
+        "last_write_1hop": 0.1638,
+        "stated_reference": 0.158,
+        "initial_only": 0.0
+      },
+      "charged_steps": 274,
+      "n_swap": 23,
+      "n_give": 41
+    },
+    "composed@96": {
+      "cell": "s5_bind_local_v3",
+      "L": 96,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.209,
+      "floor_disjoint": 0.201,
+      "floor_on_scored_items": 0.209,
+      "surface_held_out": 0.23475,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.0024999999999999745,
+      "surface_blocks": [
+        0.2325,
+        0.235
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1152,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 403,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.201,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1918,
+        "last_write_1hop": 0.1698,
+        "uniform": 0.1667,
+        "stated_reference": 0.1635,
+        "initial_only": 0.0
+      },
+      "charged_steps": 403,
+      "n_swap": 34,
+      "n_give": 62
+    },
+    "state@16": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 16,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.197,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.009000000000000008,
+      "surface_blocks": [
+        0.20125,
+        0.19225
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 192,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 34,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1867,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.144,
+        "trunc_walk_T1": 0.116,
+        "initial_only": 0.0
+      },
+      "charged_steps": 39,
+      "n_swap": 16,
+      "n_give": 0
+    },
+    "state@17": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 17,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.21125,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.006249999999999978,
+      "surface_blocks": [
+        0.20075,
+        0.207
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 204,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 36,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1708,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.158,
+        "trunc_walk_T1": 0.1075,
+        "initial_only": 0.0
+      },
+      "charged_steps": 42,
+      "n_swap": 17,
+      "n_give": 0
+    },
+    "state@23": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 23,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.1865,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.01175000000000001,
+      "surface_blocks": [
+        0.197,
+        0.18525
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 276,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 48,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1995,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1565,
+        "trunc_walk_T1": 0.1275,
+        "initial_only": 0.0
+      },
+      "charged_steps": 56,
+      "n_swap": 23,
+      "n_give": 0
+    },
+    "state@34": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 34,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.19075,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.017499999999999988,
+      "surface_blocks": [
+        0.20675,
+        0.18925
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 408,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 70,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.194,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.161,
+        "trunc_walk_T1": 0.0953,
+        "trunc_walk_drop33": 0.0953,
+        "initial_only": 0.0
+      },
+      "charged_steps": 81,
+      "n_swap": 34,
+      "n_give": 0
+    },
+    "state@48": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.208,
+      "floor_disjoint": 0.20125,
+      "floor_on_scored_items": 0.208,
+      "surface_held_out": 0.19175,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.008250000000000007,
+      "surface_blocks": [
+        0.19025,
+        0.1985
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 576,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 98,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2013,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.156,
+        "trunc_walk_T1": 0.074,
+        "initial_only": 0.0
+      },
+      "charged_steps": 114,
+      "n_swap": 48,
+      "n_give": 0
+    },
+    "state@80": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 80,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.207,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.207,
+      "surface_held_out": 0.20275,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.00874999999999998,
+      "surface_blocks": [
+        0.2095,
+        0.20075
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 960,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 162,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1978,
+        "last_swap_ref": 0.1668,
+        "uniform": 0.1667,
+        "trunc_walk_T1": 0.065,
+        "initial_only": 0.0
+      },
+      "charged_steps": 189,
+      "n_swap": 80,
+      "n_give": 0
+    },
+    "state@108": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 108,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.2015,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.006249999999999978,
+      "surface_blocks": [
+        0.19825,
+        0.2045
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1296,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 218,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.152,
+        "trunc_walk_T1": 0.068,
+        "initial_only": 0.0
+      },
+      "charged_steps": 254,
+      "n_swap": 108,
+      "n_give": 0
+    },
+    "state@128": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 128,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.216,
+      "floor_disjoint": 0.20425,
+      "floor_on_scored_items": 0.216,
+      "surface_held_out": 0.20175,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.005250000000000005,
+      "surface_blocks": [
+        0.19425,
+        0.1995
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1536,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 258,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2042,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1615,
+        "trunc_walk_T1": 0.065,
+        "initial_only": 0.0
+      },
+      "charged_steps": 301,
+      "n_swap": 128,
+      "n_give": 0
+    },
+    "state@160": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 160,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2005,
+      "floor_disjoint": 0.2005,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.193,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.003500000000000003,
+      "surface_blocks": [
+        0.19825,
+        0.19475
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1920,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 322,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2005,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.159,
+        "trunc_walk_T1": 0.071,
+        "initial_only": 0.0
+      },
+      "charged_steps": 375,
+      "n_swap": 160,
+      "n_give": 0
+    }
+  },
+  "guided_floors": {
+    "state@17": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 17,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": 0.21875,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.21875,
+      "floor_plain": 0.2,
+      "pad_reach": null,
+      "surface_held_out": 0.2095,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.012999999999999984,
+      "surface_blocks": [
+        0.21075,
+        0.19775
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 204,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 36,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "ckpt_last_event_target": 0.185,
+        "ckpt_last_event_operand": 0.1725,
+        "last_write_1hop": 0.172,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1565,
+        "trunc_walk_T1": 0.1067,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
+      },
+      "charged_steps": 42,
+      "n_swap": 17,
+      "n_give": 0
+    },
+    "state@80": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 80,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": 0.25,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.25,
+      "floor_plain": 0.25,
+      "pad_reach": null,
+      "surface_held_out": 0.1985,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.0020000000000000018,
+      "surface_blocks": [
+        0.19625,
+        0.19825
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 960,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 162,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1975,
+        "ckpt_last_event_operand": 0.1747,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1665,
+        "ckpt_last_event_target": 0.1658,
+        "trunc_walk_T1": 0.0643,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
+      },
+      "charged_steps": 189,
+      "n_swap": 80,
+      "n_give": 0
+    },
+    "bind@31": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 31,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "floor_plain": 0.2,
+      "pad_reach": null,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 372,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 19,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "ckpt_last_event_operand": 0.1737,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d7": 0.0,
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_target": 0.0
+      },
+      "charged_steps": 29,
+      "n_swap": 0,
+      "n_give": 31
+    },
+    "bind@132": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 132,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "floor_plain": 0.2,
+      "pad_reach": null,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1584,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 69,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "ckpt_last_event_operand": 0.1705,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d16": 0.0,
+        "give_scan_d32": 0.0,
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_target": 0.0
+      },
+      "charged_steps": 79,
+      "n_swap": 0,
+      "n_give": 132
+    },
+    "composed@48": {
+      "cell": "s5_bind_local_v3",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": null,
+      "floor_disjoint": null,
+      "floor_on_scored_items": null,
+      "floor_plain": 0.234375,
+      "pad_reach": 0.71875,
+      "surface_held_out": 0.239,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.007499999999999979,
+      "surface_blocks": [
+        0.2415,
+        0.234
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 576,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 208,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "unfloorable",
+      "admitted_rows": {
+        "window_90": 0.2812,
+        "window_75": 0.21,
+        "last_swap_ref": 0.2035,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1905,
+        "window_50": 0.179,
+        "one_structure_B": 0.1727,
+        "last_write_1hop": 0.1715,
+        "prefix_50": 0.1705,
+        "stated_reference": 0.1675,
+        "uniform": 0.1667,
+        "final_state": 0.1655,
+        "ckpt_last_event_operand": 0.1645,
+        "prefix_75": 0.1323,
+        "ckpt_last_event_target": 0.0703,
+        "prefix_90": 0.0563,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
+      },
+      "charged_steps": 208,
+      "n_swap": 17,
+      "n_give": 31
+    }
+  },
+  "runs": [
+    {
+      "arch": "transformer",
+      "seed": 0,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.9223635196685791,
+          "loss_curve": [
+            [
+              500,
+              0.92051100730896
+            ],
+            [
+              1000,
+              0.5313176512718201
+            ],
+            [
+              1500,
+              0.8930718898773193
+            ],
+            [
+              2000,
+              0.7102046608924866
+            ],
+            [
+              2500,
+              0.89794921875
+            ],
+            [
+              3000,
+              0.5342172980308533
+            ],
+            [
+              3500,
+              0.8635305166244507
+            ],
+            [
+              4000,
+              0.5070925951004028
+            ],
+            [
+              4500,
+              0.5357562899589539
+            ],
+            [
+              5000,
+              0.4534713625907898
+            ],
+            [
+              5500,
+              0.8820807933807373
+            ],
+            [
+              6000,
+              0.44280654191970825
+            ],
+            [
+              6500,
+              0.9091804027557373
+            ],
+            [
+              7000,
+              0.9133301973342896
+            ],
+            [
+              7500,
+              0.900148868560791
+            ],
+            [
+              8000,
+              0.5008257627487183
+            ],
+            [
+              8500,
+              0.895752489566803
+            ]
+          ],
+          "train_s": 507,
+          "eval": {
+            "state": {
+              "16": 0.175,
+              "17": 0.185
+            },
+            "bind": {
+              "16": 0.155,
+              "31": 0.13
+            },
+            "composed": {
+              "16": 0.195,
+              "48": 0.175
+            }
+          },
+          "guided": {},
+          "sched_step0": 0,
+          "sched_total": 25000
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.903076171875,
+          "loss_curve": [
+            [
+              500,
+              0.9030763506889343
+            ],
+            [
+              1000,
+              0.44549423456192017
+            ],
+            [
+              1500,
+              0.896728515625
+            ],
+            [
+              2000,
+              0.49667391180992126
+            ],
+            [
+              2500,
+              0.901611328125
+            ],
+            [
+              3000,
+              0.4191833734512329
+            ],
+            [
+              3500,
+              0.3814472258090973
+            ],
+            [
+              4000,
+              0.44856444001197815
+            ],
+            [
+              4500,
+              0.36432766914367676
+            ],
+            [
+              5000,
+              0.892333984375
+            ],
+            [
+              5500,
+              0.9013671875
+            ],
+            [
+              6000,
+              0.39654529094696045
+            ],
+            [
+              6500,
+              0.4773373305797577
+            ],
+            [
+              7000,
+              0.900634765625
+            ],
+            [
+              7500,
+              0.903076171875
+            ]
+          ],
+          "train_s": 900,
+          "eval": {
+            "state": {
+              "16": 0.175,
+              "17": 0.185
+            },
+            "bind": {
+              "16": 0.165,
+              "31": 0.22
+            },
+            "composed": {
+              "16": 0.17,
+              "48": 0.165
+            }
+          },
+          "guided": {},
+          "sched_step0": 8750,
+          "sched_total": 25000
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.3413132131099701,
+          "loss_curve": [
+            [
+              500,
+              0.3769236207008362
+            ],
+            [
+              1000,
+              0.3515731990337372
+            ],
+            [
+              1500,
+              0.904296875
+            ],
+            [
+              2000,
+              0.3541944921016693
+            ],
+            [
+              2500,
+              0.37352699041366577
+            ],
+            [
+              3000,
+              0.31206396222114563
+            ],
+            [
+              3500,
+              0.3384493589401245
+            ],
+            [
+              4000,
+              0.3406473994255066
+            ],
+            [
+              4500,
+              0.3278597295284271
+            ],
+            [
+              5000,
+              0.4037003219127655
+            ],
+            [
+              5500,
+              0.88916015625
+            ],
+            [
+              6000,
+              0.892822265625
+            ],
+            [
+              6500,
+              0.89794921875
+            ],
+            [
+              7000,
+              0.90625
+            ],
+            [
+              7500,
+              0.3040403425693512
+            ],
+            [
+              8000,
+              0.33095070719718933
+            ],
+            [
+              8500,
+              0.898193359375
+            ]
+          ],
+          "train_s": 3167,
+          "eval": {
+            "state": {
+              "16": 0.172,
+              "17": 0.168,
+              "23": 0.179,
+              "34": 0.162,
+              "48": 0.18,
+              "80": 0.164,
+              "108": 0.144,
+              "128": 0.186,
+              "160": 0.172
+            },
+            "bind": {
+              "16": 0.166,
+              "31": 0.182,
+              "41": 0.176,
+              "62": 0.167,
+              "132": 0.164
+            },
+            "composed": {
+              "16": 0.179,
+              "48": 0.158,
+              "64": 0.155,
+              "96": 0.174
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.203125,
+                "checkpoint_acc": 0.18952971813725492,
+                "trace": {
+                  "match": 0.2265625,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              },
+              "80": {
+                "match": 0.1328125,
+                "checkpoint_acc": 0.1693115234375,
+                "trace": {
+                  "match": 0.15625,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.1640625,
+                "checkpoint_acc": 0.17261004704301075,
+                "trace": {
+                  "match": 0.1640625,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              },
+              "132": {
+                "match": 0.109375,
+                "checkpoint_acc": 0.1795346038510101,
+                "trace": {
+                  "match": 0.1015625,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.1015625,
+                "checkpoint_acc": 0.1647677951388889,
+                "trace": {
+                  "match": 0.125,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            }
+          },
+          "sched_step0": 16250,
+          "sched_total": 25000
+        }
+      ]
+    },
+    {
+      "arch": "transformer",
+      "seed": 1,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.44952553510665894,
+          "loss_curve": [
+            [
+              500,
+              0.9681001901626587
+            ],
+            [
+              1000,
+              0.594857394695282
+            ],
+            [
+              1500,
+              0.862827479839325
+            ],
+            [
+              2000,
+              0.675494909286499
+            ],
+            [
+              2500,
+              0.5767588019371033
+            ],
+            [
+              3000,
+              0.49425897002220154
+            ],
+            [
+              3500,
+              0.9143069982528687
+            ],
+            [
+              4000,
+              0.5012246370315552
+            ],
+            [
+              4500,
+              0.5754733681678772
+            ],
+            [
+              5000,
+              0.900390625
+            ],
+            [
+              5500,
+              0.8850100040435791
+            ],
+            [
+              6000,
+              0.476073294878006
+            ],
+            [
+              6500,
+              0.89404296875
+            ],
+            [
+              7000,
+              0.46579089760780334
+            ],
+            [
+              7500,
+              0.9074708223342896
+            ],
+            [
+              8000,
+              0.4033418595790863
+            ],
+            [
+              8500,
+              0.40516233444213867
+            ]
+          ],
+          "train_s": 509,
+          "eval": {
+            "state": {
+              "16": 0.16,
+              "17": 0.145
+            },
+            "bind": {
+              "16": 0.165,
+              "31": 0.225
+            },
+            "composed": {
+              "16": 0.165,
+              "48": 0.16
+            }
+          },
+          "guided": {},
+          "sched_step0": 0,
+          "sched_total": 25000
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.900146484375,
+          "loss_curve": [
+            [
+              500,
+              1.105806589126587
+            ],
+            [
+              1000,
+              0.4145987629890442
+            ],
+            [
+              1500,
+              0.9055181741714478
+            ],
+            [
+              2000,
+              0.4079825282096863
+            ],
+            [
+              2500,
+              0.9341299533843994
+            ],
+            [
+              3000,
+              0.8454170227050781
+            ],
+            [
+              3500,
+              0.911865234375
+            ],
+            [
+              4000,
+              0.6018897294998169
+            ],
+            [
+              4500,
+              0.8923344016075134
+            ],
+            [
+              5000,
+              0.89794921875
+            ],
+            [
+              5500,
+              0.88232421875
+            ],
+            [
+              6000,
+              0.42149075865745544
+            ],
+            [
+              6500,
+              0.901611328125
+            ],
+            [
+              7000,
+              0.36841464042663574
+            ],
+            [
+              7500,
+              0.900146484375
+            ]
+          ],
+          "train_s": 536,
+          "eval": {
+            "state": {
+              "16": 0.14,
+              "17": 0.145
+            },
+            "bind": {
+              "16": 0.175,
+              "31": 0.14
+            },
+            "composed": {
+              "16": 0.175,
+              "48": 0.19
+            }
+          },
+          "guided": {},
+          "sched_step0": 8750,
+          "sched_total": 25000
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.34509187936782837,
+          "loss_curve": [
+            [
+              500,
+              0.33257851004600525
+            ],
+            [
+              1000,
+              0.32115522027015686
+            ],
+            [
+              1500,
+              0.34058743715286255
+            ],
+            [
+              2000,
+              0.8935546875
+            ],
+            [
+              2500,
+              0.9091796875
+            ],
+            [
+              3000,
+              0.3057129979133606
+            ],
+            [
+              3500,
+              0.3215514123439789
+            ],
+            [
+              4000,
+              0.3087499141693115
+            ],
+            [
+              4500,
+              0.3560445010662079
+            ],
+            [
+              5000,
+              0.885009765625
+            ],
+            [
+              5500,
+              0.895263671875
+            ],
+            [
+              6000,
+              0.892333984375
+            ],
+            [
+              6500,
+              0.890380859375
+            ],
+            [
+              7000,
+              0.30857592821121216
+            ],
+            [
+              7500,
+              0.2579838037490845
+            ],
+            [
+              8000,
+              0.30359911918640137
+            ],
+            [
+              8500,
+              0.29973605275154114
+            ]
+          ],
+          "train_s": 1770,
+          "eval": {
+            "state": {
+              "16": 0.149,
+              "17": 0.177,
+              "23": 0.166,
+              "34": 0.151,
+              "48": 0.167,
+              "80": 0.181,
+              "108": 0.163,
+              "128": 0.159,
+              "160": 0.148
+            },
+            "bind": {
+              "16": 0.153,
+              "31": 0.169,
+              "41": 0.165,
+              "62": 0.18,
+              "132": 0.162
+            },
+            "composed": {
+              "16": 0.184,
+              "48": 0.149,
+              "64": 0.176,
+              "96": 0.161
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.2109375,
+                "checkpoint_acc": 0.16379442401960784,
+                "trace": {
+                  "match": 0.1171875,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              },
+              "80": {
+                "match": 0.15625,
+                "checkpoint_acc": 0.16222330729166667,
+                "trace": {
+                  "match": 0.15625,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.2109375,
+                "checkpoint_acc": 0.40192372311827956,
+                "trace": {
+                  "match": 0.6796875,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              },
+              "132": {
+                "match": 0.140625,
+                "checkpoint_acc": 0.4048739346590909,
+                "trace": {
+                  "match": 0.34375,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.15625,
+                "checkpoint_acc": 0.1661105685763889,
+                "trace": {
+                  "match": 0.140625,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            }
+          },
+          "sched_step0": 16250,
+          "sched_total": 25000
+        }
+      ]
+    },
+    {
+      "arch": "transformer",
+      "seed": 2,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.880127489566803,
+          "loss_curve": [
+            [
+              500,
+              0.5256616473197937
+            ],
+            [
+              1000,
+              0.5054393410682678
+            ],
+            [
+              1500,
+              0.8986698389053345
+            ],
+            [
+              2000,
+              0.9470462799072266
+            ],
+            [
+              2500,
+              0.6101190447807312
+            ],
+            [
+              3000,
+              0.48249351978302
+            ],
+            [
+              3500,
+              0.9458010196685791
+            ],
+            [
+              4000,
+              0.4561653137207031
+            ],
+            [
+              4500,
+              0.4317046105861664
+            ],
+            [
+              5000,
+              0.41989994049072266
+            ],
+            [
+              5500,
+              0.8896509408950806
+            ],
+            [
+              6000,
+              0.4598109722137451
+            ],
+            [
+              6500,
+              0.4166356027126312
+            ],
+            [
+              7000,
+              0.46552804112434387
+            ],
+            [
+              7500,
+              0.876220703125
+            ],
+            [
+              8000,
+              0.858642578125
+            ],
+            [
+              8500,
+              0.39766186475753784
+            ]
+          ],
+          "train_s": 506,
+          "eval": {
+            "state": {
+              "16": 0.14,
+              "17": 0.15
+            },
+            "bind": {
+              "16": 0.165,
+              "31": 0.135
+            },
+            "composed": {
+              "16": 0.155,
+              "48": 0.165
+            }
+          },
+          "guided": {},
+          "sched_step0": 0,
+          "sched_total": 25000
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.8955078125,
+          "loss_curve": [
+            [
+              500,
+              0.9954088926315308
+            ],
+            [
+              1000,
+              0.8585498332977295
+            ],
+            [
+              1500,
+              0.6729370355606079
+            ],
+            [
+              2000,
+              0.41007140278816223
+            ],
+            [
+              2500,
+              0.41272127628326416
+            ],
+            [
+              3000,
+              0.37219586968421936
+            ],
+            [
+              3500,
+              0.91796875
+            ],
+            [
+              4000,
+              0.3840293288230896
+            ],
+            [
+              4500,
+              0.89404296875
+            ],
+            [
+              5000,
+              0.35978808999061584
+            ],
+            [
+              5500,
+              0.882568359375
+            ],
+            [
+              6000,
+              0.3745286762714386
+            ],
+            [
+              6500,
+              0.35147586464881897
+            ],
+            [
+              7000,
+              0.89208984375
+            ],
+            [
+              7500,
+              0.8955078125
+            ]
+          ],
+          "train_s": 538,
+          "eval": {
+            "state": {
+              "16": 0.155,
+              "17": 0.135
+            },
+            "bind": {
+              "16": 0.165,
+              "31": 0.225
+            },
+            "composed": {
+              "16": 0.17,
+              "48": 0.145
+            }
+          },
+          "guided": {},
+          "sched_step0": 8750,
+          "sched_total": 25000
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.3034665584564209,
+          "loss_curve": [
+            [
+              500,
+              0.896484375
+            ],
+            [
+              1000,
+              0.896484375
+            ],
+            [
+              1500,
+              0.90576171875
+            ],
+            [
+              2000,
+              0.89404296875
+            ],
+            [
+              2500,
+              0.2999608516693115
+            ],
+            [
+              3000,
+              0.30670469999313354
+            ],
+            [
+              3500,
+              0.891357421875
+            ],
+            [
+              4000,
+              0.3027954697608948
+            ],
+            [
+              4500,
+              0.890625
+            ],
+            [
+              5000,
+              0.27197274565696716
+            ],
+            [
+              5500,
+              0.892822265625
+            ],
+            [
+              6000,
+              0.33508121967315674
+            ],
+            [
+              6500,
+              0.89599609375
+            ],
+            [
+              7000,
+              0.3304695785045624
+            ],
+            [
+              7500,
+              0.900390625
+            ],
+            [
+              8000,
+              0.89453125
+            ],
+            [
+              8500,
+              0.2869850993156433
+            ]
+          ],
+          "train_s": 1767,
+          "eval": {
+            "state": {
+              "16": 0.164,
+              "17": 0.149,
+              "23": 0.168,
+              "34": 0.156,
+              "48": 0.177,
+              "80": 0.175,
+              "108": 0.164,
+              "128": 0.177,
+              "160": 0.164
+            },
+            "bind": {
+              "16": 0.167,
+              "31": 0.147,
+              "41": 0.149,
+              "62": 0.157,
+              "132": 0.163
+            },
+            "composed": {
+              "16": 0.173,
+              "48": 0.181,
+              "64": 0.177,
+              "96": 0.167
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.1328125,
+                "checkpoint_acc": 0.16398590686274508,
+                "trace": {
+                  "match": 0.1484375,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              },
+              "80": {
+                "match": 0.203125,
+                "checkpoint_acc": 0.143408203125,
+                "trace": {
+                  "match": 0.1640625,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.15625,
+                "checkpoint_acc": 0.46635584677419356,
+                "trace": {
+                  "match": 0.8671875,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              },
+              "132": {
+                "match": 0.2421875,
+                "checkpoint_acc": 0.4746143071338384,
+                "trace": {
+                  "match": 0.625,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.25,
+                "checkpoint_acc": 0.1760525173611111,
+                "trace": {
+                  "match": 0.1484375,
+                  "n": 128,
+                  "t1_agree": 128
+                }
+              }
+            }
+          },
+          "sched_step0": 16250,
+          "sched_total": 25000
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "transformer": {
+      "plain": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@16': 0, 'bind@16': 0} (0/2 seeds at best, on state@16). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@16",
+          "per_pair": {
+            "state@16": 0,
+            "bind@16": 0
+          },
+          "required": [
+            "state@16",
+            "bind@16"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": true,
+        "composed_pad_reach": null,
+        "lengths_read": {
+          "state": [
+            17,
+            23,
+            34
+          ],
+          "bind": [
+            31,
+            41,
+            62
+          ],
+          "composed": [
+            48,
+            64,
+            96
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0,
+            "23": 0,
+            "34": 0
+          },
+          "bind": {
+            "31": 0,
+            "41": 0,
+            "62": 0
+          },
+          "composed": {
+            "48": 0,
+            "64": 0,
+            "96": 0
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "16": 0.172,
+              "17": 0.168,
+              "23": 0.179,
+              "34": 0.162,
+              "48": 0.18,
+              "80": 0.164,
+              "108": 0.144,
+              "128": 0.186,
+              "160": 0.172
+            },
+            "1": {
+              "16": 0.149,
+              "17": 0.177,
+              "23": 0.166,
+              "34": 0.151,
+              "48": 0.167,
+              "80": 0.181,
+              "108": 0.163,
+              "128": 0.159,
+              "160": 0.148
+            },
+            "2": {
+              "16": 0.164,
+              "17": 0.149,
+              "23": 0.168,
+              "34": 0.156,
+              "48": 0.177,
+              "80": 0.175,
+              "108": 0.164,
+              "128": 0.177,
+              "160": 0.164
+            }
+          },
+          "bind": {
+            "0": {
+              "16": 0.166,
+              "31": 0.182,
+              "41": 0.176,
+              "62": 0.167,
+              "132": 0.164
+            },
+            "1": {
+              "16": 0.153,
+              "31": 0.169,
+              "41": 0.165,
+              "62": 0.18,
+              "132": 0.162
+            },
+            "2": {
+              "16": 0.167,
+              "31": 0.147,
+              "41": 0.149,
+              "62": 0.157,
+              "132": 0.163
+            }
+          },
+          "composed": {
+            "0": {
+              "16": 0.179,
+              "48": 0.158,
+              "64": 0.155,
+              "96": 0.174
+            },
+            "1": {
+              "16": 0.184,
+              "48": 0.149,
+              "64": 0.176,
+              "96": 0.161
+            },
+            "2": {
+              "16": 0.173,
+              "48": 0.181,
+              "64": 0.177,
+              "96": 0.167
+            }
+          }
+        }
+      },
+      "guided": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@17': 0, 'bind@31': 0} (0/2 seeds at best, on state@17). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@17",
+          "per_pair": {
+            "state@17": 0,
+            "bind@31": 0
+          },
+          "required": [
+            "state@17",
+            "bind@31"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
+        "lengths_read": {
+          "state": [
+            17
+          ],
+          "bind": [
+            31
+          ],
+          "composed": [
+            48
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0
+          },
+          "bind": {
+            "31": 0
+          },
+          "composed": {
+            "48": null
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "17": 0.203125,
+              "80": 0.1328125
+            },
+            "1": {
+              "17": 0.2109375,
+              "80": 0.15625
+            },
+            "2": {
+              "17": 0.1328125,
+              "80": 0.203125
+            }
+          },
+          "bind": {
+            "0": {
+              "31": 0.1640625,
+              "132": 0.109375
+            },
+            "1": {
+              "31": 0.2109375,
+              "132": 0.140625
+            },
+            "2": {
+              "31": 0.15625,
+              "132": 0.2421875
+            }
+          },
+          "composed": {
+            "0": {
+              "48": 0.1015625
+            },
+            "1": {
+              "48": 0.15625
+            },
+            "2": {
+              "48": 0.25
+            }
+          }
+        }
+      }
+    }
+  }
+}

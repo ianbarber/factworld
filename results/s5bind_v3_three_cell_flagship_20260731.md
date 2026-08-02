@@ -4,6 +4,8 @@ k=6 · informed chance 1/(k-1) = 0.200 · match · n_eval=1000 · d_model=768 n_
 
 Reading rule pre-registered in `scripts/protocol_s5bind_v3_three_cell_20260731.py`: a cell CLEARS its floor at z > 3.0 AND margin >= 0.15; it FORMS for an architecture on >= 2 of the seeds at every registered length. Per-seed values only — this family is bimodal at the emergence threshold.
 
+**Every reading below that has the composed cell CLEARING on the GUIDED read is RETRACTED** — the `gdp_hybrid / guided: V2_NO_GAP_HERE` verdict, the `_floor_` of 0.204 in the guided composed table and the bold on the two cells read against it, and the seed-pairing paragraph "the composed cell clears on EXACTLY the seeds where the state component clears". All of them score the composed cell against a floor that does not hold under the guided protocol: that floor is the one-structure bound `W <= max(k, m) + 1`, and the guided format writes the whole of P then the whole of B at every event, so the k + m slots the bound prices are handed to every policy — the task's own algorithm included — on the answer channel as much as on the trace channel. The composed cell is UNFLOORABLE there; what the excluded both-maps class reaches on composed@48's own 128 items is 0.719. This run's measured numbers are unaffected and stand as they are; only the readings built on that floor are withdrawn, and they cannot be recomputed here, because this run evaluated each component at the composed cell's own length rather than at the work-matched partner the rule now requires (`state@17/23/34`, `bind@31/41/62`). The run that carries the current verdict is `results/s5bind_v3_three_cell_depthmatched_20260801.md`.
+
 ## Size (compute-matched: shared d_model and depth; `fprm` is weight-tied)
 
 | arch | params | FLOPs/token |
@@ -103,7 +105,7 @@ _A matched length is where that component's own forward pass costs what the comp
 
 # Verdict
 
-**gdp_hybrid / guided: V2_NO_GAP_HERE** — the composed cell forms wherever both components do. Composition is not a separate difficulty at k=6 / L<=96 in this regime; the lengths or k must move before the cell is worth buying on the frontier.
+**gdp_hybrid / guided: V2_NO_GAP_HERE — RETRACTED (see the head of this file)** — the composed cell forms wherever both components do. Composition is not a separate difficulty at k=6 / L<=96 in this regime; the lengths or k must move before the cell is worth buying on the frontier.
 
 seeds clearing: {'state': {48: 2}, 'bind': {48: 3}, 'composed': {48: 2}}; positive control (some component clears on this read's grid) {'state@48': 2, 'bind@48': 3} of 3 seeds, required ['state@48', 'bind@48']; matched-cost control: {'state': True, 'bind': True} (measured: {'state': True, 'bind': True}); lengths read: [48]
 
@@ -124,7 +126,7 @@ Both verdicts read each component at the composed cell's own length, which carri
 | 1 | 0.281 | 0.242 | 0.992 (clears) |
 | 2 | 0.992 (clears) | 1.000 (clears) | 0.992 (clears) |
 
-The composed cell clears on EXACTLY the seeds where the state component clears, and fails on the seed where it fails, while the retrieval component clears on all three. The pre-registered rule counts seeds per cell and so cannot see this: it is the same statement as the verdict at one operating point, and a stronger one, because it says the composed cell costs this architecture nothing beyond the state leg rather than that both happened to reach 2 of 3.
+RETRACTED (see the head of this file): the composed cell has no floor on this read, so "clears" is not defined for it and the pairing below has one side missing. The composed cell clears on EXACTLY the seeds where the state component clears, and fails on the seed where it fails, while the retrieval component clears on all three. The pre-registered rule counts seeds per cell and so cannot see this: it is the same statement as the verdict at one operating point, and a stronger one, because it says the composed cell costs this architecture nothing beyond the state leg rather than that both happened to reach 2 of 3.
 
 ## What the checkpoint diagnostic says
 

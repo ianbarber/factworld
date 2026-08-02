@@ -4037,6 +4037,8 @@
           "state": true,
           "bind": true
         },
+        "composed_floored": true,
+        "composed_pad_reach": null,
         "lengths_read": {
           "state": [
             17,
@@ -4181,6 +4183,8 @@
           "state": true,
           "bind": true
         },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
         "lengths_read": {
           "state": [
             17
@@ -4205,7 +4209,7 @@
             "31": 0
           },
           "composed": {
-            "48": 0
+            "48": null
           }
         },
         "matched_forms": {
@@ -4276,6 +4280,8 @@
           "state": true,
           "bind": true
         },
+        "composed_floored": true,
+        "composed_pad_reach": null,
         "lengths_read": {
           "state": [
             17,
@@ -4401,8 +4407,8 @@
         }
       },
       "guided": {
-        "verdict": "V2_NO_GAP_HERE",
-        "why": "the composed cell forms, and so does each component at the length carrying the same amount of that component's own work. Composition is not a separate difficulty at k=6 / L<=96 in this regime; the lengths or k must move before the cell is worth buying on the frontier.",
+        "verdict": "V0_COMPOSED_UNFLOORABLE",
+        "why": "both components form at their own registered lengths, and the composed cell has NO FLOOR on this read's protocol: its floor argument is the one-structure bound W <= max(k, m) + 1, and this protocol's format requires the whole of P then B at every event, which hands those k + m slots to every policy including the task's own algorithm. Neither 'clears' nor 'does not clear' is available for the composed cell here, so no composition verdict is. What the excluded both-maps class reaches on the exact scored items is 0.719, and it is a lower bound on that class's max rather than a floor. The comparison this read does support is WITHIN-RUN \u2014 the composed cell against its work-matched component on the same seeds and items.",
         "control": {
           "seeds": 3,
           "cleared_on": "bind@31",
@@ -4420,6 +4426,8 @@
           "state": true,
           "bind": true
         },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
         "lengths_read": {
           "state": [
             17
@@ -4434,7 +4442,7 @@
         "forms": {
           "state": true,
           "bind": true,
-          "composed": true
+          "composed": false
         },
         "seed_counts": {
           "state": {
@@ -4444,7 +4452,7 @@
             "31": 3
           },
           "composed": {
-            "48": 2
+            "48": null
           }
         },
         "matched_forms": {
@@ -4515,6 +4523,8 @@
           "state": true,
           "bind": true
         },
+        "composed_floored": true,
+        "composed_pad_reach": null,
         "lengths_read": {
           "state": [
             17,
@@ -4659,6 +4669,8 @@
           "state": true,
           "bind": true
         },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
         "lengths_read": {
           "state": [
             17
@@ -4683,7 +4695,7 @@
             "31": 0
           },
           "composed": {
-            "48": 0
+            "48": null
           }
         },
         "matched_forms": {
@@ -4742,10 +4754,13 @@
       "m": 6,
       "query": "state",
       "named": true,
+      "protocol": "guided",
       "chance": 0.2,
-      "floor": 0.2,
+      "floor": 0.21875,
       "floor_disjoint": 0.2,
-      "floor_on_scored_items": 0.2,
+      "floor_on_scored_items": 0.21875,
+      "floor_plain": 0.2,
+      "pad_reach": null,
       "surface_held_out": 0.2095,
       "surface_n_fit": 4000,
       "surface_block_spread": 0.012999999999999984,
@@ -4770,11 +4785,14 @@
       "basis": "measured",
       "admitted_rows": {
         "uniform_non_initial": 0.2,
+        "ckpt_last_event_target": 0.185,
+        "ckpt_last_event_operand": 0.1725,
         "last_write_1hop": 0.172,
         "uniform": 0.1667,
         "last_swap_ref": 0.1565,
         "trunc_walk_T1": 0.1067,
-        "initial_only": 0.0
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
       },
       "charged_steps": 42,
       "n_swap": 17,
@@ -4787,10 +4805,13 @@
       "m": 6,
       "query": "state",
       "named": true,
+      "protocol": "guided",
       "chance": 0.2,
       "floor": 0.25,
       "floor_disjoint": 0.2,
       "floor_on_scored_items": 0.25,
+      "floor_plain": 0.25,
+      "pad_reach": null,
       "surface_held_out": 0.1985,
       "surface_n_fit": 4000,
       "surface_block_spread": 0.0020000000000000018,
@@ -4816,10 +4837,13 @@
       "admitted_rows": {
         "uniform_non_initial": 0.2,
         "last_write_1hop": 0.1975,
+        "ckpt_last_event_operand": 0.1747,
         "uniform": 0.1667,
         "last_swap_ref": 0.1665,
+        "ckpt_last_event_target": 0.1658,
         "trunc_walk_T1": 0.0643,
-        "initial_only": 0.0
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
       },
       "charged_steps": 189,
       "n_swap": 80,
@@ -4832,10 +4856,13 @@
       "m": 6,
       "query": "bind",
       "named": true,
+      "protocol": "guided",
       "chance": 0.2,
       "floor": 0.2,
       "floor_disjoint": 0.2,
       "floor_on_scored_items": 0.2,
+      "floor_plain": 0.2,
+      "pad_reach": null,
       "surface_held_out": null,
       "surface_n_fit": null,
       "surface_block_spread": null,
@@ -4857,12 +4884,15 @@
       "basis": "chance",
       "admitted_rows": {
         "uniform_non_initial": 0.2,
+        "ckpt_last_event_operand": 0.1737,
         "uniform": 0.1667,
         "initial_only": 0.0,
         "give_scan_d1": 0.0,
         "give_scan_d2": 0.0,
         "give_scan_d4": 0.0,
-        "give_scan_d7": 0.0
+        "give_scan_d7": 0.0,
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_target": 0.0
       },
       "charged_steps": 29,
       "n_swap": 0,
@@ -4875,10 +4905,13 @@
       "m": 6,
       "query": "bind",
       "named": true,
+      "protocol": "guided",
       "chance": 0.2,
       "floor": 0.2,
       "floor_disjoint": 0.2,
       "floor_on_scored_items": 0.2,
+      "floor_plain": 0.2,
+      "pad_reach": null,
       "surface_held_out": null,
       "surface_n_fit": null,
       "surface_block_spread": null,
@@ -4900,6 +4933,7 @@
       "basis": "chance",
       "admitted_rows": {
         "uniform_non_initial": 0.2,
+        "ckpt_last_event_operand": 0.1705,
         "uniform": 0.1667,
         "initial_only": 0.0,
         "give_scan_d1": 0.0,
@@ -4907,7 +4941,9 @@
         "give_scan_d4": 0.0,
         "give_scan_d8": 0.0,
         "give_scan_d16": 0.0,
-        "give_scan_d32": 0.0
+        "give_scan_d32": 0.0,
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_target": 0.0
       },
       "charged_steps": 79,
       "n_swap": 0,
@@ -4920,10 +4956,13 @@
       "m": 6,
       "query": "state",
       "named": false,
+      "protocol": "guided",
       "chance": 0.2,
-      "floor": 0.234375,
-      "floor_disjoint": 0.2035,
-      "floor_on_scored_items": 0.234375,
+      "floor": null,
+      "floor_disjoint": null,
+      "floor_on_scored_items": null,
+      "floor_plain": 0.234375,
+      "pad_reach": 0.71875,
       "surface_held_out": 0.239,
       "surface_n_fit": 4000,
       "surface_block_spread": 0.007499999999999979,
@@ -4945,15 +4984,26 @@
         "depth_max": null
       },
       "surface_in_floor": false,
-      "basis": "measured",
+      "basis": "unfloorable",
       "admitted_rows": {
+        "window_90": 0.2812,
+        "window_75": 0.21,
         "last_swap_ref": 0.2035,
         "uniform_non_initial": 0.2,
         "one_structure_P": 0.1905,
+        "window_50": 0.179,
+        "one_structure_B": 0.1727,
         "last_write_1hop": 0.1715,
+        "prefix_50": 0.1705,
         "stated_reference": 0.1675,
         "uniform": 0.1667,
-        "initial_only": 0.0
+        "final_state": 0.1655,
+        "ckpt_last_event_operand": 0.1645,
+        "prefix_75": 0.1323,
+        "ckpt_last_event_target": 0.0703,
+        "prefix_90": 0.0563,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
       },
       "charged_steps": 208,
       "n_swap": 17,

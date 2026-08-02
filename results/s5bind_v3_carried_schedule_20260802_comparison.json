@@ -1,0 +1,876 @@
+{
+  "written_utc": "2026-08-02T02:31:17+00:00",
+  "control": "results/s5bind_v3_three_cell_depthmatched_20260801.json",
+  "carried": "results/s5bind_v3_carried_schedule_20260802.json",
+  "arch": "transformer",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "guided": {
+    "state@17": {
+      "answer": {
+        "0": {
+          "control": 0.171875,
+          "carried": 0.203125
+        },
+        "1": {
+          "control": 0.1328125,
+          "carried": 0.2109375
+        },
+        "2": {
+          "control": 0.2109375,
+          "carried": 0.1328125
+        }
+      },
+      "trace": {
+        "0": {
+          "control": 0.1953125,
+          "carried": 0.2265625
+        },
+        "1": {
+          "control": 0.1953125,
+          "carried": 0.1171875
+        },
+        "2": {
+          "control": 0.171875,
+          "carried": 0.1484375
+        }
+      }
+    },
+    "state@80": {
+      "answer": {
+        "0": {
+          "control": 0.1640625,
+          "carried": 0.1328125
+        },
+        "1": {
+          "control": 0.125,
+          "carried": 0.15625
+        },
+        "2": {
+          "control": 0.1796875,
+          "carried": 0.203125
+        }
+      },
+      "trace": {
+        "0": {
+          "control": 0.203125,
+          "carried": 0.15625
+        },
+        "1": {
+          "control": 0.1015625,
+          "carried": 0.15625
+        },
+        "2": {
+          "control": 0.203125,
+          "carried": 0.1640625
+        }
+      }
+    },
+    "bind@31": {
+      "answer": {
+        "0": {
+          "control": 0.2109375,
+          "carried": 0.1640625
+        },
+        "1": {
+          "control": 0.1796875,
+          "carried": 0.2109375
+        },
+        "2": {
+          "control": 0.140625,
+          "carried": 0.15625
+        }
+      },
+      "trace": {
+        "0": {
+          "control": 0.515625,
+          "carried": 0.1640625
+        },
+        "1": {
+          "control": 0.109375,
+          "carried": 0.6796875
+        },
+        "2": {
+          "control": 1.0,
+          "carried": 0.8671875
+        }
+      }
+    },
+    "bind@132": {
+      "answer": {
+        "0": {
+          "control": 0.203125,
+          "carried": 0.109375
+        },
+        "1": {
+          "control": 0.125,
+          "carried": 0.140625
+        },
+        "2": {
+          "control": 0.1796875,
+          "carried": 0.2421875
+        }
+      },
+      "trace": {
+        "0": {
+          "control": 0.4140625,
+          "carried": 0.1015625
+        },
+        "1": {
+          "control": 0.1484375,
+          "carried": 0.34375
+        },
+        "2": {
+          "control": 0.9609375,
+          "carried": 0.625
+        }
+      }
+    },
+    "composed@48": {
+      "answer": {
+        "0": {
+          "control": 0.125,
+          "carried": 0.1015625
+        },
+        "1": {
+          "control": 0.15625,
+          "carried": 0.15625
+        },
+        "2": {
+          "control": 0.1328125,
+          "carried": 0.25
+        }
+      },
+      "trace": {
+        "0": {
+          "control": 0.1640625,
+          "carried": 0.125
+        },
+        "1": {
+          "control": 0.171875,
+          "carried": 0.140625
+        },
+        "2": {
+          "control": 0.1640625,
+          "carried": 0.1484375
+        }
+      }
+    }
+  },
+  "plain": {
+    "state@16": {
+      "0": {
+        "control": 0.172,
+        "carried": 0.172
+      },
+      "1": {
+        "control": 0.161,
+        "carried": 0.149
+      },
+      "2": {
+        "control": 0.173,
+        "carried": 0.164
+      }
+    },
+    "state@17": {
+      "0": {
+        "control": 0.154,
+        "carried": 0.168
+      },
+      "1": {
+        "control": 0.147,
+        "carried": 0.177
+      },
+      "2": {
+        "control": 0.176,
+        "carried": 0.149
+      }
+    },
+    "state@23": {
+      "0": {
+        "control": 0.175,
+        "carried": 0.179
+      },
+      "1": {
+        "control": 0.152,
+        "carried": 0.166
+      },
+      "2": {
+        "control": 0.181,
+        "carried": 0.168
+      }
+    },
+    "state@34": {
+      "0": {
+        "control": 0.159,
+        "carried": 0.162
+      },
+      "1": {
+        "control": 0.166,
+        "carried": 0.151
+      },
+      "2": {
+        "control": 0.159,
+        "carried": 0.156
+      }
+    },
+    "state@80": {
+      "0": {
+        "control": 0.166,
+        "carried": 0.164
+      },
+      "1": {
+        "control": 0.174,
+        "carried": 0.181
+      },
+      "2": {
+        "control": 0.177,
+        "carried": 0.175
+      }
+    },
+    "bind@16": {
+      "0": {
+        "control": 0.153,
+        "carried": 0.166
+      },
+      "1": {
+        "control": 0.166,
+        "carried": 0.153
+      },
+      "2": {
+        "control": 0.144,
+        "carried": 0.167
+      }
+    },
+    "bind@31": {
+      "0": {
+        "control": 0.154,
+        "carried": 0.182
+      },
+      "1": {
+        "control": 0.19,
+        "carried": 0.169
+      },
+      "2": {
+        "control": 0.159,
+        "carried": 0.147
+      }
+    },
+    "bind@41": {
+      "0": {
+        "control": 0.154,
+        "carried": 0.176
+      },
+      "1": {
+        "control": 0.172,
+        "carried": 0.165
+      },
+      "2": {
+        "control": 0.158,
+        "carried": 0.149
+      }
+    },
+    "bind@62": {
+      "0": {
+        "control": 0.184,
+        "carried": 0.167
+      },
+      "1": {
+        "control": 0.163,
+        "carried": 0.18
+      },
+      "2": {
+        "control": 0.162,
+        "carried": 0.157
+      }
+    },
+    "bind@132": {
+      "0": {
+        "control": 0.153,
+        "carried": 0.164
+      },
+      "1": {
+        "control": 0.183,
+        "carried": 0.162
+      },
+      "2": {
+        "control": 0.166,
+        "carried": 0.163
+      }
+    },
+    "composed@16": {
+      "0": {
+        "control": 0.16,
+        "carried": 0.179
+      },
+      "1": {
+        "control": 0.174,
+        "carried": 0.184
+      },
+      "2": {
+        "control": 0.186,
+        "carried": 0.173
+      }
+    },
+    "composed@48": {
+      "0": {
+        "control": 0.16,
+        "carried": 0.158
+      },
+      "1": {
+        "control": 0.15,
+        "carried": 0.149
+      },
+      "2": {
+        "control": 0.172,
+        "carried": 0.181
+      }
+    },
+    "composed@64": {
+      "0": {
+        "control": 0.162,
+        "carried": 0.155
+      },
+      "1": {
+        "control": 0.162,
+        "carried": 0.176
+      },
+      "2": {
+        "control": 0.176,
+        "carried": 0.177
+      }
+    },
+    "composed@96": {
+      "0": {
+        "control": 0.195,
+        "carried": 0.174
+      },
+      "1": {
+        "control": 0.152,
+        "carried": 0.161
+      },
+      "2": {
+        "control": 0.168,
+        "carried": 0.167
+      }
+    }
+  },
+  "guided_floors": {
+    "state@17": 0.21875,
+    "state@80": 0.25,
+    "bind@31": 0.2,
+    "bind@132": 0.2,
+    "composed@48": null
+  },
+  "plain_floors": {
+    "bind@16": 0.2,
+    "bind@31": 0.2,
+    "bind@41": 0.2,
+    "bind@62": 0.2,
+    "bind@132": 0.2,
+    "composed@16": 0.52125,
+    "composed@48": 0.2045,
+    "composed@64": 0.20925,
+    "composed@96": 0.209,
+    "state@16": 0.2,
+    "state@17": 0.2,
+    "state@23": 0.2,
+    "state@34": 0.2,
+    "state@48": 0.208,
+    "state@80": 0.207,
+    "state@108": 0.2,
+    "state@128": 0.216,
+    "state@160": 0.2005
+  },
+  "verdicts": {
+    "control": {
+      "plain": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@16': 0, 'bind@16': 0} (0/2 seeds at best, on state@16). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@16",
+          "per_pair": {
+            "state@16": 0,
+            "bind@16": 0
+          },
+          "required": [
+            "state@16",
+            "bind@16"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": true,
+        "composed_pad_reach": null,
+        "lengths_read": {
+          "state": [
+            17,
+            23,
+            34
+          ],
+          "bind": [
+            31,
+            41,
+            62
+          ],
+          "composed": [
+            48,
+            64,
+            96
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0,
+            "23": 0,
+            "34": 0
+          },
+          "bind": {
+            "31": 0,
+            "41": 0,
+            "62": 0
+          },
+          "composed": {
+            "48": 0,
+            "64": 0,
+            "96": 0
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "16": 0.172,
+              "17": 0.154,
+              "23": 0.175,
+              "34": 0.159,
+              "48": 0.19,
+              "80": 0.166,
+              "108": 0.145,
+              "128": 0.183,
+              "160": 0.172
+            },
+            "1": {
+              "16": 0.161,
+              "17": 0.147,
+              "23": 0.152,
+              "34": 0.166,
+              "48": 0.161,
+              "80": 0.174,
+              "108": 0.176,
+              "128": 0.149,
+              "160": 0.161
+            },
+            "2": {
+              "16": 0.173,
+              "17": 0.176,
+              "23": 0.181,
+              "34": 0.159,
+              "48": 0.163,
+              "80": 0.177,
+              "108": 0.158,
+              "128": 0.186,
+              "160": 0.146
+            }
+          },
+          "bind": {
+            "0": {
+              "16": 0.153,
+              "31": 0.154,
+              "41": 0.154,
+              "62": 0.184,
+              "132": 0.153
+            },
+            "1": {
+              "16": 0.166,
+              "31": 0.19,
+              "41": 0.172,
+              "62": 0.163,
+              "132": 0.183
+            },
+            "2": {
+              "16": 0.144,
+              "31": 0.159,
+              "41": 0.158,
+              "62": 0.162,
+              "132": 0.166
+            }
+          },
+          "composed": {
+            "0": {
+              "16": 0.16,
+              "48": 0.16,
+              "64": 0.162,
+              "96": 0.195
+            },
+            "1": {
+              "16": 0.174,
+              "48": 0.15,
+              "64": 0.162,
+              "96": 0.152
+            },
+            "2": {
+              "16": 0.186,
+              "48": 0.172,
+              "64": 0.176,
+              "96": 0.168
+            }
+          }
+        }
+      },
+      "guided": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@17': 0, 'bind@31': 0} (0/2 seeds at best, on state@17). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@17",
+          "per_pair": {
+            "state@17": 0,
+            "bind@31": 0
+          },
+          "required": [
+            "state@17",
+            "bind@31"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
+        "lengths_read": {
+          "state": [
+            17
+          ],
+          "bind": [
+            31
+          ],
+          "composed": [
+            48
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0
+          },
+          "bind": {
+            "31": 0
+          },
+          "composed": {
+            "48": null
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "17": 0.171875,
+              "80": 0.1640625
+            },
+            "1": {
+              "17": 0.1328125,
+              "80": 0.125
+            },
+            "2": {
+              "17": 0.2109375,
+              "80": 0.1796875
+            }
+          },
+          "bind": {
+            "0": {
+              "31": 0.2109375,
+              "132": 0.203125
+            },
+            "1": {
+              "31": 0.1796875,
+              "132": 0.125
+            },
+            "2": {
+              "31": 0.140625,
+              "132": 0.1796875
+            }
+          },
+          "composed": {
+            "0": {
+              "48": 0.125
+            },
+            "1": {
+              "48": 0.15625
+            },
+            "2": {
+              "48": 0.1328125
+            }
+          }
+        }
+      }
+    },
+    "carried": {
+      "plain": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@16': 0, 'bind@16': 0} (0/2 seeds at best, on state@16). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@16",
+          "per_pair": {
+            "state@16": 0,
+            "bind@16": 0
+          },
+          "required": [
+            "state@16",
+            "bind@16"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": true,
+        "composed_pad_reach": null,
+        "lengths_read": {
+          "state": [
+            17,
+            23,
+            34
+          ],
+          "bind": [
+            31,
+            41,
+            62
+          ],
+          "composed": [
+            48,
+            64,
+            96
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0,
+            "23": 0,
+            "34": 0
+          },
+          "bind": {
+            "31": 0,
+            "41": 0,
+            "62": 0
+          },
+          "composed": {
+            "48": 0,
+            "64": 0,
+            "96": 0
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "16": 0.172,
+              "17": 0.168,
+              "23": 0.179,
+              "34": 0.162,
+              "48": 0.18,
+              "80": 0.164,
+              "108": 0.144,
+              "128": 0.186,
+              "160": 0.172
+            },
+            "1": {
+              "16": 0.149,
+              "17": 0.177,
+              "23": 0.166,
+              "34": 0.151,
+              "48": 0.167,
+              "80": 0.181,
+              "108": 0.163,
+              "128": 0.159,
+              "160": 0.148
+            },
+            "2": {
+              "16": 0.164,
+              "17": 0.149,
+              "23": 0.168,
+              "34": 0.156,
+              "48": 0.177,
+              "80": 0.175,
+              "108": 0.164,
+              "128": 0.177,
+              "160": 0.164
+            }
+          },
+          "bind": {
+            "0": {
+              "16": 0.166,
+              "31": 0.182,
+              "41": 0.176,
+              "62": 0.167,
+              "132": 0.164
+            },
+            "1": {
+              "16": 0.153,
+              "31": 0.169,
+              "41": 0.165,
+              "62": 0.18,
+              "132": 0.162
+            },
+            "2": {
+              "16": 0.167,
+              "31": 0.147,
+              "41": 0.149,
+              "62": 0.157,
+              "132": 0.163
+            }
+          },
+          "composed": {
+            "0": {
+              "16": 0.179,
+              "48": 0.158,
+              "64": 0.155,
+              "96": 0.174
+            },
+            "1": {
+              "16": 0.184,
+              "48": 0.149,
+              "64": 0.176,
+              "96": 0.161
+            },
+            "2": {
+              "16": 0.173,
+              "48": 0.181,
+              "64": 0.177,
+              "96": 0.167
+            }
+          }
+        }
+      },
+      "guided": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@17': 0, 'bind@31': 0} (0/2 seeds at best, on state@17). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@17",
+          "per_pair": {
+            "state@17": 0,
+            "bind@31": 0
+          },
+          "required": [
+            "state@17",
+            "bind@31"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
+        "lengths_read": {
+          "state": [
+            17
+          ],
+          "bind": [
+            31
+          ],
+          "composed": [
+            48
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0
+          },
+          "bind": {
+            "31": 0
+          },
+          "composed": {
+            "48": null
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "17": 0.203125,
+              "80": 0.1328125
+            },
+            "1": {
+              "17": 0.2109375,
+              "80": 0.15625
+            },
+            "2": {
+              "17": 0.1328125,
+              "80": 0.203125
+            }
+          },
+          "bind": {
+            "0": {
+              "31": 0.1640625,
+              "132": 0.109375
+            },
+            "1": {
+              "31": 0.2109375,
+              "132": 0.140625
+            },
+            "2": {
+              "31": 0.15625,
+              "132": 0.2421875
+            }
+          },
+          "composed": {
+            "0": {
+              "48": 0.1015625
+            },
+            "1": {
+              "48": 0.15625
+            },
+            "2": {
+              "48": 0.25
+            }
+          }
+        }
+      }
+    }
+  }
+}

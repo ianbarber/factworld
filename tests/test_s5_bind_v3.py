@@ -74,9 +74,11 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_floor_basis,
     s5_bind_v3_floors,
     s5_bind_v3_give_scan,
+    s5_bind_v3_guided_admits,
     s5_bind_v3_is_named,
     s5_bind_v3_needs,
     s5_bind_v3_operative_floor,
+    s5_bind_v3_pad_reach,
     s5_bind_v3_partial_carry,
     s5_bind_v3_partial_carry_profile,
     s5_bind_v3_query_kind,
@@ -93,11 +95,9 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_task_cost,
     s5_bind_v3_task_cost_min,
     s5_bind_v3_task_depth,
-    s5_bind_v3_trace_admits,
     s5_bind_v3_trace_floor_basis,
     s5_bind_v3_trace_is_answer,
     s5_bind_v3_trace_operative_floor,
-    s5_bind_v3_trace_pad_floor,
     s5_bind_v3_trace_slot,
     s5_bind_v3_trunc_walk,
     s5_bind_v3_work_match,
@@ -933,6 +933,12 @@ def _protocol():
     return P
 
 
+def _driver():
+    _protocol()
+    import experiment_s5bind_v3_three_cell_local_20260731 as E
+    return E
+
+
 def test_the_positive_control_is_evaluated_on_the_grid_its_read_covers_or_raises():
     """THE DEFECT THIS CLOSES. The control was "the state component at L=16" and it was applied
     to the GUIDED read, whose grid is GUIDED_LENGTHS and does not contain 16. The guided arm
@@ -1511,16 +1517,16 @@ def test_every_checkpoint_row_is_priced_and_admitted_so_it_could_move_a_floor():
         for row in S5_BIND_V3_CKPT_ROWS:
             assert s5_bind_v3_row_depth(row, query, L) <= S5_BIND_V3_MAX_DEPTH
             assert s5_bind_v3_admits(row, k, m, ns, ng, named, query), f"{name}@{L}/{row}"
-            assert s5_bind_v3_trace_admits(row, k, m, ns, ng, named, query), f"{name}@{L}/{row}"
+            assert s5_bind_v3_guided_admits(row, k, m, ns, ng, named, query), f"{name}@{L}/{row}"
         preds = s5_bind_v3_ckpt_preds(ex[0].prompt)
         assert set(preds) == set(S5_BIND_V3_CKPT_ROWS)
 
 
-def test_the_trace_class_is_the_answer_class_on_a_component_cell():
+def test_the_guided_class_is_the_plain_class_on_a_component_cell():
     """T2 removes the LIVE-SLOT axis, because the guided protocol requires the whole of P and B to
     be written out at every event and so hands those slots to every policy. On a COMPONENT cell
-    that removes nothing: its W bound is 2 and every depth <= 1 row already costs 2, so the trace
-    class and the answer class admit exactly the same rows and the floors are the same number."""
+    that removes nothing: its W bound is 2 and every depth <= 1 row already costs 2, so the guided
+    class and the plain class admit exactly the same rows and the floors are the same number."""
     for name, L in TRACE_CELLS:
         spec = TK.CANONICAL[name]
         k, m = spec.k, spec.n_objects_active
@@ -1533,8 +1539,8 @@ def test_the_trace_class_is_the_answer_class_on_a_component_cell():
             s5_bind_v3_family_rows(k, m, ns, ng, named, query)
         for row in rows:
             a = s5_bind_v3_admits(row, k, m, ns, ng, named, query)
-            t = s5_bind_v3_trace_admits(row, k, m, ns, ng, named, query)
-            assert a == t, f"{name}@{L}/{row}: answer {a} trace {t}"
+            t = s5_bind_v3_guided_admits(row, k, m, ns, ng, named, query)
+            assert a == t, f"{name}@{L}/{row}: plain {a} guided {t}"
         fl = dict(s5_bind_v3_floors(ex, k, m))
         fl.update(s5_bind_v3_family_floors(ex, k, m, named, query))
         assert (s5_bind_v3_trace_operative_floor({**fl, **s5_bind_v3_ckpt_floors(ex)},
@@ -1543,14 +1549,21 @@ def test_the_trace_class_is_the_answer_class_on_a_component_cell():
         assert s5_bind_v3_trace_floor_basis(k, m, ns, ng, named, query) in ("measured", "chance")
 
 
-def test_the_composed_cells_trace_read_has_no_floor_and_the_price_is_measured():
+def test_the_composed_cell_is_unfloorable_on_BOTH_reads_under_a_guided_protocol():
     """THE COMPOSED CELL'S FLOOR ARGUMENT IS ENTIRELY A LIVE-SLOT ARGUMENT — W <= max(k, m) + 1
-    against the task's k + m + 1, with a step bound the task itself satisfies — and the guided
+    against the task's k + m + 1, with a step bound the task itself satisfies — and a scratchpad
     protocol hands out exactly those slots. What is left admits the task, so the operative floor
     is None rather than a max over a class that contains the answer.
 
+    IT IS THE PROTOCOL AND NOT THE READ THAT DECIDES THIS, so the guided ANSWER channel gets the
+    same treatment as the trace channel. Pinning both here is the point: the earlier revision
+    voided the floor on the trace only, and the guided answer score was then read as clearing
+    0.234 at composed@48 — a number that does not hold under the format that produced the score.
+    ``s5_bind_v3_operative_floor`` returns the SAME thing as its trace wrapper, at every composed
+    cell and for every floor dict.
+
     The price is measured, not asserted: the best both-maps policy strictly cheaper than the task
-    (drop one block of events, replay the rest) reads far above the answer floor."""
+    (drop one block of events, replay the rest) reads far above the plain protocol's floor."""
     for name in ("s5_bind_local_v3", "s5_bind_v3"):
         spec = TK.CANONICAL[name]
         k, m = spec.k, spec.n_objects_active
@@ -1560,13 +1573,109 @@ def test_the_composed_cells_trace_read_has_no_floor_and_the_price_is_measured():
         named, query = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
         assert not named
         fl = dict(s5_bind_v3_floors(ex, k, m))
-        ans = s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query)
-        assert s5_bind_v3_trace_operative_floor({**fl, **s5_bind_v3_ckpt_floors(ex)},
-                                                k, m, ns, ng, named, query) is None
+        both = {**fl, **s5_bind_v3_ckpt_floors(ex)}
+        plain = s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query)
+        assert plain is not None, f"{name}@{L}: the PLAIN protocol's floor must survive"
+        # both channels, one rule: the answer read under guided=True and the trace wrapper
+        for floors in (fl, both):
+            assert s5_bind_v3_operative_floor(floors, k, m, ns, ng, named, query,
+                                              guided=True) is None, f"{name}@{L}: guided ANSWER"
+            assert s5_bind_v3_trace_operative_floor(floors, k, m, ns, ng, named,
+                                                    query) is None, f"{name}@{L}: guided TRACE"
+        assert s5_bind_v3_floor_basis(k, m, ns, ng, named, query, guided=True) == "unfloorable"
         assert s5_bind_v3_trace_floor_basis(k, m, ns, ng, named, query) == "unfloorable"
-        pad = s5_bind_v3_trace_pad_floor(ex)
-        assert pad > ans + 0.3, f"{name}@{L}: pad {pad:.3f} against answer floor {ans:.3f}"
-        assert pad > 2.5 * ans, f"{name}@{L}: pad {pad:.3f} is {pad / ans:.2f}x the answer floor"
+        assert s5_bind_v3_floor_basis(k, m, ns, ng, named, query) != "unfloorable"
+        pad = s5_bind_v3_pad_reach(ex)
+        assert pad > plain + 0.3, f"{name}@{L}: pad {pad:.3f} against plain floor {plain:.3f}"
+        assert pad > 2.5 * plain, f"{name}@{L}: pad {pad:.3f} is {pad / plain:.2f}x plain floor"
+
+
+def test_the_component_cells_are_unaffected_by_the_guided_protocol():
+    """THE RETRACTION IS THE COMPOSED CELL'S ONLY. A component's class rule is depth <= 1 AND cost
+    strictly under that cell's own algorithm's minimum, and a pad substitutes for REGISTERS, not
+    for CHAINING — so nothing the guided format hands out is on either axis. Every component cell
+    keeps a floor on both channels, its basis stays 'measured' or 'chance', and the guided number
+    is the plain number (or above it, where the checkpoint-shaped rows the protocol makes
+    available are merged in — never below).
+
+    A pad reach is not defined there and must not be reported: the block-drop family carries both
+    maps, and a component has one."""
+    for name, L in TRACE_CELLS:
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        ex = TK.generate(spec, "test", n=N_FLOOR, length=L)
+        ns, ng = s5_bind_v3_shape(ex)
+        named, query = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
+        if not named:
+            continue
+        fl = dict(s5_bind_v3_floors(ex, k, m))
+        fl.update(s5_bind_v3_family_floors(ex, k, m, named, query))
+        plain = s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query)
+        guided = s5_bind_v3_operative_floor(fl, k, m, ns, ng, named, query, guided=True)
+        assert guided is not None, f"{name}@{L}: a component must keep its floor"
+        assert abs(guided - plain) < 1e-12, f"{name}@{L}: {guided:.4f} against {plain:.4f}"
+        with_ckpt = s5_bind_v3_operative_floor({**fl, **s5_bind_v3_ckpt_floors(ex)},
+                                               k, m, ns, ng, named, query, guided=True)
+        assert with_ckpt >= plain - 1e-12, f"{name}@{L}: {with_ckpt:.4f} below {plain:.4f}"
+        for g in (False, True):
+            assert s5_bind_v3_floor_basis(k, m, ns, ng, named, query,
+                                          guided=g) in ("measured", "chance"), f"{name}@{L}"
+
+
+def test_the_protocol_and_the_driver_agree_that_a_guided_composed_cell_has_no_floor():
+    """THE REPO CONTRADICTED ITSELF ON EXACTLY THIS and the contradiction is what the test pins.
+    ``cell_floor(guided=True)`` must return no floor on a composed cell and a pad reach instead,
+    must return the component cells unchanged, and ``verdict`` must refuse to read a composition
+    result off it: with the composed cell unfloorable the verdict is V0_COMPOSED_UNFLOORABLE and
+    never V2_NO_GAP_HERE (the retracted one) and never V1, which would report a gap measured
+    against a floor that does not exist."""
+    P = _protocol()
+    fl = P.cell_floor(TK.CANONICAL["s5_bind_local_v3"], 48, n_eval=64, n_fit=200, n_score=400,
+                      guided=True)
+    assert fl["floor"] is None and fl["basis"] == "unfloorable" and fl["protocol"] == "guided"
+    assert fl["pad_reach"] is not None and fl["pad_reach"] > fl["floor_plain"] + 0.3
+    fs = P.cell_floor(TK.CANONICAL["s5_bind_local_v3_state"], 17, n_eval=64, n_fit=200,
+                      n_score=400, guided=True)
+    assert fs["floor"] is not None and fs["pad_reach"] is None and fs["basis"] == "measured"
+    # FORMS counts a length with no floor as None, not as 0: an unfloorable cell and a floored
+    # one must not report the same number.
+    ok, counts = P.forms({0: {48: 0.9}, 1: {48: 0.9}}, {48: None}, (48,), n=128)
+    assert ok is False and counts == {48: None}
+    ctrl = {"seeds": 2, "cleared_on": "state@17", "per_pair": {"state@17": 2}, "required": []}
+    forms_ok = {"state": True, "bind": True, "composed": False}
+    counts = {c: {48: 2} for c in forms_ok}
+    code, why = P.verdict(ctrl, forms_ok, counts, {"state": True, "bind": True},
+                          {"state": True, "bind": True}, composed_floored=False,
+                          pad_reach=fl["pad_reach"])
+    assert code == "V0_COMPOSED_UNFLOORABLE", code
+    assert f"{fl['pad_reach']:.3f}" in why
+    # and the same inputs WITH a floor still reach the registered table
+    code, _why = P.verdict(ctrl, {**forms_ok, "composed": True}, counts,
+                           {"state": True, "bind": True}, {"state": True, "bind": True})
+    assert code == "V2_NO_GAP_HERE", code
+
+
+def test_a_record_with_no_guided_floors_does_not_fall_back_to_the_plain_one():
+    """THE RETRACTED FLOOR HAD A SECOND WAY BACK IN. A results file written before the guided
+    floors were measured separately carries none, and the fallback was the PLAIN floors — so the
+    guided composed score was read against 0.204 and the rule returned V2_NO_GAP_HERE through
+    ``protocol.read_results`` after the runner's own path had stopped doing so.
+
+    The fallback keeps the COMPONENT records, whose class is the same under either protocol, and
+    returns the composed cell UNFLOORABLE. There is no input to the guided read that produces a
+    composed floor."""
+    E = _driver()
+    plain = {"state@17": {"floor": 0.20}, "bind@31": {"floor": 0.20},
+             "composed@48": {"floor": 0.204}}
+    for guided in (None, {}):
+        got = E._guided_records(guided, plain)
+        assert got["composed@48"]["floor"] is None, got["composed@48"]
+        assert got["composed@48"]["floor_plain"] == 0.204
+        assert got["state@17"]["floor"] == 0.20 and got["bind@31"]["floor"] == 0.20
+    # a record measured under the guided protocol is used as it stands
+    measured = {"composed@48": {"floor": None, "pad_reach": 0.72, "protocol": "guided"},
+                "state@17": {"floor": 0.219, "protocol": "guided"}}
+    assert E._guided_records(measured, plain) is measured
 
 
 def test_the_lag_family_is_the_copier_with_the_true_trace_and_is_never_admitted():

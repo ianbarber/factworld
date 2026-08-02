@@ -78,11 +78,19 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
         seed=0, return_model=False, num_householder=4, allow_neg_eigval=True,
         use_short_conv=False, resid_init=False, model=None, loss_log_interval=0,
         wandb_project=None, wandb_run_name=None, wandb_log_every=1, wandb_config=None,
-        prompt_lens=None):
+        prompt_lens=None, opt=None, sched_step0=0, sched_total=None, return_opt=False):
     """Train a model from scratch or continue from an existing one.
 
     Args:
         model: optional ``nn.Module`` to keep training. If None, a fresh model is built.
+        opt: optional existing ``AdamW`` to keep stepping. If None a fresh one is built, which
+            resets the moment estimates — for a run split into stages that is a reset in the
+            middle of training and not a property of the architecture.
+        sched_step0: this call's first step in the GLOBAL schedule. With ``sched_total`` it makes
+            warmup+cosine continuous across a multi-stage run; the defaults (0, None) reproduce
+            the single-call schedule exactly.
+        sched_total: the global step count the cosine decays over; defaults to ``steps``.
+        return_opt: also return the optimizer, so the next stage can carry it.
         loss_log_interval: if > 0, record the training loss every N steps in ``loss_curve``.
         wandb_project: if set and ``wandb`` is installed, log training metrics live.
         wandb_run_name: optional run name; defaults to ``arch_seed{N}``.
@@ -114,12 +122,15 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
                             use_forget_gate=use_forget_gate, num_householder=num_householder,
                             allow_neg_eigval=allow_neg_eigval, use_short_conv=use_short_conv,
                             resid_init=resid_init).to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    if opt is None:
+        opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    total_sched = steps if sched_total is None else int(sched_total)
 
     def lr_mult(step):
-        if step < warmup:
-            return (step + 1) / max(1, warmup)
-        prog = (step - warmup) / max(1, steps - warmup)
+        g = step + sched_step0
+        if g < warmup:
+            return (g + 1) / max(1, warmup)
+        prog = (g - warmup) / max(1, total_sched - warmup)
         return 0.5 * (1.0 + math.cos(math.pi * min(1.0, prog)))
 
     gen = torch.Generator(device=device).manual_seed(seed)
@@ -170,6 +181,8 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
         for key, val in acc.items():
             wandb.log({f"eval/{'_'.join(str(k) for k in key)}": val}, step=steps)
         wandb.finish()
+    if return_opt:
+        out["opt"] = opt
     if return_model:
         out["model"] = model
         return out
