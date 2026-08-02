@@ -661,8 +661,14 @@ def post_hoc_section(runs, floors, cfg):
         if unfloorable:
             # THE CLEARS AXIS IS NOT AVAILABLE HERE. The composed cell has no floor under this
             # protocol, so "clears on exactly the seeds the state component does" is a comparison
-            # with one side missing. What the same seeds and the same items do support is the
-            # DIRECTION, per seed — but only on the seeds whose STATE leg is off its own floor.
+            # with one side missing. What the matched run DOES support is the DIRECTION, per
+            # seed — but only on the seeds whose STATE leg is off its own floor.
+            #
+            # THE TWO LEGS ARE NOT THE SAME ITEMS and the comparison must not be written as if
+            # they were. ``s5_bind_local_v3`` and ``s5_bind_local_v3_state`` are different specs
+            # drawing different streams; what is matched is the SEED, the item count and the
+            # forward-pass cost, not the item. So this is an unpaired difference of two means and
+            # its uncertainty is the two cells' sampling error, never a within-item one.
             # Differencing two cells that are both at floor reports noise as a composition cost,
             # which is the same substitution the floored branch below refuses.
             live = [(s, c) for s, c in full if c["state"][1]]
@@ -679,8 +685,9 @@ def post_hoc_section(runs, floors, cfg):
                 f"- **{arch}**: the composed cell is UNFLOORABLE on this read, so there is no "
                 "clears/does-not-clear pairing to read. On the "
                 f"{len(live)} of {len(full)} seeds whose state component is off its own floor, "
-                f"the composed cell is BELOW it on {below}, within the run and on the same "
-                "items: "
+                f"the composed cell is BELOW it on {below}, within the run and UNPAIRED — the "
+                "two legs are different specs drawing different streams, matched on seed, n and "
+                "forward-pass cost, not item by item: "
                 + ", ".join(f"seed {s} {d:+.3f}" for s, d in deficits)
                 + (f". The excluded both-maps class reaches {pad:.3f} on those items, so the "
                    "composed cell scores from a cheap-policy baseline far above the state "

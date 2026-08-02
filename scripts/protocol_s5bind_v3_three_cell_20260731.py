@@ -152,8 +152,17 @@ THE TRACE READ IS A FROM-SCRATCH-ARM INSTRUMENT AND IS NOT SCORED ON THE FRONTIE
         reaches: 0.719 on the 128 scored composed@48 items and 0.734 on the disjoint pool,
         against the plain protocol's floor of 0.234 and 0.200.
     So a composed-cell score under this protocol is a WITHIN-RUN COMPARISON — same seeds, same
-    items, matched depth and matched cost — and never a cleared floor. The DOWNWARD separation it
-    carries does not need one; the other direction is not available at any registered length.
+    item count, matched depth and matched cost — and never a cleared floor. The DOWNWARD
+    separation it carries does not need one; the other direction is not available at any
+    registered length.
+
+    IT IS NOT A PAIRED COMPARISON AND MUST NOT BE WRITTEN AS ONE. The two legs are different
+    SPECS — ``s5_bind_local_v3`` and ``s5_bind_local_v3_state`` — drawing different item streams
+    from different rng namespaces, at different lengths by construction (the pairing is what puts
+    them at different lengths). What is matched is the seed, the item count and the forward-pass
+    cost. A per-seed difference between them is therefore an unpaired difference of two
+    proportions, and every interval quoted on one is the two cells' sampling error and never a
+    within-item one.
 
 THE READING RULE (pre-registered; every threshold below is fixed before any result exists)
     Metric: match, the canonical evaluator, on N_EVAL held-out items per (cell, length) for the
@@ -244,10 +253,29 @@ THE VERDICT TABLE (mechanical; ``verdict()`` returns exactly one of these, or ra
     diagnostic and no verdict here reads it. The composition evidence is the three-cell
     comparison and only that.
 
-WHAT WOULD STOP A FRONTIER SPEND — see ``scout_plan()`` for the priced version
+WHAT WOULD STOP A FRONTIER SPEND — ``scout_plan()`` prices it, ``scout_verdict()`` applies it
     The repo's standing rule is that scout data showing a ceiling stops or redesigns a paid run
     rather than merely re-budgeting it. The scout is bought first; the roster run is bought only
-    if the scout separates. Both stop conditions and the buy condition are fixed here.
+    if the scout separates. Every threshold and THE ORDER THEY ARE EVALUATED IN are fixed here,
+    before any frontier number exists:
+
+      1. VOID (truncation) first. A cell over 10% finish=length or empty answers is a budget
+         measurement, not a model one; it is re-run at a raised budget and enters no decision.
+         Evaluated anywhere but first, it makes STOP(floor) fire on truncation — which is
+         exactly how the published s5 L64 cliff was manufactured.
+      2. STOP (ceiling) on the top model's composed@256.
+      3. STOP (floor) against INFORMED CHANCE 1/(k-1) on composed@128, never against an
+         operative floor. A frontier model reasons in visible tokens, which is a scratchpad, and
+         the composed cell's floor argument prices LIVE SLOTS — so the cell is unfloorable there
+         for the same reason it is unfloorable under the guided protocol locally.
+      4. STOP (component) on either component for the top model.
+      5. BUY on the composed SPREAD across models, which needs no baseline and therefore
+         survives the composed cell's floor retraction unchanged.
+
+    NO "CLEARS THE FLOOR" LANGUAGE MAY BE USED OF THE COMPOSED CELL in the scout or roster
+    report (``SCOUT_COMPOSED_FLOOR_LANGUAGE``). The frontier cells are scored on the ANSWER only
+    (``FRONTIER_READS``); the frontier spec carries no event_trace and ``assert_trace_read``
+    raises on that arm.
 """
 from __future__ import annotations
 
@@ -450,14 +478,208 @@ FRONTIER_WORK_MATCHED = {128: {"state": 43, "bind": 85},
 SCOUT_COMPONENT_LENGTHS = {c: (FRONTIER_WORK_MATCHED[max(SCOUT_COMPOSED_LENGTHS)][c],)
                            for c in ("state", "bind")}
 SCOUT_N = 40
-SCOUT_MAX_NEW_TOKENS = 8192               # the protocol budget for every reasoning-on cell
+# PER-CELL COMPLETION BUDGETS, and the 8192 they replace was a VALIDITY defect rather than a
+# price one. ``benchmark.cost_estimate`` prices ``assumed_output_tokens`` and never reads
+# ``max_new_tokens``, so the cheap budget bought nothing; what it did buy was truncation, scored
+# as wrong (``run_frontier_benchmark._run_attempt`` empties a finish=length reply). The composed
+# PROMPT alone is 2,984 tokens at L=128 and 5,583 at L=256 before a single reasoning token, and
+# ``benchmark.py``'s s5_concrete facet already carries 16,384/32,768 for exactly this reason
+# (opus and sonnet finished at length with no visible answer at 8,192). The budgets are keyed by
+# (cell, length) so a length that is not registered has no budget rather than a default one.
+SCOUT_BUDGETS = {("composed", 128): 16384, ("composed", 256): 32768,
+                 ("state", 85): 16384, ("bind", 171): 16384}
+SCOUT_MAX_NEW_TOKENS = min(SCOUT_BUDGETS.values())   # the floor across the scout's cells
 # three models spanning the roster's measured range, not three near neighbours: the top of the
 # owner's ranking, the mid-tier reasoner that sits surprisingly high on it, and the bottom.
 SCOUT_MODELS = ("openai/gpt-5.5", "z-ai/glm-5.2", "nvidia/nemotron-3-ultra-550b-a55b")
+SCOUT_EFFORT = "high"
 ROSTER_N = 100                            # what a RANKING needs, against the scout's 40
 SCOUT_CEILING = 0.90                      # composed cell at/above this for the top model -> STOP
 SCOUT_SEPARATION = 0.20                   # composed-cell spread across the scout -> BUY
 SCOUT_COMPONENT_MIN = 0.80                # components must be this high for the top model
+SCOUT_TRUNCATION_MAX = 0.10               # per-cell finish=length OR empty rate above this -> VOID
+SCOUT_FLOOR_SE = 2.0                      # "within this many se of informed chance" -> STOP(floor)
+SCOUT_STOP_FLOOR_LENGTH = 128             # the composed length STOP(floor) is read at
+SCOUT_STOP_CEILING_LENGTH = 256           # the composed length STOP(ceiling) is read at
+
+
+class ScoutCellVoid(RuntimeError):
+    """A scout cell whose truncation or empty rate is over ``SCOUT_TRUNCATION_MAX``.
+
+    Deliberately an exception rather than a verdict. A truncated cell is not a measurement of
+    the model, and letting it reach the stop table is how the published "s5 L64 cliff" was
+    manufactured the first time: a budget too small to hold the answer reads as a floor. The
+    cell is re-run at a raised budget and may not enter any stop or buy decision until it is.
+    """
+
+
+# THE COMPOSED CELL HAS NO FLOOR ON THE FRONTIER, and every threshold below is written so that
+# nothing needs one. A frontier model reasons in visible tokens, which is a SCRATCHPAD, and the
+# composed cell's floor argument is the one-structure live-slot bound W <= max(k, m) + 1 against
+# the task's k + m + 1 — the same bound the guided protocol's format voids locally, measured at
+# composed@48 as a both-maps replay reaching 0.719 against a printed floor of 0.234. So:
+#   * STOP(floor) is stated against INFORMED CHANCE, 1/(k-1) — the initial map is stated and the
+#     gold answer is never the queried agent's own starting value — and never against "the
+#     operative floor", which does not exist here;
+#   * BUY is a SPREAD rule across models on one cell, which needs no baseline at all and is why
+#     it survives the retraction unchanged;
+#   * NO "CLEARS THE FLOOR" LANGUAGE MAY APPEAR for the composed cell anywhere in the scout or
+#     roster report. ``SCOUT_COMPOSED_FLOOR_LANGUAGE`` is the banned phrasing, kept as data so
+#     the report generator can assert on its own output rather than rely on a reviewer.
+SCOUT_COMPOSED_FLOOR_LANGUAGE = ("clears the floor", "clears its floor", "above the floor",
+                                 "off the floor", "cleared the floor", "beats the floor")
+
+
+def scout_informed_chance(cells=None):
+    """Informed chance on the frontier cells: 1/(k-1) at the k=12 operating point.
+
+    The stated initial map means a guesser knows the queried agent's own starting value is not
+    the answer, so chance is over k-1 candidates and not k. It is the number STOP(floor) is
+    read against, and it is not a floor: no policy class is being priced, only a guess.
+    """
+    cells = FRONTIER_CELLS if cells is None else cells
+    k = TK.CANONICAL[cells["composed"]].k
+    return 1.0 / (k - 1)
+
+
+def scout_cells(models=SCOUT_MODELS, n=SCOUT_N, effort=SCOUT_EFFORT):
+    """The scout's (cell, length, n, budget) plan — the single source of truth for the runner
+    AND the price, so a cell cannot be run at a budget it was not priced at.
+
+    Four cells: the composed cell at both scout lengths, since it carries the length axis and
+    that is where separation would come from, and each component at the WORK-MATCHED partner of
+    the DEEPEST composed length (state@85, bind@171) — a component that holds the work the
+    composed cell makes it do at 256 holds the smaller amount it makes it do at 128, and the
+    component reading is a GATE, not a ranking.
+    """
+    out = []
+    for L in SCOUT_COMPOSED_LENGTHS:
+        out.append({"cell": "composed", "task": FRONTIER_CELLS["composed"], "length": L, "n": n,
+                    "settings": {"effort": effort,
+                                 "max_new_tokens": SCOUT_BUDGETS[("composed", L)]}})
+    for c in ("state", "bind"):
+        for L in SCOUT_COMPONENT_LENGTHS[c]:
+            out.append({"cell": c, "task": FRONTIER_CELLS[c], "length": L, "n": n,
+                        "settings": {"effort": effort,
+                                     "max_new_tokens": SCOUT_BUDGETS[(c, L)]}})
+    return out
+
+
+def scout_verdict(scores, n=SCOUT_N, chance=None, models=SCOUT_MODELS):
+    """The scout's decision rule, applied mechanically and IN THE REGISTERED ORDER.
+
+    Fixed before any scout result exists. ``scores`` is
+    ``{model: {"composed@128": row, "composed@256": row, "state@85": row, "bind@171": row}}``
+    where a row carries ``match`` and the two validity rates ``length_rate`` (finish=length) and
+    ``empty_rate``. Returns ``(code, why, detail)``.
+
+    The order is the rule. Evaluated in any other order, a truncated cell reads as a floor and
+    STOP(floor) fires on a budget defect — which is how the published s5 L64 cliff was made.
+
+      1. VOID_TRUNCATION   any cell over SCOUT_TRUNCATION_MAX on finish=length OR empty answers.
+                           That cell is re-run at a raised budget and enters no decision. Raises
+                           ScoutCellVoid rather than returning, so a void cannot be read as a
+                           result.
+      2. STOP_CEILING      the top model's composed@256 >= SCOUT_CEILING. A ceiling cannot rank
+                           a roster, so the roster run buys nothing; redesign (raise k or L).
+      3. STOP_FLOOR        every scout model within SCOUT_FLOOR_SE standard errors of INFORMED
+                           CHANCE on composed@128. Redesign, do not re-budget: the frontier is a
+                           scratchpad regime, so the composed cell is unfloorable there for the
+                           same reason it is unfloorable on the guided read, and this is a
+                           statement about a guess baseline and not about a cleared floor.
+      4. STOP_COMPONENT    either component below SCOUT_COMPONENT_MIN for the top model. The
+                           composed cell is then state-limited or retrieval-limited and its
+                           number is unreadable for the same reason a local V4 is.
+      5. BUY / NO_BUY      BUY iff the composed spread across the three models is >=
+                           SCOUT_SEPARATION at EITHER composed length AND both components are >=
+                           SCOUT_COMPONENT_MIN for EVERY scout model. The spread is computed per
+                           length and both are reported; "either" is registered here, before any
+                           number exists, because two composed lengths are registered and a rule
+                           that named one would discard the other's information after the fact.
+    """
+    chance = scout_informed_chance() if chance is None else chance
+    ceiling_key = f"composed@{SCOUT_STOP_CEILING_LENGTH}"
+    floor_key = f"composed@{SCOUT_STOP_FLOOR_LENGTH}"
+    models = [m for m in models if m in scores]
+    detail = {"chance": chance, "n": n, "models": models}
+
+    void = [f"{m} {key} (length {row.get('length_rate'):.2f} / empty "
+            f"{row.get('empty_rate'):.2f})"
+            for m in models for key, row in sorted(scores[m].items())
+            if max(row.get("length_rate") or 0.0, row.get("empty_rate") or 0.0)
+            > SCOUT_TRUNCATION_MAX]
+    detail["void_cells"] = void
+    if void:
+        raise ScoutCellVoid(
+            f"{len(void)} cell(s) over the {SCOUT_TRUNCATION_MAX:.0%} truncation/empty bar: "
+            f"{'; '.join(void)}. Each is re-run at a raised budget and enters no stop or buy "
+            "decision until it is; a truncated cell is a budget measurement, not a model one.")
+
+    ranked = sorted(models, key=lambda m: -(scores[m].get(ceiling_key, {}).get("match") or 0.0))
+    top = ranked[0] if ranked else None
+    detail["top_model"] = top
+    comps = {c: {m: scores[m].get(f"{c}@{L}", {}).get("match")
+                 for m in models}
+             for c in ("state", "bind") for L in SCOUT_COMPONENT_LENGTHS[c]}
+    spreads = {}
+    for L in SCOUT_COMPOSED_LENGTHS:
+        vals = [scores[m].get(f"composed@{L}", {}).get("match") for m in models]
+        vals = [v for v in vals if v is not None]
+        spreads[L] = (max(vals) - min(vals)) if len(vals) > 1 else None
+    detail["spreads"] = spreads
+    detail["components"] = comps
+    # DESCRIPTIVE, computed unconditionally so an early stop still reports what the later rules
+    # would have read. No branch below reads these; each recomputes its own condition.
+    se_c = math.sqrt(max(1e-12, chance * (1.0 - chance) / n))
+    detail["informed_chance_band"] = [round(chance - SCOUT_FLOOR_SE * se_c, 4),
+                                      round(chance + SCOUT_FLOOR_SE * se_c, 4)]
+    detail["components_all_above_min"] = all(
+        v is not None and v >= SCOUT_COMPONENT_MIN for c in comps for v in comps[c].values())
+    detail["best_spread"] = max((s for s in spreads.values() if s is not None), default=None)
+
+    top_ceiling = scores.get(top, {}).get(ceiling_key, {}).get("match")
+    if top_ceiling is not None and top_ceiling >= SCOUT_CEILING:
+        return "STOP_CEILING", (
+            f"the top scout model ({top}) reads {top_ceiling:.3f} on {ceiling_key}, at or above "
+            f"{SCOUT_CEILING}. A ceiling cannot rank the roster, so the roster run buys nothing; "
+            "redesign (raise k or L) before spending."), detail
+
+    se = math.sqrt(max(1e-12, chance * (1.0 - chance) / n))
+    at_chance = {m: scores[m].get(floor_key, {}).get("match") for m in models}
+    if at_chance and all(v is not None and v <= chance + SCOUT_FLOOR_SE * se
+                         for v in at_chance.values()):
+        return "STOP_FLOOR", (
+            f"every scout model is within {SCOUT_FLOOR_SE:.0f} se of informed chance "
+            f"({chance:.4f} = 1/(k-1), se {se:.4f}) on {floor_key}: {at_chance}. Zero separation "
+            "across the roster's range means zero expected pairwise separations in the full run. "
+            "Redesign, do not re-budget. Stated against informed chance and not against an "
+            "operative floor, because the frontier is a scratchpad regime and the composed cell "
+            "has no floor there."), detail
+
+    if top is not None:
+        low = {c: v[top] for c, v in comps.items()
+               if v.get(top) is None or v[top] < SCOUT_COMPONENT_MIN}
+        if low:
+            return "STOP_COMPONENT", (
+                f"component(s) {sorted(low)} read {low} for the top model ({top}), below "
+                f"{SCOUT_COMPONENT_MIN}. The composed cell is state-limited or "
+                "retrieval-limited, so its number does not measure the composition; redesign "
+                "the component that failed before buying a ranking."), detail
+
+    comp_ok = detail["components_all_above_min"]
+    best = detail["best_spread"]
+    if best is not None and best >= SCOUT_SEPARATION and comp_ok:
+        return "BUY", (
+            f"the composed spread across the three scout models reaches {best:.3f} "
+            f"({ {L: (None if s is None else round(s, 3)) for L, s in spreads.items()} }), at or "
+            f"above {SCOUT_SEPARATION}, while both components sit at or above "
+            f"{SCOUT_COMPONENT_MIN} for every scout model. The composed cell discriminates "
+            "inside the roster's range where the components do not."), detail
+    return "NO_BUY", (
+        f"no stop rule fires and the buy rule is not met: composed spread "
+        f"{ {L: (None if s is None else round(s, 3)) for L, s in spreads.items()} } against "
+        f"{SCOUT_SEPARATION}, components at or above {SCOUT_COMPONENT_MIN} for every model: "
+        f"{comp_ok}. The roster run is not bought."), detail
 
 
 # ---- costs ---------------------------------------------------------------------------------
@@ -1021,8 +1243,9 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
             "algorithm. Neither 'clears' nor 'does not clear' is available for the composed cell "
             f"here, so no composition verdict is. What the excluded both-maps class reaches on "
             f"the exact scored items is {pr}, and it is a lower bound on that class's max rather "
-            "than a floor. The comparison this read does support is WITHIN-RUN — the composed "
-            "cell against its work-matched component on the same seeds and items.")
+            "than a floor. The comparison this read does support is WITHIN-RUN and UNPAIRED — "
+            "the composed cell against its work-matched component on the same seeds and the same "
+            "item count, drawn from different specs and so never item by item.")
     if comp_forms["composed"]:
         return "V2_NO_GAP_HERE", (
             "the composed cell forms, and so does each component at the length carrying the same "
@@ -1061,28 +1284,35 @@ def scout_plan(models=SCOUT_MODELS, n=SCOUT_N):
     z = 2.1 against a two-sided binomial at p = 0.5 — enough to see a spread that large, and
     deliberately not enough to order two models 0.05 apart, which is what the roster run is for.
     """
-    from factworld.benchmark import MODELS, cost_estimate
+    from factworld.benchmark import MODELS, cell_dollar_cap, cost_estimate
 
-    cells = ([{"task": FRONTIER_CELLS["composed"], "length": L, "n": n,
-               "settings": {"effort": "high", "max_new_tokens": SCOUT_MAX_NEW_TOKENS}}
-              for L in SCOUT_COMPOSED_LENGTHS]
-             + [{"task": FRONTIER_CELLS[c], "length": L, "n": n,
-                 "settings": {"effort": "high", "max_new_tokens": SCOUT_MAX_NEW_TOKENS}}
-                for c in ("state", "bind") for L in SCOUT_COMPONENT_LENGTHS[c]])
-    rows, total = [], 0.0
+    cells = scout_cells(models=models, n=n)
+    rows, total, worst = [], 0.0, 0.0
     for slug in models:
         if slug not in MODELS:
             rows.append({"model": slug, "error": "not in MODELS"})
             continue
         est = cost_estimate(slug, cells, assumed_output_tokens=4000)
+        # WORST CASE, which the 4000-token estimate does not price: every call spending its whole
+        # registered budget. It is what the per-cell dollar caps actually bound the run to, and it
+        # is the number the spend is approved against.
+        caps = {f"{c['cell']}@{c['length']}":
+                cell_dollar_cap(slug, c["n"], c["settings"]["max_new_tokens"]) for c in cells}
+        full = sum(c["n"] * c["settings"]["max_new_tokens"] for c in cells)
+        w = (est["prompt_tokens"] / 1e6 * MODELS[slug]["prompt_price_per_M"]
+             + full / 1e6 * MODELS[slug]["completion_price_per_M"])
         total += est["cost_usd"]
-        rows.append({"model": slug, **est})
+        worst += w
+        rows.append({"model": slug, **est, "worst_case_usd": round(w, 2),
+                     "cell_dollar_caps": caps})
     # what the scout is gating: the same three cells over their OWN registered grids — the
     # composed cell's lengths and each component's work-matched partners of them — and the whole
     # roster, at the n a ranking needs. Both numbers belong in the decision, because the scout is
     # only worth its own price against what it stops.
     roster_cells = [{"task": FRONTIER_CELLS[c], "length": L, "n": ROSTER_N,
-                     "settings": {"effort": "high", "max_new_tokens": SCOUT_MAX_NEW_TOKENS}}
+                     "settings": {"effort": SCOUT_EFFORT,
+                                  "max_new_tokens": SCOUT_BUDGETS.get((c, L),
+                                                                      SCOUT_MAX_NEW_TOKENS)}}
                     for c in ("state", "bind", "composed")
                     for L in TK.CANONICAL[FRONTIER_CELLS[c]].eval_lengths]
     roster, roster_total = [], 0.0
@@ -1091,34 +1321,52 @@ def scout_plan(models=SCOUT_MODELS, n=SCOUT_N):
         roster_total += est["cost_usd"]
         roster.append({"model": slug, "cost_usd": est["cost_usd"]})
     return {"cells": cells, "n_cells": len(cells), "per_model": rows,
-            "total_usd": round(total, 2),
+            "total_usd": round(total, 2), "worst_case_usd": round(worst, 2),
+            "budgets": {f"{c['cell']}@{c['length']}": c["settings"]["max_new_tokens"]
+                        for c in cells},
+            "informed_chance": round(scout_informed_chance(), 4),
             "roster_run_if_bought": {
                 "models": len(MODELS), "cells_per_model": len(roster_cells), "n": ROSTER_N,
                 "per_model": sorted(roster, key=lambda r: -r["cost_usd"]),
                 "total_usd": round(roster_total, 2)},
+            # THE ORDER IS PART OF THE RULE — see scout_verdict, which applies it.
             "stop_rules": [
-                f"STOP (ceiling) if the top scout model's COMPOSED match >= {SCOUT_CEILING} at "
-                f"L={max(SCOUT_COMPOSED_LENGTHS)}. A ceiling cannot rank the roster, so the "
-                "roster run buys "
-                f"nothing; redesign (raise k or L) before spending.",
-                "STOP (floor) if the composed cell is at its operative floor for ALL scout "
-                "models. Zero separation across the roster's range means zero expected pairwise "
-                "separations in the full run — the same reading that stopped the s5_chain "
-                "ranking.",
-                f"STOP (component) if either COMPONENT is below {SCOUT_COMPONENT_MIN} for the "
-                "top scout model. The composed cell is then unreadable on the frontier for the "
-                "same reason it is unreadable locally when a component does not form.",
+                f"1. VOID (truncation), FIRST: any cell with more than "
+                f"{SCOUT_TRUNCATION_MAX:.0%} finish=length or empty answers is VOID — re-run "
+                "that cell at a raised budget, and it may not enter any stop or buy decision. "
+                "Without this, STOP(floor) fires on truncation and manufactures the published "
+                "s5 L64 cliff a second time.",
+                f"2. STOP (ceiling) if the top scout model's COMPOSED match >= {SCOUT_CEILING} "
+                f"at L={SCOUT_STOP_CEILING_LENGTH}. A ceiling cannot rank the roster, so the "
+                "roster run buys nothing; redesign (raise k or L) before spending.",
+                f"3. STOP (floor) if all three models are within {SCOUT_FLOOR_SE:.0f} se of "
+                f"INFORMED CHANCE 1/(k-1) = {scout_informed_chance():.4f} on "
+                f"composed@{SCOUT_STOP_FLOOR_LENGTH}. Stated against informed chance and NOT "
+                "against an operative floor: the frontier is a scratchpad regime, so the "
+                "composed cell is unfloorable there for exactly the reason it is unfloorable on "
+                "the guided read. Redesign, do not re-budget.",
+                f"4. STOP (component) if either COMPONENT is below {SCOUT_COMPONENT_MIN} for the "
+                "top scout model. The composed cell is then state-limited or retrieval-limited "
+                "and unreadable for the same reason it is unreadable locally when a component "
+                "does not form.",
             ],
             "buy_rule": (
                 f"BUY the roster run iff the composed cell's spread across the three scout "
-                f"models is >= {SCOUT_SEPARATION} match AND both components are >= "
-                f"{SCOUT_COMPONENT_MIN} for every scout model — the composed cell discriminates "
-                f"inside the roster's range while the components do not."),
+                f"models is >= {SCOUT_SEPARATION} match at either composed length AND both "
+                f"components are >= {SCOUT_COMPONENT_MIN} for every scout model — the composed "
+                f"cell discriminates inside the roster's range while the components do not. It "
+                f"is a SPREAD rule and needs no floor, which is why it survives the composed "
+                f"cell's floor retraction; floor-clearing language is banned for the composed "
+                f"cell anywhere in the scout or roster report "
+                f"(SCOUT_COMPOSED_FLOOR_LANGUAGE, asserted on the report text)."),
             "budget_note": (
-                f"Priced at {SCOUT_MAX_NEW_TOKENS}-token reasoning cells with 4000 assumed "
-                "completion tokens per call. The 8192 budget is the protocol minimum for a "
-                "reasoning-on cell; smaller budgets manufactured the published s5 L64 cliff and "
-                "chain floor as truncation artifacts, so a cheaper scout is not available."),
+                f"Per-cell budgets {dict((f'{c}@{L}', b) for (c, L), b in SCOUT_BUDGETS.items())} "
+                "and 4000 assumed completion tokens per call for the estimate; worst_case_usd "
+                "prices every call at its full budget, which is what the per-cell dollar caps "
+                "bound the run to. The old 8192 was a VALIDITY defect and not a price one: "
+                "cost_estimate never reads max_new_tokens, the composed prompt alone is 2,984 "
+                "tokens at L=128 and 5,583 at L=256, and a truncated reply is scored as wrong — "
+                "which is how the published s5 L64 cliff and chain floor were manufactured."),
             }
 
 

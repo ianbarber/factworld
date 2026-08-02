@@ -4408,7 +4408,7 @@
       },
       "guided": {
         "verdict": "V0_COMPOSED_UNFLOORABLE",
-        "why": "both components form at their own registered lengths, and the composed cell has NO FLOOR on this read's protocol: its floor argument is the one-structure bound W <= max(k, m) + 1, and this protocol's format requires the whole of P then B at every event, which hands those k + m slots to every policy including the task's own algorithm. Neither 'clears' nor 'does not clear' is available for the composed cell here, so no composition verdict is. What the excluded both-maps class reaches on the exact scored items is 0.719, and it is a lower bound on that class's max rather than a floor. The comparison this read does support is WITHIN-RUN \u2014 the composed cell against its work-matched component on the same seeds and items.",
+        "why": "both components form at their own registered lengths, and the composed cell has NO FLOOR on this read's protocol: its floor argument is the one-structure bound W <= max(k, m) + 1, and this protocol's format requires the whole of P then B at every event, which hands those k + m slots to every policy including the task's own algorithm. Neither 'clears' nor 'does not clear' is available for the composed cell here, so no composition verdict is. What the excluded both-maps class reaches on the exact scored items is 0.719, and it is a lower bound on that class's max rather than a floor. The comparison this read does support is WITHIN-RUN and UNPAIRED \u2014 the composed cell against its work-matched component on the same seeds and the same item count, drawn from different specs and so never item by item.",
         "control": {
           "seeds": 3,
           "cleared_on": "bind@31",

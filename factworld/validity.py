@@ -1549,6 +1549,8 @@ def s5_bind_v3_row_depth(row: str, query: str = "state", length: int | None = No
         return 1
     if row in S5_BIND_V3_REPLAY_DEPTH_ROWS:
         return (1 << 30) if length is None else length
+    if row.startswith("partial_carry_j") and row[len("partial_carry_j"):].isdigit():
+        return (1 << 30) if length is None else length      # it replays the whole stream
     if row.startswith(("window_", "prefix_")) and row.split("_")[1].isdigit():
         f = int(row.split("_")[1]) / 100.0   # a replay of f*L events chains that many
         return (1 << 30) if length is None else max(1, int(round(f * length)))
@@ -1630,6 +1632,13 @@ def s5_bind_v3_row_cost(row: str, k: int, m: int, n_swap: int, n_give: int,
             return 2, 2 * min(p, L) + 3
         impl = s5_bind_v3_surface_price(k, m, n_swap, n_give, named, query, weights)
         return impl["W"], impl["S"]
+    if row.startswith("partial_carry_j") and row[len("partial_carry_j"):].isdigit():
+        # carry P in full and only j of the m holder cells, allocated by first write, online, no
+        # lookahead; an uncached holder read hits the stated fact block (W4). W = k + j + 1, and
+        # the replay itself is the task's, so S ties. It is priced here because a BOUNDED PAD
+        # admits exactly j <= pad of this family and it is the family that sets the number there.
+        return k + int(row[len("partial_carry_j"):]) + 1, \
+            (k + m) + 6 * n_swap + 3 * n_give + 1
     if row == "ckpt_copy_prev":
         # emit the previous checkpoint, so the trace never moves: one keyed read of the stated
         # block and the answer register. The (k + m) L emission itself is protocol overhead the
@@ -2057,6 +2066,131 @@ def s5_bind_v3_operative_floor(floors: dict[str, float], k: int, m: int,
         ok = s5_bind_v3_classify(k, m, n_swap, n_give, named, query, rows=tuple(floors))
     vals = [v for nm, v in floors.items() if ok.get(nm) and v is not None]
     return max(vals) if vals else None
+
+
+# ===========================================================================================
+# THE BOUNDED PAD — the same protocol argument run at a WIDTH instead of at a flag
+# ===========================================================================================
+# ``guided`` above is binary because the shipped format is: it writes the whole of P then the
+# whole of B after every event, so the pad it hands out is k + m slots wide and the composed
+# cell's live-slot conjunct is void. The argument is not binary, and writing it at a width is what
+# makes the retraction reversible: a pad of ``pad`` slots is ``pad`` free live slots (W3 — a pad
+# substitutes for REGISTERS, and a policy may allocate them as it likes), so a row of true cost W
+# costs W - pad of the policy's own and the class rule admits it iff
+#
+#     W - pad <= max(k, m) + 1.
+#
+# THE COMPOSED CELL IS FLOORED IFF THE TASK IS EXCLUDED, and its algorithm costs W = k + m + 1:
+#
+#     k + m + 1 - pad > max(k, m) + 1   <=>   pad < min(k, m).
+#
+# So ``pad = k + m`` (the shipped format) is unfloorable, ``pad = min(k, m)`` is unfloorable by a
+# TIE, and every ``pad <= min(k, m) - 1`` restores the bound. ``s5_bind_v3_pad_max_width`` returns
+# that last number; at the k = m = 6 local operating point it is 5.
+#
+# THE SAME INEQUALITY SETS THE FLOOR'S VALUE, and that half decides whether a floorable width is
+# a USEFUL one. ``partial_carry_j`` costs W = k + j + 1, so a pad of ``pad`` admits exactly
+# j <= pad, and that family is not flat in j. Measured at k = m = 6 on the exact 128 scored items
+# and a disjoint 4000-item pool (``scripts/probe_s5bind_v3_bounded_pad_floor_20260802.py``):
+#
+#     pad    composed@48        composed@64        composed@96
+#     1-2    0.2344 (1.17x)     0.2266 (1.13x)     0.2109 (1.05x)   = the PLAIN floor, unchanged
+#     3      0.2891 (1.45x)     0.2578 (1.29x)     0.2109 (1.05x)
+#     4      0.3906 (1.95x)     0.2734 (1.37x)     0.2109 (1.05x)
+#     5      0.6132 (3.07x)     0.4609 (2.31x)     0.2969 (1.48x)   bar 0.763 — unbuyable
+#     6+     unfloorable        unfloorable        unfloorable
+#
+# so the floorable range is pad <= 5 and the range that costs the floor NOTHING is pad <= 2.
+# COMPONENT cells are unmoved at every width, measured as well as argued (state@17 0.2188,
+# state@80 0.2500, bind@31 and bind@132 0.2000 at every pad from 1 to 12): their rule is depth and
+# steps, and T3 holds — a pad stores values, it does not chain them, and it does not shorten a
+# scan.
+# ===========================================================================================
+def s5_bind_v3_pad_max_width(k: int, m: int) -> int:
+    """The widest pad under which a COMPOSED cell still has a floor: ``min(k, m) - 1``.
+
+    At ``min(k, m)`` the task ties the one-structure bound and is admitted, which is why the
+    boundary is stated as a width rather than as "narrower than one structure".
+    """
+    return min(k, m) - 1
+
+
+def s5_bind_v3_pad_floorable(k: int, m: int, pad: int, named: bool = False) -> bool:
+    """Whether a cell of this kind keeps a floor under a pad ``pad`` slots wide.
+
+    A COMPONENT cell always does — its class rule never used the W axis. A COMPOSED cell does iff
+    ``pad <= s5_bind_v3_pad_max_width(k, m)``.
+    """
+    return bool(named) or pad <= s5_bind_v3_pad_max_width(k, m)
+
+
+def s5_bind_v3_pad_admits(row: str, k: int, m: int, n_swap: int, n_give: int,
+                          named: bool = False, query: str = "state", pad: int = 0,
+                          weights=None) -> bool:
+    """Whether ONE row may set a floor under a pad ``pad`` slots wide.
+
+    ``s5_bind_v3_admits`` with the live-slot conjunct relaxed by the pad and the depth and step
+    conjuncts untouched (T3). ``pad=0`` is the plain protocol and returns exactly what
+    ``s5_bind_v3_admits`` returns, which is what makes this a generalisation rather than a second
+    rule; ``pad >= min(k, m)`` admits the task on a composed cell, which is what
+    ``s5_bind_v3_pad_operative_floor`` turns into a None.
+    """
+    if row == "surface_ranker":
+        impl = s5_bind_v3_surface_price(k, m, n_swap, n_give, named, query, weights)
+        if named:
+            return (impl["S"] < s5_bind_v3_task_cost_min(k, m, n_swap, n_give, named, query)
+                    and s5_bind_v3_surface_depth(weights) <= S5_BIND_V3_MAX_DEPTH)
+        return (impl["W"] - pad <= one_structure_bound(k, m)
+                and impl["S"] <= s5_bind_v3_task_cost(k, m, n_swap, n_give, named, query)[1])
+    w, s = s5_bind_v3_row_cost(row, k, m, n_swap, n_give, query, named, weights)
+    wt, st = s5_bind_v3_task_cost(k, m, n_swap, n_give, named, query)
+    if not named:
+        return floor_eligible(w - pad, s, one_structure_bound(k, m), st)
+    return floor_eligible(w, s, wt, s5_bind_v3_task_cost_min(k, m, n_swap, n_give, named, query),
+                          s5_bind_v3_row_depth(row, query, n_swap + n_give, weights),
+                          S5_BIND_V3_MAX_DEPTH)
+
+
+def s5_bind_v3_pad_operative_floor(floors: dict[str, float], k: int, m: int,
+                                   n_swap: int, n_give: int, named: bool = False,
+                                   query: str = "state", pad: int = 0) -> float | None:
+    """The number a score must clear under a BOUNDED-PAD protocol, or None where the pad is wide
+    enough to admit the task.
+
+    ``floors`` is expected to carry the ``partial_carry_j{j}`` rows as well as the registry and
+    swept ones: the pad admits exactly j <= pad of that family and it is the family that sets the
+    number at every pad above 2, so a caller that omits it under-reports the floor.
+    ``s5_bind_v3_pad_floors`` builds the whole dict from a cell's items.
+    """
+    if not s5_bind_v3_pad_floorable(k, m, pad, named):
+        return None
+    vals = [v for nm, v in floors.items()
+            if v is not None and s5_bind_v3_pad_admits(nm, k, m, n_swap, n_give, named, query,
+                                                       pad)]
+    return max(vals) if vals else None
+
+
+def s5_bind_v3_pad_floors(examples, k: int, m: int, named: bool | None = None,
+                          query: str | None = None) -> dict[str, float]:
+    """Every row a bounded-pad floor maxes over, measured on one cell's exact items.
+
+    The registry rows, the swept families, the checkpoint-shaped rows and the whole partial-carry
+    profile in one dict, so ``s5_bind_v3_pad_operative_floor`` has the family that decides the
+    number at every pad above 2 rather than silently omitting it.
+    """
+    if named is None:
+        named = s5_bind_v3_is_named(examples)
+    if query is None:
+        query = s5_bind_v3_query_kind(examples)
+    ns, ng = s5_bind_v3_shape(examples)
+    fl = dict(s5_bind_v3_floors(examples, k, m))
+    fl.update(s5_bind_v3_family_floors(examples, k, m, named, query,
+                                       rows=s5_bind_v3_family_rows(k, m, ns, ng, named, query)))
+    fl.update(s5_bind_v3_ckpt_floors(examples))
+    if not named:
+        for j, v in enumerate(s5_bind_v3_partial_carry_profile(examples, m)):
+            fl[f"partial_carry_j{j}"] = v
+    return fl
 
 
 # --- the two component families, swept, so each cell carries its continuum ------------------
@@ -2729,10 +2863,17 @@ def s5_bind_v3_block_drop(examples, width: float, pos: float) -> float:
 #
 # SO A COMPOSED-CELL SCORE UNDER THIS PROTOCOL IS A WITHIN-RUN COMPARISON AND NEVER A CLEARED
 # FLOOR, on the trace channel and on the answer channel alike. The comparison is a real object —
-# the same seeds, the same items, matched depth and matched cost — and the DOWNWARD separation it
-# carries does not need a floor, because a floor bounds what a cheap policy scores and a deficit
-# is not a claim about cheapness. What it cannot support is the other direction: no "the composed
-# cell clears its floor" reading is available under this protocol at any registered length.
+# the same seeds, the same item count, matched depth and matched cost — and the DOWNWARD
+# separation it carries does not need a floor, because a floor bounds what a cheap policy scores
+# and a deficit is not a claim about cheapness. What it cannot support is the other direction: no
+# "the composed cell clears its floor" reading is available under this protocol at any registered
+# length.
+#
+# IT IS UNPAIRED. The composed cell and its work-matched component are different SPECS drawing
+# different item streams at different lengths, matched on seed, item count and forward-pass cost
+# and on nothing else, so a difference between them is a difference of two independent
+# proportions. "On the same items" is false of this comparison and is false of every three-cell
+# table; only the two READS of one cell (plain and guided) score the same items.
 #
 # THE CHEAP CHECKPOINT-SHAPED POLICIES ARE PRICED HERE and none of them raises a floor:
 # ``ckpt_copy_prev`` (emit the previous checkpoint, so the trace never moves) is exactly the

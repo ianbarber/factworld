@@ -78,6 +78,11 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_is_named,
     s5_bind_v3_needs,
     s5_bind_v3_operative_floor,
+    s5_bind_v3_pad_admits,
+    s5_bind_v3_pad_floorable,
+    s5_bind_v3_pad_floors,
+    s5_bind_v3_pad_max_width,
+    s5_bind_v3_pad_operative_floor,
     s5_bind_v3_pad_reach,
     s5_bind_v3_partial_carry,
     s5_bind_v3_partial_carry_profile,
@@ -1761,6 +1766,97 @@ def test_a_floor_is_recomputed_on_the_items_the_read_actually_scores():
         assert got > s5_bind_v3_operative_floor(fb, k, m, ns, ng, named, query), (
             f"{name}@{L}: the small-n max is not above the large-n one; the selection bias this "
             "pins has gone")
+
+
+def test_a_pad_of_zero_is_the_plain_rule_on_every_row_at_every_cell():
+    """The bounded-pad rule is a GENERALISATION and not a second rule.
+
+    If ``pad=0`` disagreed with ``s5_bind_v3_admits`` anywhere, the bounded protocol's floors and
+    the plain protocol's would be two different objects and the comparison between them would be
+    an artefact of which function was called.
+    """
+    for name, L in (("s5_bind_local_v3", 48), ("s5_bind_local_v3", 96),
+                    ("s5_bind_local_v3_state", 17), ("s5_bind_local_v3_state", 80),
+                    ("s5_bind_local_v3_bind", 31)):
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        ex = TK.generate(spec, "test", n=200, length=L)
+        ns, ng = s5_bind_v3_shape(ex)
+        named, query = s5_bind_v3_is_named(ex), s5_bind_v3_query_kind(ex)
+        rows = (list(S5_BIND_V3_ROWS) + list(S5_BIND_V3_CKPT_ROWS) + ["surface_ranker"]
+                + list(s5_bind_v3_family_rows(k, m, ns, ng, named, query)))
+        for r in rows:
+            assert (s5_bind_v3_admits(r, k, m, ns, ng, named, query)
+                    == s5_bind_v3_pad_admits(r, k, m, ns, ng, named, query, pad=0)), (
+                f"{name}@{L}: pad=0 disagrees with the plain rule on {r!r}")
+
+
+def test_the_composed_floor_survives_exactly_the_pads_narrower_than_one_structure():
+    """The single inequality the bounded-pad protocol rests on, checked as a boundary.
+
+    A pad of w slots is w free live slots, so the task's W = k + m + 1 costs k + m + 1 - w of a
+    policy's own and the class excludes it iff that exceeds max(k, m) + 1, i.e. iff w < min(k, m).
+    The boundary is what matters: at w = min(k, m) the task TIES the bound and is admitted, so
+    "narrower than one structure" would be off by one and the cell would be unfloorable at the
+    width a half-and-half format hands out.
+    """
+    for k, m in ((6, 6), (12, 12), (8, 5)):
+        assert s5_bind_v3_pad_max_width(k, m) == min(k, m) - 1
+        for w in range(0, k + m + 1):
+            want = w < min(k, m)
+            assert s5_bind_v3_pad_floorable(k, m, w) is want, (k, m, w)
+            # a COMPONENT cell is floored at every width: its rule never used the W axis
+            assert s5_bind_v3_pad_floorable(k, m, w, named=True) is True, (k, m, w)
+
+
+def test_the_partial_carry_family_is_what_a_pad_lets_in_and_it_is_priced():
+    """A pad of w admits exactly ``partial_carry_j`` for j <= w, and that family sets the floor.
+
+    Both halves matter. If the family were not priced at all it would be silently excluded and the
+    bounded floor would be reported too LOW, which is the direction that manufactures a cleared
+    floor; if it were admitted at every j the pad would admit the task by another name.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=200, length=48)
+    ns, ng = s5_bind_v3_shape(ex)
+    for w in range(0, m + 1):
+        for j in range(m + 1):
+            got = s5_bind_v3_pad_admits(f"partial_carry_j{j}", k, m, ns, ng, False, "state", w)
+            assert got is (j <= w), f"pad={w}: partial_carry_j{j} admitted={got}"
+    assert s5_bind_v3_row_cost("partial_carry_j3", k, m, ns, ng, "state")[0] == k + 3 + 1
+
+
+def test_the_bounded_pad_floor_is_the_plain_floor_up_to_width_two_and_rises_after():
+    """The measurement the format width is chosen on, pinned at the k = 6 operating point.
+
+    ``pad <= 2`` costs the composed cell's floor NOTHING — it is the plain protocol's own number —
+    and every wider floorable pad is strictly worse. That is the whole reason the registered
+    format is two slots and not five: five is floorable and useless (the bar at composed@48 is
+    0.763), two is floorable and free.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=128, length=48)
+    ns, ng = s5_bind_v3_shape(ex)
+    fl = s5_bind_v3_pad_floors(ex, k, m, False, "state")
+    plain = s5_bind_v3_operative_floor(fl, k, m, ns, ng, False, "state")
+    at = {w: s5_bind_v3_pad_operative_floor(fl, k, m, ns, ng, False, "state", pad=w)
+          for w in (0, 1, 2, 3, 4, 5, 6, 12)}
+    assert at[1] == at[2] == plain, at
+    assert at[3] > at[2] and at[4] > at[3] and at[5] > at[4], at
+    assert at[6] is None and at[12] is None, at
+    # and the component cells do not move at any width — a pad buys registers, not chaining
+    for name, L in (("s5_bind_local_v3_state", 17), ("s5_bind_local_v3_bind", 31)):
+        cs = TK.CANONICAL[name]
+        cex = TK.generate(cs, "test", n=128, length=L)
+        cns, cng = s5_bind_v3_shape(cex)
+        cq = s5_bind_v3_query_kind(cex)
+        cfl = s5_bind_v3_pad_floors(cex, cs.k, cs.n_objects_active, True, cq)
+        vals = {w: s5_bind_v3_pad_operative_floor(cfl, cs.k, cs.n_objects_active, cns, cng,
+                                                  True, cq, pad=w)
+                for w in (0, 1, 2, 5, 6, 12)}
+        assert len(set(vals.values())) == 1, f"{name}@{L}: the pad moved a component floor {vals}"
 
 
 def _run() -> int:
