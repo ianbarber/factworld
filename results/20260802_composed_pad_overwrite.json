@@ -1,0 +1,140 @@
+{
+ "generated": "2026-08-03T08:35:56.305581+00:00",
+ "cfg": {
+  "counts": false,
+  "forced": false,
+  "decompose": false,
+  "overwrite": true,
+  "ckpt_dir": "results/20260802_s5bind_v3_bounded_pad_restart_grid_ckpt",
+  "arch": "gdp_hybrid",
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "cells": "composed@48",
+  "format": "moved2",
+  "n": 512,
+  "n_count": 200,
+  "batch_read": 128,
+  "batch_forced": 16,
+  "mixes": null,
+  "steps": 600,
+  "warmup": 200,
+  "lr": 0.0003,
+  "batch": 16,
+  "train_n": 20000,
+  "device": "cuda",
+  "out": "results/20260802_composed_pad_overwrite.json"
+ },
+ "runs": [
+  {
+   "seed": 0,
+   "mix": "registered",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.52532958984375
+   },
+   "after": {
+    "composed@48": 0.5503743489583334
+   },
+   "final_loss": 0.864990234375
+  },
+  {
+   "seed": 0,
+   "mix": "no_answer_docs",
+   "n_docs": 40000,
+   "before": {
+    "composed@48": 0.52532958984375
+   },
+   "after": {
+    "composed@48": 0.5555419921875
+   },
+   "final_loss": 0.3223765194416046
+  },
+  {
+   "seed": 0,
+   "mix": "composed_only",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.52532958984375
+   },
+   "after": {
+    "composed@48": 0.5679931640625
+   },
+   "final_loss": 0.3335579037666321
+  },
+  {
+   "seed": 1,
+   "mix": "registered",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.4839680989583333
+   },
+   "after": {
+    "composed@48": 0.4847208658854167
+   },
+   "final_loss": 0.950439453125
+  },
+  {
+   "seed": 1,
+   "mix": "no_answer_docs",
+   "n_docs": 40000,
+   "before": {
+    "composed@48": 0.4839680989583333
+   },
+   "after": {
+    "composed@48": 0.4898681640625
+   },
+   "final_loss": 0.46342742443084717
+  },
+  {
+   "seed": 1,
+   "mix": "composed_only",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.4839680989583333
+   },
+   "after": {
+    "composed@48": 0.4827067057291667
+   },
+   "final_loss": 0.30968791246414185
+  },
+  {
+   "seed": 2,
+   "mix": "registered",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.7991536458333334
+   },
+   "after": {
+    "composed@48": 0.7900390625
+   },
+   "final_loss": 0.90234375
+  },
+  {
+   "seed": 2,
+   "mix": "no_answer_docs",
+   "n_docs": 40000,
+   "before": {
+    "composed@48": 0.7991536458333334
+   },
+   "after": {
+    "composed@48": 0.7932942708333334
+   },
+   "final_loss": 0.89453125
+  },
+  {
+   "seed": 2,
+   "mix": "composed_only",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.7991536458333334
+   },
+   "after": {
+    "composed@48": 0.7947998046875
+   },
+   "final_loss": 0.881103515625
+  }
+ ]
+}

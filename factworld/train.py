@@ -78,7 +78,8 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
         seed=0, return_model=False, num_householder=4, allow_neg_eigval=True,
         use_short_conv=False, resid_init=False, model=None, loss_log_interval=0,
         wandb_project=None, wandb_run_name=None, wandb_log_every=1, wandb_config=None,
-        prompt_lens=None, opt=None, sched_step0=0, sched_total=None, return_opt=False):
+        prompt_lens=None, opt=None, sched_step0=0, sched_total=None, return_opt=False,
+        gen=None, return_gen=False):
     """Train a model from scratch or continue from an existing one.
 
     Args:
@@ -91,6 +92,13 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
             the single-call schedule exactly.
         sched_total: the global step count the cosine decays over; defaults to ``steps``.
         return_opt: also return the optimizer, so the next stage can carry it.
+        gen: optional ``torch.Generator`` to keep drawing batch starts from. If None a fresh one
+            is built from ``seed``, which is what a single-call run does. Passing one back in
+            (with ``opt``, ``sched_step0`` and ``sched_total``) makes a run SPLIT INTO CHUNKS
+            draw the same batches in the same order as the single call it is split from, so
+            reading a probe every N steps costs the measurement and changes nothing else. There
+            is no dropout in any arch here, so the batch draw is the loop's only randomness.
+        return_gen: also return the generator, so the next chunk can carry it.
         loss_log_interval: if > 0, record the training loss every N steps in ``loss_curve``.
         wandb_project: if set and ``wandb`` is installed, log training metrics live.
         wandb_run_name: optional run name; defaults to ``arch_seed{N}``.
@@ -133,7 +141,7 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
         prog = (g - warmup) / max(1, total_sched - warmup)
         return 0.5 * (1.0 + math.cos(math.pi * min(1.0, prog)))
 
-    gen = torch.Generator(device=device).manual_seed(seed)
+    gen = torch.Generator(device=device).manual_seed(seed) if gen is None else gen
     ndoc, pad = len(docs), tok.pad_id
     model.train()
     last = float("nan")
@@ -183,6 +191,8 @@ def run(arch, tok, docs, encoded, *, device="cuda", steps=20000, batch=16, lr=1e
         wandb.finish()
     if return_opt:
         out["opt"] = opt
+    if return_gen:
+        out["gen"] = gen
     if return_model:
         out["model"] = model
         return out

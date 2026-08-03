@@ -168,6 +168,20 @@ SYSTEM_PROMPT_EST_TOKENS = 90
 # provider/quantization request options. ``responses_endpoint`` selects
 # ``ResponsesBackend`` instead of ``APIBackend`` for endpoints that speak the
 # OpenAI Responses API (e.g. Meta Model API /v1/responses).
+#
+# Self-hosted entries (``local_served``: a machine the owner runs — this box or
+# another on the tailnet) additionally carry ``max_model_len``, the TOTAL window
+# their server is started at and the number every planned budget is checked
+# against, plus ``serve_hint``, the command that brings that server up, quoted
+# in the error when it does not answer. Four further keys are theirs in practice:
+# ``api_key_optional`` (the endpoint checks no key, so a missing ``api_key_env``
+# is not an error — the value is still sent when the var is set),
+# ``max_workers`` (a MEASURED ceiling on concurrent calls; the runner clamps its
+# --max-workers to it, so a server holding one session is not hammered),
+# ``generation_tok_per_s`` (the MEASURED completion rate, from which the runner
+# sizes each request's timeout — a timeout under a cell's generation time is a
+# retry loop, not an error), and ``context_is_minimum`` (the declared window is a
+# floor rather than an equality, for a server whose --ctx this repo does not own).
 MODELS = {
     "anthropic/claude-opus-4.8": {
         "tier": "frontier_pair", "prompt_price_per_M": 5.0,
@@ -368,7 +382,98 @@ MODELS = {
                                     "high": "high", "xhigh": "xhigh",
                                     "max": "max"},
         "local_served": True,
+        "serve_hint": ".venv-serve/bin/python scripts/serve_local_model.py up",
         "max_model_len": 131072},
+    # STEED ARM (2026-08-02): DeepSeek V4 Flash (IQ2XXS q2 GGUF, ~81 GB resident)
+    # served by ds4-server on steed, a DGX Spark GB10 reached over the tailnet
+    # (scripts/serve_steed_model.py brings it up and down and reads THIS entry).
+    # Registered exactly like the local vLLM arm — {base_url, api_key_env}
+    # resolved by endpoint_for — so it inherits every runner diagnostic: empty
+    # rate, finish reasons, contract/covert-CoT rates, the regime-scoped system
+    # prompt, the resume keys and the cost guard. Prices are 0.0 as a measured
+    # fact (the endpoint is a machine the owner runs), so records carry
+    # cost_usd_est 0.0 rather than an absent cost field. It uses no GPU on THIS
+    # box, so it runs alongside a local training job.
+    # ONE SLUG, NOT TWO. steed's /v1/models advertises deepseek-v4-flash AND
+    # deepseek-v4-pro, both with the display name "DeepSeek V4 Flash". The pair
+    # is an ALIAS, not two models: the server's send_models emits both ids
+    # unconditionally while the loaded engine picks its own id, and on the wire
+    # the two are indistinguishable — greedy decoding (temperature 0, fixed
+    # seed) is reproducible on this endpoint (flash vs flash byte-identical on
+    # every probe) and flash vs pro is byte-identical too, out to a 400-token
+    # thinking trace (results/probes/steed_ds4_identity_20260802.json). Only
+    # -flash is registered; a -pro slug would put one model on the board twice
+    # and a sweep across the two would read as a model comparison.
+    # NO AUTH: the endpoint is tailnet-only and checks no key, so api_key_env is
+    # OPTIONAL here (api_key_optional). The var is still read and sent when set,
+    # so putting auth on the box later needs no code change; a missing key is
+    # not an error the way META_API_KEY's absence is.
+    # THREE REASONING ARMS, NOT SEVEN, AND THE THIRD DEPENDS ON THE WINDOW.
+    # ds4-server parses reasoning_effort and collapses minimal/low/medium/high/
+    # xhigh to ONE internal level (they decode byte-identically), so buying that
+    # band twice buys the same measurement twice. "none" is a genuine off arm and
+    # MUST stay mapped: the server's default think mode is on, so an unmapped arm
+    # would send nothing and silently turn every instant cell into a thinking
+    # cell. "max" is a separate level, but ds4 serves it only when the server's
+    # context is at least 393,216 and otherwise decodes it as the high band — so
+    # whether the roster's top arm is one rung or two is a property of how the
+    # server was STARTED, and preflight_context reads that number live.
+    # supports_reasoning_effort False keeps the OpenRouter extra_body block off
+    # the wire; the value rides the top-level parameter.
+    # Reasoning tokens read like the local arm's: the chat-completions usage has
+    # no reasoning-token field, so rtok is 0 whether or not it thought. There is
+    # no <think> delimiter either — the working is plain content — so the answer
+    # extractors see it: on the sanity row 5 of 30 answers were correct values
+    # inside a sentence ("The a0 of g5 is v37 ."), match 0.833 against
+    # containment 1.000. covert_cot_rate and the contract cells' extraction are
+    # the diagnostics that bite here, not rtok.
+    # CONCURRENCY 1, MEASURED. The unit passes no --batched-session, so the
+    # server allocates a single KV session and serializes: at 1/2/4/8 concurrent
+    # calls throughput was flat at 16.3-16.4 completion tok/s while wall time and
+    # per-call latency scaled linearly with the worker count (7.2 s -> 57.7 s at
+    # 8). Parallelism buys nothing here and only walks calls toward the request
+    # timeout, so max_workers caps the runner at 1.
+    # THE BINDING CONSTRAINT IS WALL CLOCK, NOT CONTEXT, and a cell's budget is
+    # also its per-item duration. Short generations run at 16.3-16.4 completion
+    # tok/s; a long one runs slower, because the KV grows under it — one
+    # s5_bind_v3 composed item at L=128 was still generating after 45 minutes at
+    # a 32,768-token cap, which bounds the long-output rate below 12.1 tok/s.
+    # generation_tok_per_s therefore carries the SLOW rate, not the fast one, and
+    # build_backend sizes each request's timeout from the cell's own budget
+    # against it: a timeout under the budget's generation time does not fail the
+    # call, it RETRIES it (an openai timeout is an APIConnectionError) and re-runs
+    # the whole generation up to five times. Read the same arithmetic before
+    # planning a battery here: at 12 tok/s a 32,768-token budget is 45 minutes an
+    # item and an n=40 cell is 30 hours.
+    # max_model_len is the TOTAL window, prompt plus completion, and here it is a
+    # FLOOR rather than an equality (context_is_minimum). steed's --ctx lives in
+    # a unit file outside this repo and is tuned there — the server has been seen
+    # at 65,536, 393,216 and 262,144 within one evening — so the registry declares
+    # the smallest window observed, budgets are planned against that, and
+    # preflight_context reads the live number and uses it when it is larger. Only
+    # a server smaller than the declared floor is a fault. The longest prompt this
+    # instrument plans is 5,083 tokens (s5_bind_v3 composed, k=32, L=256, measured
+    # on the server's own tokenizer — results/probes/steed_ds4_budget_20260802.json),
+    # so within this floor a completion budget of 53,346 fits every cell of the
+    # k x L grid and the window is not what bounds it.
+    "steed/deepseek-v4-flash": {
+        "tier": "cheap_reasoner", "prompt_price_per_M": 0.0,
+        "completion_price_per_M": 0.0, "open_weights": True,
+        "base_url": "https://steed.tailc4bb6.ts.net/v1",
+        "api_key_env": "STEED_DS4_API_KEY",
+        "api_key_optional": True,
+        "model_name": "deepseek-v4-flash",
+        "supports_reasoning_effort": False,
+        "reasoning_effort_values": {"none": "none", "minimal": "minimal",
+                                    "low": "low", "medium": "medium",
+                                    "high": "high", "xhigh": "xhigh",
+                                    "max": "max"},
+        "local_served": True,
+        "serve_hint": ".venv-api/bin/python scripts/serve_steed_model.py up",
+        "max_workers": 1,
+        "generation_tok_per_s": 12.0,
+        "context_is_minimum": True,
+        "max_model_len": 65536},
     # meta-llama/llama-4-maverick DROPPED 2026-07-07 (owner decision); the
     # non_reasoning tier is currently empty but kept for future roster additions.
     # Candidate additions (noted, NOT added pending a pricing/behavior sanity pass;
@@ -441,7 +546,7 @@ def context_overrun(model_slug: str, cell: dict, *, limit: int | None = None,
     s = cell["settings"]
     budget = max(s["max_new_tokens"], min_completion_tokens)
     prompt = _prompt_tokens_est(cell["task"], cell["length"], s.get("rendering"),
-                                s.get("breadth"), s.get("k_fixed"))
+                                s.get("breadth"), s.get("k_fixed"), s.get("k_sweep"))
     needed = budget + int(CONTEXT_PROMPT_HEADROOM * prompt)
     return (needed, limit) if needed > limit else None
 
@@ -806,10 +911,17 @@ def settings_hash(cell: dict) -> str:
 # --- spec resolution (single source of truth for the runner + cost estimator) ------
 
 def spec_for_cell(task: str, length: int, breadth: int | None = None,
-                  k_fixed: int | None = None):
+                  k_fixed: int | None = None, k_sweep: int | None = None):
     """The TaskSpec a cell actually runs (shared by the runner's cell execution
     and ``_prompt_tokens_est`` so prompts and prices never diverge).
 
+      - ``k_sweep`` (s5_bind family): CANONICAL[task].scaled(k=K, n_objects=K,
+        n_objects_active=K) — the agent/object count moved together, which is
+        what the k-vs-L difficulty sweep varies and what the family's floor
+        argument is written at (pad < min(k, m)). It is the only knob that
+        changes an s5_bind prompt's LENGTH at fixed L, so the context guard
+        prices the rung that runs rather than the canonical k=12 spec. None
+        (every registry facet) leaves the spec untouched.
       - ``breadth`` (pool rung B, composite tasks): CANONICAL[task].scaled(
         k=2*B, recall_pool=B). Anchored so B=CANONICAL_BREADTH (16) resolves to
         the canonical composite_copy_v2 knobs (k=32/pool16) — scaling at the
@@ -827,6 +939,8 @@ def spec_for_cell(task: str, length: int, breadth: int | None = None,
     """
     from . import tasks as TK
     spec = TK.CANONICAL[task]
+    if k_sweep and spec.family == "s5_bind":
+        spec = spec.scaled(k=k_sweep, n_objects=k_sweep, n_objects_active=k_sweep)
     if breadth:
         spec = spec.scaled(k=2 * breadth, recall_pool=breadth)
     if spec.family == "recall" and not spec.memorized_recall and length > spec.k:
@@ -846,13 +960,15 @@ def spec_for_cell(task: str, length: int, breadth: int | None = None,
 
 @lru_cache(maxsize=None)
 def _prompt_tokens_est(task: str, length: int, rendering: str | None,
-                       breadth: int | None = None, k_fixed: int | None = None) -> int:
+                       breadth: int | None = None, k_fixed: int | None = None,
+                       k_sweep: int | None = None) -> int:
     """Rough prompt-token count for one example of (task, length, rendering,
-    breadth rung, fixed chain k).
+    breadth rung, fixed chain k, s5_bind k rung).
 
     Generates one deterministic example — via ``spec_for_cell``, so breadth rungs
-    (more facts + a bigger recipient pool) and fixed-k chains (k facts at any
-    depth) are priced on the exact spec the runner executes — and estimates
+    (more facts + a bigger recipient pool), fixed-k chains (k facts at any
+    depth) and s5_bind k rungs (k agents and k objects, both stated in the
+    initial map) are priced on the exact spec the runner executes — and estimates
     tokens at CHARS_PER_TOKEN (the synthetic g/v/r token soup tokenizes
     densely). Cached: the dry-run plan touches each distinct combination once,
     not once per model.
@@ -862,7 +978,7 @@ def _prompt_tokens_est(task: str, length: int, rendering: str | None,
         sysp, user, _gold = s5_concrete.gen_examples(length, 1, framing=rendering)[0]
         return max(1, (len(sysp) + len(user)) // CHARS_PER_TOKEN)
     from . import tasks as TK
-    spec = spec_for_cell(task, length, breadth=breadth, k_fixed=k_fixed)
+    spec = spec_for_cell(task, length, breadth=breadth, k_fixed=k_fixed, k_sweep=k_sweep)
     ex = TK.generate(spec, "test", n=1, length=length)[0]
     return SYSTEM_PROMPT_EST_TOKENS + max(1, len(ex.prompt) // CHARS_PER_TOKEN)
 
@@ -881,7 +997,7 @@ def cost_estimate(model_slug: str, cells: list[dict], assumed_output_tokens: int
         n = cell["n"]
         s = cell["settings"]
         per_prompt = _prompt_tokens_est(cell["task"], cell["length"], s.get("rendering"),
-                                        s.get("breadth"), s.get("k_fixed"))
+                                        s.get("breadth"), s.get("k_fixed"), s.get("k_sweep"))
         per_out = assumed_output_tokens if s["effort"] in REASONING_EFFORTS else NON_REASONING_OUTPUT_TOKENS
         calls += n
         prompt_tokens += n * per_prompt

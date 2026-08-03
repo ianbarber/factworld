@@ -58,7 +58,7 @@ def _efforts(cells, facet):
 # --- registry -------------------------------------------------------------------
 
 def test_registry_shape():
-    assert len(B.MODELS) == 14
+    assert len(B.MODELS) == 15
     # roster decisions 2026-07-07/08/09: maverick, gpt-5.4, gemini-3.1-pro
     # dropped; the UNMEASURABLE x-ai endpoints stay off the roster (mainline
     # grok bio-filtered on composite prompts; grok-build dropped for provider
@@ -658,6 +658,188 @@ def test_context_guard_refuses_a_budget_the_server_cannot_hold():
     zb = next(c for c in B.arms_for(LOCAL_SLUG) if c["facet"] == "zero_budget")
     assert RFB.cell_completion_ceiling(zb) == max(RFB.ESCALATION_BUDGETS)
     assert RFB.cell_completion_ceiling(cell) == 98304
+
+
+STEED_SLUG = "steed/deepseek-v4-flash"
+
+
+def test_steed_arm_is_a_roster_entry_not_a_side_path():
+    """The DeepSeek V4 endpoint on steed enters through the SAME machinery as a paid one.
+
+    It resolves through ``endpoint_for`` to steed's tailnet URL; it plans every
+    facet a cheap_reasoner plans (nothing skipped structurally); its cost is zero
+    rather than absent, so a record carries cost_usd_est 0.0; every effort arm
+    resolves to a vendor string on the TOP-LEVEL parameter (an unmapped "none"
+    would send nothing and leave ds4's default think mode ON, turning every
+    instant cell into a thinking cell while still recording effort "none"); and
+    ONE slug is registered, not one per advertised id — steed lists
+    deepseek-v4-pro as well, and it is an alias of the same weights
+    (results/probes/steed_ds4_identity_20260802.json)."""
+    reg = B.MODELS[STEED_SLUG]
+    assert reg["local_served"] is True
+    assert B.endpoint_for(STEED_SLUG, default_base_url="https://openrouter.ai/api/v1") == \
+        (reg["base_url"], "STEED_DS4_API_KEY")
+    assert reg["base_url"].startswith("https://steed."), "the endpoint must be steed"
+    assert reg["model_name"] == "deepseek-v4-flash"
+    assert not any(s.endswith("deepseek-v4-pro") and s.startswith("steed/") for s in B.MODELS)
+    assert not reg.get("skip_facets")
+    assert {c["facet"] for c in B.arms_for(STEED_SLUG)} == set(B.FACETS)
+    est = B.cost_estimate(STEED_SLUG, B.arms_for(STEED_SLUG))
+    assert est["calls"] > 0 and est["cost_usd"] == 0.0
+    assert B.cell_dollar_cap(STEED_SLUG, 25, 32768) is None
+    for cell in B.arms_for(STEED_SLUG):
+        req = RFB.resolved_request_params(STEED_SLUG, cell)
+        assert req["reasoning_effort"] == cell["settings"]["effort"], cell["facet"]
+        assert req["reasoning_extra_body"] is None   # not an OpenRouter endpoint
+        assert req["endpoint"] == "chat_completions"
+        assert req["model_name"] == "deepseek-v4-flash"
+    off = [c for c in B.arms_for(STEED_SLUG) if c["settings"]["effort"] == "none"]
+    assert off and all(
+        RFB.resolved_request_params(STEED_SLUG, c)["reasoning_effort"] == "none"
+        for c in off)
+
+
+def test_steed_arm_needs_no_key_clamps_workers_and_sizes_its_own_timeout():
+    """Three endpoint properties that are measurements, not defaults.
+
+    The endpoint is tailnet-only and checks no key, so a missing env var is not
+    the loud failure it is for muse-spark — but the var is still read and sent
+    when set. The server holds ONE KV session (no --batched-session) and
+    serializes, so the registry caps concurrency at the measured 1 no matter what
+    --max-workers asks for. And its measured completion rate means a cell's budget
+    IS its duration — one composed item was still generating after 45 minutes at a
+    32,768-token cap — so the shared 30-minute timeout sits below the generation
+    time of most thinking budgets, and an openai timeout is an APIConnectionError:
+    the backend retries it, regenerating from scratch up to five times. So the
+    timeout is sized from the cell's own budget against the SLOW rate."""
+    from unittest import mock
+    reg = B.MODELS[STEED_SLUG]
+    assert reg["api_key_optional"] is True and reg["max_workers"] == 1
+    small = next(c for c in B.arms_for(STEED_SLUG) if c["facet"] == "sanity")
+    big = next(c for c in B.arms_for(STEED_SLUG)
+               if c["facet"] == "s5_chain" and c["length"] == 32)
+    with mock.patch.dict(os.environ, {}, clear=True):
+        be = RFB.build_backend(STEED_SLUG, small, api_key=None,
+                               base_url=B.DEFAULT_BASE_URL, max_workers=8)
+        assert be.client.api_key and be.max_workers == 1
+        assert be.client.timeout == RFB.DEFAULT_REQUEST_TIMEOUT_S
+        be_big = RFB.build_backend(STEED_SLUG, big, api_key=None,
+                                   base_url=B.DEFAULT_BASE_URL, max_workers=8)
+        # 32,768 tokens at this endpoint's rate is ~45 minutes of generation; the
+        # timeout must exceed it, not stop at the shared 30-minute floor.
+        assert be_big.client.timeout > 32768 / reg["generation_tok_per_s"]
+        assert be_big.client.timeout > RFB.DEFAULT_REQUEST_TIMEOUT_S
+        # the key env is honoured when it IS set (adding auth needs no code change)
+    with mock.patch.dict(os.environ, {"STEED_DS4_API_KEY": "k9"}, clear=True):
+        assert RFB.build_backend(STEED_SLUG, small, api_key=None,
+                                 base_url=B.DEFAULT_BASE_URL,
+                                 max_workers=8).client.api_key == "k9"
+    # a metered direct endpoint keeps the loud failure
+    muse = next(c for c in B.arms_for("muse-spark-1.1"))
+    with mock.patch.dict(os.environ, {}, clear=True):
+        try:
+            RFB.build_backend("muse-spark-1.1", muse, api_key=None,
+                              base_url=B.DEFAULT_BASE_URL, max_workers=2)
+        except SystemExit as exc:
+            assert "META_API_KEY" in str(exc)
+        else:
+            raise AssertionError("a metered endpoint must still demand its key")
+
+
+def test_declared_context_is_an_equality_locally_and_a_floor_on_steed():
+    """Who owns the --ctx flag decides which direction of drift is a fault.
+
+    This repo starts the local vLLM server, so its window is an EQUALITY the run
+    enforces: a server at any other length is not the one being described.
+    steed's --ctx lives in a unit file outside this repo and is tuned there (the
+    endpoint has answered at 65,536, 393,216 and 262,144), so the registry number
+    is a FLOOR: a larger live window is reported and then used for the per-cell
+    checks, and only a smaller one aborts the run."""
+    from unittest import mock
+    assert B.MODELS[STEED_SLUG]["context_is_minimum"] is True
+    assert not B.MODELS[LOCAL_SLUG].get("context_is_minimum")
+    floor = B.context_limit(STEED_SLUG)
+    cells = [c for c in B.arms_for(STEED_SLUG) if c["facet"] == "sanity"]
+
+    def probe(served):
+        return mock.patch.object(RFB, "served_context",
+                                 lambda *a, **k: {"served": "x", "max_model_len": served})
+
+    with probe(floor * 4):        # tuned up: fine, and the bigger number is used
+        RFB.preflight_context({STEED_SLUG: cells}, B.DEFAULT_BASE_URL)
+    with probe(floor):            # exactly the floor
+        RFB.preflight_context({STEED_SLUG: cells}, B.DEFAULT_BASE_URL)
+    with probe(floor // 2):       # below it: the budgets were planned on a lie
+        try:
+            RFB.preflight_context({STEED_SLUG: cells}, B.DEFAULT_BASE_URL)
+        except SystemExit as exc:
+            assert str(floor // 2) in str(exc) and "serve_steed_model" in str(exc)
+        else:
+            raise AssertionError("a window below the planned floor must abort")
+    # The DRY RUN has no live number and a floor is not a claim about the server,
+    # so a floor entry is not checked offline: checking the s5_chain budgets
+    # against 65,536 would refuse cells the endpoint serves and abort the whole
+    # roster's plan. On the live run those same cells are checked and pass.
+    big = [c for c in B.arms_for(STEED_SLUG) if c["facet"] == "s5_chain"]
+    assert any(RFB.cell_completion_ceiling(c) > floor for c in big)
+    RFB.preflight_context({STEED_SLUG: big}, B.DEFAULT_BASE_URL, probe=False)
+
+    # The plan check and the per-backend check must agree. build_backend is the
+    # last line of defence and reads the registry when nothing has probed — which
+    # on a floor entry refuses cells the endpoint can serve — so preflight hands
+    # it the live number it observed. Without that the cell passes the plan and
+    # then dies at run time.
+    RFB._SERVED_CONTEXT.pop(STEED_SLUG, None)
+    biggest = max(big, key=RFB.cell_completion_ceiling)
+    with mock.patch.dict(os.environ, {}, clear=True):
+        try:
+            RFB.build_backend(STEED_SLUG, biggest, None, B.DEFAULT_BASE_URL, 1)
+        except SystemExit:
+            pass                      # conservative: nothing has probed yet
+        else:
+            raise AssertionError("unprobed, the floor must be what bounds it")
+        with probe(floor * 4):
+            RFB.preflight_context({STEED_SLUG: big}, B.DEFAULT_BASE_URL)
+        assert RFB._SERVED_CONTEXT[STEED_SLUG] == floor * 4
+        RFB.build_backend(STEED_SLUG, biggest, None, B.DEFAULT_BASE_URL, 1)
+    RFB._SERVED_CONTEXT.pop(STEED_SLUG, None)
+    # the local arm keeps the strict equality in BOTH directions
+    local_cells = [c for c in B.arms_for(LOCAL_SLUG) if c["facet"] == "sanity"]
+    with probe(B.context_limit(LOCAL_SLUG) * 2):
+        try:
+            RFB.preflight_context({LOCAL_SLUG: local_cells}, B.DEFAULT_BASE_URL)
+        except SystemExit as exc:
+            assert "serve_local_model" in str(exc)
+        else:
+            raise AssertionError("the local arm's window is an equality")
+
+
+def test_prompt_tokens_est_prices_the_s5_bind_k_rung_that_runs():
+    """k is the only knob that changes an s5_bind prompt's LENGTH at fixed L.
+
+    The k x L sweep runs rungs the registry does not carry, so a context guard
+    reading the canonical k=12 spec under-counts the k=32 prompt and would admit
+    a budget the server cannot hold. ``k_sweep`` rides in settings (it is already
+    part of the settings hash, hence of the resume key), and both the guard and
+    the cost estimate resolve the spec through it. It is sentinel-absent on every
+    registry facet, so no shipped cell's estimate moves."""
+    canonical = B._prompt_tokens_est("s5_bind_v3", 256, None, None, None, None)
+    wide = B._prompt_tokens_est("s5_bind_v3", 256, None, None, None, 32)
+    narrow = B._prompt_tokens_est("s5_bind_v3", 256, None, None, None, 6)
+    assert narrow < canonical < wide
+    assert B._prompt_tokens_est("s5_bind_v3", 256, None, None, None, 12) == canonical
+    # the guard flips on the rung's own prompt, not the canonical one
+    settings = B._settings("high", max_new_tokens=53346)
+    settings["k_sweep"] = 32
+    cell = {"facet": "s5_bind_v3_kl_sweep", "task": "s5_bind_v3", "length": 256,
+            "n": 40, "settings": settings}
+    assert B.context_overrun(STEED_SLUG, cell, limit=65536) is None
+    cell["settings"]["max_new_tokens"] = 53347
+    assert B.context_overrun(STEED_SLUG, cell, limit=65536) is not None
+    # non-s5_bind specs are untouched by the new argument
+    for task, length in (("composite_copy_v2", 16), ("chain_v2", 32), ("s5_chain_v4", 64)):
+        assert (B.spec_for_cell(task, length, k_sweep=32)
+                == B.spec_for_cell(task, length))
 
 
 def test_resolved_request_params_records_what_was_sent():
@@ -1489,8 +1671,8 @@ def test_skip_facets_machinery():
                                                "sanity", "commutative",
                                                "gap_stability", "s5_chain"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
-    assert sum(len(cells) for cells in plan.values()) == 55  # 11 models x 5 zero_budget cells
-    assert sum(1 for cells in plan.values() if cells) == 11  # grok-4.5, muse-spark-1.1, fable-5 plan none
+    assert sum(len(cells) for cells in plan.values()) == 60  # 12 models x 5 zero_budget cells
+    assert sum(1 for cells in plan.values() if cells) == 12  # grok-4.5, muse-spark-1.1, fable-5 plan none
 
 
 def test_v2_task_cells_get_fresh_resume_keys():
@@ -1646,6 +1828,12 @@ if __name__ == "__main__":
                test_build_plan_stamps_the_resolved_system_prompt,
                test_plan_has_no_rung_keys_and_facet_breadths_expand,
                test_prompt_tokens_est_breadth_and_k_fixed,
+               test_local_arm_is_a_roster_entry_not_a_side_path,
+               test_context_guard_refuses_a_budget_the_server_cannot_hold,
+               test_steed_arm_is_a_roster_entry_not_a_side_path,
+               test_steed_arm_needs_no_key_clamps_workers_and_sizes_its_own_timeout,
+               test_declared_context_is_an_equality_locally_and_a_floor_on_steed,
+               test_prompt_tokens_est_prices_the_s5_bind_k_rung_that_runs,
                test_cell_dollar_cap, test_endpoint_for_defaults_and_direct_entry,
                test_build_backend_direct_endpoint,
                test_resolved_request_params_records_what_was_sent,

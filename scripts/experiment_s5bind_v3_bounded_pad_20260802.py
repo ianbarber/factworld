@@ -69,6 +69,20 @@ READOUT: its final checkpoint's queried slot IS the gold answer on 1.000 of item
 0.281-0.625 for a bounded pad, so the dense guided answer read is a copy of a token the format
 printed beside the query, and removing that copy is what the width costs.
 
+THE REGISTERED FINAL STAGE IS A SHORT OPTIMIZER RESTART, and it is registered because READOUT
+FORMATION IS A LATE BIMODAL TRANSITION THE CURRICULUM SOMETIMES FAILS TO REACH. A floored seed is
+not computing the answer wrong: it emits a CONSTANT (seed 1 ``bind@31`` "g1 ." on 128 of 128 items,
+seed 2 "g0 ." on 128 of 128) while its pad is byte-perfect at 1.000, which is an untrained output
+head. 3,000 further steps on the final mix at a FRESH optimizer with a 200-step warmup at lr 3e-4
+flips it, and both mechanism stories offered for that died to their own controls: a length-sorted
+arm reproduces the grouped-sort result at identical steps, ratio, lr and documents, so the SORT is
+not the lever, and the ratio-1 control at the registered mix clears everything on held-out seed 3
+(state@17 1.000, state@80 0.984, bind@31 1.000, bind@132 0.984), so the RATIO is not the lever
+either. What is left is the restart itself: the curriculum's last stage ends on a cosine at ~0, and
+raising the learning rate again is what reaches the transition. So ``stage4_restart`` runs the
+REGISTERED mix — the schedule's last, ratio 1, length sort — and adds no document kind, no
+format and no floor. ``--no_restart`` reproduces the three-stage runs.
+
 THE READOUT IS THE SEPARATE, BIMODAL EVENT, and ``--pad_answer_docs`` is what buys it: masking a
 second copy of each pad document to the answer takes that token from one in ~250 of a full
 next-token loss to half the document's loss mass, and it is the same argument the runner already
@@ -124,6 +138,14 @@ import experiment_s5bind_v3_three_cell_local_20260731 as E                 # noq
 PAD_WIDTH = {"dense": None, "moved2": 2, "delta2": 2, "hybrid4": 4}
 FORMATS = tuple(PAD_WIDTH)
 MAX_DOC_TOKENS = E.MAX_DOC_TOKENS
+
+# The registered final stage: a short optimizer restart on the schedule's LAST mix. Its whole
+# content is the schedule — fresh moments, a 200-step warmup and a learning rate the curriculum's
+# cosine has already decayed away from — and it changes no document kind, format or floor.
+RESTART_STAGE = "stage4_restart"
+RESTART_STEPS = 3000
+RESTART_LR = 3e-4
+RESTART_WARMUP = 200
 
 # WHY ACCUMULATION DOES NOT WIDEN THE PAD, since a narrow format writes many blocks over a stream
 # and their union covers every slot. Two conventions decide it and both are the repo's own:
@@ -655,34 +677,104 @@ def bounded_floors_for(guided_grid, guided_n, pad):
     return out
 
 
+def track_probe(model, tok, specs, cells, n, device, fmt, batch, floors):
+    """``{cell@L: {match, slot_acc, ...}}`` — the mid-stage read, and it trains nothing.
+
+    It exists because the composed cell's ``slot_acc`` MOVES DURING A STAGE and an end-of-stage
+    number cannot say which way. Called between chunks of a stage whose optimizer, batch generator
+    and LR schedule are carried across the split, so the probe costs its own decode and changes
+    the trajectory by nothing (verified bit-identical against the unsplit call).
+    """
+    out = {}
+    for cell, L in cells:
+        a, sa, _t = bounded_free_run_batched(model, tok, specs[cell], L, n, device, fmt,
+                                             batch=batch)
+        f = (floors.get(f"{cell}@{L}") or {}).get("floor")
+        cl, z = P.clears(a, f, n)
+        out[f"{cell}@{L}"] = {"match": a, "slot_acc": sa, "floor": f, "clears": cl, "z": z}
+    return out
+
+
+def train_stage(arch, tok, docs, plens, model, *, steps, batch, build, lr, warmup, seed, device,
+                loss_log_interval, track_every=0, probe=None):
+    """One stage, optionally SPLIT INTO CHUNKS so ``probe`` can read the model mid-stage.
+
+    The optimizer, the batch-draw generator and the (warmup + cosine) schedule are all carried
+    across the split, so a tracked stage draws the same batches in the same order as the untracked
+    one it is split from; ``factworld.train.run`` grew ``gen``/``return_gen`` for exactly this and
+    defaults to the single-call behaviour. Returns ``(model, final_loss, loss_curve, series)``
+    where ``series`` is ``[(step, probe_reading)]`` including step 0.
+    """
+    from factworld import train as T
+
+    opt = gen = None
+    done, curve, series = 0, [], []
+    if probe is not None:
+        series.append((0, probe(model)))
+    while done < steps:
+        n = min(track_every or steps, steps - done)
+        run = T.run(arch, tok, docs, [], steps=n, batch=batch, lr=lr, warmup=warmup, seed=seed,
+                    return_model=True, device=device, model=model, use_short_conv=True,
+                    loss_log_interval=loss_log_interval, prompt_lens=plens,
+                    opt=opt, gen=gen, sched_step0=done, sched_total=steps,
+                    return_opt=True, return_gen=True, **build)
+        model, opt, gen = run["model"], run["opt"], run["gen"]
+        curve += [(done + int(s), float(v)) for s, v in run.get("loss_curve", [])]
+        done += n
+        if probe is not None:
+            series.append((done, probe(model)))
+    return model, run["final_loss"], curve, series
+
+
 def grid_run_one(arch, seed, specs, tok, world, grid, *, steps, batch, d_model, n_layers,
                  n_heads, lr, train_n, eval_n, guided_n, guided_lengths, device, fmt,
                  loss_log_interval, guided_batch=128, ckpt_dir=None, answer_docs=False,
-                 answer_ratio=1, group_masked=False):
-    """One (arch, seed) carried through the registered three-stage curriculum under a BOUNDED pad.
+                 answer_ratio=1, group_masked=False, restart=True, restart_steps=RESTART_STEPS,
+                 restart_lr=RESTART_LR, restart_warmup=RESTART_WARMUP, track_cells=(),
+                 track_every=0, track_every_curriculum=0, track_n=128, track_floors=None,
+                 final_guided_n=None):
+    """One (arch, seed) carried through the registered curriculum under a BOUNDED pad.
 
-    Structurally ``E.run_one`` with ``E.stage_documents`` replaced by the bounded one and the
-    guided read taken under ``fmt``; the schedule, the stage shares and the checkpoint discipline
-    are the shipped ones, so the only thing that differs from the run at HEAD is the pad width.
+    Structurally ``E.run_one`` with ``E.stage_documents`` replaced by the bounded one, the guided
+    read taken under ``fmt``, and the registered ``stage4_restart`` appended; the stage shares and
+    the checkpoint discipline are the shipped ones.
     """
     import torch
-    from factworld import train as T
 
+    build = {"d_model": d_model, "n_layers": n_layers, "n_heads": n_heads, "d_ff": 4 * d_model}
+    final_guided_n = guided_n if final_guided_n is None else final_guided_n
     model, stages = None, []
-    for si, (name, share, weights) in enumerate(E.SCHEDULE):
-        last = si == len(E.SCHEDULE) - 1
-        stage_steps = max(1, int(round(steps * share)))
+    schedule = list(E.SCHEDULE)
+    if restart and restart_steps:
+        schedule.append((RESTART_STAGE, None, E.SCHEDULE[-1][2]))
+    for si, (name, share, weights) in enumerate(schedule):
+        last = si == len(schedule) - 1
+        is_restart = name == RESTART_STAGE
+        stage_steps = int(restart_steps) if is_restart else max(1, int(round(steps * share)))
+        stage_lr = restart_lr if is_restart else lr
+        stage_warm = restart_warmup if is_restart else 1000
         docs, plens = stage_documents(specs, weights, train_n, tok, fmt,
                                       answer_docs=answer_docs, answer_ratio=answer_ratio,
                                       group_masked=group_masked)
+        every = (track_every if is_restart else
+                 (track_every_curriculum if si == len(E.SCHEDULE) - 1 else 0))
+        probe = None
+        if track_cells and every:
+            def probe(m, _c=track_cells):
+                got = track_probe(m, tok, specs, _c, track_n, device, fmt, guided_batch,
+                                  track_floors or {})
+                print("       track " + "  ".join(
+                    f"{k} m={v['match']:.3f} slot={v['slot_acc']:.3f}" for k, v in got.items()),
+                    flush=True)
+                return got
         t0 = time.time()
-        run = T.run(arch, tok, docs, [], steps=stage_steps, batch=batch, d_model=d_model,
-                    n_layers=n_layers, n_heads=n_heads, d_ff=4 * d_model, lr=lr, seed=seed,
-                    return_model=True, device=device, model=model, use_short_conv=True,
-                    loss_log_interval=loss_log_interval, prompt_lens=plens)
-        model = run["model"]
-        print(f"  -- {name}: {stage_steps} steps, {len(docs)} docs, "
-              f"loss={run['final_loss']:.4f} [{time.time() - t0:.0f}s]", flush=True)
+        model, floss, curve, series = train_stage(
+            arch, tok, docs, plens, model, steps=stage_steps, batch=batch, build=build,
+            lr=stage_lr, warmup=stage_warm, seed=seed, device=device,
+            loss_log_interval=loss_log_interval, track_every=every, probe=probe)
+        print(f"  -- {name}: {stage_steps} steps @ lr {stage_lr:g} (warmup {stage_warm}), "
+              f"{len(docs)} docs, loss={floss:.4f} [{time.time() - t0:.0f}s]", flush=True)
+        run = {"final_loss": floss, "loss_curve": curve}
         if ckpt_dir:
             E.save_checkpoint(model, E.checkpoint_path(ckpt_dir, arch, seed), arch=arch,
                               seed=seed, stage=name,
@@ -696,10 +788,14 @@ def grid_run_one(arch, seed, specs, tok, world, grid, *, steps, batch, d_model, 
                                           "answer_docs": bool(answer_docs),
                                           "answer_ratio": int(answer_ratio),
                                           "group_masked": bool(group_masked),
+                                          "stage_lr": stage_lr, "stage_warmup": stage_warm,
                                           "train_lengths": list(P.TRAIN_LENGTHS)})
-        if last:
+        # The last CURRICULUM stage is read too, so the restart has a before as well as an after.
+        pre_restart = (not last) and si == len(E.SCHEDULE) - 1
+        if last or pre_restart:
             ev, gv = evaluate_all(model, arch, specs, tok, world, grid, eval_n=eval_n,
-                                  guided_n=guided_n, guided_lengths=guided_lengths,
+                                  guided_n=(final_guided_n if last else guided_n),
+                                  guided_lengths=guided_lengths,
                                   device=device, fmt=fmt, guided_batch=guided_batch)
         else:
             ev, gv = evaluate_all(
@@ -707,12 +803,35 @@ def grid_run_one(arch, seed, specs, tok, world, grid, *, steps, batch, d_model, 
                 {c: [P.CONTROL_LENGTH, P.registered_lengths(c)[0]] for c in grid},
                 eval_n=200, guided_n=0, guided_lengths={}, device=device, fmt=fmt)
         stages.append({"stage": name, "steps": stage_steps, "n_docs": len(docs),
-                       "mix": weights, "final_loss": run["final_loss"],
+                       "mix": weights, "final_loss": run["final_loss"], "lr": stage_lr,
+                       "warmup": stage_warm,
+                       "guided_n": (final_guided_n if last else
+                                    (guided_n if pre_restart else 0)),
                        "loss_curve": [(int(s), float(v)) for s, v in run.get("loss_curve", [])],
+                       "track_n": track_n, "track_every": every,
+                       "track": [(int(s), v) for s, v in series],
                        "train_s": round(time.time() - t0), "eval": ev, "guided": gv})
     del model
     torch.cuda.empty_cache()
     return stages
+
+
+def registered_guided_grid():
+    """Every cell at its OWN registered lengths, plus the matched-COST control the read buys.
+
+    ``P.guided_grid`` bought one composed length because the DENSE decode is (k + m) L rounds per
+    item; a bounded pad makes it ``pad`` L, so the composed cell's whole registered grid is
+    affordable and "does not clear at ANY registered length" stops being an extrapolation from one
+    rung. The components keep the convention the protocol registers: their work-matched partners of
+    the composed grid (the lengths FORMS is read at) plus the token-matched control at the one
+    composed length ``GUIDED_MATCHED_FROM`` names.
+    """
+    gg = {c: list(P.registered_lengths(c)) for c in P.LOCAL_CELLS}
+    for c in ("state", "bind"):
+        wl = P.WORK_MATCHED.get(P.GUIDED_MATCHED_FROM, {}).get(c)
+        ml = P.TOKEN_MATCHED.get(P.GUIDED_MATCHED_FROM, {}).get(c)
+        gg[c] = sorted({*gg[c], *(x for x in (wl, ml) if x)})
+    return gg
 
 
 def run_grid(a):
@@ -720,18 +839,49 @@ def run_grid(a):
     specs = E.three_cell_specs(P.TRAIN_LENGTHS)
     world, r = TK.build_world(specs["composed"])
     tok = Tokenizer.build([world], r)
-    ml = P.matched_lengths(tok)
-    gg = P.guided_grid(ml)
-    gg["composed"] = list(P.GUIDED_LENGTHS)
+    if a.full_guided_grid:
+        gg = registered_guided_grid()
+    else:
+        gg = P.guided_grid(P.matched_lengths(tok))
+        gg["composed"] = list(P.GUIDED_LENGTHS)
     grid = {c: sorted(set(list(P.registered_lengths(c)) + list(gg.get(c, ()))
                           + [P.CONTROL_LENGTH])) for c in P.LOCAL_CELLS}
     pad = PAD_WIDTH[a.format]
-    floors = bounded_floors_for(gg, a.guided_n, pad=pad)
+    track_cells = [(c.split("@")[0], int(c.split("@")[1]))
+                   for c in a.track_cells.split(",") if c] if a.track_cells else []
+    print("  -- floors for the FINAL read", flush=True)
+    floors = bounded_floors_for(gg, a.final_guided_n, pad=pad)
+    if a.guided_n == a.final_guided_n:
+        floors_pre = floors
+    else:
+        print(f"  -- floors for the PRE-RESTART read (n={a.guided_n})", flush=True)
+        floors_pre = bounded_floors_for(gg, a.guided_n, pad=pad)
+    # A floor is a property of the SCORED ITEM SET, so a read at a different n needs its own; the
+    # three reads here share whenever their n agrees, because the pass costs minutes per grid.
+    track_floors = {}
+    if track_cells:
+        if a.track_n == a.final_guided_n:
+            track_floors = floors
+        elif a.track_n == a.guided_n:
+            track_floors = floors_pre
+        else:
+            tg = {}
+            for c, L in track_cells:
+                tg.setdefault(c, []).append(L)
+            print(f"  -- floors for the TRACKING read (n={a.track_n})", flush=True)
+            track_floors = bounded_floors_for(tg, a.track_n, pad=pad)
     out = {"generated": datetime.now(timezone.utc).isoformat(), "pad_width": pad,
            "format": a.format, "cfg": {**{k: v for k, v in vars(a).items()},
                                        "guided_grid": gg, "grid": grid,
+                                       "restart": {"stage": RESTART_STAGE,
+                                                   "steps": (0 if a.no_restart
+                                                             else a.restart_steps),
+                                                   "lr": a.restart_lr,
+                                                   "warmup": a.restart_warmup,
+                                                   "mix": E.SCHEDULE[-1][2]},
                                        "k": specs["composed"].k},
-           "floors": floors, "runs": []}
+           "floors": floors, "floors_pre_restart": floors_pre, "track_floors": track_floors,
+           "runs": []}
     ckpt_dir = a.ckpt_dir or f"{a.out_prefix}_ckpt"
     jl = open(f"{a.out_prefix}.jsonl", "a")
     for arch in a.archs.split(","):
@@ -746,7 +896,13 @@ def run_grid(a):
                                   guided_batch=a.guided_batch, ckpt_dir=ckpt_dir,
                                   answer_docs=a.pad_answer_docs,
                                   answer_ratio=a.answer_ratio,
-                                  group_masked=a.group_masked)
+                                  group_masked=a.group_masked,
+                                  restart=not a.no_restart, restart_steps=a.restart_steps,
+                                  restart_lr=a.restart_lr, restart_warmup=a.restart_warmup,
+                                  track_cells=track_cells, track_every=a.track_every,
+                                  track_every_curriculum=a.track_every_curriculum,
+                                  track_n=a.track_n, track_floors=track_floors,
+                                  final_guided_n=a.final_guided_n)
             row = {"arch": arch, "seed": seed, "stages": stages}
             out["runs"].append(row)
             jl.write(json.dumps(row) + "\n")
@@ -772,7 +928,7 @@ def report(path):
     res = json.load(open(path))
     fl, cfg = res["floors"], res["cfg"]
     gg = cfg["guided_grid"]
-    n = cfg["guided_n"]
+    n = cfg.get("final_guided_n") or cfg["guided_n"]
     print(f"\npad {res['pad_width']} / format {res['format']}   guided n={n}   "
           f"CLEARS = z>{P.Z_CLEAR} and margin>={P.MARGIN}\n")
     hdr = [f"{c}@{L}" for c in ("state", "bind", "composed") for L in gg.get(c, ())]
@@ -805,6 +961,19 @@ def report(path):
                 if v is not None:
                     row.append(f"{c[0]}{L}={v:.3f}")
         print(f"{r['arch']:11s} {r['seed']:2d}  " + " ".join(row))
+    tracked = [s for r in res["runs"] for s in r["stages"] if s.get("track")]
+    if not tracked:
+        return
+    print("\nPAD ACCURACY ACROSS THE STAGE (slot_acc; the composed cell is what this tracks)\n")
+    for r in res["runs"]:
+        for st in r["stages"]:
+            if not st.get("track"):
+                continue
+            keys = list(st["track"][0][1])
+            print(f"  seed {r['seed']} {st['stage']} (n={st.get('track_n')})")
+            for k in keys:
+                series = "  ".join(f"{step}:{pt[k]['slot_acc']:.3f}" for step, pt in st["track"])
+                print(f"    {k:14s} {series}")
 
 
 def main():
@@ -823,6 +992,21 @@ def main():
                     help="answer-masked copies per item (1 reproduces the registered runs)")
     ap.add_argument("--group_masked", action="store_true",
                     help="sort by (is_masked, length) so a batch is a tracking OR a readout step")
+    ap.add_argument("--no_restart", action="store_true",
+                    help=f"drop the registered {RESTART_STAGE}; reproduces the three-stage runs")
+    ap.add_argument("--restart_steps", type=int, default=RESTART_STEPS)
+    ap.add_argument("--restart_lr", type=float, default=RESTART_LR)
+    ap.add_argument("--restart_warmup", type=int, default=RESTART_WARMUP)
+    ap.add_argument("--track_cells", default="",
+                    help="cell@L read between chunks of the last curriculum stage and the restart")
+    ap.add_argument("--track_every", type=int, default=500, help="tracking interval, RESTART")
+    ap.add_argument("--track_every_curriculum", type=int, default=0,
+                    help="tracking interval inside the LAST curriculum stage (0 = off)")
+    ap.add_argument("--track_n", type=int, default=128)
+    ap.add_argument("--final_guided_n", type=int, default=None,
+                    help="guided n for the FINAL read; defaults to --guided_n")
+    ap.add_argument("--full_guided_grid", action="store_true",
+                    help="guided-read every cell at all its registered lengths")
     ap.add_argument("--ckpt_dir", default=None)
     ap.add_argument("--archs", default="gdp_hybrid")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
@@ -843,6 +1027,8 @@ def main():
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--out_prefix", default="results/s5bind_v3_bounded_pad_pilot_20260802")
     a = ap.parse_args()
+    if a.final_guided_n is None:
+        a.final_guided_n = a.guided_n
     if a.report:
         return report(a.report)
     if a.decode_from:

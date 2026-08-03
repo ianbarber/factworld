@@ -3,11 +3,12 @@
 Executes the cell plan from ``factworld.benchmark.arms_for`` (contract C4) against
 each model's API endpoint — OpenRouter by default; a registry entry carrying
 ``{"base_url", "api_key_env"}`` runs against its direct endpoint with its own key
-env (``factworld.benchmark.endpoint_for`` — the muse-spark slot, and the locally
-served arm, whose endpoint is this machine and whose prices are 0.0, so its cells
-record cost_usd_est 0.0) — one model at a time, one cell at a time (examples fan
-out concurrently inside ``APIBackend``). Each completed cell appends ONE
-crash-safe JSONL record to
+env (``factworld.benchmark.endpoint_for`` — the muse-spark slot, and the two
+self-hosted arms, whose endpoints are machines the owner runs and whose prices
+are 0.0, so their cells record cost_usd_est 0.0) — one model at a time, one cell
+at a time (examples fan out concurrently inside ``APIBackend``, up to a
+registry-declared ``max_workers`` where the endpoint has a measured one). Each
+completed cell appends ONE crash-safe JSONL record to
 the history file (contract C3) — metrics, diagnostics (empty-pred rate, api errors,
 finish reasons), token usage and an estimated cost. Every example record carries the
 per-call ``{ctok, rtok, finish}`` (completion tokens, reasoning tokens, finish
@@ -63,10 +64,19 @@ Protocol rules:
     unchanged; when present (non-canonical) they are part of the settings hash,
     so every rung resumes independently.
   - Self-hosted arms declare the context window they are served at
-    (``max_model_len``). Before any call, ``preflight_context`` checks every
-    planned budget against what the live server reports and refuses to start
-    otherwise: a completion budget past the window is rejected 4xx per call and
-    lands as a cell of empty predictions, which reads exactly like a floor.
+    (``max_model_len``, the TOTAL — prompt plus completion). Before any call,
+    ``preflight_context`` checks every planned budget against what the live
+    server reports and refuses to start otherwise: a completion budget past the
+    window is rejected 4xx per call and lands as a cell of empty predictions,
+    which reads exactly like a floor. Where that window belongs to a unit file
+    this repo does not own, ``context_is_minimum`` makes the declared number a
+    FLOOR instead: a larger live window is used, a smaller one aborts. Three more
+    optional keys: ``max_workers``, a measured ceiling on concurrent calls that
+    ``build_backend`` clamps --max-workers to (the steed server holds one KV
+    session and serializes); ``generation_tok_per_s``, a measured completion rate
+    that sizes each request's timeout from the cell's own budget, since a timeout
+    under that is a retry loop rather than an error; and ``api_key_optional`` for
+    an endpoint that checks no key.
   - finish_reason=="error" calls are counted into diagnostics.finish_errors
     (distinct from api_errors, the exception-path count — review F8 found 12
     finish=error calls invisible at api_errors=0) and warned about loudly.
@@ -102,6 +112,12 @@ Examples:
     # scripts/serve_local_model.py up)
     .venv-api/bin/python scripts/run_frontier_benchmark.py \\
         --models local/qwen3.6-35b-a3b-nvfp4 --facets sanity
+
+    # The steed arm (no paid endpoint, and no GPU on this box — it runs beside a
+    # local training job; scripts/serve_steed_model.py up wakes the on-demand
+    # server first, and the registry clamps concurrency to the one it serves)
+    .venv-api/bin/python scripts/run_frontier_benchmark.py \\
+        --models steed/deepseek-v4-flash --facets sanity
 """
 from __future__ import annotations
 
@@ -237,6 +253,12 @@ _ANSWER_LINE_RE = re.compile(r"answer\s*:\s*(.+)", re.IGNORECASE)
 # diagnostics, each recorded in full under escalation.attempts.
 LENGTH_ESCALATION_THRESHOLD = 0.10
 ESCALATION_BUDGETS = (512, 2048)
+
+# Floor on the per-request timeout (seconds). Endpoints declaring a measured
+# generation rate (``generation_tok_per_s``) raise it from the cell's own budget
+# in build_backend; see the note there for why a short timeout is a retry loop
+# rather than an error.
+DEFAULT_REQUEST_TIMEOUT_S = 1800.0
 
 
 def extract_contract_answer(text: str) -> str | None:
@@ -645,15 +667,32 @@ def cell_completion_ceiling(cell: dict) -> int:
     return planned
 
 
+def _card_context_len(card: dict) -> int | None:
+    """The TOTAL window a /models card declares, whichever name it uses.
+
+    vLLM writes ``max_model_len``; ds4-server (the steed arm) writes
+    ``context_length`` and repeats it under ``top_provider``. Reading only the
+    first name makes the live check silently vacuous on the second server — it
+    returns None, the check falls back to the registry's own number and then
+    compares that number to itself.
+    """
+    for key in ("max_model_len", "context_length"):
+        if isinstance(card.get(key), int):
+            return card[key]
+    tp = card.get("top_provider") or {}
+    return tp.get("context_length") if isinstance(tp.get("context_length"), int) else None
+
+
 def served_context(model: str, base_url: str, timeout: float = 10.0) -> dict:
     """``{served, max_model_len}`` reported by a self-hosted endpoint's /models.
 
     The SERVER is the authority on the context window: ``--max-model-len`` can be
     clamped by the engine, and a server left up from an earlier session can be
     serving something else entirely. Raises SystemExit if the endpoint does not
-    answer or does not serve the registry's model name — for a local arm that is
-    "the server is not up", which must stop the run before it turns into n
-    connection errors per cell.
+    answer or does not serve the registry's model name — for a self-hosted arm
+    that is "the server is not up", which must stop the run before it turns into
+    n connection errors per cell. The entry's ``serve_hint`` is the command that
+    brings THAT server up, so the message points at the right one.
     """
     url, key_env = endpoint_for(model, default_base_url=base_url)
     key = os.environ.get(key_env)
@@ -661,21 +700,30 @@ def served_context(model: str, base_url: str, timeout: float = 10.0) -> dict:
     if key:
         req.add_header("Authorization", f"Bearer {key}")
     want = MODELS[model].get("model_name") or model
+    hint = MODELS[model].get("serve_hint")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             cards = json.loads(resp.read().decode("utf-8")).get("data") or []
     except (urllib.error.URLError, OSError, TimeoutError, ValueError) as exc:
         raise SystemExit(
             f"{model}: {url} did not answer ({type(exc).__name__}: {exc}). "
-            f"Bring the server up first (.venv-serve/bin/python "
-            f"scripts/serve_local_model.py up), or select the models to run with "
-            f"--models. No calls were made.") from exc
+            + (f"Bring the server up first ({hint}), " if hint else "")
+            + f"or select the models to run with --models. "
+            f"No calls were made.") from exc
     for card in cards:
         if card.get("id") == want:
-            return {"served": card["id"], "max_model_len": card.get("max_model_len")}
+            return {"served": card["id"], "max_model_len": _card_context_len(card)}
     raise SystemExit(f"{model}: {url} serves {[c.get('id') for c in cards]}, "
                      f"not {want!r}. Refusing to measure a different model under "
                      f"this roster slug.")
+
+
+# What a live server reported for its window, per model, filled in by
+# ``preflight_context`` and read by ``build_backend``. Without it the two checks
+# can disagree on a ``context_is_minimum`` entry — preflight admits a cell
+# against the live window, build_backend then refuses it against the conservative
+# registry floor, and the cell dies at run time having passed the plan check.
+_SERVED_CONTEXT: dict[str, int] = {}
 
 
 def preflight_context(plan: dict[str, list[dict]], base_url: str,
@@ -689,7 +737,11 @@ def preflight_context(plan: dict[str, list[dict]], base_url: str,
     faults, so they abort the run here rather than being absorbed per cell.
 
     ``probe`` off (the dry run) checks against the REGISTRY's declared window
-    only and touches no endpoint.
+    only and touches no endpoint — which it can only do where that window is an
+    equality. A ``context_is_minimum`` entry declares a FLOOR, deliberately below
+    what the server is usually started at, so checking budgets against it offline
+    would refuse cells the endpoint can serve; those entries are checked on the
+    live run, against the live number.
     """
     problems: list[str] = []
     for model, cells in plan.items():
@@ -697,16 +749,38 @@ def preflight_context(plan: dict[str, list[dict]], base_url: str,
         if limit is None or not cells:
             continue  # vendor endpoint (the window is the vendor's business),
                       # or nothing left to run for this model after resume
+        if not probe and MODELS[model].get("context_is_minimum"):
+            continue
         if probe and MODELS[model].get("local_served"):
             live = served_context(model, base_url)
             served = live["max_model_len"]
-            if served is not None and served != limit:
+            # Two kinds of self-hosted server, and the difference is who owns the
+            # --ctx flag. For one this repo starts the server (the local vLLM
+            # arm), so the registry's window is an EQUALITY the run can enforce:
+            # anything else means the server is not the one being described, and a
+            # silently smaller window turns cells into floors. For the other the
+            # flag lives in someone else's unit file and gets tuned there (steed's
+            # ds4-server has been observed at three different windows), so the
+            # registry's number is a FLOOR — ``context_is_minimum``. A larger live
+            # window is reported and then USED (every per-cell check below runs
+            # against the live number either way); only a smaller one is a fault,
+            # because that is the direction that plans budgets the server cannot
+            # hold.
+            minimum = MODELS[model].get("context_is_minimum")
+            if served is not None and (served < limit if minimum else served != limit):
                 problems.append(
-                    f"{model}: server reports max_model_len={served}, registry "
-                    f"declares {limit} — the registry is what every budget was "
-                    f"checked against, so restart the server at {limit} "
-                    f"(scripts/serve_local_model.py) or fix the registry")
+                    f"{model}: server reports a context window of {served}, "
+                    f"registry declares {'at least ' if minimum else ''}{limit} — "
+                    f"the registry is what every budget was checked against, so "
+                    f"restart the server at {limit} "
+                    f"({MODELS[model].get('serve_hint') or 'see its serve script'}) "
+                    f"or fix the registry")
+            elif minimum and served is not None and served > limit:
+                print(f"note: {model} is served at {served} tokens, above the "
+                      f"{limit} the registry plans against; cells are checked "
+                      f"against the served number.")
             limit = served or limit
+            _SERVED_CONTEXT[model] = limit
         for cell in cells:
             over = context_overrun(
                 model, cell, limit=limit,
@@ -729,7 +803,12 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
     # over the whole plan first): this is the single choke point every cell's
     # backend is built through, so no call site can ask a self-hosted server for
     # more tokens than it can hold.
-    over = context_overrun(model, cell,
+    # ``limit`` is what the live server reported to preflight_context if it ran,
+    # and the registry's declared window otherwise — which for a
+    # ``context_is_minimum`` entry is a deliberately conservative floor, so a
+    # path that skips the preflight refuses more than it needs to rather than
+    # less.
+    over = context_overrun(model, cell, limit=_SERVED_CONTEXT.get(model),
                            min_completion_tokens=cell_completion_ceiling(cell))
     if over:
         needed, limit = over
@@ -747,7 +826,17 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
     if key_env != DEFAULT_API_KEY_ENV:
         api_key = os.environ.get(key_env)
         if not api_key:
-            raise SystemExit(f"{key_env} not set (required for {model})")
+            # ``api_key_optional``: the endpoint checks no key (the steed arm is
+            # tailnet-only), so its absence is not a fault. The var is still read
+            # above and sent when set — adding auth to that box needs no code
+            # change — and the client requires SOME non-empty string.
+            if not reg.get("api_key_optional"):
+                raise SystemExit(f"{key_env} not set (required for {model})")
+            api_key = "no-key"
+    # A MEASURED per-endpoint concurrency ceiling (registry ``max_workers``). The
+    # steed server holds a single KV session and serializes, so extra workers buy
+    # no throughput and only walk each call toward the request timeout.
+    max_workers = min(max_workers, reg.get("max_workers", max_workers))
     extra_body: dict = {}
     # OpenRouter-style endpoints accept a reasoning-effort block; direct vendor
     # endpoints (e.g. OpenAI chat completions for gpt-5.6-sol) reject it and
@@ -765,6 +854,18 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
         # direct vendor endpoint (which would reject the unknown field).
         extra_body["provider"] = {"require_parameters": False,
                                   "quantizations": ["fp8", "bf16", "fp16"]}
+    # Request timeout. The shared 30 minutes covers a fast endpoint's longest
+    # reasoning cell, but on a slow self-hosted one it is BELOW the time the cell's
+    # own budget takes to generate — and a timeout is not a failure, it is a retry:
+    # openai raises APITimeoutError, an APIConnectionError, which the backend backs
+    # off and re-runs up to five times, regenerating from scratch each time. An
+    # endpoint that declares its MEASURED generation rate therefore sizes its own
+    # timeout from the cell's budget, with a factor of two for prefill and for a
+    # rate that varies with load.
+    timeout = DEFAULT_REQUEST_TIMEOUT_S
+    tok_per_s = reg.get("generation_tok_per_s")
+    if tok_per_s:
+        timeout = max(timeout, 2.0 * cell_completion_ceiling(cell) / tok_per_s)
     backend_cls = ResponsesBackend if reg.get("responses_endpoint") else APIBackend
     backend = backend_cls(
         model=model,
@@ -782,11 +883,12 @@ def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_worke
         max_completion_tokens=reg.get("max_completion_tokens", False),
         reasoning_model=reg.get("reasoning_model", False),
         reasoning_effort=reasoning_effort,
-        # 30-minute request timeout: 16k-token reasoning cells (kimi at depth 32,
+        # At least 30 minutes: 16k-token reasoning cells (kimi at depth 32,
         # sonnet with a 16k thinking budget) legitimately exceed the openai
         # client's default 600s, which otherwise times out and re-bills the
-        # generation once per retry (v2 pilot 2026-07-08).
-        timeout=1800.0,
+        # generation once per retry (v2 pilot 2026-07-08). Endpoints that declare
+        # a measured generation rate scale it up from the cell's budget (above).
+        timeout=timeout,
     )
     # Provenance: the resolution this backend was built from, carried to the
     # record by execute_cell (diagnostics.request). Backends built elsewhere

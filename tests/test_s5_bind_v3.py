@@ -1019,6 +1019,50 @@ def test_the_verdict_refuses_a_bare_control_count_and_v1_needs_the_matched_contr
     assert code == "V5_HARNESS_NULL", code
 
 
+def test_a_broken_composed_pad_gates_the_composition_verdict():
+    """The verdict rule read only the ANSWER, and on a pad protocol that is not enough.
+
+    Under a bounded pad the model answers from a scratchpad IT WROTE, so a composed cell at floor
+    with a pad that is wrong by mid-stream is equally consistent with a hard composition and with
+    a model that cannot hold the state the pad gave it room for. On the measured numbers — the
+    composed cell free-running its own pad at 0.40-0.74 while both components sit at 0.99-1.00 —
+    the ungated rule returns V1_COMPOSITION_GAP, which is the claim the pad says is unavailable.
+    ``pad_tracked`` is None on the PLAIN and DENSE reads, which have no pad, so the gate applies
+    exactly where the answer depends on one."""
+    P = _protocol()
+    ctrl = {"seeds": 2, "cleared_on": "bind@48", "per_pair": {"bind@48": 2}, "required": []}
+    forms = {"state": True, "bind": True, "composed": False}
+    counts = {c: {48: 2} for c in forms}
+    matched = {"state": True, "bind": True}
+    assert P.verdict(ctrl, forms, counts, matched, matched)[0] == "V1_COMPOSITION_GAP"
+    assert P.verdict(ctrl, forms, counts, matched, matched,
+                     pad_tracked=None)[0] == "V1_COMPOSITION_GAP"
+    code, why = P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=False,
+                          pad_counts={48: 0, 96: 0})
+    assert code == "V6_TRACKING_GAP", code
+    assert "own pad" in why
+    assert P.verdict(ctrl, forms, counts, matched, matched,
+                     pad_tracked=True)[0] == "V1_COMPOSITION_GAP"
+    # a component that does not form still wins: the gate sits below V4 and V0, not above them
+    assert P.verdict(ctrl, {**forms, "bind": False}, counts, matched, matched,
+                     pad_tracked=False)[0] == "V4_COMPONENT_UNREADABLE"
+    assert P.verdict(ctrl, forms, counts, matched, matched, composed_floored=False,
+                     pad_tracked=False)[0] == "V0_COMPOSED_UNFLOORABLE"
+    # and a composed cell that FORMS is reported as formed, gate or no gate
+    assert P.verdict(ctrl, {**forms, "composed": True}, counts, matched, matched,
+                     pad_tracked=False)[0] == "V2_NO_GAP_HERE"
+    # the level is the one the components measure, and it is read per seed at EVERY length
+    broken = {0: {48: 0.619, 96: 0.417}, 1: {48: 0.398, 96: 0.287}, 2: {48: 0.742, 96: 0.511}}
+    ok, per_len = P.pad_tracks(broken, (48, 96))
+    assert ok is False and per_len == {48: 0, 96: 0}, per_len
+    good = {0: {48: 1.0, 96: 0.999}, 1: {48: 0.995, 96: 0.990}, 2: {48: 1.0, 96: 1.0}}
+    assert P.pad_tracks(good, (48, 96))[0] is True
+    # tracking at the short length and not the long one is a FAIL, and visible as that
+    part = {0: {48: 1.0, 96: 0.62}, 1: {48: 1.0, 96: 0.60}, 2: {48: 1.0, 96: 0.55}}
+    ok, per_len = P.pad_tracks(part, (48, 96))
+    assert ok is False and per_len == {48: 3, 96: 0}, per_len
+
+
 def test_the_matched_cost_control_is_declared_and_an_unreachable_one_is_absent():
     """The matched-cost control is a first-class requirement with named lengths, so "the composed
     cell is harder beyond the step multiplier" is testable. Where the sampler cannot build the

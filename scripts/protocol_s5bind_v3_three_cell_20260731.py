@@ -232,6 +232,17 @@ THE VERDICT TABLE (mechanical; ``verdict()`` returns exactly one of these, or ra
                              floor at its matched-cost length. The composed cell's failure is
                              accounted for by how much longer it is, and no composition claim is
                              available from this run.
+    V6 TRACKING GAP          both components FORM, the composed cell is floored and at floor, and
+                             the composed cell DOES NOT WRITE THE SCRATCHPAD the protocol assumes:
+                             its pad accuracy is far below the level the components reach on the
+                             same read. A pad protocol scores the answer a model gives FROM ITS
+                             OWN PAD, so a broken pad makes "the composition is hard" and "the
+                             model cannot hold the intermediate state it was handed room for"
+                             predict the same floored answer, and only the second is supported.
+                             It is a gate and not a null: the composed cell's answer number is
+                             real and reported, it just does not carry a composition reading. The
+                             verdict this replaces is V1, and without the gate V1 is what a rule
+                             reading only the answer returns.
     V1 UNCONTROLLED          both components FORM and the composed cell clears nowhere — the V1
                              pattern — but a matched-cost control was never measured, so "beyond
                              the step multiplier" is not established. The cells separate; the
@@ -1074,6 +1085,31 @@ def forms(per_seed, floors, lengths, n=N_EVAL, seeds_clear=SEEDS_CLEAR):
                                   for c in counts.values()), counts)
 
 
+# THE LEVEL A PAD PROTOCOL'S SCRATCHPAD HAS TO REACH BEFORE ITS ANSWER MEANS ANYTHING, and it is
+# a MEASURED reference rather than a chosen bar: on the bounded pad both components free-run their
+# own pad at 0.99-1.00 per token at every registered length on every seed, so a cell writing its
+# pad correctly on this protocol writes it essentially perfectly. A composed cell two thirds of the
+# way there is not a slightly worse tracker; it is a model whose scratchpad is wrong by the middle
+# of the stream, and the answer it reads off that pad prices something the composition rule does
+# not model.
+PAD_TRACKS_MIN = 0.99
+
+
+def pad_tracks(per_seed, lengths, seeds_clear=SEEDS_CLEAR, level=PAD_TRACKS_MIN):
+    """Whether the composed cell WRITES the pad the protocol scores it against.
+
+    ``per_seed`` is {seed: {L: pad accuracy}} from the SAME free-running read the answer comes
+    from — the model's own pad, fed back, not a teacher-forced one. Shaped like ``forms`` so the
+    two are read the same way: it holds iff at least ``seeds_clear`` seeds reach ``level`` at
+    EVERY registered length, and the per-length counts come back so a cell that tracks at 48 and
+    not at 96 is visible as that.
+    """
+    counts = {L: sum(1 for s in per_seed
+                     if (per_seed[s].get(L) is not None and per_seed[s][L] >= level))
+              for L in lengths}
+    return bool(lengths) and all(c >= seeds_clear for c in counts.values()), counts
+
+
 class ControlNotEvaluable(RuntimeError):
     """A control was applied at an (arm, cell, length) the arm never evaluated.
 
@@ -1188,7 +1224,7 @@ def guided_grid(matched, cells=LOCAL_CELLS, lengths=GUIDED_LENGTHS,
 
 
 def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
-            composed_floored=True, pad_reach=None):
+            composed_floored=True, pad_reach=None, pad_tracked=None, pad_counts=None):
     """The verdict table, applied mechanically. Raises rather than aborting on a missing control.
 
     Args:
@@ -1212,6 +1248,13 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
             off a number that was never measured.
         pad_reach: what the excluded both-maps class scores on the exact items, printed with the
             V0 reason so the retraction leaves a number. Not a floor.
+        pad_tracked: whether the composed cell writes its own pad at component level
+            (``pad_tracks``). None where the read has no pad at all — the PLAIN and DENSE
+            protocols — and the gate then does not apply, which is why it defaults to None rather
+            than to True. Under a BOUNDED-PAD read it is required: the answer is generated from
+            the model's own pad, so a pad that is wrong by mid-stream makes the composed cell's
+            floored answer uninterpretable as composition.
+        pad_counts: the per-length seed counts ``pad_tracks`` returns, printed with the V6 reason.
 
     Raises:
         ControlNotEvaluable: ``control`` is not an evaluated control.
@@ -1252,6 +1295,17 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
             "amount of that component's own work. Composition is not a separate difficulty at "
             f"k=6 / L<={max(LOCAL_LENGTHS)} in this regime; the lengths or k must move before the "
             "cell is worth buying on the frontier.")
+    if pad_tracked is False:
+        return "V6_TRACKING_GAP", (
+            "both components form and the composed cell is at floor, but the composed cell does "
+            f"not write its own pad at the level the components reach: pad accuracy >= "
+            f"{PAD_TRACKS_MIN} on {pad_counts if pad_counts is not None else 'no'} seeds per "
+            "length, against components that free-run their pad at 0.99-1.00 everywhere. This "
+            "read scores the answer the model gives FROM ITS OWN PAD, so a floored answer here is "
+            "equally consistent with the composition being hard and with the model being unable "
+            "to hold the state the pad gave it room for, and only the second is measured. No "
+            "composition claim is available until the composed pad reaches component level with "
+            "the answer still at floor.")
     unmatched = [c for c, ok in matched_forms.items() if ok is False]
     if unmatched:
         return "V3_GAP_IS_THE_COST", (
