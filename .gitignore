@@ -24,3 +24,6 @@ experiments/mopd/ckpts_hf/
 # local agent/runtime state
 .claude/
 feedback.txt
+
+# transient runtime state (local server pidfile)
+*.pid
