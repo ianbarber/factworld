@@ -1,8 +1,8 @@
-# The bounded-pad grid with the registered restart, and the composed pad's cap
+# The bounded-pad grid, the composed pad's cap, and the pad write's own floor
 
 ## What this run establishes
 
-THE COMPOSED CELL'S PAD IS CAPPED, at every registered length on every seed: seed 0 0.525/0.466/0.377; seed 1 0.484/0.427/0.354; seed 2 0.799/0.703/0.558 at L=48/64/96, against components that free-run their own pad at 1.000 at every length including the token-matched ones. So the composed cell's floored answer is a TRACKING result and not a composition one, and the registered rule says so only because the pad gate was added — without it the same numbers return a composition gap.
+THE COMPOSED CELL'S PAD IS CAPPED, at every registered length on every seed: seed 0 0.525/0.466/0.377; seed 1 0.484/0.427/0.354; seed 2 0.799/0.703/0.558 at L=48/64/96 per token, and seed 0 0.000/0.000/0.000; seed 1 0.000/0.000/0.000; seed 2 0.098/0.057/0.000 PER ITEM — which is the unit the answer is generated in — against components whose pad is perfect on every item at every length including the token-matched ones. So the composed cell's floored answer is a TRACKING result and not a composition one, and the registered rule says so only because the pad gate is applied — without it the same numbers return a composition gap.
 
 THE REGISTERED RESTART DOES NOT DEGRADE THE PAD; it raises it on every seed (composed@48, start to end of `stage4_restart`: seed 0 0.486->0.527; seed 1 0.490->0.501; seed 2 0.657->0.823). The degradation this round was called to investigate belonged to a grouped, answer-ratio-4 readout stage that is not the registered mix.
 
@@ -10,9 +10,15 @@ LENGTH IS NOT THE LEVER. The composed pad is SHORTER than the components' at the
 
 THE CAP IS A PER-EVENT RESIDUAL THAT COMPOUNDS, not a missing rule. With the GOLD pad in context the composed per-slot accuracy is flat in length — seed 0: 0.902 0.900 0.897 0.895 0.891 at L=16/32/48/64/96 — while the same slots free-running collapse with it: 0.773 0.626 0.525 0.466 0.377. The median ordinal of each item's FIRST wrong slot is the same at L=48 and L=96 within a seed — seed 0 6/6; seed 1 3/3; seed 2 25/26 — so the pad survives a fixed number of composed events and the stream's length only decides how much of it is wrong by the end.
 
-AND THE RESIDUAL SITS ON THE TWO-HOP WRITE. Teacher-forced, the one pad token that needs the operand resolved through the holder map and then read through the pointer map (`swap_p0`) scores 0.458-0.964 across seeds and lengths, against the three one-hop tokens of the same events. That is the composition, measured inside the scratchpad rather than in the answer.
+AND THE RESIDUAL SITS ON THE TWO-HOP WRITE. Teacher-forced, the one pad token that needs the operand resolved through the holder map and then read through the pointer map (`swap_p0`) scores 0.458-0.964 across seeds and lengths, against the three one-hop tokens of the same events. That is where the composition is, and the next section is what it is worth against a floor.
 
-WHAT WOULD MAKE THE COMPOSITION QUESTION AVAILABLE, and it is a length and not a recipe. The composed pad reaches component level only on SHORT streams: the best seed reads 0.984 at L=16, 0.912 at L=32, 0.799 at L=48, 0.703 at L=64, 0.558 at L=96. It comes within a point of 0.99 only at L=16, and is still under the bar there, while the shortest REGISTERED composed length is 48. Either the composed grid moves down to where the pad is written, and the floor is recomputed there, or the two-hop write is closed at the registered lengths. Neither the document mix nor the pad's length is the thing to change.
+THE PAD WRITE HAS A FLOOR AND THE MEASURED PAD IS UNDER IT. The bounded pad hands every policy 2 free live slots, so the registered live-slot rule admits any policy holding 8 of the 12 map cells, and such a policy writes the composed pad at 0.584/0.491/0.390 at L=48/64/96 (3.5/2.9/2.3x the per-slot chance of 1/k = 0.167). The pad width that costs the ANSWER floor nothing costs the PAD floor almost everything: on the answer a partial carry buys 1.05-1.17x chance, on the pad it buys 3-5x, because most pad tokens are one-hop reads of cells the carry holds.
+
+SO THE TWO-HOP TOKEN DOES NOT REGISTER A COMPOSITION EITHER. Free-running — the read the grid scores — `swap_p0`'s floor is 0.536/0.454/0.363, and the same one-structure carry sets it: a policy that never composes the two hops correctly still gets that token right 3-5x chance by resolving the operand against a map it holds only part of. The one-hop SUB-class reaches only 0.177-0.189 there, so the token is two-hop work — but the class that decides a floor is the registered one, and it reaches the model.
+
+AND IT DOES NOT FORM. Of 3 seeds, seed 2 clears at L=32/48/64/96, against the 2 seeds FORMS requires at EVERY registered length. The seed(s) that clear — [2] — are the ones whose ANSWER is at floor on every cell including both components, so the pad write separates on exactly the seed that reads nothing out.
+
+AND THE SHORT-STREAM ESCAPE IS CLOSED ON THIS AXIS TOO. At L=16, where the best seed writes 0.984 of the pad, the floor is 0.9271 and the CLEARS bar is 1.077 — above 1.0, so no score at that length can clear it. The pad-write read is unbuyable at exactly the lengths where the pad is written.
 
 ## The three cells at every registered length, n=512
 
@@ -38,11 +44,48 @@ WHAT WOULD MAKE THE COMPOSITION QUESTION AVAILABLE, and it is a length and not a
 - components FORM at their own registered lengths: {'state': {17: 2, 23: 2, 34: 2}, 'bind': {31: 2, 41: 2, 62: 2}, 'composed': {48: 0, 64: 0, 96: 0}} (needs 2 seeds at every length)
 - matched-cost control at composed@48: {'state': True, 'bind': True}
 - composed cell clears: {48: 0, 64: 0, 96: 0}
-- composed pad reaches 0.99 on: {48: 0, 64: 0, 96: 0} seeds per length -> pad_tracked=False
+- composed pad is perfect on 0.99 of ITEMS on: {48: 0, 64: 0, 96: 0} seeds per length -> pad_tracked=False (per seed at L=48/64/96: seed 0 0.000/0.000/0.000; seed 1 0.000/0.000/0.000; seed 2 0.098/0.057/0.000)
+- composed GOLD-PAD answer: not measured in this run
 
 **Without the pad gate the rule returns `V1_COMPOSITION_GAP`. With it, `V6_TRACKING_GAP`.**
 
-both components form and the composed cell is at floor, but the composed cell does not write its own pad at the level the components reach: pad accuracy >= 0.99 on {48: 0, 64: 0, 96: 0} seeds per length, against components that free-run their pad at 0.99-1.00 everywhere. This read scores the answer the model gives FROM ITS OWN PAD, so a floored answer here is equally consistent with the composition being hard and with the model being unable to hold the state the pad gave it room for, and only the second is measured. No composition claim is available until the composed pad reaches component level with the answer still at floor.
+both components form and the composed cell is at floor, but the composed cell does not write its own pad at the level the components reach: items perfect >= 0.99 on {48: 0, 64: 0, 96: 0} seeds per length, against components whose pad is perfect on every item everywhere. This read scores the answer the model gives FROM ITS OWN PAD, so a floored answer here is equally consistent with the composition being hard and with the model being unable to hold the state the pad gave it room for, and only the second is measured. No composition claim is available until the composed pad reaches component level with the answer still at floor.
+
+## The PAD WRITE against its own floor
+
+The class is the registered one, scored on the pad instead of on the answer: live slots `W - pad <= max(k, m) + 1`, steps no more than the cell's own algorithm pays to produce the pad. At pad 2 that admits any policy holding 8 of the 12 map cells and excludes the cell's own algorithm (12 + scratch). Chance for a per-slot read is `1/k` — every pad token is an agent name — and not the answer read's `1/(k-1)`.
+
+| cell | chance | per-slot floor | row | swap_p0 floor | swap_p0, one-hop sub-class | CLEARS bar |
+|---|---|---|---|---|---|---|
+| composed@16 | 0.1667 | 0.9271 (5.56x) | `pad_carry_P4B4_first[scored]` | 0.9096 | 0.2291 | 1.077 — above 1.0, unbuyable |
+| composed@32 | 0.1667 | 0.7390 (4.43x) | `pad_carry_P4B4_first[scored]` | 0.6793 | 0.1891 | 0.889 |
+| composed@48 | 0.1667 | 0.5835 (3.50x) | `pad_carry_P4B4_first[scored]` | 0.5363 | 0.1888 | 0.734 |
+| composed@64 | 0.1667 | 0.4906 (2.94x) | `pad_carry_P4B4_first[scored]` | 0.4541 | 0.1816 | 0.641 |
+| composed@96 | 0.1667 | 0.3898 (2.34x) | `pad_carry_P4B4_first[disjoint]` | 0.3626 | 0.1767 | 0.540 |
+
+Every measured seed against it, n=512, under the registered `clears` (z>3.0 and margin>=0.15).
+
+| seed | cell | per-slot | floor | clears | swap_p0 | floor | clears |
+|---|---|---|---|---|---|---|---|
+| 0 | composed@16 | 0.773 | 0.9271 | no | 0.453 | 0.9096 | no |
+| 0 | composed@32 | 0.626 | 0.7390 | no | 0.345 | 0.6793 | no |
+| 0 | composed@48 | 0.525 | 0.5835 | no | 0.300 | 0.5363 | no |
+| 0 | composed@64 | 0.466 | 0.4906 | no | 0.279 | 0.4541 | no |
+| 0 | composed@96 | 0.377 | 0.3898 | no | 0.250 | 0.3626 | no |
+| 1 | composed@16 | 0.704 | 0.9271 | no | 0.309 | 0.9096 | no |
+| 1 | composed@32 | 0.584 | 0.7390 | no | 0.263 | 0.6793 | no |
+| 1 | composed@48 | 0.484 | 0.5835 | no | 0.244 | 0.5363 | no |
+| 1 | composed@64 | 0.427 | 0.4906 | no | 0.239 | 0.4541 | no |
+| 1 | composed@96 | 0.354 | 0.3898 | no | 0.227 | 0.3626 | no |
+| 2 | composed@16 | 0.984 | 0.9271 | no | 0.951 | 0.9096 | no |
+| 2 | composed@32 | 0.912 | 0.7390 | yes | 0.818 | 0.6793 | no |
+| 2 | composed@48 | 0.799 | 0.5835 | yes | 0.693 | 0.5363 | yes |
+| 2 | composed@64 | 0.703 | 0.4906 | yes | 0.596 | 0.4541 | no |
+| 2 | composed@96 | 0.558 | 0.3898 | yes | 0.470 | 0.3626 | no |
+
+AND THE PAD-WRITE READ SUPPORTS NO POSITIVE CONTROL. A component cell has ONE structure, so the one-structure bound admits the component's own pad algorithm and its floor is 1.0000 at bind@62, 1.0000 at state@34 — the same argument that leaves the composed cell unfloorable under a `k + m` wide pad, one cell over. A component's perfect pad cannot clear anything, so this read has no cell on which a working model demonstrates that the measurement works.
+
+AND THE TEACHER-FORCED READ HAS A SATURATED CELL. Handed the same gold history, a row that holds the holder map refreshes each object's new holder from the adjacent gold block and scores 1.000 on `give_p1` at every length, so that cell's floor is the ceiling; the pooled teacher-forced floor is 0.7363 at composed@48. The teacher-forced numbers stay what they were — a diagnostic — and the residual they show on `swap_p0` is under the floor of that same class (0.6543 at composed@48).
 
 ## Pad accuracy ACROSS the stage
 

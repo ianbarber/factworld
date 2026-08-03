@@ -193,7 +193,7 @@ def geometry_section() -> list[str]:
 
 ONE_STRUCTURE = os.path.join(REPO, "results", "probes",
                              "s5bind_v3_onestructure_k_20260803.json")
-CLEAN_MAX = 1.25          # a cheap-policy read within this multiple of chance leaves the cell
+CLEAN_MAX = 1.25          # a one-structure read within this multiple of chance leaves the cell
                           # discriminating; above it a half-price solver is scoring
 
 
@@ -212,20 +212,19 @@ def one_structure_section() -> list[str]:
     o.append("## What raising k at fixed L does to the composed cell itself\n")
     o.append("The composed cell earns its name only while maintaining ONE of the two structures "
              "is insufficient. So the question is not only whether a model finds the cell harder "
-             "at higher k, it is whether the cell is still asking the question. The canonical "
-             "cheap solver is the ONE-STRUCTURE one: carry P through the swaps and resolve every "
-             "reference against the STATED B0 (or the mirror), which is 1+k live slots against "
-             "the task's 1+k+m and 0.63-0.68x its steps. It is not the only one, and at high k "
-             "it is not the strongest — a TRUNCATED-WINDOW read that simply ignores the first "
-             "tenth of the stream overtakes it — so what is reported per cell is the maximum "
-             "over every registered cheap policy and the name of the one that binds, not a "
-             "policy chosen in advance. Chance rows (`uniform`, `uniform_non_initial`, "
-             "`uniform_anti_surface`) are excluded: they are guesses, not algorithms. Each is "
-             f"replayed by `validity.s5_bind_v3_floors` at n={n} per cell with no model in the "
-             f"loop.\n")
+             "at higher k, it is whether the cell is still asking the question. The policy that "
+             "answers that is the ONE-STRUCTURE solver: carry P through the swaps and resolve "
+             "every reference against the STATED B0, or the mirror. It costs 1+k live slots "
+             "against the task's 1+k+m and 0.66x its steps at the shipped point — strictly less "
+             "work, and by construction it must be wrong wherever the structure it did not track "
+             "has moved. How often it is nonetheless RIGHT is a property of the stream, replayed "
+             f"by `validity.s5_bind_v3_floors` at n="
+             f"{min(c['n'] for c in cells)}"
+             f"{'' if min(c['n'] for c in cells) == max(c['n'] for c in cells) else '-' + str(max(c['n'] for c in cells))}"
+             f" per cell with no model in the loop, and is what the (k, L) choice decides.\n")
     o.append("This is not a floor and is not read as one: in the scratchpad regime the composed "
-             "cell has none, and these policies are not slot-bounded anyway — they walk "
-             "the whole stream. It measures how much of the composed cell's separation from its "
+             "cell has none, and a live-slot bound is exactly what a visible trace defeats. It "
+             "measures something else — how much of the composed cell's separation from its "
              "components a (k, L) choice leaves standing. The stream-blind read (`initial_only`) "
              "is 0.0000 in every cell of the grid — the sampler's `q_no_surface` gate gives it no "
              "items — so what follows is not that shortcut returning under another name.\n")
@@ -242,33 +241,31 @@ def one_structure_section() -> list[str]:
             if c is None:
                 row.append("—")
                 continue
-            r = c["cheap_max"] / c["chance"]
+            r = c["one_structure_max"] / c["chance"]
             row.append(f"**{r:.2f}x**" if r > CLEAN_MAX else f"{r:.2f}x")
         o.append(f"| {L} | " + " | ".join(row) + " |")
     o.append("")
     o.append(f"Bold is over {CLEAN_MAX:.2f}x — a chosen line, not a measured one; the raw "
              f"numbers are printed so a different line can be drawn. Above it a half-price "
-             f"cheap policy is beating "
+             f"one-structure solver is beating "
              f"the guess baseline the cell is scored against. Raising k at fixed L walks every "
              f"row rightwards into that region: at L=128 the read goes "
-             f"{by[(12,128)]['cheap_max']:.4f} ({by[(12,128)]['cheap_max']/by[(12,128)]['chance']:.2f}x) "
-             f"at k=12 to {by[(48,128)]['cheap_max']:.4f} "
-             f"({by[(48,128)]['cheap_max']/by[(48,128)]['chance']:.2f}x) at k=48, and at "
-             f"L=32/k=48 it reaches {by[(48,32)]['cheap_max']:.4f} "
-             f"({by[(48,32)]['cheap_max']/by[(48,32)]['chance']:.2f}x). k does not make "
+             f"{by[(12,128)]['one_structure_max']:.4f} ({by[(12,128)]['one_structure_max']/by[(12,128)]['chance']:.2f}x) "
+             f"at k=12 to {by[(48,128)]['one_structure_max']:.4f} "
+             f"({by[(48,128)]['one_structure_max']/by[(48,128)]['chance']:.2f}x) at k=48, and at "
+             f"L=32/k=48 it reaches {by[(48,32)]['one_structure_max']:.4f} "
+             f"({by[(48,32)]['one_structure_max']/by[(48,32)]['chance']:.2f}x). k does not make "
              f"the composed cell harder; past a point it makes it a component cell with more "
              f"agents in it.\n")
 
     o.append("### The shape of the admissible region\n")
-    o.append("L/k is most of the story and not all of it. Every cheap policy that gains here "
-             "gains for the same reason: L/k is how many times the stream touches any one agent "
-             "or object, so as it falls, the two structures stop moving under each other (the "
-             "one-structure reads) and the early part of the stream stops mattering (the "
-             "truncated-window reads). The RAW cheap-policy read therefore falls with L/k. But "
-             "the baseline the cell is scored against falls as 1/(k-1) at the same time, and it "
-             "falls faster — so at matched L/k the read gets WORSE as a multiple of chance the "
-             "wider the cell is:\n")
-    o.append("| L/k | cells (k, L) | best cheap read | x chance |")
+    o.append("L/k is most of the story and not all of it. L/k is how many times the stream "
+             "touches any one agent or object, so as it falls the two structures stop moving "
+             "under each other and the RAW one-structure read falls with it. But the baseline "
+             "the cell is scored against falls as 1/(k-1) at the same time, and it falls faster "
+             "— so at matched L/k the read gets WORSE as a multiple of chance the wider the cell "
+             "is:\n")
+    o.append("| L/k | cells (k, L) | one-structure read | x chance |")
     o.append("|---|---|---|---|")
     buckets: dict[float, list] = {}
     for c in cells:
@@ -276,10 +273,10 @@ def one_structure_section() -> list[str]:
     for ratio in sorted(buckets):
         b = sorted(buckets[ratio], key=lambda c: c["k"])
         o.append(f"| {ratio:.2f} | " + ", ".join(f"({c['k']}, {c['L']})" for c in b) + " | "
-                 + ", ".join(f"{c['cheap_max']:.4f}" for c in b) + " | "
-                 + ", ".join(f"{c['cheap_max'] / c['chance']:.2f}x" for c in b) + " |")
+                 + ", ".join(f"{c['one_structure_max']:.4f}" for c in b) + " | "
+                 + ", ".join(f"{c['one_structure_max'] / c['chance']:.2f}x" for c in b) + " |")
     o.append("")
-    clean = [c for c in cells if c["cheap_max"] / c["chance"] <= CLEAN_MAX]
+    clean = [c for c in cells if c["one_structure_max"] / c["chance"] <= CLEAN_MAX]
     need: dict[int, float] = {}
     for k in ks:
         ok = [c["L"] / c["k"] for c in clean if c["k"] == k]
@@ -309,35 +306,67 @@ def one_structure_section() -> list[str]:
     o.append("|---|---|---|---|---|")
     for L in ls:
         row = sorted((c for c in cells if c["L"] == L), key=lambda c: c["k"])
-        ok = [c for c in row if c["cheap_max"] / c["chance"] <= CLEAN_MAX]
-        bad = [c for c in row if c["cheap_max"] / c["chance"] > CLEAN_MAX]
+        ok = [c for c in row if c["one_structure_max"] / c["chance"] <= CLEAN_MAX]
+        bad = [c for c in row if c["one_structure_max"] / c["chance"] > CLEAN_MAX]
         if not ok:
             o.append(f"| {L} | none | — | {row[0]['k']} | "
-                     f"{row[0]['cheap_max'] / row[0]['chance']:.2f}x |")
+                     f"{row[0]['one_structure_max'] / row[0]['chance']:.2f}x |")
             continue
         b = ok[-1]
-        nxt = (f"{bad[0]['k']} | {bad[0]['cheap_max'] / bad[0]['chance']:.2f}x"
+        nxt = (f"{bad[0]['k']} | {bad[0]['one_structure_max'] / bad[0]['chance']:.2f}x"
                if bad else "— | —")
-        o.append(f"| {L} | {b['k']} | {b['cheap_max'] / b['chance']:.2f}x | {nxt} |")
+        o.append(f"| {L} | {b['k']} | {b['one_structure_max'] / b['chance']:.2f}x | {nxt} |")
     o.append("")
+    win = [c for c in cells if "window_90" in (c.get("rows") or {})]
+    if win:
+        o.append("### A second thing k does to the stream\n")
+        o.append("The one-structure read is the measure above because it is the one that is "
+                 "strictly cheaper — 1+k live slots against 1+k+m. A different row moves even "
+                 "further and is worth stating separately: `window_90`, which replays the task's "
+                 "own algorithm but SKIPS THE FIRST TENTH of the events. It holds both structures "
+                 "and so is not a half-price solver — `validity.s5_bind_v3_admits` rejects it as "
+                 "a floor row for exactly that reason — but it is 0.90x the task's steps, and "
+                 "what it measures is how much of the stream carries no information about the "
+                 "answer.\n")
+        o.append("| L | " + " | ".join(f"k={k}" for k in ks) + " |")
+        o.append("|---" * (len(ks) + 1) + "|")
+        for L in ls:
+            row = []
+            for k in ks:
+                c = by.get((k, L))
+                v = (c.get("rows") or {}).get("window_90") if c else None
+                row.append(f"{v / c['chance']:.2f}x" if v is not None else "—")
+            o.append(f"| {L} | " + " | ".join(row) + " |")
+        o.append("")
+        hi = max(win, key=lambda c: (c["rows"]["window_90"] / c["chance"]))
+        lo = min((c for c in win if c["k"] == min(ks)),
+                 key=lambda c: c["rows"]["window_90"] / c["chance"])
+        o.append(f"At k={hi['k']}, L={hi['L']} a solver that never reads the first tenth of the "
+                 f"stream answers correctly {hi['rows']['window_90']:.3f} of the time against an "
+                 f"informed chance of {hi['chance']:.4f} — "
+                 f"{hi['rows']['window_90'] / hi['chance']:.0f}x. The events are still there; at "
+                 f"that width they have stopped mattering. This is the same fact as the falling "
+                 f"carrier chain seen from the readout side, and it is why raising k cannot "
+                 f"substitute for raising L: L is what puts events between the query and the "
+                 f"initial map, and k takes them back out.\n")
+
     grid = qwen_grid()
     if grid:
         o.append("### What that costs a live reading\n")
-        o.append("The margin a measured score holds OVER the best cheap policy is what the "
+        o.append("The margin a measured score holds OVER the one-structure read is what the "
                  "composed cell is buying. On the local Qwen grid at n=40 that margin collapses "
                  "along k while raw match barely moves — the flatness of the k axis is not a "
                  "null, it is the cell handing its own separation away:\n")
-        o.append("| L | k | match (n=40) | best cheap read (policy) | margin | x chance |")
+        o.append("| L | k | match (n=40) | one-structure read | margin | x chance |")
         o.append("|---|---|---|---|---|---|")
         for k, L, _h, m, x, _c, _n in sorted(grid, key=lambda g: (g[1], g[0])):
             c = by.get((k, L))
             if c is None:
                 continue
-            o.append(f"| {L} | {k} | {m:.3f} | {c['cheap_max']:.4f} "
-                     f"(`{c.get('cheap_max_row', '?')}`) | "
-                     f"**{m - c['cheap_max']:+.3f}** | {x:.2f}x |")
+            o.append(f"| {L} | {k} | {m:.3f} | {c['one_structure_max']:.4f} | "
+                     f"**{m - c['one_structure_max']:+.3f}** | {x:.2f}x |")
         o.append("")
-        row = [(k, L, m, by[(k, L)]["cheap_max"])
+        row = [(k, L, m, by[(k, L)]["one_structure_max"])
                for k, L, _h, m, _x, _c, _n in grid if (k, L) in by and L == 64]
         if len(row) >= 2:
             row.sort()
@@ -362,13 +391,13 @@ def one_structure_section() -> list[str]:
                  f"the narrow-and-long corner is not available and the ray has a floor in k as "
                  f"well as a ceiling.\n")
 
-    reg = by.get((12, 128))
-    if reg:
+    reg, nxt = by.get((12, 128)), by.get((24, 128))
+    if reg and nxt:
         o.append(f"The shipped operating point is k=12 at L=128 — L/k = {128 / 12:.1f}, read "
-                 f"{reg['cheap_max'] / reg['chance']:.2f}x. It sits ON the frontier, not "
+                 f"{reg['one_structure_max'] / reg['chance']:.2f}x. It sits ON the frontier, not "
                  f"inside it: the registered cell is as wide as it can be at that length, and "
                  f"the next k rung up at L=128 is already "
-                 f"{by[(24, 128)]['cheap_max'] / by[(24, 128)]['chance']:.2f}x.\n")
+                 f"{nxt['one_structure_max'] / nxt['chance']:.2f}x.\n")
     return o
 
 
@@ -424,7 +453,7 @@ def next_point_section() -> list[str]:
                  f"completion tokens per item — {pe:.0f} completion and {pp:.0f} prompt tokens "
                  f"per event, and ${a['cost']:.3f} and ${b['cost']:.3f} an item. Both cells are "
                  f"at the ceiling. Extending that per-event rate along the admissible ray:\n")
-        o.append("| L | widest admissible k | its best cheap read | informed chance | "
+        o.append("| L | widest admissible k | its one-structure read | informed chance | "
                  "carrier hops | est. completion tok/item | est. $/item | est. $ at n=40 |")
         o.append("|---|---|---|---|---|---|---|---|")
         reg = MODELS_PRICE = None
@@ -435,7 +464,7 @@ def next_point_section() -> list[str]:
             reg = {"prompt_price_per_M": 0.0, "completion_price_per_M": 0.0}
         for L in sorted({c["L"] for c in d["cells"]}):
             row = sorted((c for c in d["cells"] if c["L"] == L), key=lambda c: c["k"])
-            ok = [c for c in row if c["cheap_max"] / c["chance"] <= CLEAN_MAX]
+            ok = [c for c in row if c["one_structure_max"] / c["chance"] <= CLEAN_MAX]
             if not ok or L < L1:
                 continue
             c = ok[-1]
@@ -444,7 +473,7 @@ def next_point_section() -> list[str]:
             dollars = (ptok * reg["prompt_price_per_M"]
                        + ctok * reg["completion_price_per_M"]) / 1e6
             o.append(f"| {L} | {c['k']} | "
-                     f"{c['cheap_max'] / c['chance']:.2f}x | {c['chance']:.4f} | "
+                     f"{c['one_structure_max'] / c['chance']:.2f}x | {c['chance']:.4f} | "
                      f"{c['hops']:.1f} | {ctok:.0f} | ${dollars:.2f} | ${dollars * 40:.0f} |")
         o.append("")
         o.append("The estimate is linear in L at this model's own measured per-event rate, which "
@@ -455,13 +484,14 @@ def next_point_section() -> list[str]:
                  "priced. These rows are the only extrapolation in this report and are marked "
                  "as such; everything else is a measurement.\n")
         wide = [c for c in d["cells"]
-                if c["cheap_max"] / c["chance"] <= CLEAN_MAX and c["L"] >= 512]
-        if wide:
+                if c["one_structure_max"] / c["chance"] <= CLEAN_MAX and c["L"] >= 512]
+        ref = by.get((12, 128))
+        if wide and ref and (12, max(c["L"] for c in wide)) in by:
             best = max(wide, key=lambda c: c["k"])
             o.append(f"Widening along the ray is bought for RESOLUTION and not for difficulty: "
                      f"at L={best['L']} the widest admissible cell is k={best['k']}, whose "
-                     f"informed chance is {best['chance']:.4f} against {by[(12, 128)]['chance']:.4f} "
-                     f"at the shipped point — {by[(12, 128)]['chance'] / best['chance']:.1f}x the "
+                     f"informed chance is {best['chance']:.4f} against {ref['chance']:.4f} "
+                     f"at the shipped point — {ref['chance'] / best['chance']:.1f}x the "
                      f"measurement resolution — but its carrier chain is {best['hops']:.1f} hops "
                      f"against {by[(12, best['L'])]['hops']:.1f} for k=12 at the same length. The "
                      f"difficulty comes from L. k comes along to keep the guess baseline low "
@@ -528,8 +558,8 @@ def lead_section() -> list[str]:
             o.append(f"**Worse than inert: past a boundary, raising k stops the cell being a "
                      f"composition cell.** A half-price solver that maintains ONE structure and "
                      f"resolves references against the other's stated initial map reads "
-                     f"{a['cheap_max'] / a['chance']:.2f}x informed chance at the shipped "
-                     f"k=12/L=128 and {b['cheap_max'] / b['chance']:.2f}x at k=48/L=128. "
+                     f"{a['one_structure_max'] / a['chance']:.2f}x informed chance at the shipped "
+                     f"k=12/L=128 and {b['one_structure_max'] / b['chance']:.2f}x at k=48/L=128. "
                      f"The admissible set is a narrowing ray in (k, L), the shipped operating "
                      f"point sits on its edge, and on the local grid the margin a measured score "
                      f"holds over that solver collapses along k while raw match stays flat.\n")
@@ -714,24 +744,23 @@ def report() -> str:
                for c in json.load(open(ONE_STRUCTURE, encoding="utf-8"))["cells"]}
     o.append("## 2. The k axis — match against informed chance 1/(k-1), and its token price\n")
     o.append("| k | L | chance 1/(k-1) | n | match | 95% CI | x chance | z | "
-             "best cheap read | margin | prompt tok/item | completion tok/item | wall/item |")
+             "one-structure read | margin | prompt tok/item | completion tok/item | wall/item |")
     o.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for (k, L) in sorted(comp, key=lambda t: (t[1], t[0])):
         r = comp[(k, L)]
         ch = S.informed_chance(k)
         lo, hi = _wilson(r["match"], r["n"])
         c = one.get((k, L))
-        os_read = (f"{c['cheap_max']:.4f} ({c['cheap_max'] / ch:.2f}x, "
-                   f"`{c.get('cheap_max_row', '?')}`)" if c else "—")
-        margin = f"**{r['match'] - c['cheap_max']:+.3f}**" if c else "—"
+        os_read = (f"{c['one_structure_max']:.4f} "
+                   f"({c['one_structure_max'] / ch:.2f}x)" if c else "—")
+        margin = f"**{r['match'] - c['one_structure_max']:+.3f}**" if c else "—"
         o.append(f"| {k} | {L} | {ch:.4f} | {r['n']} | "
                  f"{'VOID ' if W.void(r) else ''}{r['match']:.3f} | [{lo:.2f},{hi:.2f}] | "
                  f"{r['match'] / ch:.2f}x | {_z(r['match'], ch, r['n']):+.1f} | {os_read} | "
                  f"{margin} | {r['ptok_item']:.0f} | {r['ctok_item']:.0f} | "
                  f"{r['elapsed_s'] / r['n']:.0f}s |")
     o.append("")
-    o.append("`best cheap read` is the strongest registered cheap policy on that cell from the "
-             "section above, and "
+    o.append("`one-structure read` is that cell's half-price policy from the section above, and "
              "`margin` is what the measured score holds over it. A cell whose margin is not "
              "clearly positive is not reading composition, whatever its match says.\n")
     for L in ls:

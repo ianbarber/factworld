@@ -79,11 +79,21 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_needs,
     s5_bind_v3_operative_floor,
     s5_bind_v3_pad_admits,
+    s5_bind_v3_pad_carry_parse,
+    s5_bind_v3_pad_carry_rows,
     s5_bind_v3_pad_floorable,
     s5_bind_v3_pad_floors,
+    s5_bind_v3_pad_gold,
     s5_bind_v3_pad_max_width,
     s5_bind_v3_pad_operative_floor,
     s5_bind_v3_pad_reach,
+    s5_bind_v3_pad_scan_last_write,
+    s5_bind_v3_pad_write_admits,
+    s5_bind_v3_pad_write_chance,
+    s5_bind_v3_pad_write_cost,
+    s5_bind_v3_pad_write_floor,
+    s5_bind_v3_pad_write_scores,
+    s5_bind_v3_pad_write_task_cost,
     s5_bind_v3_partial_carry,
     s5_bind_v3_partial_carry_profile,
     s5_bind_v3_query_kind,
@@ -1025,8 +1035,9 @@ def test_a_broken_composed_pad_gates_the_composition_verdict():
     Under a bounded pad the model answers from a scratchpad IT WROTE, so a composed cell at floor
     with a pad that is wrong by mid-stream is equally consistent with a hard composition and with
     a model that cannot hold the state the pad gave it room for. On the measured numbers — the
-    composed cell free-running its own pad at 0.40-0.74 while both components sit at 0.99-1.00 —
-    the ungated rule returns V1_COMPOSITION_GAP, which is the claim the pad says is unavailable.
+    composed cell free-running a pad that is perfect on 0.000-0.098 of items while both components
+    are perfect on all of them — the ungated rule returns V1_COMPOSITION_GAP, which is the claim
+    the pad says is unavailable.
     ``pad_tracked`` is None on the PLAIN and DENSE reads, which have no pad, so the gate applies
     exactly where the answer depends on one."""
     P = _protocol()
@@ -1041,8 +1052,8 @@ def test_a_broken_composed_pad_gates_the_composition_verdict():
                           pad_counts={48: 0, 96: 0})
     assert code == "V6_TRACKING_GAP", code
     assert "own pad" in why
-    assert P.verdict(ctrl, forms, counts, matched, matched,
-                     pad_tracked=True)[0] == "V1_COMPOSITION_GAP"
+    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True,
+                     readout=True)[0] == "V1_COMPOSITION_GAP"
     # a component that does not form still wins: the gate sits below V4 and V0, not above them
     assert P.verdict(ctrl, {**forms, "bind": False}, counts, matched, matched,
                      pad_tracked=False)[0] == "V4_COMPONENT_UNREADABLE"
@@ -1901,6 +1912,194 @@ def test_the_bounded_pad_floor_is_the_plain_floor_up_to_width_two_and_rises_afte
                                                   True, cq, pad=w)
                 for w in (0, 1, 2, 5, 6, 12)}
         assert len(set(vals.values())) == 1, f"{name}@{L}: the pad moved a component floor {vals}"
+
+
+def test_the_pad_write_class_excludes_the_task_and_prices_the_backward_scan_out():
+    """THE PAD-WRITE CLASS, on the two conjuncts that decide what is in it.
+
+    LIVE SLOTS. ``W = 1 + cells held``, so ``W - pad <= max(k, m) + 1`` admits exactly the splits
+    of 8 cells at k = m = 6 and pad 2, and the cell's own algorithm — 12 cells and the scratch
+    register — is out. That is what makes the pad write floorable at all where the answer is: the
+    same inequality, the same width.
+
+    STEPS. ``pad_scan_last_write`` recovers a cross swap's operand EXACTLY by scanning back to the
+    last give that wrote the referenced object, and the distance it scans does not grow with L —
+    an L-independence rule alone would admit it. It is excluded on the step conjunct, which is the
+    registered one, and the exclusion is a statement about cost: it pays ~2 m / p_give steps per
+    swap where the algorithm pays 6.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=64, length=48)
+    ns, ng = s5_bind_v3_shape(ex)
+    rows = s5_bind_v3_pad_carry_rows(k, m, 2)
+    lim = one_structure_bound(k, m) + 2 - 1
+    for row in rows:
+        jp, jb, ev = s5_bind_v3_pad_carry_parse(row)
+        assert jp + jb <= lim, row
+        assert ev in ("first", "recent"), row
+        assert s5_bind_v3_pad_write_cost(row, k, m, ns, ng)[0] == 1 + jp + jb, row
+        assert s5_bind_v3_pad_write_admits(row, "own_gold", "swap_p0", k, m, ns, ng, pad=2), row
+    assert (6, 2) in {s5_bind_v3_pad_carry_parse(r)[:2] for r in rows}
+    assert (6, 3) not in {s5_bind_v3_pad_carry_parse(r)[:2] for r in rows}
+    # the cell's own pad algorithm: both maps and the scratch register, and it is out at pad 2
+    wt, st = s5_bind_v3_pad_write_task_cost(k, m, ns, ng)
+    assert wt == k + m + 1 and st > s5_bind_v3_task_cost(k, m, ns, ng)[1], (wt, st)
+    assert not floor_eligible(wt - 2, st, one_structure_bound(k, m), st)
+    # the backward scan: L-independent per event, and excluded on total steps at every length
+    for L in (48, 96):
+        exl = TK.generate(spec, "test", n=32, length=L)
+        nsl, ngl = s5_bind_v3_shape(exl)
+        w, s = s5_bind_v3_pad_write_cost("pad_scan_last_write", k, m, nsl, ngl)
+        per_swap = (s - (k + m) - 4 * ngl - 1) / max(1, nsl)
+        assert w <= one_structure_bound(k, m), w        # it holds ONE structure
+        assert 20 < per_swap < 30, per_swap             # and its per-event cost is flat in L
+        assert not s5_bind_v3_pad_write_admits("pad_scan_last_write", "own_gold", "swap_p0",
+                                               k, m, nsl, ngl, pad=2)
+    scan = s5_bind_v3_pad_scan_last_write(ex, k, m)
+    assert scan["swap_p0"] > 0.4, scan                  # and it is excluded on cost, not on merit
+
+
+def test_the_pad_write_chance_baseline_is_one_over_k():
+    """DERIVED, not borrowed. Every pad token is an AGENT name — the pad carries values of P and
+    of B, and both are agents — so an uninformed guess is 1 / k. The answer read's 1 / (k - 1)
+    comes from the QUERY GATE, which excludes the queried slot's stated value; that gate binds one
+    slot at the end of the stream and says nothing about the 2 L tokens of the pad.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k = spec.k
+    ex = TK.generate(spec, "test", n=128, length=48)
+    ch = s5_bind_v3_pad_write_chance(ex, k)
+    assert ch["uniform"] == 1.0 / k
+    assert ch["n_slots"] == sum(2 * len(C.read(e.prompt)["events"]) for e in ex)
+    agents = set(C.read(ex[0].prompt)["P0"])
+    for e in ex[:16]:
+        for blk in s5_bind_v3_pad_gold(C.read(e.prompt)):
+            assert set(blk) <= agents, blk
+    # the marginal is near flat, so the best FIXED agent — an admitted row at every width — is
+    # within a point of uniform and the ratio below is read against 1 / k
+    assert abs(ch["best_const"] - 1.0 / k) < 0.02, ch["best_const"]
+
+
+def test_the_composed_pad_write_has_a_floor_at_three_times_chance():
+    """THE FLOOR THE PAD WRITE HAS TO CLEAR, and what the bounded pad costs on this axis.
+
+    The 2 free live slots the pad hands out are nearly free on the ANSWER (pad <= 2 is the plain
+    floor, 1.05-1.17x chance) and expensive on the PAD: a policy holding 8 of the 12 map cells
+    writes most of the pad, because three of the four tokens are one-hop reads of cells it holds.
+    So the composed pad write is floored at 3x chance and above, and the two-hop token with it.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=96, length=48)
+    ns, ng = s5_bind_v3_shape(ex)
+    sc = s5_bind_v3_pad_write_scores(ex, k, m, pad=2)
+    fl = s5_bind_v3_pad_write_floor(sc, k, m, ns, ng, pad=2)
+    ch = 1.0 / k
+    assert fl["per_slot"] > 3 * ch, fl["per_slot"]
+    for cell, v in fl["cells"].items():
+        assert v > 3 * ch, (cell, v)
+    # the row that sets it holds one structure and part of the other, and is not the task
+    jp, jb, _ev = s5_bind_v3_pad_carry_parse(fl["per_slot_row"].split(":")[0])
+    assert jp + jb == one_structure_bound(k, m) + 1, (jp, jb)
+    # THE ONE-HOP SUB-CLASS is at chance on the two-hop token and unchanged on the other three:
+    # swap_p0 is two-hop work. It is the SMALLER class, so it is never the operative floor.
+    one = s5_bind_v3_pad_write_floor(sc, k, m, ns, ng, pad=2, max_hops=1)
+    assert one["cells"]["swap_p0"] < 1.5 * ch, one["cells"]["swap_p0"]
+    assert one["cells"]["swap_p0"] < fl["cells"]["swap_p0"] - 0.3, one["cells"]
+    for cell in ("give_p0", "give_p1", "swap_p1"):
+        assert one["cells"][cell] == fl["cells"][cell], cell
+    assert one["per_slot"] <= fl["per_slot"], (one["per_slot"], fl["per_slot"])
+
+
+def test_the_pad_write_read_has_no_floor_below_one_on_a_component_cell():
+    """AND THE PAD-WRITE READ SUPPORTS NO POSITIVE CONTROL, which is a property of the class.
+
+    A component cell has ONE structure, so the one-structure bound admits the component's own pad
+    algorithm and the floor is 1.000 — the same argument that makes the composed cell unfloorable
+    under a k + m wide pad, one cell over. A component's perfect pad therefore cannot clear
+    anything, and the pad-write read has no cell on which a working model demonstrates the
+    measurement works.
+    """
+    for name, L in (("s5_bind_local_v3_state", 34), ("s5_bind_local_v3_bind", 62)):
+        spec = TK.CANONICAL[name]
+        k, m = spec.k, spec.n_objects_active
+        ex = TK.generate(spec, "test", n=32, length=L)
+        ns, ng = s5_bind_v3_shape(ex)
+        sc = s5_bind_v3_pad_write_scores(ex, k, m, pad=2)
+        fl = s5_bind_v3_pad_write_floor(sc, k, m, ns, ng, pad=2)
+        assert fl["per_slot"] == 1.0, (name, fl["per_slot"])
+
+
+def test_the_pad_gate_is_read_per_item_and_the_gold_pad_answer_is_required():
+    """THE TWO GATE DEFECTS, closed.
+
+    PER ITEM, NOT PER TOKEN. The answer is generated from one item's whole pad, so one wrong token
+    in it is a corrupted context. At L = 96 the pad is 192 tokens and 0.99 per token is 0.99^192 =
+    0.14 of items, so the token bar admits a cell whose items are almost never perfect — and the
+    composed cell's own numbers separate by an order of magnitude under the two units.
+
+    THE GOLD-PAD ANSWER IS A REQUIRED COLUMN. A seed whose pad is byte-perfect and whose answer is
+    still at floor has a dead readout, and its floored composed answer is a fact about the readout.
+    The rule RAISES on any path that interprets that answer without the column rather than
+    defaulting to "alive", for the reason it refuses a bare control count.
+    """
+    P = _protocol()
+    per_token = {0: {96: 0.995}, 1: {96: 0.993}, 2: {96: 0.991}}
+    per_item = {0: {96: 0.38}, 1: {96: 0.34}, 2: {96: 0.30}}
+    assert P.pad_tracks(per_token, (96,))[0] is True
+    assert P.pad_tracks(per_item, (96,))[0] is False
+    assert 0.99 ** 192 < 0.2                      # the arithmetic the unit change rests on
+
+    ctrl = {"seeds": 2, "cleared_on": "bind@48", "per_pair": {"bind@48": 2}, "required": []}
+    forms = {"state": True, "bind": True, "composed": False}
+    counts = {c: {48: 2} for c in forms}
+    matched = {"state": True, "bind": True}
+    try:
+        P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True)
+    except P.ReadoutNotEvaluable:
+        pass
+    else:
+        raise AssertionError("a composition verdict must not be read without the readout column")
+    code, why = P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True,
+                          readout=False, readout_counts={48: 1})
+    assert code == "V7_READOUT_DEAD", code
+    assert "GOLD" in why
+    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True,
+                     readout=True)[0] == "V1_COMPOSITION_GAP"
+    # V6 is decided before the readout is read, so a broken pad needs no readout column
+    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=False,
+                     pad_counts={48: 0})[0] == "V6_TRACKING_GAP"
+    # and a read with no pad at all is unaffected: the gate applies where the answer depends on one
+    assert P.verdict(ctrl, forms, counts, matched, matched)[0] == "V1_COMPOSITION_GAP"
+    # readout_alive is CLEARS at every length on seeds_clear seeds, and a floored gold-pad answer
+    # on the seed whose pad is perfect is exactly the case it exists to catch
+    floors = {48: 0.2285, 96: 0.2168}
+    alive = {0: {48: 0.883, 96: 0.842}, 1: {48: 0.889, 96: 0.848}, 2: {48: 0.174, 96: 0.213}}
+    ok, per_len = P.readout_alive(alive, floors, (48, 96), 512)
+    assert ok is True and per_len == {48: 2, 96: 2}, per_len
+    dead = {s: {L: 0.19 for L in (48, 96)} for s in (0, 1, 2)}
+    assert P.readout_alive(dead, floors, (48, 96), 512) == (False, {48: 0, 96: 0})
+
+
+def test_the_pad_write_gold_is_the_format_the_grid_trains_and_scores():
+    """The floor and the score are about the SAME tokens. ``validity.s5_bind_v3_pad_gold`` replays
+    the moved2 pad off the prompt; the bounded-pad driver builds it from its own replay while
+    rendering the document. They agree token for token, so a floor computed here is a floor on the
+    quantity the grid reads."""
+    B = _bounded()
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    ags, objs = B.slot_order(spec)
+    for L in (16, 48):
+        for e in TK.generate(spec, "test", n=24, length=L):
+            got = s5_bind_v3_pad_gold(C.read(e.prompt))
+            assert [list(b) for b in got] == B.pad_values(e, "moved2", ags, objs), (L, e.prompt)
+
+
+def _bounded():
+    _protocol()
+    import experiment_s5bind_v3_bounded_pad_20260802 as B
+    return B
 
 
 def _run() -> int:

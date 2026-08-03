@@ -17,12 +17,18 @@ and beside them ``initial_only`` — the stream-blind read — which the sampler
 gate gives no items to and which reads 0.0000 everywhere, so a rising one-structure number is
 not the stream-blind shortcut coming back under a different name.
 
+``cheap_max`` and ``cheap_max_row`` also record the strongest of EVERY registered non-chance
+row. That number is reported separately and is NOT the admissibility measure: at high k the
+winner is ``window_90``, which replays the task's own algorithm on a truncated stream, holds
+both structures, and is rejected by ``validity.s5_bind_v3_admits`` for exactly that reason. It
+says how much of the stream carries no information, which is a different fact.
+
 THIS IS NOT A FLOOR AND MAY NOT BE READ AS ONE. In the scratchpad regime the composed cell has
-no floor: its floor argument bounds LIVE SLOTS and a visible trace supplies them. A
-one-structure policy is not slot-bounded — it walks the whole stream and costs about what a
-component cell costs — so what is measured here is how often a HALF-PRICE algorithm lands on
-the answer, i.e. how much of the composed cell's separation from its components a (k, L) choice
-leaves intact. No model score is compared against it.
+no floor: its floor argument bounds LIVE SLOTS and a visible trace supplies them. What is
+measured here is how often an algorithm that does strictly LESS WORK lands on the answer —
+1+k live slots against the task's 1+k+m, and 0.66x its steps at the shipped point — i.e. how
+much of the composed cell's separation from its components a (k, L) choice leaves intact. No
+model score is compared against it as a bound.
 
     .venv-api/bin/python scripts/probe_s5bind_v3_onestructure_k_20260803.py --n 2000
 """
@@ -67,7 +73,17 @@ def main():
     for L in a.lengths:
         for k in a.ks:
             spec = S.scaled_spec("composed", k)
-            items = TK.generate(spec, "test", n=a.n, length=L)
+            try:
+                items = TK.generate(spec, "test", n=a.n, length=L)
+            except RuntimeError as exc:
+                # A (k, L) the sampler cannot fill: the composed spec's q_no_surface gate runs
+                # out of admissible items at narrow k and long L. That is a real boundary of the
+                # instrument, so it is RECORDED rather than skipped silently or allowed to kill
+                # the sweep and lose every cell computed before it.
+                recs.append({"k": k, "L": L, "n": 0, "chance": 1.0 / (k - 1),
+                             "ungeneratable": str(exc)[:160]})
+                print(f"k={k:<3} L={L:<4} UNGENERATABLE: {exc}", flush=True)
+                continue
             fl = V.s5_bind_v3_floors(items, k, spec.n_objects_active)
             ns, ng = V.s5_bind_v3_shape(items)
             cheap = {r: v for r, v in fl.items()
@@ -81,9 +97,9 @@ def main():
                    **{r: fl.get(r) for r in ROWS}}
             best = max((fl.get(r) or 0.0) for r in ("one_structure_P", "one_structure_B"))
             rec["one_structure_max"] = best
-            # The admissibility measure is the BEST cheap policy, not one chosen in advance:
-            # at high k the truncated-window reads beat the one-structure ones, so naming a
-            # single policy would understate how far the cell has moved.
+            # Recorded, but NOT the admissibility measure: at high k the strongest row is
+            # window_90, which holds both structures and only skips the stream's first tenth,
+            # so it is not a cheaper algorithm in the sense the cell is defined by.
             rec["cheap_max"] = cheap[best_row]
             rec["cheap_max_row"] = best_row
             rec["ci"] = wilson(cheap[best_row], a.n)
@@ -104,15 +120,24 @@ def main():
         with open(OUT, encoding="utf-8") as fh:
             for c in json.load(fh).get("cells", []):
                 merged[(c["k"], c["L"])] = c
+    def rank(c):
+        # A record that carries the full row breakdown wins over one that does not, whatever
+        # the pool: the breakdown is what the admissibility read and the window read are built
+        # from, and a richer record at a smaller n is more useful than a bare one at a larger.
+        return (1 if c.get("rows") else 0, c["n"])
+
     for c in recs:
         prev = merged.get((c["k"], c["L"]))
-        if prev is None or c["n"] >= prev["n"]:
+        if prev is None or rank(c) >= rank(prev):
             merged[(c["k"], c["L"])] = c
     cells = [merged[key] for key in sorted(merged, key=lambda t: (t[1], t[0]))]
+    live = [c for c in cells if not c.get("ungeneratable")]
     with open(OUT, "w", encoding="utf-8") as fh:
         json.dump({"ts": datetime.now(timezone.utc).isoformat(),
-                   "n": min(c["n"] for c in cells), "n_by_cell": True,
-                   "suite_version": TK.SUITE_VERSION, "cells": cells}, fh, indent=1)
+                   "n": min((c["n"] for c in live), default=0), "n_by_cell": True,
+                   "suite_version": TK.SUITE_VERSION, "cells": live,
+                   "ungeneratable": [{"k": c["k"], "L": c["L"], "why": c["ungeneratable"]}
+                                     for c in cells if c.get("ungeneratable")]}, fh, indent=1)
     print(f"\nwrote {OUT} ({len(cells)} cells)")
 
 

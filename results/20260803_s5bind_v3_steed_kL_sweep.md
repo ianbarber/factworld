@@ -1,6 +1,6 @@
 # s5_bind_v3 on steed's DeepSeek V4 — placing the model, and pricing the k axis
 
-Written 2026-08-03T10:37:20+00:00. Model `steed/deepseek-v4-flash` — DeepSeek V4, q2, ~81 GB resident, served by `ds4-server` on a DGX Spark GB10 over the tailnet at a 262,144-token window. Metric is **match**, the canonical evaluator, on the ANSWER only. Effort arm `high`; ds4 collapses `minimal`/`low`/`medium`/`high`/`xhigh` to one internal level, so that is the model's single thinking arm. **No paid endpoint was contacted and the local GPU was not used**; `cost_usd_est` is 0.0 on every record.
+Written 2026-08-03T11:20:00+00:00. Model `steed/deepseek-v4-flash` — DeepSeek V4, q2, ~81 GB resident, served by `ds4-server` on a DGX Spark GB10 over the tailnet at a 262,144-token window. Metric is **match**, the canonical evaluator, on the ANSWER only. Effort arm `high`; ds4 collapses `minimal`/`low`/`medium`/`high`/`xhigh` to one internal level, so that is the model's single thinking arm. **No paid endpoint was contacted and the local GPU was not used**; `cost_usd_est` is 0.0 on every record.
 
 **The composed cell has no floor in this regime.** The model emits its working as plain content, which is a scratchpad, and the composed cell's floor argument bounds LIVE SLOTS (W <= max(k,m)+1 against the task's k+m+1). Its number is read against INFORMED CHANCE 1/(k-1) — the initial map is stated, so the queried agent's own starting value is never gold — which is a guess baseline, not a floor, and which MOVES WITH k. Component cells keep their floors, recomputed below from the exact scored items and from a disjoint pool.
 
@@ -8,7 +8,7 @@ Written 2026-08-03T10:37:20+00:00. Model `steed/deepseek-v4-flash` — DeepSeek 
 
 **k does not buy difficulty, and the reason is in the task rather than in any model.** The composed cell's state leg is a chain of `2 n_swap / k` hops and `n_swap` is a fixed fraction of L, so raising k at fixed L DIVIDES the chain. On the local grid, over 16 live cells at n=40, corr(match, log L) = -0.934 while corr(match, log k) = -0.043. Read against informed chance — the baseline k itself moves — the ordering runs the wrong way: match-over-chance rises monotonically with k at 3 of the 4 lengths.
 
-**Worse than inert: past a boundary, raising k stops the cell being a composition cell.** A half-price solver that maintains ONE structure and resolves references against the other's stated initial map reads 0.92x informed chance at the shipped k=12/L=128 and 16.76x at k=48/L=128. The admissible set is a narrowing ray in (k, L), the shipped operating point sits on its edge, and on the local grid the margin a measured score holds over that solver collapses along k while raw match stays flat.
+**Worse than inert: past a boundary, raising k stops the cell being a composition cell.** A half-price solver that maintains ONE structure and resolves references against the other's stated initial map reads 0.87x informed chance at the shipped k=12/L=128 and 16.87x at k=48/L=128. The admissible set is a narrowing ray in (k, L), the shipped operating point sits on its edge, and on the local grid the margin a measured score holds over that solver collapses along k while raw match stays flat.
 
 **So the ceiling's only remaining remedy is L**, with k raised no faster than the ray allows and only for the resolution 1/(k-1) buys. Candidate next paid points and their prices are below.
 
@@ -57,51 +57,51 @@ Over all 16 live cells: corr(match, log L) = **-0.934**, corr(match, log carrier
 
 ## What raising k at fixed L does to the composed cell itself
 
-The composed cell earns its name only while maintaining ONE of the two structures is insufficient. So the question is not only whether a model finds the cell harder at higher k, it is whether the cell is still asking the question. A one-structure solver carries P through the swaps and resolves every reference against the STATED B0 (or the mirror), which is 1+k live slots against the task's 1+k+m and 0.63-0.68x its steps — a half-price algorithm. How often it is RIGHT is a property of the stream, replayed by `validity.s5_bind_v3_floors` at n=1000-2000 per cell with no model in the loop.
+The composed cell earns its name only while maintaining ONE of the two structures is insufficient. So the question is not only whether a model finds the cell harder at higher k, it is whether the cell is still asking the question. The policy that answers that is the ONE-STRUCTURE solver: carry P through the swaps and resolve every reference against the STATED B0, or the mirror. It costs 1+k live slots against the task's 1+k+m and 0.66x its steps at the shipped point — strictly less work, and by construction it must be wrong wherever the structure it did not track has moved. How often it is nonetheless RIGHT is a property of the stream, replayed by `validity.s5_bind_v3_floors` at n=1000 per cell with no model in the loop, and is what the (k, L) choice decides.
 
-This is not a floor and is not read as one: in the scratchpad regime the composed cell has none, and a one-structure policy is not slot-bounded anyway — it walks the whole stream. It measures how much of the composed cell's separation from its components a (k, L) choice leaves standing. The stream-blind read (`initial_only`) is 0.0000 in every cell of the grid — the sampler's `q_no_surface` gate gives it no items — so what follows is not that shortcut returning under another name.
+This is not a floor and is not read as one: in the scratchpad regime the composed cell has none, and a live-slot bound is exactly what a visible trace defeats. It measures something else — how much of the composed cell's separation from its components a (k, L) choice leaves standing. The stream-blind read (`initial_only`) is 0.0000 in every cell of the grid — the sampler's `q_no_surface` gate gives it no items — so what follows is not that shortcut returning under another name.
 
 One-structure read as a multiple of that cell's own informed chance 1/(k-1):
 
 | L | k=6 | k=12 | k=24 | k=32 | k=48 | k=64 |
 |---|---|---|---|---|---|---|
-| 32 | 1.09x | **4.50x** | **15.41x** | **23.45x** | **39.36x** | **55.41x** |
-| 64 | 0.91x | **1.61x** | **8.43x** | **15.07x** | **31.61x** | **47.69x** |
-| 96 | 0.87x | 1.03x | **4.47x** | **9.21x** | **22.87x** | **38.27x** |
-| 128 | 0.88x | 0.92x | **2.63x** | **5.78x** | **16.76x** | **31.06x** |
-| 192 | 0.93x | 0.95x | **1.30x** | **2.23x** | **8.77x** | **19.06x** |
-| 256 | 0.97x | 0.96x | 1.02x | **1.36x** | **4.28x** | **10.62x** |
+| 32 | 1.09x | **4.41x** | **15.55x** | **23.00x** | **39.62x** | **56.26x** |
+| 64 | 0.96x | **1.63x** | **8.33x** | **14.82x** | **31.02x** | **47.19x** |
+| 96 | 0.86x | 0.91x | **4.51x** | **9.27x** | **22.65x** | **38.30x** |
+| 128 | 0.79x | 0.87x | **2.60x** | **5.74x** | **16.87x** | **31.25x** |
+| 192 | 0.92x | 0.80x | **1.33x** | **2.48x** | **9.63x** | **19.47x** |
+| 256 | 1.01x | 1.06x | 1.15x | 1.09x | **4.32x** | **11.72x** |
 | 384 | — | 0.96x | 1.10x | 1.09x | **1.32x** | **4.47x** |
 | 512 | — | 0.95x | 0.94x | 0.99x | 1.18x | **1.32x** |
 | 768 | — | 0.96x | 1.01x | 1.09x | 1.13x | **1.26x** |
 
-Bold is over 1.25x — a chosen line, not a measured one; the raw numbers are printed so a different line can be drawn. Above it a half-price one-structure solver is beating the guess baseline the cell is scored against. Raising k at fixed L walks every row rightwards into that region: at L=128 the read goes 0.0835 (0.92x) at k=12 to 0.3565 (16.76x) at k=48, and at L=32/k=48 it reaches 0.8375 (39.36x). k does not make the composed cell harder; past a point it makes it a component cell with more agents in it.
+Bold is over 1.25x — a chosen line, not a measured one; the raw numbers are printed so a different line can be drawn. Above it a half-price one-structure solver is beating the guess baseline the cell is scored against. Raising k at fixed L walks every row rightwards into that region: at L=128 the read goes 0.0790 (0.87x) at k=12 to 0.3590 (16.87x) at k=48, and at L=32/k=48 it reaches 0.8430 (39.62x). k does not make the composed cell harder; past a point it makes it a component cell with more agents in it.
 
 ### The shape of the admissible region
 
-L/k is most of the story and not all of it. The coupling between the two structures is what a cross-reference costs, and a give lands on the object a later swap names about L/k times, so the RAW one-structure read falls with L/k. But the baseline the cell is scored against falls as 1/(k-1) at the same time, and it falls faster — so at matched L/k the read gets WORSE as a multiple of chance the wider the cell is:
+L/k is most of the story and not all of it. L/k is how many times the stream touches any one agent or object, so as it falls the two structures stop moving under each other and the RAW one-structure read falls with it. But the baseline the cell is scored against falls as 1/(k-1) at the same time, and it falls faster — so at matched L/k the read gets WORSE as a multiple of chance the wider the cell is:
 
 | L/k | cells (k, L) | one-structure read | x chance |
 |---|---|---|---|
-| 0.50 | (64, 32) | 0.8795 | 55.41x |
-| 0.67 | (48, 32) | 0.8375 | 39.36x |
-| 1.00 | (32, 32), (64, 64) | 0.7565, 0.7570 | 23.45x, 47.69x |
-| 1.33 | (24, 32), (48, 64) | 0.6700, 0.6725 | 15.41x, 31.61x |
-| 1.50 | (64, 96) | 0.6075 | 38.27x |
-| 2.00 | (32, 64), (48, 96), (64, 128) | 0.4860, 0.4865, 0.4930 | 15.07x, 22.87x, 31.06x |
-| 2.67 | (12, 32), (24, 64), (48, 128) | 0.4095, 0.3665, 0.3565 | 4.50x, 8.43x, 16.76x |
-| 3.00 | (32, 96), (64, 192) | 0.2970, 0.3025 | 9.21x, 19.06x |
-| 4.00 | (24, 96), (32, 128), (48, 192), (64, 256) | 0.1945, 0.1865, 0.1865, 0.1685 | 4.47x, 5.78x, 8.77x, 10.62x |
-| 5.33 | (6, 32), (12, 64), (24, 128), (48, 256) | 0.2185, 0.1465, 0.1145, 0.0910 | 1.09x, 1.61x, 2.63x, 4.28x |
-| 6.00 | (32, 192), (64, 384) | 0.0720, 0.0710 | 2.23x, 4.47x |
-| 8.00 | (12, 96), (24, 192), (32, 256), (48, 384), (64, 512) | 0.0940, 0.0565, 0.0440, 0.0280, 0.0210 | 1.03x, 1.30x, 1.36x, 1.32x, 1.32x |
-| 10.67 | (6, 64), (12, 128), (24, 256), (48, 512) | 0.1815, 0.0835, 0.0445, 0.0250 | 0.91x, 0.92x, 1.02x, 1.18x |
+| 0.50 | (64, 32) | 0.8930 | 56.26x |
+| 0.67 | (48, 32) | 0.8430 | 39.62x |
+| 1.00 | (32, 32), (64, 64) | 0.7420, 0.7490 | 23.00x, 47.19x |
+| 1.33 | (24, 32), (48, 64) | 0.6760, 0.6600 | 15.55x, 31.02x |
+| 1.50 | (64, 96) | 0.6080 | 38.30x |
+| 2.00 | (32, 64), (48, 96), (64, 128) | 0.4780, 0.4820, 0.4960 | 14.82x, 22.65x, 31.25x |
+| 2.67 | (12, 32), (24, 64), (48, 128) | 0.4010, 0.3620, 0.3590 | 4.41x, 8.33x, 16.87x |
+| 3.00 | (32, 96), (64, 192) | 0.2990, 0.3090 | 9.27x, 19.47x |
+| 4.00 | (24, 96), (32, 128), (48, 192), (64, 256) | 0.1960, 0.1850, 0.2050, 0.1860 | 4.51x, 5.74x, 9.63x, 11.72x |
+| 5.33 | (6, 32), (12, 64), (24, 128), (48, 256) | 0.2180, 0.1480, 0.1130, 0.0920 | 1.09x, 1.63x, 2.60x, 4.32x |
+| 6.00 | (32, 192), (64, 384) | 0.0800, 0.0710 | 2.48x, 4.47x |
+| 8.00 | (12, 96), (24, 192), (32, 256), (48, 384), (64, 512) | 0.0830, 0.0580, 0.0350, 0.0280, 0.0210 | 0.91x, 1.33x, 1.09x, 1.32x, 1.32x |
+| 10.67 | (6, 64), (12, 128), (24, 256), (48, 512) | 0.1930, 0.0790, 0.0500, 0.0250 | 0.96x, 0.87x, 1.15x, 1.18x |
 | 12.00 | (32, 384), (64, 768) | 0.0350, 0.0200 | 1.09x, 1.26x |
-| 16.00 | (6, 96), (12, 192), (24, 384), (32, 512), (48, 768) | 0.1735, 0.0865, 0.0480, 0.0320, 0.0240 | 0.87x, 0.95x, 1.10x, 0.99x, 1.13x |
-| 21.33 | (6, 128), (12, 256), (24, 512) | 0.1755, 0.0875, 0.0410 | 0.88x, 0.96x, 0.94x |
+| 16.00 | (6, 96), (12, 192), (24, 384), (32, 512), (48, 768) | 0.1720, 0.0730, 0.0480, 0.0320, 0.0240 | 0.86x, 0.80x, 1.10x, 0.99x, 1.13x |
+| 21.33 | (6, 128), (12, 256), (24, 512) | 0.1580, 0.0960, 0.0410 | 0.79x, 1.06x, 0.94x |
 | 24.00 | (32, 768) | 0.0350 | 1.09x |
-| 32.00 | (6, 192), (12, 384), (24, 768) | 0.1865, 0.0870, 0.0440 | 0.93x, 0.96x, 1.01x |
-| 42.67 | (6, 256), (12, 512) | 0.1945, 0.0860 | 0.97x, 0.95x |
+| 32.00 | (6, 192), (12, 384), (24, 768) | 0.1840, 0.0870, 0.0440 | 0.92x, 0.96x, 1.01x |
+| 42.67 | (6, 256), (12, 512) | 0.2020, 0.0860 | 1.01x, 0.95x |
 | 64.00 | (12, 768) | 0.0870 | 0.96x |
 
 The smallest L/k at which each width still reads at chance, measured:
@@ -111,22 +111,40 @@ The smallest L/k at which each width still reads at chance, measured:
 | 6 | 5.3 | 32 |
 | 12 | 8.0 | 96 |
 | 24 | 10.7 | 256 |
-| 32 | 12.0 | 384 |
+| 32 | 8.0 | 256 |
 | 48 | 10.7 | 512 |
 
-The requirement itself RISES with k, from L/k >= 5.3 at k=6 to L/k >= 12.0 by k=32, so **the admissible region is a narrowing ray, not a rectangle**: raising k needs L raised at least in proportion and in practice more. Of the 51 cells on this grid, 22 are admissible. k=64 is admissible at no length measured here, up to L=768.
+The requirement itself RISES with k, from L/k >= 5.3 at k=6 to L/k >= 10.7 by k=24, so **the admissible region is a narrowing ray, not a rectangle**: raising k needs L raised at least in proportion and in practice more. Of the 51 cells on this grid, 23 are admissible. k=64 is admissible at no length measured here, up to L=768.
 
 | L | largest k that stays within 1.25x | its read | next k up | its read |
 |---|---|---|---|---|
-| 32 | 6 | 1.09x | 12 | 4.50x |
-| 64 | 6 | 0.91x | 12 | 1.61x |
-| 96 | 12 | 1.03x | 24 | 4.47x |
-| 128 | 12 | 0.92x | 24 | 2.63x |
-| 192 | 12 | 0.95x | 24 | 1.30x |
-| 256 | 24 | 1.02x | 32 | 1.36x |
+| 32 | 6 | 1.09x | 12 | 4.41x |
+| 64 | 6 | 0.96x | 12 | 1.63x |
+| 96 | 12 | 0.91x | 24 | 4.51x |
+| 128 | 12 | 0.87x | 24 | 2.60x |
+| 192 | 12 | 0.80x | 24 | 1.33x |
+| 256 | 32 | 1.09x | 48 | 4.32x |
 | 384 | 32 | 1.09x | 48 | 1.32x |
 | 512 | 48 | 1.18x | 64 | 1.32x |
 | 768 | 48 | 1.13x | 64 | 1.26x |
+
+### A second thing k does to the stream
+
+The one-structure read is the measure above because it is the one that is strictly cheaper — 1+k live slots against 1+k+m. A different row moves even further and is worth stating separately: `window_90`, which replays the task's own algorithm but SKIPS THE FIRST TENTH of the events. It holds both structures and so is not a half-price solver — `validity.s5_bind_v3_admits` rejects it as a floor row for exactly that reason — but it is 0.90x the task's steps, and what it measures is how much of the stream carries no information about the answer.
+
+| L | k=6 | k=12 | k=24 | k=32 | k=48 | k=64 |
+|---|---|---|---|---|---|---|
+| 32 | 1.91x | 6.36x | 18.68x | 26.94x | 43.48x | 60.35x |
+| 64 | 1.18x | 2.16x | 11.64x | 20.24x | 37.69x | 54.18x |
+| 96 | 0.91x | 1.07x | 5.84x | 12.56x | 28.86x | 45.23x |
+| 128 | 0.91x | 1.04x | 3.01x | 7.59x | 21.71x | 36.48x |
+| 192 | 0.89x | 1.09x | 1.52x | 2.29x | 10.90x | 25.33x |
+| 256 | 0.92x | 0.98x | 1.13x | 1.21x | 4.32x | 12.54x |
+| 384 | — | 0.87x | 1.06x | 0.99x | 1.13x | 4.28x |
+| 512 | — | 1.08x | 1.08x | 1.24x | 1.27x | 1.70x |
+| 768 | — | 1.00x | 0.94x | 0.96x | 0.89x | 1.32x |
+
+At k=64, L=32 a solver that never reads the first tenth of the stream answers correctly 0.958 of the time against an informed chance of 0.0159 — 60x. The events are still there; at that width they have stopped mattering. This is the same fact as the falling carrier chain seen from the readout side, and it is why raising k cannot substitute for raising L: L is what puts events between the query and the initial map, and k takes them back out.
 
 ### What that costs a live reading
 
@@ -134,38 +152,36 @@ The margin a measured score holds OVER the one-structure read is what the compos
 
 | L | k | match (n=40) | one-structure read | margin | x chance |
 |---|---|---|---|---|---|
-| 64 | 6 | 0.550 | 0.1815 | **+0.369** | 2.75x |
-| 64 | 12 | 0.550 | 0.1465 | **+0.404** | 6.05x |
-| 64 | 24 | 0.700 | 0.3665 | **+0.333** | 16.10x |
-| 64 | 32 | 0.550 | 0.4860 | **+0.064** | 17.05x |
-| 128 | 6 | 0.250 | 0.1755 | **+0.075** | 1.25x |
-| 128 | 12 | 0.250 | 0.0835 | **+0.166** | 2.75x |
-| 128 | 24 | 0.200 | 0.1145 | **+0.086** | 4.60x |
-| 128 | 32 | 0.225 | 0.1865 | **+0.039** | 6.98x |
-| 192 | 6 | 0.125 | 0.1865 | **-0.061** | 0.62x |
-| 192 | 12 | 0.075 | 0.0865 | **-0.011** | 0.82x |
-| 192 | 24 | 0.075 | 0.0565 | **+0.018** | 1.73x |
-| 192 | 32 | 0.125 | 0.0720 | **+0.053** | 3.88x |
-| 256 | 6 | 0.200 | 0.1945 | **+0.006** | 1.00x |
-| 256 | 12 | 0.075 | 0.0875 | **-0.012** | 0.82x |
-| 256 | 24 | 0.100 | 0.0445 | **+0.056** | 2.30x |
-| 256 | 32 | 0.075 | 0.0440 | **+0.031** | 2.33x |
+| 64 | 6 | 0.550 | 0.1930 | **+0.357** | 2.75x |
+| 64 | 12 | 0.550 | 0.1480 | **+0.402** | 6.05x |
+| 64 | 24 | 0.700 | 0.3620 | **+0.338** | 16.10x |
+| 64 | 32 | 0.550 | 0.4780 | **+0.072** | 17.05x |
+| 128 | 6 | 0.250 | 0.1580 | **+0.092** | 1.25x |
+| 128 | 12 | 0.250 | 0.0790 | **+0.171** | 2.75x |
+| 128 | 24 | 0.200 | 0.1130 | **+0.087** | 4.60x |
+| 128 | 32 | 0.225 | 0.1850 | **+0.040** | 6.98x |
+| 192 | 6 | 0.125 | 0.1840 | **-0.059** | 0.62x |
+| 192 | 12 | 0.075 | 0.0730 | **+0.002** | 0.82x |
+| 192 | 24 | 0.075 | 0.0580 | **+0.017** | 1.73x |
+| 192 | 32 | 0.125 | 0.0800 | **+0.045** | 3.88x |
+| 256 | 6 | 0.200 | 0.2020 | **-0.002** | 1.00x |
+| 256 | 12 | 0.075 | 0.0960 | **-0.021** | 0.82x |
+| 256 | 24 | 0.100 | 0.0500 | **+0.050** | 2.30x |
+| 256 | 32 | 0.075 | 0.0350 | **+0.040** | 2.33x |
 
-L=64 is the row where this model has headroom at every rung, so it is the row that can lose something. Across it match goes 0.550 (k=6) to 0.550 (k=32) — flat, which is what the k axis was reported as buying nothing — while the margin over a half-price solver runs k=6: +0.369, k=12: +0.404, k=24: +0.333, k=32: +0.064. It holds to k=24 and then collapses. The axis is not inert: what it moves is the cell's discriminating power, and it returns a flat score while doing it.
+L=64 is the row where this model has headroom at every rung, so it is the row that can lose something. Across it match goes 0.550 (k=6) to 0.550 (k=32) — flat, which is what the k axis was reported as buying nothing — while the margin over a half-price solver runs k=6: +0.357, k=12: +0.402, k=24: +0.338, k=32: +0.072. It holds to k=24 and then collapses. The axis is not inert: what it moves is the cell's discriminating power, and it returns a flat score while doing it.
 
-The region is bounded from the other side too, by the sampler rather than by a solver: the composed spec's `q_no_surface` gate cannot fill an n=40 draw at k=6 past L=320, while every k >= 12 generates to at least L=1024. So the narrow-and-long corner is not available and the ray has a floor in k as well as a ceiling.
-
-The shipped operating point is k=12 at L=128 — L/k = 10.7, read 0.92x. It sits ON the frontier, not inside it: the registered cell is as wide as it can be at that length, and the next k rung up at L=128 is already 2.63x.
+The shipped operating point is k=12 at L=128 — L/k = 10.7, read 0.87x. It sits ON the frontier, not inside it: the registered cell is as wide as it can be at that length, and the next k rung up at L=128 is already 2.60x.
 
 ## Where the next paid point goes, and what it costs
 
-STOP_CEILING asked for a cell a strong model is off the ceiling on. The rule's own remedy was "raise k or L". The k half is ruled out above on two independent grounds — k divides the carrier chain, and past the admissibility ray it hands the cell to a half-price one-structure solver — so the remaining direction is L, with k raised only as far as the ray allows and only for the resolution it buys.
+STOP_CEILING asked for a cell a strong model is off the ceiling on. The rule's own remedy was "raise k or L". The k half is ruled out above on two independent grounds — k divides the carrier chain, and past the admissibility ray it hands the cell to a cheaper solver that need not hold both structures — so the remaining direction is L, with k raised only as far as the ray allows and only for the resolution it buys.
 
 `openai/gpt-5.5` at the registered k=12, measured: match 1.000 at L=128 and 0.975 at L=256, on 7740 and 13457 completion tokens per item — 45 completion and 17 prompt tokens per event, and $0.244 and $0.427 an item. Both cells are at the ceiling. Extending that per-event rate along the admissible ray:
 
 | L | widest admissible k | its one-structure read | informed chance | carrier hops | est. completion tok/item | est. $/item | est. $ at n=40 |
 |---|---|---|---|---|---|---|---|
-| 256 | 24 | 1.02x | 0.0435 | 7.1 | 13457 | $0.43 | $17 |
+| 256 | 32 | 1.09x | 0.0323 | 5.3 | 13457 | $0.43 | $17 |
 | 384 | 32 | 1.09x | 0.0323 | 8.0 | 19175 | $0.61 | $24 |
 | 512 | 48 | 1.18x | 0.0213 | 7.1 | 24892 | $0.79 | $32 |
 | 768 | 48 | 1.13x | 0.0213 | 10.7 | 36328 | $1.16 | $46 |

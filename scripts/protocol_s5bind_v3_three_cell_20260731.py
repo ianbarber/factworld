@@ -1087,27 +1087,66 @@ def forms(per_seed, floors, lengths, n=N_EVAL, seeds_clear=SEEDS_CLEAR):
 
 # THE LEVEL A PAD PROTOCOL'S SCRATCHPAD HAS TO REACH BEFORE ITS ANSWER MEANS ANYTHING, and it is
 # a MEASURED reference rather than a chosen bar: on the bounded pad both components free-run their
-# own pad at 0.99-1.00 per token at every registered length on every seed, so a cell writing its
+# own pad PERFECTLY ON EVERY ITEM at every registered length on every seed, so a cell writing its
 # pad correctly on this protocol writes it essentially perfectly. A composed cell two thirds of the
 # way there is not a slightly worse tracker; it is a model whose scratchpad is wrong by the middle
 # of the stream, and the answer it reads off that pad prices something the composition rule does
 # not model.
+#
+# THE UNIT IS THE ITEM, because the answer is. A per-TOKEN bar is not the same gate on a long
+# stream as on a short one: at L = 96 the pad is 192 tokens, so 0.99 per token admits a cell whose
+# items are perfect 14% of the time, and the composed cell's own numbers separate by an order of
+# magnitude under the two units (per slot 0.9836 -> items perfect 0.799 at L = 16, and
+# 0.7992 -> 0.098 at L = 48). What the answer is generated from is one item's whole pad, so one
+# wrong token in that item is a corrupted context whatever the other 191 do.
 PAD_TRACKS_MIN = 0.99
 
 
 def pad_tracks(per_seed, lengths, seeds_clear=SEEDS_CLEAR, level=PAD_TRACKS_MIN):
     """Whether the composed cell WRITES the pad the protocol scores it against.
 
-    ``per_seed`` is {seed: {L: pad accuracy}} from the SAME free-running read the answer comes
-    from — the model's own pad, fed back, not a teacher-forced one. Shaped like ``forms`` so the
-    two are read the same way: it holds iff at least ``seeds_clear`` seeds reach ``level`` at
-    EVERY registered length, and the per-length counts come back so a cell that tracks at 48 and
-    not at 96 is visible as that.
+    ``per_seed`` is {seed: {L: ITEMS-PERFECT fraction}} from the SAME free-running read the answer
+    comes from — the model's own pad, fed back, not a teacher-forced one, and counted per ITEM
+    rather than per token for the reason above. Shaped like ``forms`` so the two are read the same
+    way: it holds iff at least ``seeds_clear`` seeds reach ``level`` at EVERY registered length,
+    and the per-length counts come back so a cell that tracks at 48 and not at 96 is visible as
+    that.
     """
     counts = {L: sum(1 for s in per_seed
                      if (per_seed[s].get(L) is not None and per_seed[s][L] >= level))
               for L in lengths}
     return bool(lengths) and all(c >= seeds_clear for c in counts.values()), counts
+
+
+class ReadoutNotEvaluable(RuntimeError):
+    """A composition claim was read off a floored answer with no GOLD-PAD answer column.
+
+    Raised rather than defaulted for the reason ``ControlNotEvaluable`` is: a read whose readout
+    was never measured and a read whose readout is dead produce the same floored answer, and
+    substituting one for the other reports a model that cannot read its own scratchpad as a
+    composition gap.
+    """
+
+
+def readout_alive(gold_per_seed, floors, lengths, n, seeds_clear=SEEDS_CLEAR):
+    """Whether the composed cell can READ OUT at all, measured with the GOLD pad in its context.
+
+    ``gold_per_seed`` is {seed: {L: match}} from a read whose pad tokens are the gold ones and
+    whose answer is generated — the same items, decode and floors as the scored read, differing
+    only in whose pad is in the context. It holds iff the gold-pad answer CLEARS the cell's floor
+    on at least ``seeds_clear`` seeds at every length.
+
+    IT IS THE OTHER HALF OF THE PAD GATE. ``pad_tracks`` says the model's own pad is good enough
+    for its answer to mean something; this says an answer would be there to mean it. A seed whose
+    pad is byte-perfect and whose gold-pad answer is still at floor has a dead readout, and its
+    floored composed answer is a fact about the readout and not about the composition.
+    """
+    counts = {L: (None if floors.get(L) is None else
+                  sum(1 for s in gold_per_seed
+                      if clears(gold_per_seed[s].get(L), floors.get(L), n)[0]))
+              for L in lengths}
+    return (bool(lengths) and all(c is not None and c >= seeds_clear for c in counts.values()),
+            counts)
 
 
 class ControlNotEvaluable(RuntimeError):
@@ -1224,7 +1263,8 @@ def guided_grid(matched, cells=LOCAL_CELLS, lengths=GUIDED_LENGTHS,
 
 
 def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
-            composed_floored=True, pad_reach=None, pad_tracked=None, pad_counts=None):
+            composed_floored=True, pad_reach=None, pad_tracked=None, pad_counts=None,
+            readout=None, readout_counts=None):
     """The verdict table, applied mechanically. Raises rather than aborting on a missing control.
 
     Args:
@@ -1249,15 +1289,24 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
         pad_reach: what the excluded both-maps class scores on the exact items, printed with the
             V0 reason so the retraction leaves a number. Not a floor.
         pad_tracked: whether the composed cell writes its own pad at component level
-            (``pad_tracks``). None where the read has no pad at all — the PLAIN and DENSE
-            protocols — and the gate then does not apply, which is why it defaults to None rather
-            than to True. Under a BOUNDED-PAD read it is required: the answer is generated from
-            the model's own pad, so a pad that is wrong by mid-stream makes the composed cell's
-            floored answer uninterpretable as composition.
+            (``pad_tracks``, on ITEMS PERFECT). None where the read has no pad at all — the PLAIN
+            and DENSE protocols — and the gate then does not apply, which is why it defaults to
+            None rather than to True. Under a BOUNDED-PAD read it is required: the answer is
+            generated from the model's own pad, so a pad that is wrong by mid-stream makes the
+            composed cell's floored answer uninterpretable as composition.
         pad_counts: the per-length seed counts ``pad_tracks`` returns, printed with the V6 reason.
+        readout: whether the composed cell answers at all when it is HANDED the gold pad
+            (``readout_alive``). It is REQUIRED on every path that INTERPRETS the composed cell's
+            floored answer — V3 and both V1s — because a floored answer from a dead readout and a
+            floored answer from a failed composition are the same number. The two verdicts that
+            refuse to interpret it, V0 and V6, are returned before this is read. Absent on an
+            interpreting path, this raises rather than defaulting.
+        readout_counts: the per-length seed counts ``readout_alive`` returns, printed with V7.
 
     Raises:
         ControlNotEvaluable: ``control`` is not an evaluated control.
+        ReadoutNotEvaluable: the run reaches a composition verdict under a pad protocol with no
+            gold-pad answer column.
     """
     if not isinstance(control, dict) or "seeds" not in control:
         raise ControlNotEvaluable(
@@ -1298,14 +1347,29 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
     if pad_tracked is False:
         return "V6_TRACKING_GAP", (
             "both components form and the composed cell is at floor, but the composed cell does "
-            f"not write its own pad at the level the components reach: pad accuracy >= "
+            f"not write its own pad at the level the components reach: items perfect >= "
             f"{PAD_TRACKS_MIN} on {pad_counts if pad_counts is not None else 'no'} seeds per "
-            "length, against components that free-run their pad at 0.99-1.00 everywhere. This "
+            "length, against components whose pad is perfect on every item everywhere. This "
             "read scores the answer the model gives FROM ITS OWN PAD, so a floored answer here is "
             "equally consistent with the composition being hard and with the model being unable "
             "to hold the state the pad gave it room for, and only the second is measured. No "
             "composition claim is available until the composed pad reaches component level with "
             "the answer still at floor.")
+    if pad_tracked is not None and readout is None:
+        raise ReadoutNotEvaluable(
+            "this run reaches a composition verdict under a pad protocol and carries no GOLD-PAD "
+            "answer column. Handed a perfect pad the composed answer either clears or does not, "
+            "and a run that never measured it cannot tell a failed composition from a model that "
+            "cannot read its own scratchpad: both are a floored answer. Measure the composed cell "
+            "with the gold pad in context on the same items and decode, and pass "
+            "readout_alive(...).")
+    if readout is False:
+        return "V7_READOUT_DEAD", (
+            "both components form, the composed cell writes its pad, and the composed cell is at "
+            "floor — but handed the GOLD pad on the same items and decode it is still at floor "
+            f"({readout_counts if readout_counts is not None else 'no'} seeds clearing per "
+            "length). The answer this read scores is downstream of a readout that does not work, "
+            "so its floored value is a fact about the readout and not about the composition.")
     unmatched = [c for c, ok in matched_forms.items() if ok is False]
     if unmatched:
         return "V3_GAP_IS_THE_COST", (

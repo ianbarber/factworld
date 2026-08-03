@@ -83,7 +83,7 @@ def grid_tables(res, out):
     out.append("")
 
 
-def findings(res, counts, forced, decomp, out):
+def findings(res, counts, forced, decomp, fw, out):
     """The head of the page: what the run establishes, with every number pulled from the data."""
     gg = res["cfg"]["guided_grid"]
     cl = P.registered_lengths("composed")
@@ -97,13 +97,20 @@ def findings(res, counts, forced, decomp, out):
             t = st[0]["track"]
             restart.append(f"seed {r['seed']} {t[0][1]['composed@48']['slot_acc']:.3f}->"
                            f"{t[-1][1]['composed@48']['slot_acc']:.3f}")
+    perfect = {}
+    for r in (decomp or {}).get("rows", []):
+        if r["cell"] == "composed" and "items_perfect" in r:
+            perfect.setdefault(r["seed"], {})[r["L"]] = r["items_perfect"]
+    items = "; ".join(f"seed {s} " + "/".join(f3(perfect[s].get(L)) for L in cl)
+                      for s in sorted(perfect))
     out.append("## What this run establishes\n")
     out.append(f"THE COMPOSED CELL'S PAD IS CAPPED, at every registered length on every seed: "
-               f"{per_seed} at L={'/'.join(str(L) for L in cl)}, against components that free-run "
-               "their own pad at 1.000 at every length including the token-matched ones. So the "
-               "composed cell's floored answer is a TRACKING result and not a composition one, "
-               "and the registered rule says so only because the pad gate was added — without "
-               "it the same numbers return a composition gap.\n")
+               f"{per_seed} at L={'/'.join(str(L) for L in cl)} per token, and "
+               f"{items} PER ITEM — which is the unit the answer is generated in — against "
+               "components whose pad is perfect on every item at every length including the "
+               "token-matched ones. So the composed cell's floored answer is a TRACKING result "
+               "and not a composition one, and the registered rule says so only because the pad "
+               "gate is applied — without it the same numbers return a composition gap.\n")
     out.append("THE REGISTERED RESTART DOES NOT DEGRADE THE PAD; it raises it on every seed "
                f"(composed@48, start to end of `stage4_restart`: {'; '.join(restart)}). The "
                "degradation this round was called to investigate belonged to a grouped, "
@@ -145,20 +152,68 @@ def findings(res, counts, forced, decomp, out):
             f"map (`swap_p0`) scores "
             f"{min(fo[k]['by_kind_position']['swap_p0'] for k in ks):.3f}-"
             f"{max(fo[k]['by_kind_position']['swap_p0'] for k in ks):.3f} across seeds and "
-            "lengths, against the three one-hop tokens of the same events. That is the "
-            "composition, measured inside the scratchpad rather than in the answer.\n")
-        best = max(fr, key=lambda k: fr[k]["per_slot"])
-        short = sorted((k for k in fr if k[0] == best[0]), key=lambda k: k[1])
+            "lengths, against the three one-hop tokens of the same events. That is where the "
+            "composition is, and the next section is what it is worth against a floor.\n")
+    if fw:
+        cl = P.registered_lengths("composed")
+        fl = {L: fw["cells"][f"composed@{L}"] for L in cl if f"composed@{L}" in fw["cells"]}
+        ps = {L: fl[L]["free_run"]["operative"]["all"]["per_slot"] for L in fl}
+        sp = {L: fl[L]["free_run"]["operative"]["all"]["cells"]["swap_p0"] for L in fl}
+        one = {L: fl[L]["free_run"]["operative"]["one_hop"]["cells"]["swap_p0"] for L in fl}
+        ch = next(iter(fl.values()))["chance"]["uniform"]
         out.append(
-            "WHAT WOULD MAKE THE COMPOSITION QUESTION AVAILABLE, and it is a length and not a "
-            "recipe. The composed pad reaches component level only on SHORT streams: the best "
-            f"seed reads " + ", ".join(f"{fr[k]['per_slot']:.3f} at L={k[1]}" for k in short)
-            + f". It comes within a point of {P.PAD_TRACKS_MIN} only at L=16, and is still under "
-            f"the bar there, while the shortest REGISTERED composed length is "
-            f"{min(cl_registered())}. Either the composed grid moves down to "
-            "where the pad is written, and the floor is recomputed there, or the two-hop write is "
-            "closed at the registered lengths. Neither the document mix nor the pad's length is "
-            "the thing to change.\n")
+            "THE PAD WRITE HAS A FLOOR AND THE MEASURED PAD IS UNDER IT. The bounded pad hands "
+            "every policy 2 free live slots, so the registered live-slot rule admits any policy "
+            f"holding 8 of the 12 map cells, and such a policy writes the composed pad at "
+            + "/".join(f"{ps[L]:.3f}" for L in fl) + f" at L={'/'.join(str(L) for L in fl)} "
+            f"({'/'.join(f'{ps[L] / ch:.1f}' for L in fl)}x the per-slot chance of 1/k = "
+            f"{ch:.3f}). The pad width that costs the ANSWER floor nothing costs the PAD floor "
+            "almost everything: on the answer a partial carry buys 1.05-1.17x chance, on the pad "
+            "it buys 3-5x, because most pad tokens are one-hop reads of cells the carry holds.\n")
+        out.append(
+            "SO THE TWO-HOP TOKEN DOES NOT REGISTER A COMPOSITION EITHER. Free-running — the read "
+            "the grid scores — `swap_p0`'s floor is "
+            + "/".join(f"{sp[L]:.3f}" for L in fl) + ", and the same one-structure carry sets it: "
+            "a policy that never composes the two hops correctly still gets that token right "
+            "3-5x chance by resolving the operand against a map it holds only part of. The "
+            f"one-hop SUB-class reaches only {min(one.values()):.3f}-{max(one.values()):.3f} "
+            "there, so the token is two-hop work — but the class that decides a floor is the "
+            "registered one, and it reaches the model.\n")
+        n = decomp["cfg"]["n"]
+        rows = {(r["seed"], r["L"]): r for r in decomp["rows"] if r["cell"] == "composed"}
+        who = {}
+        for (s, L), r in rows.items():
+            key = f"composed@{L}"
+            if key not in fw["cells"]:
+                continue
+            b = fw["cells"][key]["free_run"]["operative"]["all"]
+            if P.clears(r["per_slot"], b["per_slot"], n)[0]:
+                who.setdefault(s, []).append(L)
+        dead = [s for s in sorted(who) if all(
+            (r["stages"][-1]["guided"].get(c, {}).get(str(L)) or {}).get("match", 1) < 0.5
+            for r in res["runs"] if r["seed"] == s
+            for c in ("state", "bind") for L in gg.get(c, ()))]
+        out.append(
+            "AND IT DOES NOT FORM. Of 3 seeds, "
+            + ("none clears the per-slot floor at any length"
+               if not who else
+               "; ".join(f"seed {s} clears at L={'/'.join(str(L) for L in sorted(v))}"
+                         for s, v in sorted(who.items())))
+            + f", against the {P.SEEDS_CLEAR} seeds FORMS requires at EVERY registered length"
+            + (f". The seed(s) that clear — {dead} — are the ones whose ANSWER is at floor on "
+               "every cell including both components, so the pad write separates on exactly the "
+               "seed that reads nothing out.\n" if dead else ".\n"))
+        L16 = fw["cells"].get("composed@16")
+        if L16:
+            b16 = L16["free_run"]["operative"]["all"]["per_slot"]
+            best16 = max((r["per_slot"] for r in decomp["rows"]
+                          if r["cell"] == "composed" and r["L"] == 16), default=None)
+            out.append(
+                "AND THE SHORT-STREAM ESCAPE IS CLOSED ON THIS AXIS TOO. At L=16, where the best "
+                f"seed writes {f3(best16)} of the pad, the floor is {b16:.4f} and the CLEARS bar "
+                f"is {b16 + P.MARGIN:.3f} — above 1.0, so no score at that length can clear it. "
+                "The pad-write read is unbuyable at exactly the lengths where the pad is "
+                "written.\n")
     return out
 
 
@@ -166,24 +221,30 @@ def cl_registered():
     return P.registered_lengths("composed")
 
 
-def apply_verdict(res, out):
+def apply_verdict(res, decomp, gold, out):
     """Run the registered rule over this grid's own numbers, including the pad gate.
 
-    Nothing here is asserted: ``forms``, ``pad_tracks`` and ``verdict`` are the protocol's, applied
-    to the final read. The verdict is printed WITH and WITHOUT the pad gate, because the difference
-    between them is the round's result — a rule reading only the answer returns a composition gap
-    on a run whose composed scratchpad is wrong by the middle of every stream.
+    Nothing here is asserted: ``forms``, ``pad_tracks``, ``readout_alive`` and ``verdict`` are the
+    protocol's, applied to the final read. The verdict is printed WITH and WITHOUT the pad gate,
+    because the difference between them is what the gate is for — a rule reading only the answer
+    returns a composition gap on a run whose composed scratchpad is wrong by the middle of every
+    stream.
+
+    The pad column is ITEMS PERFECT and comes from the decompose probe, which is the same
+    free-running decode on the same n and the same items as the grid's final read (its pooled
+    ``per_slot`` reproduces the grid's ``slot_acc`` to the digit). The GOLD-PAD answer column is
+    required on any path that interprets the composed cell's floored answer; where the run does
+    not carry it, the rule raises and the refusal is printed instead of a verdict.
     """
     n = res["cfg"].get("final_guided_n") or res["cfg"]["guided_n"]
     gg = res["cfg"]["guided_grid"]
-    ans, pad = {}, {}
+    ans = {}
     for r in res["runs"]:
         g = r["stages"][-1]["guided"]
         for c in ("state", "bind", "composed"):
             for L in gg.get(c, ()):
                 blk = g.get(c, {}).get(str(L)) or {}
                 ans.setdefault(c, {}).setdefault(r["seed"], {})[L] = blk.get("match")
-                pad.setdefault(c, {}).setdefault(r["seed"], {})[L] = blk.get("slot_acc")
     floors = {c: {L: (res["floors"].get(f"{c}@{L}") or {}).get("floor") for L in gg.get(c, ())}
               for c in ans}
     comp_forms, comp_counts = {}, {}
@@ -194,26 +255,121 @@ def apply_verdict(res, out):
     for c in ("state", "bind"):
         ml = [L for L in (P.TOKEN_MATCHED.get(P.GUIDED_MATCHED_FROM, {}).get(c),) if L]
         matched[c] = P.forms(ans[c], floors[c], ml, n=n)[0] if ml else None
-    tracked, pad_counts = P.pad_tracks(pad["composed"], P.registered_lengths("composed"))
+    cl = P.registered_lengths("composed")
     out.append("## The registered rule, applied to these numbers\n")
     out.append(f"- components FORM at their own registered lengths: {comp_counts} "
                f"(needs {P.SEEDS_CLEAR} seeds at every length)")
     out.append(f"- matched-cost control at composed@{P.GUIDED_MATCHED_FROM}: {matched}")
     out.append(f"- composed cell clears: {comp_counts['composed']}")
-    out.append(f"- composed pad reaches {P.PAD_TRACKS_MIN} on: {pad_counts} seeds per length "
-               f"-> pad_tracked={tracked}")
-    ctrl = {"seeds": max(comp_counts["state"].values() or [0],
-                         default=0) if comp_counts["state"] else 0,
-            "cleared_on": "state", "per_pair": comp_counts["state"], "required": []}
+    tracked, pad_counts = None, None
+    if decomp:
+        perfect = {}
+        for r in decomp["rows"]:
+            if r["cell"] == "composed" and "items_perfect" in r:
+                perfect.setdefault(r["seed"], {})[r["L"]] = r["items_perfect"]
+        tracked, pad_counts = P.pad_tracks(perfect, cl)
+        out.append(f"- composed pad is perfect on {P.PAD_TRACKS_MIN} of ITEMS on: {pad_counts} "
+                   f"seeds per length -> pad_tracked={tracked} "
+                   + "(per seed at L=" + "/".join(str(L) for L in cl) + ": "
+                   + "; ".join(f"seed {s} " + "/".join(f3(perfect[s].get(L)) for L in cl)
+                               for s in sorted(perfect)) + ")")
+    else:
+        out.append("- composed pad: no items-perfect column in this run")
+    readout, readout_counts = None, None
+    if gold:
+        gp = {}
+        for r in gold.get("rows", []):
+            if r.get("cell") == "composed":
+                gp.setdefault(r["seed"], {})[r["L"]] = r.get("match")
+        readout, readout_counts = P.readout_alive(gp, floors["composed"], cl, n)
+        out.append(f"- composed GOLD-PAD answer clears on: {readout_counts} seeds per length "
+                   f"-> readout={readout}")
+    else:
+        out.append("- composed GOLD-PAD answer: not measured in this run")
+    ctrl = {"seeds": 0, "cleared_on": "state", "per_pair": comp_counts["state"], "required": []}
     ctrl["seeds"] = max([v for v in comp_counts["state"].values() if v is not None] or [0])
     mm = {c: matched[c] is not None for c in ("state", "bind")}
     ungated = P.verdict(ctrl, comp_forms, comp_counts, matched, mm)
-    gated = P.verdict(ctrl, comp_forms, comp_counts, matched, mm, pad_tracked=tracked,
-                      pad_counts=pad_counts)
+    try:
+        gated = P.verdict(ctrl, comp_forms, comp_counts, matched, mm, pad_tracked=tracked,
+                          pad_counts=pad_counts, readout=readout, readout_counts=readout_counts)
+    except P.ReadoutNotEvaluable as exc:
+        out.append(f"\n**Without the pad gate the rule returns `{ungated[0]}`. With it, the rule "
+                   f"REFUSES this run: {exc}**\n")
+        return ("READOUT_NOT_EVALUABLE", str(exc))
     out.append(f"\n**Without the pad gate the rule returns `{ungated[0]}`. With it, "
                f"`{gated[0]}`.**\n")
     out.append(gated[1] + "\n")
     return gated
+
+
+def pad_write_floor_table(fw, decomp, out):
+    """The pad-write floor at every composed cell, and every measured seed against it."""
+    cells = [k for k in fw["cells"] if k.startswith("composed@")]
+    out.append("## The PAD WRITE against its own floor\n")
+    out.append("The class is the registered one, scored on the pad instead of on the answer: "
+               "live slots `W - pad <= max(k, m) + 1`, steps no more than the cell's own algorithm "
+               "pays to produce the pad. At pad 2 that admits any policy holding 8 of the 12 map "
+               "cells and excludes the cell's own algorithm (12 + scratch). Chance for a per-slot "
+               "read is `1/k` — every pad token is an agent name — and not the answer read's "
+               "`1/(k-1)`.\n")
+    out.append("| cell | chance | per-slot floor | row | swap_p0 floor | swap_p0, one-hop "
+               "sub-class | CLEARS bar |")
+    out.append("|---|---|---|---|---|---|---|")
+    for key in cells:
+        c = fw["cells"][key]
+        b = c["free_run"]["operative"]["all"]
+        o = c["free_run"]["operative"]["one_hop"]
+        bar = b["per_slot"] + P.MARGIN
+        out.append(f"| {key} | {c['chance']['uniform']:.4f} | {b['per_slot']:.4f} "
+                   f"({b['per_slot'] / c['chance']['uniform']:.2f}x) | `{b['per_slot_row']}` | "
+                   f"{b['cells']['swap_p0']:.4f} | {o['cells']['swap_p0']:.4f} | "
+                   f"{bar:.3f}{' — above 1.0, unbuyable' if bar > 1.0 else ''} |")
+    out.append("")
+    rows = {(r["seed"], r["L"]): r for r in (decomp or {}).get("rows", [])
+            if r["cell"] == "composed"}
+    if not rows:
+        return
+    n = decomp["cfg"]["n"]
+    out.append(f"Every measured seed against it, n={n}, under the registered `clears` "
+               f"(z>{P.Z_CLEAR} and margin>={P.MARGIN}).\n")
+    out.append("| seed | cell | per-slot | floor | clears | swap_p0 | floor | clears |")
+    out.append("|---|---|---|---|---|---|---|---|")
+    for (s, L), r in sorted(rows.items()):
+        key = f"composed@{L}"
+        if key not in fw["cells"]:
+            continue
+        b = fw["cells"][key]["free_run"]["operative"]["all"]
+        sp0 = (r.get("by_kind_position") or {}).get("swap_p0")
+        cl = P.clears(r["per_slot"], b["per_slot"], n)[0]
+        cl0 = P.clears(sp0, b["cells"]["swap_p0"], n)[0] if sp0 is not None else False
+        out.append(f"| {s} | {key} | {r['per_slot']:.3f} | {b['per_slot']:.4f} | "
+                   f"{'yes' if cl else 'no'} | {f3(sp0)} | {b['cells']['swap_p0']:.4f} | "
+                   f"{'yes' if cl0 else 'no'} |")
+    out.append("")
+    comp = [k for k in fw["cells"] if not k.startswith("composed@")]
+    if comp:
+        vals = {k: fw["cells"][k]["free_run"]["operative"]["all"]["per_slot"] for k in comp}
+        out.append(
+            "AND THE PAD-WRITE READ SUPPORTS NO POSITIVE CONTROL. A component cell has ONE "
+            "structure, so the one-structure bound admits the component's own pad algorithm and "
+            "its floor is " + ", ".join(f"{v:.4f} at {k}" for k, v in sorted(vals.items()))
+            + " — the same argument that leaves the composed cell unfloorable under a `k + m` "
+            "wide pad, one cell over. A component's perfect pad cannot clear anything, so this "
+            "read has no cell on which a working model demonstrates that the measurement works.\n")
+    key = f"composed@{P.GUIDED_MATCHED_FROM}"
+    key = key if key in fw["cells"] else cells[0]
+    tf = fw["cells"][key].get("teacher_forced")
+    if tf:
+        b = tf["operative"]["all"]
+        out.append(
+            "AND THE TEACHER-FORCED READ HAS A SATURATED CELL. Handed the same gold history, a "
+            "row that holds the holder map refreshes each object's new holder from the adjacent "
+            "gold block and scores 1.000 on `give_p1` at every length, so that cell's floor is "
+            f"the ceiling; the pooled teacher-forced floor is {b['per_slot']:.4f} at {key}. The "
+            "teacher-forced numbers stay what they were — a diagnostic — and the residual they "
+            f"show on `swap_p0` is under the floor of that same class ({b['cells']['swap_p0']:.4f} "
+            f"at {key}).\n")
 
 
 def track_tables(res, out):
@@ -314,14 +470,20 @@ def main():
     ap.add_argument("--decompose", default=None)
     ap.add_argument("--overwrite", default=None)
     ap.add_argument("--composed_only", default=None)
+    ap.add_argument("--pad_write_floor", default=None)
+    ap.add_argument("--gold_answer", default=None,
+                    help="the composed cell read with the GOLD pad in context: the readout column")
     ap.add_argument("--out", default="results/20260802_bounded_pad_restart_grid.md")
     a = ap.parse_args()
 
     res = json.load(open(a.grid))
-    out = ["# The bounded-pad grid with the registered restart, and the composed pad's cap", ""]
-    findings(res, load(a.counts), load(a.forced), load(a.decompose), out)
+    decomp, fw = load(a.decompose), load(a.pad_write_floor)
+    out = ["# The bounded-pad grid, the composed pad's cap, and the pad write's own floor", ""]
+    findings(res, load(a.counts), load(a.forced), decomp, fw, out)
     grid_tables(res, out)
-    apply_verdict(res, out)
+    apply_verdict(res, decomp, load(a.gold_answer), out)
+    if fw:
+        pad_write_floor_table(fw, decomp, out)
     track_tables(res, out)
     for path, fn in ((a.counts, counts_table),):
         d = load(path)
