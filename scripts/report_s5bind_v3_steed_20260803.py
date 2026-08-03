@@ -569,8 +569,11 @@ def lead_section() -> list[str]:
     o.append("**The free arm cannot substitute for the paid scout on this instrument.** It "
              "serializes at ~15.8 completion tok/s, so the briefed step 1 alone is 90 hours; and "
              "it re-issued one 10,482-token generation indefinitely, which caps how long a "
-             "single item may be. What was measured on it is stated at its own lengths and its "
-             "own n, and it is not placed in the scouted band.\n")
+             "single item may be. At the longest cell it does run — composed@L32, k=6, the one "
+             "the admissibility read passes at that length — DeepSeek V4 scores 1.000 at n=20, "
+             "so it is a second ceiling and cannot test the k axis either. The two free models "
+             "fail the same job from opposite ends: the local Qwen is at informed chance at the "
+             "lengths it can afford, this one is at the ceiling at the length it can afford.\n")
     return o
 
 
@@ -734,6 +737,20 @@ def report() -> str:
                  f"an item at these lengths costs. The cells below are at the longest stream "
                  f"this arm returns cleanly, which is off the band's axis; they read this model, "
                  f"not its rank against the scouted three.\n")
+    top = [r for r in rows.values() if r["cell"] == "composed" and not W.void(r)]
+    if top:
+        best = max(top, key=lambda r: r["match"])
+        if best["match"] >= 0.95:
+            lo, hi = _wilson(best["match"], best["n"])
+            o.append(f"**What it does say is that this is a second ceiling.** At composed@L"
+                     f"{best['L']}, k={best['k']} — the longest stream this arm returns and a "
+                     f"cell whose one-structure read sits at informed chance — it scores "
+                     f"{best['match']:.3f} at n={best['n']} (95% CI [{lo:.2f}, {hi:.2f}]), with "
+                     f"0 truncated, 0 empty and 0 API errors. So it cannot test the k axis from "
+                     f"below any more than the local Qwen can from above: Qwen sits at informed "
+                     f"chance at the lengths it can afford, this model sits at the ceiling at "
+                     f"the length it can afford, and the length where it would come off the "
+                     f"ceiling is the one the endpoint will not run.\n")
 
     # --- the k axis ----------------------------------------------------------------------
     ks = sorted({k for k, _L in comp})

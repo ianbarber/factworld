@@ -81,6 +81,8 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_pad_admits,
     s5_bind_v3_pad_carry_parse,
     s5_bind_v3_pad_carry_rows,
+    s5_bind_v3_pad_hops,
+    s5_bind_v3_pad_two_hop_floor,
     s5_bind_v3_pad_floorable,
     s5_bind_v3_pad_floors,
     s5_bind_v3_pad_gold,
@@ -1052,8 +1054,10 @@ def test_a_broken_composed_pad_gates_the_composition_verdict():
                           pad_counts={48: 0, 96: 0})
     assert code == "V6_TRACKING_GAP", code
     assert "own pad" in why
-    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True,
-                     readout=True)[0] == "V1_COMPOSITION_GAP"
+    live = {s: True for s in (0, 1)}
+    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True, readout=True,
+                     seed_gates={"forms": live, "pad": live, "readout": live}
+                     )[0] == "V1_COMPOSITION_GAP"
     # a component that does not form still wins: the gate sits below V4 and V0, not above them
     assert P.verdict(ctrl, {**forms, "bind": False}, counts, matched, matched,
                      pad_tracked=False)[0] == "V4_COMPONENT_UNREADABLE"
@@ -1064,14 +1068,16 @@ def test_a_broken_composed_pad_gates_the_composition_verdict():
                      pad_tracked=False)[0] == "V2_NO_GAP_HERE"
     # the level is the one the components measure, and it is read per seed at EVERY length
     broken = {0: {48: 0.619, 96: 0.417}, 1: {48: 0.398, 96: 0.287}, 2: {48: 0.742, 96: 0.511}}
-    ok, per_len = P.pad_tracks(broken, (48, 96))
+    ok, per_len, per_seed = P.pad_tracks(broken, (48, 96))
     assert ok is False and per_len == {48: 0, 96: 0}, per_len
+    assert per_seed == {0: False, 1: False, 2: False}, per_seed
     good = {0: {48: 1.0, 96: 0.999}, 1: {48: 0.995, 96: 0.990}, 2: {48: 1.0, 96: 1.0}}
     assert P.pad_tracks(good, (48, 96))[0] is True
     # tracking at the short length and not the long one is a FAIL, and visible as that
     part = {0: {48: 1.0, 96: 0.62}, 1: {48: 1.0, 96: 0.60}, 2: {48: 1.0, 96: 0.55}}
-    ok, per_len = P.pad_tracks(part, (48, 96))
+    ok, per_len, per_seed = P.pad_tracks(part, (48, 96))
     assert ok is False and per_len == {48: 3, 96: 0}, per_len
+    assert per_seed == {0: False, 1: False, 2: False}, per_seed
 
 
 def test_the_matched_cost_control_is_declared_and_an_unreachable_one_is_absent():
@@ -1699,8 +1705,9 @@ def test_the_protocol_and_the_driver_agree_that_a_guided_composed_cell_has_no_fl
     assert fs["floor"] is not None and fs["pad_reach"] is None and fs["basis"] == "measured"
     # FORMS counts a length with no floor as None, not as 0: an unfloorable cell and a floored
     # one must not report the same number.
-    ok, counts = P.forms({0: {48: 0.9}, 1: {48: 0.9}}, {48: None}, (48,), n=128)
+    ok, counts, per_seed = P.forms({0: {48: 0.9}, 1: {48: 0.9}}, {48: None}, (48,), n=128)
     assert ok is False and counts == {48: None}
+    assert per_seed == {0: False, 1: False}, per_seed
     ctrl = {"seeds": 2, "cleared_on": "state@17", "per_pair": {"state@17": 2}, "required": []}
     forms_ok = {"state": True, "bind": True, "composed": False}
     counts = {c: {48: 2} for c in forms_ok}
@@ -2002,14 +2009,68 @@ def test_the_composed_pad_write_has_a_floor_at_three_times_chance():
     # the row that sets it holds one structure and part of the other, and is not the task
     jp, jb, _ev = s5_bind_v3_pad_carry_parse(fl["per_slot_row"].split(":")[0])
     assert jp + jb == one_structure_bound(k, m) + 1, (jp, jb)
-    # THE ONE-HOP SUB-CLASS is at chance on the two-hop token and unchanged on the other three:
-    # swap_p0 is two-hop work. It is the SMALLER class, so it is never the operative floor.
+    # THE ONE-HOP SUB-CLASS is near chance on the two-hop token and unchanged on the other three:
+    # swap_p0 is two-hop work under BOTH of its source classes. It is the SMALLER class, so it is
+    # never the floor for a one-hop token.
     one = s5_bind_v3_pad_write_floor(sc, k, m, ns, ng, pad=2, max_hops=1)
-    assert one["cells"]["swap_p0"] < 1.5 * ch, one["cells"]["swap_p0"]
-    assert one["cells"]["swap_p0"] < fl["cells"]["swap_p0"] - 0.3, one["cells"]
     for cell in ("give_p0", "give_p1", "swap_p1"):
         assert one["cells"][cell] == fl["cells"][cell], cell
     assert one["per_slot"] <= fl["per_slot"], (one["per_slot"], fl["per_slot"])
+    # THE REGISTERED TWO-HOP FLOOR is that sub-class on the CROSS partition, and the same-source
+    # half it is no longer pooled with is a different quantity: a row holding P alone writes it
+    # exactly, so the unrestricted floor there is far above the cross one.
+    two = s5_bind_v3_pad_two_hop_floor(sc, k, m, ns, ng, pad=2)
+    assert two["max_hops"] == S5_BIND_V3_MAX_DEPTH == 1
+    assert two["floor"] < 1.5 * ch, two["floor"]
+    assert two["unrestricted_cross"] > two["floor"] + 0.3, two
+    assert two["n_cross"] and two["n_same"], two
+    assert "copy_prev" in two["row"] or "ref_sym" in two["row"], two["row"]
+    # and the depth conjunct is the COMPONENT cells' own, read on the emission instead of the row
+    assert s5_bind_v3_pad_hops("own_gold", "swap_p0", "cross") == 2
+    assert s5_bind_v3_pad_hops("own_gold", "swap_p0", "same") == 2
+    assert s5_bind_v3_pad_hops("own_gold", "swap_p0", "named") == 1
+    assert not s5_bind_v3_pad_write_admits("pad_carry_P6B2_first", "own_gold", "swap_p0", k, m,
+                                           ns, ng, 2, max_hops=1, source="cross")
+    assert s5_bind_v3_pad_write_admits("pad_carry_P6B2_first", "own_gold", "swap_p0", k, m,
+                                       ns, ng, 2, max_hops=1, source="named")
+
+
+def test_the_scored_two_hop_token_exists_only_on_the_composed_cell():
+    """AND THAT IS WHY NO COMPONENT CELL CAN BE THE SATURATION CONTROL.
+
+    A component cell renders every operand by NAME, so its ``swap_p0`` is one read of P and the
+    scored partition — ``swap_p0`` on an event whose operand is resolved — has zero events on it.
+    Charging the composed cell's hop count there would exclude the component's own one-hop policy
+    from the component's own floor and manufacture a clear out of the bookkeeping: the state cell
+    would read 1.000 against a 0.19 floor on a token it does not contain.
+
+    What CAN be built is the other end of the scale, and it is a policy: the composed cell's own
+    algorithm carries both maps, is excluded at W = 13 against the bound 8, and writes the two-hop
+    token perfectly on the exact items.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3_state"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=32, length=34)
+    ns, ng = s5_bind_v3_shape(ex)
+    sc = s5_bind_v3_pad_write_scores(ex, k, m, pad=2)
+    assert sc["counts_src"]["swap_p0|cross"] == 0, sc["counts_src"]
+    assert sc["counts_src"]["swap_p0|same"] == 0, sc["counts_src"]
+    assert sc["counts_src"]["swap_p0|named"] > 0, sc["counts_src"]
+    two = s5_bind_v3_pad_two_hop_floor(sc, k, m, ns, ng, pad=2)
+    assert two["floor"] is None and two["n_cross"] == 0, two
+    # the named cell's own floor stays at the ceiling under the depth conjunct, which is the
+    # honest statement of why it is not a control
+    one = s5_bind_v3_pad_write_floor(sc, k, m, ns, ng, pad=2, max_hops=1)
+    assert one["cells"]["swap_p0"] == 1.0, one["cells"]
+
+    comp = TK.CANONICAL["s5_bind_local_v3"]
+    ex = TK.generate(comp, "test", n=48, length=48)
+    ns, ng = s5_bind_v3_shape(ex)
+    row = f"pad_carry_P{comp.k}B{comp.n_objects_active}_first"
+    sc = s5_bind_v3_pad_write_scores(ex, comp.k, comp.n_objects_active, pad=2, rows=(row,))
+    assert not s5_bind_v3_pad_write_admits(row, "own_gold", "swap_p0", comp.k,
+                                           comp.n_objects_active, ns, ng, pad=2)
+    assert sc["rows_src"][row]["swap_p0|cross"]["own_gold"] == 1.0
 
 
 def test_the_pad_write_read_has_no_floor_below_one_on_a_component_cell():
@@ -2065,8 +2126,10 @@ def test_the_pad_gate_is_read_per_item_and_the_gold_pad_answer_is_required():
                           readout=False, readout_counts={48: 1})
     assert code == "V7_READOUT_DEAD", code
     assert "GOLD" in why
-    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True,
-                     readout=True)[0] == "V1_COMPOSITION_GAP"
+    live = {s: True for s in (0, 1)}
+    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True, readout=True,
+                     seed_gates={"forms": live, "pad": live, "readout": live}
+                     )[0] == "V1_COMPOSITION_GAP"
     # V6 is decided before the readout is read, so a broken pad needs no readout column
     assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=False,
                      pad_counts={48: 0})[0] == "V6_TRACKING_GAP"
@@ -2076,10 +2139,94 @@ def test_the_pad_gate_is_read_per_item_and_the_gold_pad_answer_is_required():
     # on the seed whose pad is perfect is exactly the case it exists to catch
     floors = {48: 0.2285, 96: 0.2168}
     alive = {0: {48: 0.883, 96: 0.842}, 1: {48: 0.889, 96: 0.848}, 2: {48: 0.174, 96: 0.213}}
-    ok, per_len = P.readout_alive(alive, floors, (48, 96), 512)
+    ok, per_len, per_seed = P.readout_alive(alive, floors, (48, 96), 512)
     assert ok is True and per_len == {48: 2, 96: 2}, per_len
     dead = {s: {L: 0.19 for L in (48, 96)} for s in (0, 1, 2)}
-    assert P.readout_alive(dead, floors, (48, 96), 512) == (False, {48: 0, 96: 0})
+    assert P.readout_alive(dead, floors, (48, 96), 512)[:2] == (False, {48: 0, 96: 0})
+    # THE MIXED CASE, which the all-dead dict above cannot reach and which is this grid's own:
+    # the aggregate is True with the seed that writes the pad DEAD, so the per-seed map is the
+    # gate and not the count.
+    assert per_seed == {0: True, 1: True, 2: False}, per_seed
+    assert P.readout_alive(alive, floors, (48, 96), 512)[0] is True   # ... on the count alone
+
+
+def test_a_claim_may_not_be_assembled_from_two_different_seeds():
+    """THE DEFECT THAT REACHED V1 ON A MODEL THAT WAS NEVER TRAINED.
+
+    forms, pad_tracks and readout_alive were three INDEPENDENT counts over seeds. On this grid's
+    own shape — components forming on seeds 0 and 1, the pad written only on seed 2, the readout
+    alive only on seeds 0 and 1 — every one of them passes at SEEDS_CLEAR = 2 and the rule
+    returned a composition gap. No seed satisfies two of the three: the model whose scratchpad is
+    good is the model that cannot read one back.
+
+    The conjunction is taken PER SEED, and a verdict that interprets the composed cell without it
+    RAISES rather than defaulting, for the reason a bare control count raises.
+    """
+    P = _protocol()
+    forms_seeds = {0: True, 1: True, 2: False}
+    pad_seeds = {0: False, 1: False, 2: True}
+    readout_seeds = {0: True, 1: True, 2: False}
+    # each gate on its own count is satisfied at seeds_clear = 2 ...
+    assert sum(forms_seeds.values()) >= P.SEEDS_CLEAR
+    assert sum(readout_seeds.values()) >= P.SEEDS_CLEAR
+    ok, per, n_ok, by_gate = P.seeds_carrying(
+        {"forms": forms_seeds, "pad": pad_seeds, "readout": readout_seeds})
+    assert ok is False and n_ok == 0, (per, by_gate)
+    assert by_gate == {"forms": [0, 1], "pad": [2], "readout": [0, 1]}, by_gate
+
+    ctrl = {"seeds": 2, "cleared_on": "bind@48", "per_pair": {"bind@48": 2}, "required": []}
+    forms = {"state": True, "bind": True, "composed": False}
+    counts = {c: {48: 2} for c in forms}
+    matched = {"state": True, "bind": True}
+    try:
+        P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True, readout=True)
+    except P.SeedsNotConjoined:
+        pass
+    else:
+        raise AssertionError("a composition verdict must not be read without the conjunction")
+    code, why = P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True, readout=True,
+                          seed_gates={"forms": forms_seeds, "pad": pad_seeds,
+                                      "readout": readout_seeds})
+    assert code == "V8_NO_SEED_CARRIES_THE_CLAIM", code
+    assert "DIFFERENT MODELS" in why
+    # and where the SAME two seeds carry all three, the table is reached unchanged
+    same = {0: True, 1: True, 2: False}
+    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True, readout=True,
+                     seed_gates={"forms": same, "pad": same, "readout": same}
+                     )[0] == "V1_COMPOSITION_GAP"
+    # one seed short of SEEDS_CLEAR is not a claim either
+    one = {0: True, 1: False, 2: False}
+    assert P.verdict(ctrl, forms, counts, matched, matched, pad_tracked=True, readout=True,
+                     seed_gates={"forms": same, "pad": one, "readout": same}
+                     )[0] == "V8_NO_SEED_CARRIES_THE_CLAIM"
+
+
+def test_the_pad_margin_is_the_registered_one_transferred_and_is_defined_at_every_floor():
+    """THE ADDITIVE MARGIN DOES NOT TRANSFER TO A PER-SLOT PAD FLOOR.
+
+    MARGIN = 0.15 was set where the ANSWER floor sits at 1.05-1.17x informed chance 1/(k-1) = 0.2.
+    A per-slot pad floor runs to 0.93, and there 0.15 asks for 1.077 — no score whatever clears
+    it, at exactly the length where the pad is nearly written. A bar above 1.0 is an undefined
+    rule, not a strict one.
+
+    MARGIN_FRAC is the same margin re-expressed as a share of the headroom the floor leaves,
+    0.15 / (1 - 0.2), so it reproduces the registered bar at the floor MARGIN was calibrated on
+    and is defined at every floor below 1. Nothing measured on the pad enters it.
+    """
+    P = _protocol()
+    assert abs(P.MARGIN_FRAC - P.MARGIN / (1 - P.ANSWER_CHANCE_AT_REGISTRATION)) < 1e-12
+    # at the answer floor it was set at, the two rules agree to within a point
+    assert abs(P.bar_for(0.2) - (0.2 + P.MARGIN)) < 1e-9
+    for f in (0.2285, 0.2168):
+        assert abs(P.bar_for(f) - (f + P.MARGIN)) < 0.01, f
+    # at a pad floor the additive bar is unreachable and the fractional one is not
+    assert 0.9271 + P.MARGIN > 1.0
+    assert P.bar_for(0.9271) < 1.0
+    assert P.clears_headroom(0.9836, 0.9271, 512)[0] is True      # the measured best pad at L=16
+    assert P.clears(0.9836, 0.9271, 512)[0] is False              # ... which no additive bar takes
+    # monotone, and it still refuses a lift that is large only because n is large
+    assert P.clears_headroom(0.30, 0.1888, 4000)[0] is False
+    assert P.clears_headroom(0.50, 0.1888, 512)[0] is True
 
 
 def test_the_pad_write_gold_is_the_format_the_grid_trains_and_scores():

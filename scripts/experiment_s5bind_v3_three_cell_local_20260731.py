@@ -571,7 +571,7 @@ def apply_rule(runs, floors, grid, eval_n, guided_n, guided_floors=None):
                         f"lengths {P.registered_lengths(cell)}; it was read at "
                         f"{sorted({L for s in acc[cell] for L in acc[cell][s]})}. A missing cell "
                         "is not a cell at floor.")
-                ok, counts = P.forms(acc[cell], f[cell], lengths[cell], n=n)
+                ok, counts, _per = P.forms(acc[cell], f[cell], lengths[cell], n=n)
                 comp_forms[cell], comp_counts[cell] = ok, counts
             # the positive control, on the grid THIS read covers. Unevaluable raises rather than
             # aborting: an (arm, cell, length) the arm never ran is a missing cell, not a model

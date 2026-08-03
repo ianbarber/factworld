@@ -1,6 +1,6 @@
 # s5_bind_v3 on steed's DeepSeek V4 — placing the model, and pricing the k axis
 
-Written 2026-08-03T11:20:00+00:00. Model `steed/deepseek-v4-flash` — DeepSeek V4, q2, ~81 GB resident, served by `ds4-server` on a DGX Spark GB10 over the tailnet at a 262,144-token window. Metric is **match**, the canonical evaluator, on the ANSWER only. Effort arm `high`; ds4 collapses `minimal`/`low`/`medium`/`high`/`xhigh` to one internal level, so that is the model's single thinking arm. **No paid endpoint was contacted and the local GPU was not used**; `cost_usd_est` is 0.0 on every record.
+Written 2026-08-03T13:37:33+00:00. Model `steed/deepseek-v4-flash` — DeepSeek V4, q2, ~81 GB resident, served by `ds4-server` on a DGX Spark GB10 over the tailnet at a 262,144-token window. Metric is **match**, the canonical evaluator, on the ANSWER only. Effort arm `high`; ds4 collapses `minimal`/`low`/`medium`/`high`/`xhigh` to one internal level, so that is the model's single thinking arm. **No paid endpoint was contacted and the local GPU was not used**; `cost_usd_est` is 0.0 on every record.
 
 **The composed cell has no floor in this regime.** The model emits its working as plain content, which is a scratchpad, and the composed cell's floor argument bounds LIVE SLOTS (W <= max(k,m)+1 against the task's k+m+1). Its number is read against INFORMED CHANCE 1/(k-1) — the initial map is stated, so the queried agent's own starting value is never gold — which is a guess baseline, not a floor, and which MOVES WITH k. Component cells keep their floors, recomputed below from the exact scored items and from a disjoint pool.
 
@@ -12,7 +12,7 @@ Written 2026-08-03T11:20:00+00:00. Model `steed/deepseek-v4-flash` — DeepSeek 
 
 **So the ceiling's only remaining remedy is L**, with k raised no faster than the ray allows and only for the resolution 1/(k-1) buys. Candidate next paid points and their prices are below.
 
-**The free arm cannot substitute for the paid scout on this instrument.** It serializes at ~15.8 completion tok/s, so the briefed step 1 alone is 90 hours; and it re-issued one 10,482-token generation indefinitely, which caps how long a single item may be. What was measured on it is stated at its own lengths and its own n, and it is not placed in the scouted band.
+**The free arm cannot substitute for the paid scout on this instrument.** It serializes at ~15.8 completion tok/s, so the briefed step 1 alone is 90 hours; and it re-issued one 10,482-token generation indefinitely, which caps how long a single item may be. At the longest cell it does run — composed@L32, k=6, the one the admissibility read passes at that length — DeepSeek V4 scores 1.000 at n=20, so it is a second ceiling and cannot test the k axis either. The two free models fail the same job from opposite ends: the local Qwen is at informed chance at the lengths it can afford, this one is at the ceiling at the length it can afford.
 
 ## Why k cannot buy difficulty at fixed L — the task's own geometry
 
@@ -192,17 +192,22 @@ Widening along the ray is bought for RESOLUTION and not for difficulty: at L=512
 
 ## What this arm can and cannot buy
 
-Priced at 200 completion tokens per event and 15.8 completion tokens per second, both measured on this arm:
+Priced at 200 completion tokens per event and 15.5 completion tokens per second, both measured on this arm:
 
 | step | cells | completion tokens | serialized wall clock |
 |---|---|---|---|
-| 1. place the model | the four registered k=12 cells at n=40 | 5.12M | **90 h** |
-| 2. k in {6,12,24,32,48} at n=40, L=64 | 5 composed cells | 2.56M | **45 h** |
-| 2. k in {6,12,24,32,48} at n=40, L=128 | 5 composed cells | 5.12M | **90 h** |
-| 2. k in {6,12,24,32,48} at n=40, L=256 | 5 composed cells | 10.24M | **180 h** |
-| 3. L in {64,128,192,256} at n=40, one k | 4 composed cells | 5.12M | **90 h** |
+| 1. place the model | the four registered k=12 cells at n=40 | 5.12M | **92 h** |
+| 2. k in {6,12,24,32,48} at n=40, L=64 | 5 composed cells | 2.56M | **46 h** |
+| 2. k in {6,12,24,32,48} at n=40, L=128 | 5 composed cells | 5.12M | **92 h** |
+| 2. k in {6,12,24,32,48} at n=40, L=256 | 5 composed cells | 10.24M | **184 h** |
+| 3. L in {64,128,192,256} at n=40, one k | 4 composed cells | 5.12M | **92 h** |
 
-One n=40 composed cell at L=128 is 1.02M completion tokens, which this endpoint delivers in 18 hours. The briefed round is 270+ hours on a server that runs one request at a time. It was not run. What was run is priced against the same numbers and stated at its own n.
+One n=40 composed cell at L=128 is 1.02M completion tokens, which this endpoint delivers in 18 hours. The briefed round is 275+ hours on a server that runs one request at a time. It was not run. What was run is priced against the same numbers and stated at its own n.
+
+| cell | k | L | n | completion tokens | wall clock |
+|---|---|---|---|---|---|
+| composed | 6 | 32 | 20 | 125021 | 2.3 h |
+| state | 6 | 12 | 20 | 45737 | 0.8 h |
 
 ### The endpoint, measured
 
@@ -211,6 +216,8 @@ The window is not what bounds this grid; the WALL CLOCK is. ds4-server holds one
 | probe | cell | k | L | workers | budget | completion tokens | wall | completion tok/s | finish |
 |---|---|---|---|---|---|---|---|---|---|
 | w1_state | state | 12 | 43 | 1 | 16384 | 5411 | 344s | 15.72 | `['stop']` |
+
+Across every scored cell in this round the endpoint delivered **15.5 completion tokens per second** (170758 completion tokens in 3.1 hours of wall clock). That is the number every cell above is priced at.
 
 ### One item can stall a whole cell, and it is not the transport
 
@@ -226,6 +233,8 @@ The server's own log says it is not a transport fault. For the item that would n
 
 | cell | k | L | n | budget | finish=length | empty | finish reasons | api errors | VOID |
 |---|---|---|---|---|---|---|---|---|---|
+| composed | 6 | 32 | 20 | 12288 | 0.00 | 0.00 | `{'stop': 20}` | 0 (+0 finish=error) | — |
+| state | 6 | 12 | 20 | 8192 | 0.00 | 0.00 | `{'stop': 20}` | 0 (+0 finish=error) | — |
 
 A cell over 10% finish=length or empty is VOID and enters no comparison until it is re-run at a raised budget: a truncated call is scored wrong, so a truncated cell reads as a floor. The published s5 L64 cliff was a 16-token budget read as a capability, which is why the order is validity first and numbers second.
 
@@ -242,10 +251,13 @@ The scout's numbers are the registered k=12 spec at n=40 on the answer read — 
 
 **composed@128, composed@256, state@85, bind@171 were not run on this arm and this model is therefore not placed in the band.** Two independent limits, both measured above: the four band cells at n=40 are 90 hours of serialized generation here, and the endpoint does not return a generation of ~10.5k tokens at all, which is what an item at these lengths costs. The cells below are at the longest stream this arm returns cleanly, which is off the band's axis; they read this model, not its rank against the scouted three.
 
+**What it does say is that this is a second ceiling.** At composed@L32, k=6 — the longest stream this arm returns and a cell whose one-structure read sits at informed chance — it scores 1.000 at n=20 (95% CI [0.84, 1.00]), with 0 truncated, 0 empty and 0 API errors. So it cannot test the k axis from below any more than the local Qwen can from above: Qwen sits at informed chance at the lengths it can afford, this model sits at the ceiling at the length it can afford, and the length where it would come off the ceiling is the one the endpoint will not run.
+
 ## 2. The k axis — match against informed chance 1/(k-1), and its token price
 
 | k | L | chance 1/(k-1) | n | match | 95% CI | x chance | z | one-structure read | margin | prompt tok/item | completion tok/item | wall/item |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 6 | 32 | 0.2000 | 20 | 1.000 | [0.84,1.00] | 5.00x | +8.9 | 0.2180 (1.09x) | **+0.782** | 702 | 6251 | 414s |
 
 `one-structure read` is that cell's half-price policy from the section above, and `margin` is what the measured score holds over it. A cell whose margin is not clearly positive is not reading composition, whatever its match says.
 
@@ -253,6 +265,18 @@ The scout's numbers are the registered k=12 spec at n=40 on the answer read — 
 
 Not run on this arm: it returns one length. A second length costs a second cell at this endpoint's serialized rate, and the next length up (L=64) is where an item's trace reaches the size the server re-issued rather than returned. The L axis this round rests on is the local grid's, 16 live cells at n=40, where corr(match, log L) = -0.934 against corr(match, log k) = -0.043.
 
+## Component cells, against floors recomputed from the exact scored items
+
+| cell | k | L | partner of composed@L | n | match | floor (scored) | floor (disjoint) | operative | basis | x floor |
+|---|---|---|---|---|---|---|---|---|---|---|
+| state | 6 | 12 | 32 | 20 | 1.000 | 0.2000 | 0.2000 | **0.2000** | measured | 5.00x |
+
+Both floors are printed because they measure different failure modes: the max over admitted rows carries an upward selection bias at small n, and the house rule is that a floor is recomputed from the items a score is actually read against. The larger is operative. A component floor's admitted rows are depth <= 1 and cost under the cell's own algorithm's per-item minimum, so a scratchpad does not void them — a pad substitutes for registers, not for chaining.
+
 ## 4. The operating point on this model: off the ceiling, components still solved
 
-Not measurable on this arm: the composed cell and both of its work-matched components have to be read at the same (k, L) for the question to mean anything, and the cells that completed do not form that triple. The operating point for a redesign is the one priced above from the scout's own measured usage.
+| k | L | composed | state partner (match) | bind partner (match) | off the ceiling? | components solved? |
+|---|---|---|---|---|---|---|
+| 6 | 32 | 1.000 | 12 (1.000) | 20 (—) | NO (at the ceiling) | not measured |
+
+No cell measured on this arm satisfies both conditions. The question is asked of a STRONG model in any case, and the scouted three were read at k=12, L=128 and L=256 — lengths this arm cannot run — so the operating point for a redesign is the one priced above from the scout's own usage, not one this model could be walked to.

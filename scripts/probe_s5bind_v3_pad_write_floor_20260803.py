@@ -6,22 +6,32 @@ axis registers the pad write and cannot register a composition gap. The only qua
 could is the PAD WRITE itself, and a per-slot score means nothing until the cheap policies
 available to it have been priced and measured. This module is that measurement.
 
-THE CLASS IS THE REGISTERED ONE (``validity.s5_bind_v3_pad_write_admits``), transferred to the new
-quantity rather than invented for it: live slots ``W - pad <= max(k, m) + 1``, steps no more than
-the cell's own algorithm pays to PRODUCE THE PAD, and — reported beside it, never as the operative
-number — the sub-class that may not itself compose two hops.
+TWO CLASSES, because the pad has two kinds of token in it and they are floored by different
+conjuncts of one rule (``validity.floor_eligible``):
+    THE ONE-HOP TOKENS take the composed cell's own conjunct — live slots
+    ``W - pad <= max(k, m) + 1``, steps no more than the algorithm pays to PRODUCE THE PAD.
+    THE TWO-HOP TOKEN takes the COMPONENT cells' conjunct, ``depth <= S5_BIND_V3_MAX_DEPTH``,
+    applied per EMITTED TOKEN: an admitted row may hold 8 of the 12 map cells and still not
+    perform the resolve-then-read the token is (``validity.s5_bind_v3_pad_two_hop_floor``).
+
+AND THE TWO-HOP TOKEN IS SPLIT BY SOURCE, with only the CROSS half scored. A same-source swap's
+two reads are both of P, which a row holding P alone performs exactly and which is the state
+component's own carrier depth; only the cross write needs a value out of the holder map and then
+the pointer map. Pooling them lets a model that does the first and floors on the second read as
+though it composed.
 
 WHAT IS PRINTED, per cell and per length:
     the chance baseline, DERIVED for a per-slot read (every pad token is an agent name, so it is
     1 / k and not the answer read's 1 / (k - 1));
     the floor for the pooled per-slot read and for each of the four (event kind, block position)
-    cells, with the row that sets it;
-    the same under the one-hop sub-class, which is what the two-hop token would be read against if
-    the component rule's depth conjunct were carried over;
+    cells, with the row that sets it, under both classes;
+    the registered two-hop floor on the cross partition and the same-source one beside it;
     the EXCLUDED backward-scan row's score, so the exclusion is a judgement about cost rather than
     about the number it would have produced;
-    and, where ``--decompose`` is given, every measured seed against that floor under the
-    registered ``clears`` rule.
+    the SATURATION control, which is a policy and not a model, and what that costs;
+    and, where the decodes are given, every measured seed against those floors under
+    ``clears_headroom`` — teacher-forced as the SCORED read, free-running as the tracking
+    diagnostic — with ``--grid`` conjoining the gates PER SEED so no claim spans two models.
 
 Both item sets are measured exactly as ``protocol.cell_floor`` does it — the EXACT items the read
 scores and a DISJOINT pool, with the larger operative — because a max over rows carries an upward
@@ -31,6 +41,7 @@ Usage:
     .venv/bin/python scripts/probe_s5bind_v3_pad_write_floor_20260803.py \\
         --decompose results/20260802_composed_pad_decompose.json \\
         --forced results/20260802_composed_pad_forced.json \\
+        --grid results/20260802_s5bind_v3_bounded_pad_restart_grid.json \\
         --out results/20260803_pad_write_floor.json
 """
 from __future__ import annotations
@@ -81,6 +92,34 @@ def row_table(sc, k, m, ns, ng, pad):
     return out
 
 
+def saturation_control(items, k, m, ns, ng, pad):
+    """THE SATURATION CONTROL THAT CAN BE BUILT, and it is a POLICY and not a model.
+
+    A saturation control asks whether the measurement can register a clear at all. The cell that
+    would answer it with a MODEL does not exist on this read: a component cell's operands are all
+    NAMED, so the scored token — ``swap_p0`` on an event whose operand is resolved through the
+    other structure — has zero events there, and its floor being 1.000 is the smaller half of the
+    reason. The quantity is defined on the composed cell and nowhere else.
+
+    What can be built is the other end of the same scale. The composed cell's OWN ALGORITHM is a
+    row in this family — carry both maps in full — and it is excluded by the live-slot conjunct at
+    W = 1 + k + m = 13 against the bound 8. Scored on the exact items it writes the two-hop token
+    perfectly, so the read separates the admitted class from a policy that does compose, on the
+    tokens the model is scored on. It exercises the SCORER, not the decode, and the difference is
+    stated rather than papered over.
+    """
+    row = f"pad_carry_P{k}B{m}_first"
+    sc = V.s5_bind_v3_pad_write_scores(items, k, m, pad=pad, rows=(row,))
+    part = P.PAD_WRITE_TOKEN
+    return {"row": row, "W": V.s5_bind_v3_pad_write_cost(row, k, m, ns, ng)[0],
+            "bound": V.one_structure_bound(k, m) + pad,
+            "admitted": V.s5_bind_v3_pad_write_admits(row, "own_gold", "swap_p0", k, m, ns, ng,
+                                                      pad),
+            "own_gold": {c: sc["rows"][row][c]["own_gold"] for c in CELLS},
+            "own_gold_cross": (sc["rows_src"][row].get(part) or {}).get("own_gold"),
+            "n_cross": sc["counts_src"].get(part)}
+
+
 def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
     """Every pad-write row at one cell, on the scored items and on a disjoint pool."""
     k, m = spec.k, spec.n_objects_active
@@ -95,7 +134,8 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
            "scan_row": {"cost": V.s5_bind_v3_pad_write_cost("pad_scan_last_write", k, m, ns, ng),
                         "admitted": V.s5_bind_v3_pad_write_admits(
                             "pad_scan_last_write", "own_gold", "swap_p0", k, m, ns, ng, pad),
-                        "scores": V.s5_bind_v3_pad_scan_last_write(scored, k, m)}}
+                        "scores": V.s5_bind_v3_pad_scan_last_write(scored, k, m)},
+           "saturation": saturation_control(scored, k, m, ns, ng, pad)}
     out["chance"].pop("marginal", None)
     for tag, forced_flag in (("free_run", False), ("teacher_forced", True)):
         if forced_flag and not forced:
@@ -114,7 +154,8 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
                 "rows": row_table(sc, k, m, nsi, ngi, pad)}
         op = {}
         for cls in ("all", "one_hop"):
-            best = {"per_slot": None, "per_slot_row": None, "cells": {}, "cell_rows": {}}
+            best = {"per_slot": None, "per_slot_row": None, "cells": {}, "cell_rows": {},
+                    "parts": {}, "part_rows": {}}
             for c in CELLS:
                 vals = [(legs[nm][cls]["cells"][c], legs[nm][cls]["cell_rows"][c], nm)
                         for nm in legs if legs[nm][cls]["cells"][c] is not None]
@@ -124,16 +165,33 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
                 v, row, nm = max(vals)
                 best["cells"][c] = v
                 best["cell_rows"][c] = f"{row}[{nm}]"
+            for part in {p for nm in legs for p in legs[nm][cls]["parts"]}:
+                vals = [(legs[nm][cls]["parts"][part], legs[nm][cls]["part_rows"][part], nm)
+                        for nm in legs if legs[nm][cls]["parts"].get(part) is not None]
+                v, row, nm = max(vals)
+                best["parts"][part] = v
+                best["part_rows"][part] = f"{row}[{nm}]"
             vals = [(legs[nm][cls]["per_slot"], legs[nm][cls]["per_slot_row"], nm)
                     for nm in legs if legs[nm][cls]["per_slot"] is not None]
             v, row, nm = max(vals)
             best["per_slot"], best["per_slot_row"] = v, f"{row}[{nm}]"
-            # the CLEARS bar the registered rule sets: a floor whose bar is above 1.0 cannot be
-            # cleared by any score, and the cell is unbuyable on this read at this length
-            best["bar"] = v + P.MARGIN
-            best["buyable"] = bool(v + P.MARGIN <= 1.0)
+            # THE BAR THE REGISTERED RULE SETS, under both margins. The additive one is undefined
+            # where floor + MARGIN > 1 — no score whatever clears it — and the pad read is
+            # registered on the fractional one for that reason (protocol.MARGIN_FRAC).
+            best["bar_additive"] = v + P.MARGIN
+            best["buyable_additive"] = bool(v + P.MARGIN <= 1.0)
+            best["bar"] = P.bar_for(v)
             op[cls] = best
-        out[tag] = {"legs": legs, "operative": op}
+        # THE REGISTERED TWO-HOP READ: the one-hop sub-class on the CROSS partition of swap_p0,
+        # operative over the scored items and the disjoint pool.
+        two = {}
+        for key in (P.PAD_WRITE_TOKEN, f"{V.S5_BIND_V3_TWO_HOP_CELL}|same"):
+            two[key] = {"floor": op["one_hop"]["parts"].get(key),
+                        "row": op["one_hop"]["part_rows"].get(key),
+                        "unrestricted": op["all"]["parts"].get(key),
+                        "unrestricted_row": op["all"]["part_rows"].get(key),
+                        "bar": P.bar_for(op["one_hop"]["parts"].get(key))}
+        out[tag] = {"legs": legs, "operative": op, "two_hop": two}
     return out
 
 
@@ -151,11 +209,19 @@ def print_cell(r):
             lab = "registered class" if cls == "all" else "one-hop sub-class"
             print(f"  {tag:14s} {lab:18s} per_slot {f4(b['per_slot'])} "
                   f"({b['per_slot'] / ch['uniform']:.2f}x)  bar {b['bar']:.3f}"
-                  + ("" if b["buyable"] else " UNBUYABLE") + f"  [{b['per_slot_row']}]")
+                  + ("" if b["buyable_additive"] else
+                     f" (additive bar {b['bar_additive']:.3f} UNBUYABLE)")
+                  + f"  [{b['per_slot_row']}]")
             print("      " + "  ".join(
                 f"{c} {f4(b['cells'][c])}"
                 + ("" if b["cells"][c] is None else f" ({b['cells'][c] / ch['uniform']:.2f}x)")
                 for c in CELLS))
+        for key, t in r[tag]["two_hop"].items():
+            if t["floor"] is None:
+                continue
+            print(f"      {key:16s} one-hop floor {f4(t['floor'])} "
+                  f"({t['floor'] / ch['uniform']:.2f}x) bar {t['bar']:.4f}  [{t['row']}]   "
+                  f"unrestricted {f4(t['unrestricted'])} [{t['unrestricted_row']}]")
     tab = r["free_run"]["legs"]["scored"]["rows"]
     top = sorted(tab.items(), key=lambda z: -(z[1]["per_slot"] or 0))[:6]
     print("  every row, best 6 by per_slot (of "
@@ -167,13 +233,32 @@ def print_cell(r):
     print(f"  EXCLUDED pad_scan_last_write (W,S)={sr['cost']} vs task {r['task_pad_cost']} "
           f"-> admitted={sr['admitted']}; scores "
           + " ".join(f"{c}={f4(sr['scores'][c])}" for c in CELLS))
+    sat = r["saturation"]
+    print(f"  SATURATION (policy) {sat['row']} W={sat['W']} vs bound {sat['bound']} -> "
+          f"admitted={sat['admitted']}; own_gold "
+          + " ".join(f"{c}={f4(sat['own_gold'][c])}" for c in CELLS)
+          + f"   {P.PAD_WRITE_TOKEN}={f4(sat['own_gold_cross'])} on n={sat['n_cross']}")
 
 
 def confront(rows, floors, n, tag, label):
-    """Every measured seed against the floor, under the registered ``clears`` rule."""
+    """Every measured seed against the floors, under the registered rules.
+
+    Three columns and they are three different questions:
+      per_slot          the whole pad against the REGISTERED class (no depth conjunct) — a
+                        state-CAPACITY read, since a row holding 8 of the 12 map cells writes most
+                        of this pad from cells it holds;
+      swap_p0|cross     THE SCORED TWO-HOP QUANTITY against the one-hop sub-class, which is the
+                        only column on which a clear is a composition reading;
+      swap_p0|same      the same token on the events whose two reads are both of P, which a row
+                        holding P alone performs exactly. It is printed because it is what the
+                        pooled swap_p0 was mixing the scored column with.
+    ``clears_headroom`` throughout: the per-slot floors run to 0.93, where an additive margin is
+    not a bar (protocol.MARGIN_FRAC).
+    """
     print(f"\n== {label} ==")
-    print(f"{'seed':>4} {'cell':>12} {'per_slot':>9} {'floor':>8} {'bar':>7} {'clears':>7}   "
-          f"{'swap_p0':>8} {'floor':>8} {'bar':>7} {'clears':>7}")
+    print(f"{'seed':>4} {'cell':>12} {'per_slot':>9} {'floor':>8} {'bar':>7} {'clr':>5}   "
+          f"{'sp0|cross':>9} {'floor':>8} {'bar':>7} {'clr':>5}   "
+          f"{'sp0|same':>9} {'floor':>8} {'clr':>5}")
     out = []
     for r in rows:
         key = f"{r['cell']}@{r['L']}"
@@ -181,20 +266,75 @@ def confront(rows, floors, n, tag, label):
         if f is None or tag not in f:
             continue
         b = f[tag]["operative"]["all"]
-        sp, sp0 = r["per_slot"], (r.get("by_kind_position") or {}).get("swap_p0")
-        cl, _z = P.clears(sp, b["per_slot"], n)
-        cl0, _z0 = (P.clears(sp0, b["cells"]["swap_p0"], n)
-                    if sp0 is not None and b["cells"]["swap_p0"] is not None else (False, None))
-        bar = None if b["per_slot"] is None else b["per_slot"] + P.MARGIN
-        bar0 = (None if b["cells"]["swap_p0"] is None else b["cells"]["swap_p0"] + P.MARGIN)
-        print(f"{r['seed']:>4} {key:>12} {sp:>9.3f} {f4(b['per_slot']):>8} {f4(bar):>7} "
-              f"{str(cl):>7}   {(f'{sp0:.3f}' if sp0 is not None else '—'):>8} "
-              f"{f4(b['cells']['swap_p0']):>8} {f4(bar0):>7} {str(cl0):>7}")
-        out.append({"seed": r["seed"], "cell": key, "read": tag, "per_slot": sp,
-                    "per_slot_floor": b["per_slot"], "per_slot_clears": cl,
-                    "swap_p0": sp0, "swap_p0_floor": b["cells"]["swap_p0"],
-                    "swap_p0_clears": cl0})
+        src = r.get("by_kind_position_source") or {}
+        sp = r["per_slot"]
+        cl, _z = P.clears_headroom(sp, b["per_slot"], n)
+        row = {"seed": r["seed"], "cell": key, "read": tag, "per_slot": sp,
+               "per_slot_floor": b["per_slot"], "per_slot_clears": cl,
+               "swap_p0": (r.get("by_kind_position") or {}).get("swap_p0")}
+        cols = []
+        for part in (P.PAD_WRITE_TOKEN, f"{V.S5_BIND_V3_TWO_HOP_CELL}|same"):
+            got = src.get(part)
+            fl = f[tag]["two_hop"].get(part, {}).get("floor")
+            ok, _z2 = (P.clears_headroom(got, fl, n) if got is not None and fl is not None
+                       else (False, None))
+            row[part] = got
+            row[f"{part}_floor"] = fl
+            row[f"{part}_clears"] = ok
+            row[f"{part}_n"] = src.get(f"n_{part}")
+            cols.append((got, fl, ok))
+        bar = P.bar_for(b["per_slot"])
+        print(f"{r['seed']:>4} {key:>12} {sp:>9.4f} {f4(b['per_slot']):>8} {f4(bar):>7} "
+              f"{str(cols and cl):>5}   "
+              f"{f4(cols[0][0]):>9} {f4(cols[0][1]):>8} {f4(P.bar_for(cols[0][1])):>7} "
+              f"{str(cols[0][2]):>5}   "
+              f"{f4(cols[1][0]):>9} {f4(cols[1][1]):>8} {str(cols[1][2]):>5}")
+        out.append(row)
     return out
+
+
+def component_gate(grid_path, n):
+    """{seed: do BOTH components form on this seed at every registered length}, from the grid.
+
+    IT IS THE READOUT GATE TOO, on this read and by construction. A component's pad is
+    byte-perfect on every seed of this grid (slot_acc 1.000), so its ANSWER read differs from its
+    pad read only in whether the model can read back a scratchpad it demonstrably wrote: a seed
+    whose components are at floor on the answer with a perfect pad has a dead readout, measured on
+    eight cells, and cannot carry a claim about the composed cell's answer or about anything read
+    out of its pad. There is no separate gold-pad column to take here and none is needed.
+    """
+    res = json.load(open(grid_path))
+    nn = res["cfg"].get("final_guided_n") or res["cfg"]["guided_n"]
+    gg = res["cfg"]["guided_grid"]
+    ans: dict = {}
+    for r in res["runs"]:
+        g = r["stages"][-1]["guided"]
+        for c in ("state", "bind"):
+            for L in gg.get(c, ()):
+                blk = g.get(c, {}).get(str(L)) or {}
+                ans.setdefault(c, {}).setdefault(r["seed"], {})[L] = blk.get("match")
+    out = {}
+    per = {}
+    for c in ("state", "bind"):
+        floors = {L: (res["floors"].get(f"{c}@{L}") or {}).get("floor") for L in gg.get(c, ())}
+        lengths = tuple(L for L in P.registered_lengths(c) if L in gg.get(c, ()))
+        _ok, counts, seeds = P.forms(ans[c], floors, lengths, n=nn)
+        per[c] = seeds
+        out[c] = {"lengths": list(lengths), "counts": counts, "per_seed": seeds}
+    seeds = sorted(set(per["state"]) | set(per["bind"]))
+    return {s: bool(per["state"].get(s) and per["bind"].get(s)) for s in seeds}, out
+
+
+def two_hop_gate(confronted, lengths):
+    """{seed: does the SCORED two-hop token clear at every registered composed length}."""
+    by_seed: dict = {}
+    for r in confronted:
+        if not r["cell"].startswith("composed@"):
+            continue
+        by_seed.setdefault(r["seed"], {})[int(r["cell"].split("@")[1])] = r
+    return {s: bool(lengths) and all(by_seed[s].get(L, {}).get(f"{P.PAD_WRITE_TOKEN}_clears")
+                                     for L in lengths)
+            for s in by_seed}
 
 
 def main():
@@ -209,6 +349,9 @@ def main():
     ap.add_argument("--no_forced", action="store_true")
     ap.add_argument("--decompose", default=None)
     ap.add_argument("--forced", default=None)
+    ap.add_argument("--grid", default=None,
+                    help="the bounded-pad grid JSON: the component ANSWER read, which is this "
+                         "read's components-form AND readout gate")
     ap.add_argument("--out", default="results/20260803_pad_write_floor.json")
     a = ap.parse_args()
 
@@ -224,7 +367,9 @@ def main():
                      if (c == "state" and L in (34,)) or (c == "bind" and L in (62,))]
     rec = {"generated": datetime.now(timezone.utc).isoformat(), "cfg": vars(a),
            "registered_composed_lengths": list(P.registered_lengths("composed")),
-           "margin": P.MARGIN, "z_clear": P.Z_CLEAR, "cells": {}}
+           "margin": P.MARGIN, "margin_frac": P.MARGIN_FRAC, "z_clear": P.Z_CLEAR,
+           "scored_read": P.PAD_WRITE_SCORED_READ, "scored_token": P.PAD_WRITE_TOKEN,
+           "diagnostic_read": P.PAD_WRITE_DIAGNOSTIC_READ, "cells": {}}
     for cell, L in grid:
         t0 = time.time()
         r = cell_pad_write_floor(specs[cell], L, a.n, a.n_big, a.pad, forced=not a.no_forced)
@@ -239,12 +384,28 @@ def main():
         d = json.load(open(a.decompose))
         rec["confront_free_run"] = confront(
             d["rows"], rec["cells"], d["cfg"]["n"], "free_run",
-            "THE SCORED READ: the model's own free-running pad against the free-running class")
+            "THE TRACKING DIAGNOSTIC: the model's own free-running pad, against a free-running "
+            "class. It compounds a per-event residual over the stream and is not the score.")
     if a.forced:
         d = json.load(open(a.forced))
         rec["confront_teacher_forced"] = confront(
             d["rows"], rec["cells"], d["cfg"]["n"], "teacher_forced",
-            "THE DIAGNOSTIC READ: teacher-forced, against a class handed the same gold history")
+            "THE SCORED READ: teacher-forced per event, against a class handed the same gold "
+            "history. It scores each event once and claims nothing about the model's own writes.")
+    if a.grid and a.forced:
+        lengths = P.registered_lengths("composed")
+        comp, detail = component_gate(a.grid, a.n)
+        two = two_hop_gate(rec["confront_teacher_forced"], lengths)
+        gates = {"components_form_and_read_out": comp, "two_hop_clears": two}
+        ok, per, n_ok, by_gate = P.seeds_carrying(gates)
+        rec["claim"] = {"gates": gates, "per_seed": per, "n_seeds": n_ok, "by_gate": by_gate,
+                        "seeds_clear": P.SEEDS_CLEAR, "holds": ok, "components": detail,
+                        "lengths": list(lengths)}
+        print(f"\n== THE CLAIM, CONJOINED PER SEED (registered lengths {list(lengths)}) ==")
+        for g, v in gates.items():
+            print(f"  {g:32s} {v}")
+        print(f"  seeds carrying ALL of it: {sorted(s for s in per if per[s])} "
+              f"({n_ok}, needs {P.SEEDS_CLEAR}) -> {'HOLDS' if ok else 'DOES NOT HOLD'}")
     with open(a.out, "w") as f:
         json.dump(rec, f, indent=1, default=float)
     print(f"\nwrote {a.out}")

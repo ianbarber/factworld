@@ -23,11 +23,16 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
+from factworld import validity as V                                        # noqa: E402
 import protocol_s5bind_v3_three_cell_20260731 as P                         # noqa: E402
 
 
 def f3(v):
     return "—" if v is None else f"{v:.3f}"
+
+
+def f4(v):
+    return "—" if v is None else f"{v:.4f}"
 
 
 def load(path):
@@ -146,14 +151,22 @@ def findings(res, counts, forced, decomp, fw, out):
                 for s in sorted({k[0] for k in fr}) if (s, 48) in fr and (s, 96) in fr)
             + " — so the pad survives a fixed number of composed events and the stream's length "
             "only decides how much of it is wrong by the end.\n")
+        cross = [fo[k].get("by_kind_position_source", {}).get(P.PAD_WRITE_TOKEN)
+                 for k in ks if fo[k].get("by_kind_position_source", {}).get(P.PAD_WRITE_TOKEN)]
+        same = [fo[k].get("by_kind_position_source", {}).get("swap_p0|same")
+                for k in ks if fo[k].get("by_kind_position_source", {}).get("swap_p0|same")]
         out.append(
             "AND THE RESIDUAL SITS ON THE TWO-HOP WRITE. Teacher-forced, the one pad token that "
-            "needs the operand resolved through the holder map and then read through the pointer "
-            f"map (`swap_p0`) scores "
+            "needs the operand resolved and then read through the pointer map (`swap_p0`) scores "
             f"{min(fo[k]['by_kind_position']['swap_p0'] for k in ks):.3f}-"
             f"{max(fo[k]['by_kind_position']['swap_p0'] for k in ks):.3f} across seeds and "
-            "lengths, against the three one-hop tokens of the same events. That is where the "
-            "composition is, and the next section is what it is worth against a floor.\n")
+            "lengths, against the three one-hop tokens of the same events"
+            + (f". Split by SOURCE it is {min(cross):.3f}-{max(cross):.3f} where the operand is "
+               f"resolved through the HOLDER map and {min(same):.3f}-{max(same):.3f} where it is "
+               "resolved through the pointer map the write also reads — the first needs both "
+               "structures, the second is P read twice and is the state component's own carrier "
+               "depth, and only the first is scored" if cross and same else "")
+            + ".\n")
     if fw:
         cl = P.registered_lengths("composed")
         fl = {L: fw["cells"][f"composed@{L}"] for L in cl if f"composed@{L}" in fw["cells"]}
@@ -170,50 +183,95 @@ def findings(res, counts, forced, decomp, fw, out):
             f"{ch:.3f}). The pad width that costs the ANSWER floor nothing costs the PAD floor "
             "almost everything: on the answer a partial carry buys 1.05-1.17x chance, on the pad "
             "it buys 3-5x, because most pad tokens are one-hop reads of cells the carry holds.\n")
-        out.append(
-            "SO THE TWO-HOP TOKEN DOES NOT REGISTER A COMPOSITION EITHER. Free-running — the read "
-            "the grid scores — `swap_p0`'s floor is "
-            + "/".join(f"{sp[L]:.3f}" for L in fl) + ", and the same one-structure carry sets it: "
-            "a policy that never composes the two hops correctly still gets that token right "
-            "3-5x chance by resolving the operand against a map it holds only part of. The "
-            f"one-hop SUB-class reaches only {min(one.values()):.3f}-{max(one.values()):.3f} "
-            "there, so the token is two-hop work — but the class that decides a floor is the "
-            "registered one, and it reaches the model.\n")
-        n = decomp["cfg"]["n"]
-        rows = {(r["seed"], r["L"]): r for r in decomp["rows"] if r["cell"] == "composed"}
-        who = {}
-        for (s, L), r in rows.items():
-            key = f"composed@{L}"
-            if key not in fw["cells"]:
-                continue
-            b = fw["cells"][key]["free_run"]["operative"]["all"]
-            if P.clears(r["per_slot"], b["per_slot"], n)[0]:
-                who.setdefault(s, []).append(L)
-        dead = [s for s in sorted(who) if all(
-            (r["stages"][-1]["guided"].get(c, {}).get(str(L)) or {}).get("match", 1) < 0.5
-            for r in res["runs"] if r["seed"] == s
-            for c in ("state", "bind") for L in gg.get(c, ()))]
-        out.append(
-            "AND IT DOES NOT FORM. Of 3 seeds, "
-            + ("none clears the per-slot floor at any length"
-               if not who else
-               "; ".join(f"seed {s} clears at L={'/'.join(str(L) for L in sorted(v))}"
-                         for s, v in sorted(who.items())))
-            + f", against the {P.SEEDS_CLEAR} seeds FORMS requires at EVERY registered length"
-            + (f". The seed(s) that clear — {dead} — are the ones whose ANSWER is at floor on "
-               "every cell including both components, so the pad write separates on exactly the "
-               "seed that reads nothing out.\n" if dead else ".\n"))
+        read = P.PAD_WRITE_SCORED_READ
+        two = {L: fl[L][read]["two_hop"][P.PAD_WRITE_TOKEN] for L in fl
+               if fl[L][read]["two_hop"].get(P.PAD_WRITE_TOKEN, {}).get("floor") is not None}
+        conf = {(r["seed"], r["cell"]): r for r in (fw.get(f"confront_{read}") or [])}
+        conf_free = {(r["seed"], r["cell"]): r for r in (fw.get("confront_free_run") or [])}
+        seeds = sorted({s for s, _c in conf})
+        if two and conf:
+            out.append(
+                "AND THE TWO-HOP TOKEN IS SCORED AGAINST A CLASS THAT MAY NOT COMPOSE IT. The "
+                "registered live-slot rule is the composed cell's own and is the floor for the "
+                "three one-hop tokens; the two-hop token takes the COMPONENT cells' conjunct "
+                f"instead — depth <= {V.S5_BIND_V3_MAX_DEPTH}, applied per emitted token — so an "
+                "admitted row may hold 8 of the 12 map cells and still not perform the "
+                "resolve-then-read the token is. On the events whose operand is resolved through "
+                "the OTHER structure, that class reaches "
+                + "/".join(f"{two[L]['floor']:.4f}" for L in two)
+                + f" at L={'/'.join(str(L) for L in two)} against a per-slot chance of "
+                f"{ch:.4f}, where the class WITHOUT the depth conjunct reaches "
+                + "/".join(f"{two[L]['unrestricted']:.4f}" for L in two) + ".\n")
+            out.append(
+                "WHICH CONJUNCT IS APPLIED DECIDES THE RESULT, so it is stated rather than "
+                "assumed. Under the W-only conjunct — the composed cell's own, no depth bound — a "
+                "row holding 8 of the 12 map cells resolves the operand against a map it holds "
+                "most of and reaches "
+                + "/".join(f"{two[L]['unrestricted']:.4f}" for L in two)
+                + ", and the two seeds that carry a claim are UNDER it at every registered "
+                "length. The result below rests entirely on the depth conjunct being the right "
+                "class for this token, and the argument for that is that it is the conjunct both "
+                "COMPONENT cells' floors are already set by, read on the emission instead of on "
+                "the policy: a row may not chain two events' contents, and this token is two "
+                "dependent reads.\n")
+            out.append(
+                "THE SCORED READ IS THE TEACHER-FORCED PER-EVENT ONE, and it clears on every seed "
+                "at every registered length. Per seed at L="
+                + "/".join(str(L) for L in two) + ": "
+                + "; ".join(
+                    f"seed {s} " + "/".join(
+                        f3(conf[(s, f'composed@{L}')].get(P.PAD_WRITE_TOKEN)) for L in two)
+                    for s in seeds)
+                + ", against bars "
+                + "/".join(f"{P.bar_for(two[L]['floor']):.4f}" for L in two)
+                + ". Teacher-forcing removes the COMPOUNDING of a per-event residual over the "
+                "model's own writes and therefore claims nothing about them: free-running, the "
+                "same token on the same events reads "
+                + "; ".join(
+                    f"seed {s} " + "/".join(
+                        f3(conf_free.get((s, f'composed@{L}'), {}).get(P.PAD_WRITE_TOKEN))
+                        for L in two)
+                    for s in seeds)
+                + " and clears "
+                + str(sum(1 for k, r in conf_free.items()
+                          if k[1].startswith("composed@")
+                          and r.get(f"{P.PAD_WRITE_TOKEN}_clears")))
+                + f" of {sum(1 for k in conf_free if k[1].startswith('composed@'))} cells. The "
+                "free-running read stays the tracking diagnostic and is printed at every cell.\n")
+        claim = fw.get("claim")
+        if claim:
+            carry = sorted(int(s) for s, v in claim["per_seed"].items() if v)
+            out.append(
+                "THE CLAIM IS CONJOINED PER SEED, so it cannot be assembled across models. "
+                + "; ".join(f"`{g}` on {v}" for g, v in claim["by_gate"].items())
+                + f" — {claim['n_seeds']} seed(s) carry all of it ({carry}), against "
+                f"{P.SEEDS_CLEAR} required, so a scored composition result on this token "
+                f"{'EXISTS' if claim['holds'] else 'DOES NOT EXIST'} on this grid. The seed with "
+                "the best pad is excluded by its own components: its answer is at floor on all "
+                "eight component cells with a byte-perfect pad, so it reads nothing out and "
+                "carries no claim about anything downstream of a readout. The result survives "
+                "its exclusion.\n")
+            out.append(
+                "WHAT THAT RESULT IS, exactly: on events whose operand is resolved through the "
+                "holder map, given the true history, these models write the value that operand "
+                "points to more often than any policy that may hold 8 of the 12 map cells but "
+                "may not chain two reads. It is not an ANSWER result and not an end-to-end one — "
+                "the same grid's answer read returns a tracking gap on the same seeds, and the "
+                "free-running column above is why.\n")
         L16 = fw["cells"].get("composed@16")
         if L16:
             b16 = L16["free_run"]["operative"]["all"]["per_slot"]
             best16 = max((r["per_slot"] for r in decomp["rows"]
                           if r["cell"] == "composed" and r["L"] == 16), default=None)
             out.append(
-                "AND THE SHORT-STREAM ESCAPE IS CLOSED ON THIS AXIS TOO. At L=16, where the best "
-                f"seed writes {f3(best16)} of the pad, the floor is {b16:.4f} and the CLEARS bar "
-                f"is {b16 + P.MARGIN:.3f} — above 1.0, so no score at that length can clear it. "
-                "The pad-write read is unbuyable at exactly the lengths where the pad is "
-                "written.\n")
+                "AND THE MARGIN ON THIS READ IS FRACTIONAL, because the additive one is not a bar "
+                f"here. At L=16 the per-slot floor is {b16:.4f} and the additive rule asks for "
+                f"{b16 + P.MARGIN:.3f} — above 1.0, so no score whatever clears it, at the length "
+                f"where the best measured pad is {f3(best16)}. The registered rule is "
+                f"`(a - f)/(1 - f) >= {P.MARGIN_FRAC:g}`, which is the same 0.15 re-expressed at "
+                f"the answer floor it was calibrated on ({P.MARGIN} / (1 - "
+                f"{P.ANSWER_CHANCE_AT_REGISTRATION})) and is defined at every floor below 1. "
+                f"Under it composed@16 is buyable at a bar of {P.bar_for(b16):.4f}.\n")
     return out
 
 
@@ -247,10 +305,10 @@ def apply_verdict(res, decomp, gold, out):
                 ans.setdefault(c, {}).setdefault(r["seed"], {})[L] = blk.get("match")
     floors = {c: {L: (res["floors"].get(f"{c}@{L}") or {}).get("floor") for L in gg.get(c, ())}
               for c in ans}
-    comp_forms, comp_counts = {}, {}
+    comp_forms, comp_counts, comp_seeds = {}, {}, {}
     for c in ("state", "bind", "composed"):
         lengths = P.registered_lengths(c)
-        comp_forms[c], comp_counts[c] = P.forms(ans[c], floors[c], lengths, n=n)
+        comp_forms[c], comp_counts[c], comp_seeds[c] = P.forms(ans[c], floors[c], lengths, n=n)
     matched = {}
     for c in ("state", "bind"):
         ml = [L for L in (P.TOKEN_MATCHED.get(P.GUIDED_MATCHED_FROM, {}).get(c),) if L]
@@ -261,13 +319,13 @@ def apply_verdict(res, decomp, gold, out):
                f"(needs {P.SEEDS_CLEAR} seeds at every length)")
     out.append(f"- matched-cost control at composed@{P.GUIDED_MATCHED_FROM}: {matched}")
     out.append(f"- composed cell clears: {comp_counts['composed']}")
-    tracked, pad_counts = None, None
+    tracked, pad_counts, pad_seeds = None, None, {}
     if decomp:
         perfect = {}
         for r in decomp["rows"]:
             if r["cell"] == "composed" and "items_perfect" in r:
                 perfect.setdefault(r["seed"], {})[r["L"]] = r["items_perfect"]
-        tracked, pad_counts = P.pad_tracks(perfect, cl)
+        tracked, pad_counts, pad_seeds = P.pad_tracks(perfect, cl)
         out.append(f"- composed pad is perfect on {P.PAD_TRACKS_MIN} of ITEMS on: {pad_counts} "
                    f"seeds per length -> pad_tracked={tracked} "
                    + "(per seed at L=" + "/".join(str(L) for L in cl) + ": "
@@ -275,25 +333,36 @@ def apply_verdict(res, decomp, gold, out):
                                for s in sorted(perfect)) + ")")
     else:
         out.append("- composed pad: no items-perfect column in this run")
-    readout, readout_counts = None, None
+    readout, readout_counts, readout_seeds = None, None, {}
     if gold:
         gp = {}
         for r in gold.get("rows", []):
             if r.get("cell") == "composed":
                 gp.setdefault(r["seed"], {})[r["L"]] = r.get("match")
-        readout, readout_counts = P.readout_alive(gp, floors["composed"], cl, n)
+        readout, readout_counts, readout_seeds = P.readout_alive(gp, floors["composed"], cl, n)
         out.append(f"- composed GOLD-PAD answer clears on: {readout_counts} seeds per length "
                    f"-> readout={readout}")
     else:
         out.append("- composed GOLD-PAD answer: not measured in this run")
+    # THE CONJUNCTION, per seed. Three counts over seeds are satisfied by a run in which no one
+    # seed satisfies two of them, so the seeds are intersected before any composition verdict is
+    # available and the intersection is printed with the gates that produced it.
+    gates = {"components_form": {s: bool(comp_seeds["state"].get(s) and comp_seeds["bind"].get(s))
+                                 for s in set(comp_seeds["state"]) | set(comp_seeds["bind"])},
+             "pad_tracks": pad_seeds, "readout_alive": readout_seeds}
+    gates = {g: v for g, v in gates.items() if v}
+    carry_ok, carry_per, carry_n, by_gate = P.seeds_carrying(gates)
+    out.append(f"- PER-SEED conjunction of the gates {by_gate} -> {carry_n} seed(s) carry the "
+               f"whole claim ({carry_per}); needs {P.SEEDS_CLEAR}")
     ctrl = {"seeds": 0, "cleared_on": "state", "per_pair": comp_counts["state"], "required": []}
     ctrl["seeds"] = max([v for v in comp_counts["state"].values() if v is not None] or [0])
     mm = {c: matched[c] is not None for c in ("state", "bind")}
     ungated = P.verdict(ctrl, comp_forms, comp_counts, matched, mm)
     try:
         gated = P.verdict(ctrl, comp_forms, comp_counts, matched, mm, pad_tracked=tracked,
-                          pad_counts=pad_counts, readout=readout, readout_counts=readout_counts)
-    except P.ReadoutNotEvaluable as exc:
+                          pad_counts=pad_counts, readout=readout, readout_counts=readout_counts,
+                          seed_gates=gates)
+    except (P.ReadoutNotEvaluable, P.SeedsNotConjoined) as exc:
         out.append(f"\n**Without the pad gate the rule returns `{ungated[0]}`. With it, the rule "
                    f"REFUSES this run: {exc}**\n")
         return ("READOUT_NOT_EVALUABLE", str(exc))
@@ -304,72 +373,114 @@ def apply_verdict(res, decomp, gold, out):
 
 
 def pad_write_floor_table(fw, decomp, out):
-    """The pad-write floor at every composed cell, and every measured seed against it."""
+    """The pad-write floors, the SCORED two-hop read against its own floor, and the controls."""
     cells = [k for k in fw["cells"] if k.startswith("composed@")]
-    out.append("## The PAD WRITE against its own floor\n")
-    out.append("The class is the registered one, scored on the pad instead of on the answer: "
-               "live slots `W - pad <= max(k, m) + 1`, steps no more than the cell's own algorithm "
-               "pays to produce the pad. At pad 2 that admits any policy holding 8 of the 12 map "
-               "cells and excludes the cell's own algorithm (12 + scratch). Chance for a per-slot "
-               "read is `1/k` — every pad token is an agent name — and not the answer read's "
-               "`1/(k-1)`.\n")
-    out.append("| cell | chance | per-slot floor | row | swap_p0 floor | swap_p0, one-hop "
-               "sub-class | CLEARS bar |")
-    out.append("|---|---|---|---|---|---|---|")
+    out.append("## The PAD WRITE against its own floors\n")
+    out.append("Two floors, because the pad has two kinds of token in it. The REGISTERED CLASS is "
+               "the composed cell's own: live slots `W - pad <= max(k, m) + 1`, steps no more than "
+               "the algorithm pays to produce the pad — at pad 2 any policy holding 8 of the 12 "
+               "map cells, and not the algorithm itself (12 + scratch). It is the floor for the "
+               "three ONE-HOP tokens. The TWO-HOP token takes the COMPONENT cells' conjunct "
+               "instead, `depth <= 1` applied per emitted token, so an admitted row may hold most "
+               "of both maps and still not perform the resolve-then-read that this token is. "
+               "Chance for a per-slot read is `1/k` — every pad token is an agent name — and not "
+               "the answer read's `1/(k-1)`.\n")
+    out.append("`swap_p0` is split by SOURCE and only the cross half is scored: on a same-source "
+               "swap both reads are of P, which a row holding P alone performs exactly and which "
+               "is the state component's own carrier depth. Pooling the two lets a model that "
+               "does the same-source write and floors on the cross one read as though it "
+               "composed.\n")
+    out.append("| cell | chance | per-slot floor (registered class) | row | swap_p0\\|cross, "
+               "one-hop floor | row | same-source, one-hop | swap_p0\\|cross unrestricted |")
+    out.append("|---|---|---|---|---|---|---|---|")
     for key in cells:
         c = fw["cells"][key]
-        b = c["free_run"]["operative"]["all"]
-        o = c["free_run"]["operative"]["one_hop"]
-        bar = b["per_slot"] + P.MARGIN
-        out.append(f"| {key} | {c['chance']['uniform']:.4f} | {b['per_slot']:.4f} "
-                   f"({b['per_slot'] / c['chance']['uniform']:.2f}x) | `{b['per_slot_row']}` | "
-                   f"{b['cells']['swap_p0']:.4f} | {o['cells']['swap_p0']:.4f} | "
-                   f"{bar:.3f}{' — above 1.0, unbuyable' if bar > 1.0 else ''} |")
+        read = P.PAD_WRITE_SCORED_READ if P.PAD_WRITE_SCORED_READ in c else "free_run"
+        b = c[read]["operative"]["all"]
+        t = c[read]["two_hop"]
+        cross = t.get(P.PAD_WRITE_TOKEN, {})
+        same = t.get("swap_p0|same", {})
+        ch = c["chance"]["uniform"]
+        out.append(f"| {key} | {ch:.4f} | {b['per_slot']:.4f} ({b['per_slot'] / ch:.2f}x) | "
+                   f"`{b['per_slot_row']}` | {f4(cross.get('floor'))} "
+                   f"({(cross.get('floor') or 0) / ch:.2f}x) | `{cross.get('row')}` | "
+                   f"{f4(same.get('floor'))} | {f4(cross.get('unrestricted'))} |")
     out.append("")
-    rows = {(r["seed"], r["L"]): r for r in (decomp or {}).get("rows", [])
-            if r["cell"] == "composed"}
-    if not rows:
-        return
-    n = decomp["cfg"]["n"]
-    out.append(f"Every measured seed against it, n={n}, under the registered `clears` "
-               f"(z>{P.Z_CLEAR} and margin>={P.MARGIN}).\n")
-    out.append("| seed | cell | per-slot | floor | clears | swap_p0 | floor | clears |")
-    out.append("|---|---|---|---|---|---|---|---|")
-    for (s, L), r in sorted(rows.items()):
-        key = f"composed@{L}"
-        if key not in fw["cells"]:
-            continue
-        b = fw["cells"][key]["free_run"]["operative"]["all"]
-        sp0 = (r.get("by_kind_position") or {}).get("swap_p0")
-        cl = P.clears(r["per_slot"], b["per_slot"], n)[0]
-        cl0 = P.clears(sp0, b["cells"]["swap_p0"], n)[0] if sp0 is not None else False
-        out.append(f"| {s} | {key} | {r['per_slot']:.3f} | {b['per_slot']:.4f} | "
-                   f"{'yes' if cl else 'no'} | {f3(sp0)} | {b['cells']['swap_p0']:.4f} | "
-                   f"{'yes' if cl0 else 'no'} |")
-    out.append("")
+    out.append(f"Floors are on the {P.PAD_WRITE_SCORED_READ} read, which is the scored one; the "
+               "same table on the free-running read is in the JSON. A floor is measured on the "
+               "exact scored items AND on a disjoint pool with the larger operative, since a max "
+               "over 78 rows carries an upward selection bias at small n.\n")
+    conf = fw.get(f"confront_{P.PAD_WRITE_SCORED_READ}") or []
+    if conf:
+        n = fw["cfg"]["n"]
+        out.append(f"### The scored read, per seed and per length\n")
+        out.append(f"Teacher-forced per event, n={n}, under `clears_headroom` "
+                   f"(z>{P.Z_CLEAR} and `(a-f)/(1-f) >= {P.MARGIN_FRAC:g}`). Teacher-forcing "
+                   "removes the COMPOUNDING of a per-event residual over the model's own writes "
+                   "and therefore claims nothing about them; the free-running column beside it is "
+                   "the tracking diagnostic.\n")
+        out.append("| seed | cell | swap_p0\\|cross | floor | bar | clears | same-source | "
+                   "free-running cross | its floor | clears |")
+        out.append("|---|---|---|---|---|---|---|---|---|---|")
+        free = {(r["seed"], r["cell"]): r for r in (fw.get("confront_free_run") or [])}
+        for r in conf:
+            if not r["cell"].startswith("composed@"):
+                continue
+            fr = free.get((r["seed"], r["cell"]), {})
+            fl = r.get(f"{P.PAD_WRITE_TOKEN}_floor")
+            out.append(
+                f"| {r['seed']} | {r['cell']} | {f4(r.get(P.PAD_WRITE_TOKEN))} | {f4(fl)} | "
+                f"{f4(P.bar_for(fl))} | {'yes' if r.get(f'{P.PAD_WRITE_TOKEN}_clears') else 'no'} "
+                f"| {f4(r.get('swap_p0|same'))} | {f4(fr.get(P.PAD_WRITE_TOKEN))} | "
+                f"{f4(fr.get(f'{P.PAD_WRITE_TOKEN}_floor'))} | "
+                f"{'yes' if fr.get(f'{P.PAD_WRITE_TOKEN}_clears') else 'no'} |")
+        out.append("")
+    claim = fw.get("claim")
+    if claim:
+        out.append("### The claim, conjoined per seed\n")
+        out.append("A seed counts only where EVERY gate holds for THAT seed. Counted apart, three "
+                   "gates are satisfied by a run in which no single model satisfies two of "
+                   "them.\n")
+        out.append("| gate | seeds |")
+        out.append("|---|---|")
+        for g, v in claim["by_gate"].items():
+            out.append(f"| `{g}` | {v} |")
+        carry = sorted(int(s) for s, v in claim["per_seed"].items() if v)
+        out.append(f"| **all of them** | **{carry}** |")
+        out.append("")
+        out.append(f"{claim['n_seeds']} seed(s) carry the whole claim at the registered lengths "
+                   f"{claim['lengths']}; {P.SEEDS_CLEAR} are required, so the claim "
+                   f"{'HOLDS' if claim['holds'] else 'DOES NOT HOLD'}.\n")
+    sat = (fw["cells"].get(cells[0]) or {}).get("saturation") if cells else None
     comp = [k for k in fw["cells"] if not k.startswith("composed@")]
-    if comp:
-        vals = {k: fw["cells"][k]["free_run"]["operative"]["all"]["per_slot"] for k in comp}
-        out.append(
-            "AND THE PAD-WRITE READ SUPPORTS NO POSITIVE CONTROL. A component cell has ONE "
-            "structure, so the one-structure bound admits the component's own pad algorithm and "
-            "its floor is " + ", ".join(f"{v:.4f} at {k}" for k, v in sorted(vals.items()))
-            + " — the same argument that leaves the composed cell unfloorable under a `k + m` "
-            "wide pad, one cell over. A component's perfect pad cannot clear anything, so this "
-            "read has no cell on which a working model demonstrates that the measurement works.\n")
-    key = f"composed@{P.GUIDED_MATCHED_FROM}"
-    key = key if key in fw["cells"] else cells[0]
-    tf = fw["cells"][key].get("teacher_forced")
-    if tf:
-        b = tf["operative"]["all"]
-        out.append(
-            "AND THE TEACHER-FORCED READ HAS A SATURATED CELL. Handed the same gold history, a "
-            "row that holds the holder map refreshes each object's new holder from the adjacent "
-            "gold block and scores 1.000 on `give_p1` at every length, so that cell's floor is "
-            f"the ceiling; the pooled teacher-forced floor is {b['per_slot']:.4f} at {key}. The "
-            "teacher-forced numbers stay what they were — a diagnostic — and the residual they "
-            f"show on `swap_p0` is under the floor of that same class ({b['cells']['swap_p0']:.4f} "
-            f"at {key}).\n")
+    out.append("### The saturation control\n")
+    out.append("A saturation control asks whether the measurement can register a clear at all. "
+               "NO MODEL CONTROL EXISTS ON THIS READ and the reason is structural, not a gap in "
+               "the run: a component cell renders every operand by NAME, so the scored token has "
+               "ZERO events there"
+               + (" (and its pad-write floor is "
+                  + ", ".join(f"{fw['cells'][k]['free_run']['operative']['all']['per_slot']:.4f} "
+                              f"at {k}" for k in sorted(comp)) + ")" if comp else "")
+               + ". The quantity is defined on the composed cell and nowhere else, so no cell "
+                 "carries a model that is known good on other evidence AND has the token to "
+                 "write.\n")
+    if sat:
+        out.append(f"What can be built is a POLICY control at the other end of the same scale. "
+                   f"The composed cell's own algorithm is a row in this family — `{sat['row']}`, "
+                   f"carrying both maps — and it is excluded by the live-slot conjunct at "
+                   f"W = {sat['W']} against the bound {sat['bound']}. On the exact scored items it "
+                   f"writes the two-hop token at {f4(sat['own_gold_cross'])} on n = "
+                   f"{sat['n_cross']} events, against an admitted class that reaches "
+                   f"{f4((fw['cells'][cells[0]][P.PAD_WRITE_SCORED_READ]['two_hop'].get(P.PAD_WRITE_TOKEN) or {}).get('floor'))} "
+                   f"at {cells[0]}. That exercises the SCORER over the whole range; it does not "
+                   "exercise the decode, and the difference is what the missing model control "
+                   "would have bought.\n")
+        out.append("WHAT ITS ABSENCE COSTS, stated rather than absorbed: this read is uncalibrated "
+                   "against FALSE NEGATIVES. A floored two-hop score on some future model could be "
+                   "the measurement rather than the model, and nothing here would separate them. "
+                   "It does not weaken a clear — a clear is the model emitting the token more "
+                   "often than any admitted policy does, on items the policies were measured on — "
+                   "and the run reported here has no null on this token to protect.\n")
 
 
 def track_tables(res, out):

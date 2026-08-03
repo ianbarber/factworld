@@ -3223,10 +3223,20 @@ def s5_bind_v3_ckpt_copy_per_slot(examples, k: int, m: int, agents, objs) -> flo
 # every carry for the same reason, which is the most permissive reading and therefore the
 # conservative one for a floor.
 #
-# THE EMISSION IS CHOSEN PER (kind, position) AND NOT PER SOURCE, and the direction is stated
-# because it is the one that matters: a code defined only on same-source events (``ref_sym``, the
-# operand named on the line) is scored WRONG on cross-source ones rather than being allowed to
-# switch there, so every number below is a floor the finer partition could only raise.
+# THE EMISSION IS CHOSEN PER (kind, position, SOURCE), and the source conjunct is the one this
+# read turns on. Which structure resolves an event's operand is on the SURFACE — "the agent o5
+# belongs to" and "the agent g3 points to" are different clauses — so switching emission on it
+# costs a row nothing it does not already pay to read the event, and a class that may not switch
+# is a class with an admitted policy left out of it. Leaving one out lowers a floor, which is the
+# direction that invalidates a cleared reading, so the finer partition is the registered one and
+# the coarse (kind, position) figure is reported beside it as the lower number it is.
+#
+# IT ALSO SPLITS THE TWO-HOP TOKEN INTO THE TWO THINGS IT WAS POOLING. On a composed stream a swap
+# resolves its operand through the HOLDER map (cross) or through the POINTER map (same), and
+# ``swap_p0`` is two dependent reads either way — but the same-source one is two reads of P alone,
+# which a row holding P alone performs exactly, and it is the STATE component's own carrier depth
+# rather than anything composed. The cross one needs both maps and is the only token on this rung
+# whose write is the composition. They are floored and reported apart for that reason.
 #
 # THE CHEAP POLICIES A PAD-WRITE READ MAKES AVAILABLE, and where each one is:
 #   copy the previous checkpoint's slot      ``copy_prev`` — the row emits its own last block, so
@@ -3245,25 +3255,66 @@ def s5_bind_v3_ckpt_copy_per_slot(examples, k: int, m: int, agents, objs) -> flo
 #                                            position, so the combination is one admitted policy.
 S5_BIND_V3_PAD_CELLS = ("give_p0", "give_p1", "swap_p0", "swap_p1")
 
-# HOPS PER (code, cell) on a COMPOSED stream, where every event's operand is resolved through the
-# other structure. ``own_gold`` at ``swap_p0`` is the two-hop write — resolve the operand through
-# the holder map, then read it through the pointer map — and is the only two-hop cell there is.
+# THE SOURCE CLASSES a pad cell is partitioned by, and they are the event's own, read off the
+# clause: 'named' the operand is written out, 'same' it is resolved through the structure this
+# event WRITES, 'cross' through the other one (``composition.is_cross``, the registered reading).
+S5_BIND_V3_PAD_SOURCES = ("named", "same", "cross")
+
 S5_BIND_V3_PAD_CODES = ("own_gold", "operand", "target_val", "target_sym", "ref_sym",
                         "stated_ref_val", "stated_target_val", "stated_operand_val",
                         "copy_prev", "const", "uniform")
-S5_BIND_V3_PAD_HOPS = {
-    "own_gold": {"give_p0": 1, "give_p1": 1, "swap_p0": 2, "swap_p1": 1},
-    "operand": {"give_p0": 1, "give_p1": 1, "swap_p0": 1, "swap_p1": 1},
-    "target_val": {"give_p0": 1, "give_p1": 1, "swap_p0": 1, "swap_p1": 1},
-    "stated_ref_val": {"give_p0": 1, "give_p1": 1, "swap_p0": 1, "swap_p1": 1},
-    "stated_target_val": {"give_p0": 1, "give_p1": 1, "swap_p0": 1, "swap_p1": 1},
-    "stated_operand_val": {"give_p0": 1, "give_p1": 1, "swap_p0": 2, "swap_p1": 1},
-    "target_sym": {"give_p0": 0, "give_p1": 0, "swap_p0": 0, "swap_p1": 0},
-    "ref_sym": {"give_p0": 0, "give_p1": 0, "swap_p0": 0, "swap_p1": 0},
-    "copy_prev": {"give_p0": 0, "give_p1": 0, "swap_p0": 0, "swap_p1": 0},
-    "const": {"give_p0": 0, "give_p1": 0, "swap_p0": 0, "swap_p1": 0},
-    "uniform": {"give_p0": 0, "give_p1": 0, "swap_p0": 0, "swap_p1": 0},
+
+# HOPS PER (code, cell), AS THE TWO READS THEY ARE MADE OF, so the count is a property of the
+# EVENT and not of the cell's name: ``(resolves_the_operand, map_reads)``. An emission's depth is
+# ``map_reads`` plus the operand resolve where the event HAS one — a named operand is on the
+# surface and is not a read — which is why the same ``own_gold`` at ``swap_p0`` is TWO hops on a
+# composed stream (resolve, then read the pointer map) and ONE on a component stream, whose
+# operands are all named. Charging the composed number on a component cell would exclude that
+# cell's own one-hop policy from its own floor and manufacture a clear out of the bookkeeping.
+S5_BIND_V3_PAD_HOP_PARTS = {
+    "own_gold": {"give_p0": (1, 0), "give_p1": (0, 1), "swap_p0": (1, 1), "swap_p1": (0, 1)},
+    "operand": {c: (1, 0) for c in S5_BIND_V3_PAD_CELLS},
+    "target_val": {c: (0, 1) for c in S5_BIND_V3_PAD_CELLS},
+    "stated_ref_val": {c: (1, 0) for c in S5_BIND_V3_PAD_CELLS},
+    "stated_target_val": {c: (0, 1) for c in S5_BIND_V3_PAD_CELLS},
+    "stated_operand_val": {c: (1, 1) for c in S5_BIND_V3_PAD_CELLS},
+    "target_sym": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
+    "ref_sym": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
+    "copy_prev": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
+    "const": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
+    "uniform": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
 }
+
+
+def s5_bind_v3_pad_hops(code: str, cell: str, source: str = "cross") -> int:
+    """The emission's COMPOSITION DEPTH at one pad cell on an event of this source class.
+
+    ``S5_BIND_V3_PAD_HOP_PARTS`` split into the operand resolve and the map reads that follow it;
+    a NAMED operand costs no resolve. This is the quantity the component cells' depth conjunct is
+    applied to, per emitted token (``s5_bind_v3_pad_write_admits``).
+    """
+    if code not in S5_BIND_V3_PAD_HOP_PARTS or cell not in S5_BIND_V3_PAD_CELLS:
+        raise KeyError(f"{code!r}/{cell!r} names no priced pad-write emission")
+    if source not in S5_BIND_V3_PAD_SOURCES:
+        raise KeyError(f"{source!r} is not one of {S5_BIND_V3_PAD_SOURCES}")
+    res, reads = S5_BIND_V3_PAD_HOP_PARTS[code][cell]
+    return reads + (res if source != "named" else 0)
+
+
+def s5_bind_v3_pad_event_source(kind: str, src: str) -> str:
+    """The source class of one event, from its kind and the structure that resolves its operand."""
+    from .composition import is_cross
+
+    if src == "N":
+        return "named"
+    return "cross" if is_cross((kind, None, None, src)) else "same"
+
+
+# HOPS PER (code, cell) on a COMPOSED stream, where every operand is resolved. Kept as the table
+# the reports print; it is DERIVED from the parts above rather than written down twice.
+S5_BIND_V3_PAD_HOPS = {code: {cell: s5_bind_v3_pad_hops(code, cell, "cross")
+                              for cell in S5_BIND_V3_PAD_CELLS}
+                       for code in S5_BIND_V3_PAD_CODES}
 S5_BIND_V3_PAD_EVICT = ("first", "recent")
 
 
@@ -3361,18 +3412,19 @@ def s5_bind_v3_pad_write_cost(row: str, k: int, m: int, n_swap: int, n_give: int
 
 def s5_bind_v3_pad_write_admits(row: str, code: str, cell: str, k: int, m: int,
                                 n_swap: int, n_give: int, pad: int = 0,
-                                max_hops: int | None = None) -> bool:
-    """Whether one ``(row, code)`` may set the floor for one pad cell.
+                                max_hops: int | None = None, source: str = "cross") -> bool:
+    """Whether one ``(row, code)`` may set the floor for one pad cell on one source class.
 
-    ``max_hops=None`` is the registered composed-cell rule — live slots and steps, no depth
-    conjunct — and gives the OPERATIVE floor. An integer adds the depth conjunct per emitted
-    token, which is a SMALLER class and therefore a lower bar; it is reported so the two-hop
-    token can be read against a class that may not itself compose two hops, and never as the
-    operative number.
+    ``max_hops=None`` is the composed cell's own W-axis rule — live slots and steps, no depth
+    conjunct — and it is the floor for the THREE ONE-HOP TOKENS. An integer adds the DEPTH
+    conjunct per emitted token: ``s5_bind_v3_pad_hops(code, cell, source) <= max_hops``, which is
+    ``floor_eligible``'s ``depth_row <= depth_max`` — the conjunct that sets both COMPONENT cells'
+    floors (``s5_bind_v3_admits``, named branch) — read on the emission instead of on the whole
+    policy. At ``max_hops = S5_BIND_V3_MAX_DEPTH`` it is the class that may not itself perform the
+    two-hop resolve, and that is the registered floor for the two-hop token
+    (``s5_bind_v3_pad_two_hop_floor``).
     """
-    if code not in S5_BIND_V3_PAD_HOPS or cell not in S5_BIND_V3_PAD_CELLS:
-        raise KeyError(f"{code!r}/{cell!r} names no priced pad-write emission")
-    if max_hops is not None and S5_BIND_V3_PAD_HOPS[code][cell] > max_hops:
+    if max_hops is not None and s5_bind_v3_pad_hops(code, cell, source) > max_hops:
         return False
     w, s = s5_bind_v3_pad_write_cost(row, k, m, n_swap, n_give)
     _wt, st = s5_bind_v3_pad_write_task_cost(k, m, n_swap, n_give)
@@ -3380,7 +3432,10 @@ def s5_bind_v3_pad_write_admits(row: str, code: str, cell: str, k: int, m: int,
 
 
 def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
-    """One item, one carry: every emission code scored against the gold pad, per cell.
+    """One item, one carry: every emission code scored against the gold pad, per (cell, source).
+
+    ``acc`` is keyed by ``(cell, source)`` because a row may switch emission on the source class,
+    which is on the surface of the event line it already reads.
 
     The carry's beliefs are its own — an uncached cell reads the STATED block — so a free-running
     row is closed-loop exactly as the model's free-running read is. ``forced`` models the
@@ -3444,15 +3499,16 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
         em["copy_prev"] = prev if prev is not None else em["own_gold"]
         prev = em["copy_prev"]
         g = gold[i]
+        source = s5_bind_v3_pad_event_source(kind, src)
         for p in (0, 1):
-            cell = names[p]
+            slot = acc[(names[p], source)]
             for code, vals in em.items():
                 if vals[p] is not None and vals[p] == g[p]:
-                    acc[cell][code][0] += 1
-                acc[cell][code][1] += 1
+                    slot[code][0] += 1
+                slot[code][1] += 1
             for a in agents:
-                acc[cell]["const"][a][0] += int(a == g[p])
-                acc[cell]["const"][a][1] += 1
+                slot["const"][a][0] += int(a == g[p])
+                slot["const"][a][1] += 1
         # THE ROW'S OWN UPDATE, then — teacher-forced only — the adjacent gold block. Only the
         # slot the surface NAMES is refreshed: a swap's gold block is (value now at tgt, value now
         # at the resolved operand), and which slot the second token belongs to is exactly the
@@ -3472,11 +3528,29 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
 
 def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=None,
                                 forced: bool = False) -> dict:
-    """Every admitted pad-write row's accuracy on one cell's exact items, per pad cell.
+    """Every admitted pad-write row's accuracy on one cell's exact items, per pad cell and source.
 
-    Returns ``{"n", "counts": {cell: slots}, "rows": {row: {cell: {code: acc}}}}`` with the
-    ``const`` code already reduced to the best fixed agent and ``uniform`` carrying 1 / k. Rows
-    are ``s5_bind_v3_pad_carry_rows`` unless given.
+    Returns ``{"n", "counts": {cell: slots}, "rows": {row: {cell: {code: acc}}}}`` — pooled over
+    source classes, which is what the coarse (kind, position) reading needs — plus
+    ``{"counts_src": {"cell|source": slots}, "rows_src": {row: {"cell|source": {code: acc}}}}``,
+    which is the partition the floor is registered on. ``const`` is already reduced to the best
+    fixed agent IN EACH PARTITION and ``uniform`` carries 1 / k. Rows are
+    ``s5_bind_v3_pad_carry_rows`` unless given.
+
+    ``forced`` PUTS THE CLASS ON THE SAME READ AS THE MODEL, and which read that is decides what
+    the comparison measures. Free-running, both the model and every row are closed-loop: one wrong
+    slot corrupts the context, so the pooled number is a per-event error rate COMPOUNDED over the
+    stream and falls with L on a model whose per-event behaviour is flat. That comparison answers
+    "can this hold its own pad for 2L tokens", which is state capacity. Teacher-forced, each event
+    is scored once against the true history — the model reads the gold pad, and a row refreshes
+    the slot the surface NAMES from the adjacent gold block — and the comparison answers "given
+    the state, is the two-hop write performed", which is the composition question.
+
+    WHAT THE TEACHER-FORCED NUMBER THEREFORE CANNOT CLAIM: anything about behaviour on the model's
+    own writes, at any length, end to end. A cell that clears teacher-forced and floors
+    free-running is a model that computes the composed update and cannot survive its own errors.
+    Both are measured and the protocol registers the first as the score and the second as the
+    tracking diagnostic; neither substitutes for the other.
     """
     from .composition import SWAP, read
 
@@ -3496,71 +3570,184 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
             # the structure it moves, so the pool is read off the values and not off P0's keys
             agents = sorted(set(rec["P0"]) | set(rec["P0"].values()) | set(rec["B0"].values()))
     if not prepped:
-        return {"n": 0, "counts": {}, "rows": {}}
-    counts = Counter()
+        return {"n": 0, "counts": {}, "counts_src": {}, "rows": {}, "rows_src": {}}
+    counts, counts_src = Counter(), Counter()
     for rec, _g in prepped:
-        for kind, _t, _r, _s in rec["events"]:
+        for kind, _t, _r, src in rec["events"]:
+            pos = ("swap_p0", "swap_p1") if kind == SWAP else ("give_p0", "give_p1")
             counts["swap" if kind == SWAP else "give"] += 1
+            for c in pos:
+                counts_src[f"{c}|{s5_bind_v3_pad_event_source(kind, src)}"] += 1
+    parts = tuple((c, s) for c in S5_BIND_V3_PAD_CELLS for s in S5_BIND_V3_PAD_SOURCES)
     out = {"n": len(prepped), "forced": bool(forced),
            "counts": {"give_p0": counts["give"], "give_p1": counts["give"],
                       "swap_p0": counts["swap"], "swap_p1": counts["swap"]},
-           "rows": {}}
+           "counts_src": {f"{c}|{s}": counts_src[f"{c}|{s}"] for c, s in parts},
+           "rows": {}, "rows_src": {}}
     for row in rows:
         jp, jb, ev = s5_bind_v3_pad_carry_parse(row)
-        acc = {c: {code: [0, 0] for code in S5_BIND_V3_PAD_CODES if code != "const"}
-               for c in S5_BIND_V3_PAD_CELLS}
-        for c in acc:
-            acc[c]["const"] = {a: [0, 0] for a in agents}
+        acc = {p: {code: [0, 0] for code in S5_BIND_V3_PAD_CODES if code != "const"}
+               for p in parts}
+        for p in acc:
+            acc[p]["const"] = {a: [0, 0] for a in agents}
         for rec, g in prepped:
             _pad_write_item(rec, g, jp, jb, ev, acc, agents, forced=forced)
-        out["rows"][row] = {}
-        for c in S5_BIND_V3_PAD_CELLS:
+
+        def reduce(pairs):
+            """``{code: accuracy}`` over one or more partitions' raw counts."""
             d = {}
-            for code, v in acc[c].items():
-                if code == "const":
-                    best = max(v.values(), key=lambda z: (z[0] / z[1]) if z[1] else -1.0)
-                    d["const"] = (best[0] / best[1]) if best[1] else None
-                elif code == "uniform":
+            for code in S5_BIND_V3_PAD_CODES:
+                if code == "uniform":
                     d["uniform"] = 1.0 / k
+                elif code == "const":
+                    per = {a: [0, 0] for a in agents}
+                    for p in pairs:
+                        for a, v in acc[p]["const"].items():
+                            per[a][0] += v[0]
+                            per[a][1] += v[1]
+                    best = max(per.values(), key=lambda z: (z[0] / z[1]) if z[1] else -1.0)
+                    d["const"] = (best[0] / best[1]) if best[1] else None
                 else:
-                    d[code] = (v[0] / v[1]) if v[1] else None
-            out["rows"][row][c] = d
+                    h = sum(acc[p][code][0] for p in pairs)
+                    t = sum(acc[p][code][1] for p in pairs)
+                    d[code] = (h / t) if t else None
+            return d
+
+        out["rows"][row] = {c: reduce([(c, s) for s in S5_BIND_V3_PAD_SOURCES])
+                            for c in S5_BIND_V3_PAD_CELLS}
+        out["rows_src"][row] = {f"{c}|{s}": reduce([(c, s)]) for c, s in parts}
     return out
 
 
 def s5_bind_v3_pad_write_floor(scores: dict, k: int, m: int, n_swap: int, n_give: int,
-                               pad: int = 2, max_hops: int | None = None) -> dict:
-    """The number a pad-write score has to clear, per cell and pooled over slots.
+                               pad: int = 2, max_hops: int | None = None,
+                               by_source: bool = True) -> dict:
+    """The number a pad-write score has to clear, per partition, per cell and pooled over slots.
 
-    The pooled figure is a max over ROWS of that row's own weighted mean, never a max per cell
+    Every figure is a max over ROWS of that row's own count-weighted mean, never a max per cell
     recombined across rows: two rows whose cells were combined would hold both structures between
     them, which is the policy the class exists to exclude.
+
+    ``by_source`` partitions each cell by the event's source class and lets a row choose its
+    emission per partition, which the surface pays for and no slot does. It is the REGISTERED
+    reading and it can only raise a cell's floor; ``by_source=False`` reproduces the coarse
+    (kind, position) figure, which is reported as the lower number it is.
+
+    Returns the per-cell and pooled floors plus ``parts``/``part_rows`` keyed ``"cell|source"``,
+    which is where the two-hop token's cross and same halves are read apart.
     """
     per_cell: dict = {c: (None, None) for c in S5_BIND_V3_PAD_CELLS}
+    per_part: dict = {}
     pooled = (None, None)
     tot = sum(scores["counts"].values())
-    for row, cells in scores["rows"].items():
+    src_counts = scores.get("counts_src") or {}
+    groups = {c: ([f"{c}|{s}" for s in S5_BIND_V3_PAD_SOURCES if src_counts.get(f"{c}|{s}")]
+                  if by_source and src_counts else [])
+              for c in S5_BIND_V3_PAD_CELLS}
+    for row in scores["rows"]:
         w_sum, ok = 0.0, True
         for c in S5_BIND_V3_PAD_CELLS:
             if not scores["counts"].get(c):
                 continue                          # a cell this stream has no events for
-            cand = [(v, code) for code, v in cells[c].items() if v is not None
-                    and s5_bind_v3_pad_write_admits(row, code, c, k, m, n_swap, n_give, pad,
-                                                    max_hops)]
-            if not cand:
-                ok = False
+            keys = groups[c] or [c]
+            cell_hits = 0.0
+            picked = []
+            for key in keys:
+                if "|" in key:
+                    cell_, source = key.split("|")
+                    vals = scores["rows_src"][row][key]
+                    n_key = src_counts[key]
+                else:
+                    # the coarse reading has no partition to price against, so it charges the
+                    # CHEAPEST source class the stream actually contains: a named operand costs no
+                    # resolve, and charging a resolve the events do not pay would exclude an
+                    # admitted policy, which lowers a floor.
+                    cell_, vals = c, scores["rows"][row][c]
+                    source = ("named" if src_counts.get(f"{c}|named") else "cross")
+                    n_key = scores["counts"][c]
+                cand = [(v, code) for code, v in vals.items() if v is not None
+                        and s5_bind_v3_pad_write_admits(row, code, cell_, k, m, n_swap, n_give,
+                                                        pad, max_hops, source)]
+                if not cand:
+                    ok = False
+                    continue
+                best = max(cand)
+                if "|" in key and (key not in per_part or best[0] > per_part[key][0]):
+                    per_part[key] = (best[0], f"{row}:{best[1]}")
+                picked.append(f"{source}:{best[1]}" if "|" in key else best[1])
+                cell_hits += n_key * best[0]
+            if not ok:
                 continue
-            best = max(cand)
-            if per_cell[c][0] is None or best[0] > per_cell[c][0]:
-                per_cell[c] = (best[0], f"{row}:{best[1]}")
-            w_sum += scores["counts"][c] * best[0]
+            cell_acc = cell_hits / scores["counts"][c]
+            if per_cell[c][0] is None or cell_acc > per_cell[c][0]:
+                per_cell[c] = (cell_acc, f"{row}:{'/'.join(picked)}")
+            w_sum += cell_hits
         if ok and tot and (pooled[0] is None or w_sum / tot > pooled[0]):
             pooled = (w_sum / tot, row)
     return {"per_slot": pooled[0], "per_slot_row": pooled[1],
             "cells": {c: per_cell[c][0] for c in S5_BIND_V3_PAD_CELLS},
             "cell_rows": {c: per_cell[c][1] for c in S5_BIND_V3_PAD_CELLS},
-            "chance": 1.0 / k, "pad": pad, "max_hops": max_hops,
+            "parts": {p: v[0] for p, v in sorted(per_part.items())},
+            "part_rows": {p: v[1] for p, v in sorted(per_part.items())},
+            "chance": 1.0 / k, "pad": pad, "max_hops": max_hops, "by_source": bool(by_source),
             "n": scores.get("n"), "forced": scores.get("forced")}
+
+
+S5_BIND_V3_TWO_HOP_CELL = "swap_p0"        # the only pad token whose write is two dependent reads
+S5_BIND_V3_TWO_HOP_SOURCE = "cross"        # ... resolved through the OTHER structure
+
+
+def s5_bind_v3_pad_two_hop_floor(scores: dict, k: int, m: int, n_swap: int, n_give: int,
+                                 pad: int = 2) -> dict:
+    """THE REGISTERED FLOOR FOR THE TWO-HOP TOKEN: the one-hop sub-class on the cross partition.
+
+    WHICH CONJUNCT DOES THE WORK, and it is borrowed and not invented. ``floor_eligible`` carries
+    two rules: on a COMPOSED cell the gap is on live slots (``w_row <= w_max``, steps tied to the
+    task's) and on a COMPONENT cell it is on ``depth_row <= depth_max`` with
+    ``depth_max = S5_BIND_V3_MAX_DEPTH = 1`` — a floor row may chain at most ONE event's contents.
+    That second conjunct is what makes both component cells floorable, and it is the one applied
+    here, per EMITTED TOKEN rather than per policy: an admitted row may hold up to
+    ``max(k, m) + 1 + pad`` map cells and pay what the algorithm pays, and may still not itself
+    perform the resolve-then-read that this token IS
+    (``s5_bind_v3_pad_hops(code, cell, source) <= S5_BIND_V3_MAX_DEPTH``).
+
+    WHY THE CROSS PARTITION AND NOT ALL OF ``swap_p0``. Both source classes of a swap write two
+    dependent reads, so the depth conjunct excludes ``own_gold`` on both and the two floors come
+    out close. What differs is what CLEARING one means: the same-source write is P read twice,
+    which a row holding P alone does exactly and which the STATE component's carrier walk already
+    chains eleven deep, so a score on it is a depth result the component cell has already
+    registered. Only the cross write needs a value out of the holder map and then the pointer map,
+    and pooling the two lets a model that does the first and floors on the second read as though
+    it did both.
+
+    THE DEPTH CONJUNCT IS ADDITIONAL AND NOT A REPLACEMENT: an admitted row still satisfies the
+    live-slot and step conjuncts. That is what excludes the one policy a depth rule alone would
+    let through — carrying the COMPOSED map ``C[o] = P[B[o]]``, which answers this token with a
+    single read of C at the referenced key. C is m cells and would fit, but C cannot be maintained
+    from C: a give moves one entry to the new holder's pointer and a swap moves every entry whose
+    object points into the swapped pair, so keeping it needs P and B as well and the row is over
+    the bound. It is not a swept row, and its exclusion rests on that argument rather than on a
+    measured number.
+
+    Returns the cross-partition floor, the same-source one beside it, and the whole
+    ``max_hops=1`` reading, all on the exact items ``scores`` was measured on.
+    """
+    one = s5_bind_v3_pad_write_floor(scores, k, m, n_swap, n_give, pad,
+                                     max_hops=S5_BIND_V3_MAX_DEPTH)
+    full = s5_bind_v3_pad_write_floor(scores, k, m, n_swap, n_give, pad)
+    cross = f"{S5_BIND_V3_TWO_HOP_CELL}|{S5_BIND_V3_TWO_HOP_SOURCE}"
+    same = f"{S5_BIND_V3_TWO_HOP_CELL}|same"
+    return {"floor": one["parts"].get(cross), "row": one["part_rows"].get(cross),
+            "same_source_floor": one["parts"].get(same),
+            "same_source_row": one["part_rows"].get(same),
+            "pooled_swap_p0": one["cells"].get(S5_BIND_V3_TWO_HOP_CELL),
+            "unrestricted_cross": full["parts"].get(cross),
+            "unrestricted_cross_row": full["part_rows"].get(cross),
+            "unrestricted_same": full["parts"].get(same),
+            "n_cross": (scores.get("counts_src") or {}).get(cross),
+            "n_same": (scores.get("counts_src") or {}).get(same),
+            "max_hops": S5_BIND_V3_MAX_DEPTH, "chance": 1.0 / k,
+            "one_hop": one, "unrestricted": full}
 
 
 def s5_bind_v3_pad_write_chance(examples, k: int) -> dict:

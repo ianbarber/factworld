@@ -66,6 +66,7 @@ sys.path.insert(0, os.path.join(REPO, "scripts"))
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 from factworld import tasks as TK                                          # noqa: E402
+from factworld import validity as V                                        # noqa: E402
 from factworld.composition import SWAP, read as _read                      # noqa: E402
 from factworld.tokenizer import Tokenizer                                  # noqa: E402
 import protocol_s5bind_v3_three_cell_20260731 as P                         # noqa: E402
@@ -86,21 +87,31 @@ def _tok_and_specs():
 
 
 def operand_kinds(ex):
-    """``([resolved], [is_swap])`` per event.
+    """``([resolved], [is_swap], [source])`` per event.
 
-    ``resolved`` is True where the operand has to be looked up in the map the cell's OTHER
-    component owns rather than read off the event line. It is 1.000 on the composed cell and 0.000
-    on both components (``--counts``), so it separates the cells and not the events inside one.
+    ``resolved`` is True where the operand has to be looked up in a map rather than read off the
+    event line. It is 1.000 on the composed cell and 0.000 on both components (``--counts``), so it
+    separates the cells and not the events inside one.
 
     ``is_swap`` is the split that does separate events inside the composed stream: a swap writes
     two POINTER cells and a give writes a HOLDER cell and the value it displaced, so the two halves
     of the composed pad are the two components' own work and can be scored apart.
+
+    ``source`` is the split that separates the composed cell's TWO-HOP TOKEN from the thing it was
+    pooled with (``validity.s5_bind_v3_pad_event_source``). A swap's ``swap_p0`` is two dependent
+    reads either way, but on a SAME-source swap both are reads of P — which a policy holding P
+    alone performs exactly, and which is the state component's own carrier depth — while on a CROSS
+    swap the first read is of the holder map and the second of the pointer map. Only the second is
+    the composition, and a pooled number cannot tell a model that does one from a model that does
+    both.
     """
     rec = _read(ex.prompt)
     if rec is None:
-        return None, None
+        return None, None, None
     return ([src != "N" for _k, _t, _r, src in rec["events"]],
-            [kind == SWAP for kind, _t, _r, _s in rec["events"]])
+            [kind == SWAP for kind, _t, _r, _s in rec["events"]],
+            [V.s5_bind_v3_pad_event_source(kind, src)
+             for kind, _t, _r, src in rec["events"]])
 
 
 # ---- (1) the length lever ----------------------------------------------------------------------
@@ -121,7 +132,7 @@ def counts(a):
             pad_slots.append(len(slots))
             doc_toks.append(len(tok.encode(" ".join(toks) + " " + e.answer, add_eos=True)))
             prompt_toks.append(len(tok.encode(" ".join(toks))))
-            ks, _sw = operand_kinds(e)
+            ks, _sw, _src = operand_kinds(e)
             if ks is not None:
                 resolved.append(sum(ks) / max(1, len(ks)))
                 n_ev.append(len(ks))
@@ -168,6 +179,7 @@ def teacher_forced(model, tok, spec, L, n, device, fmt, batch=16):
     by_named = [[0, 0], [0, 0]]                      # [named, resolved] x [hit, tot]
     by_kind = [[0, 0], [0, 0]]                       # [give, swap] x [hit, tot]
     by_kp = [[0, 0] for _ in KIND_POS]               # give_p0, give_p1, swap_p0, swap_p1
+    by_kps = {p: [0, 0] for p in KIND_POS_SRC}       # ... each split by the event's source class
     model.eval()
     with torch.no_grad():
         for b0 in range(0, len(prepped), batch):
@@ -178,7 +190,7 @@ def teacher_forced(model, tok, spec, L, n, device, fmt, batch=16):
                 inp[ri, :len(ids)] = torch.tensor(ids, device=device)
             with torch.autocast(device, dtype=torch.bfloat16):
                 pred = model(inp).argmax(-1)
-            for ri, (ids, at, gold, kinds, swaps) in enumerate(chunk):
+            for ri, (ids, at, gold, kinds, swaps, srcs) in enumerate(chunk):
                 w = B.PAD_WIDTH[fmt]
                 for si, (pos, g) in enumerate(zip(at, gold)):
                     ok = int(tok.id_to_token.get(int(pred[ri, pos - 1]), "") == g)
@@ -195,11 +207,16 @@ def teacher_forced(model, tok, spec, L, n, device, fmt, batch=16):
                         by_kind[s][1] += 1
                         by_kp[2 * s + (si % w)][0] += ok
                         by_kp[2 * s + (si % w)][1] += 1
+                        key = f"{KIND_POS[2 * s + (si % w)]}|{srcs[si // w]}"
+                        by_kps[key][0] += ok
+                        by_kps[key][1] += 1
     return {"per_slot": hit / max(1, tot), "n_slots": tot, "n": len(prepped),
             "by_position": [c[0] / c[1] if c[1] else None for c in by_pos],
             "by_operand": _split(by_named, ("named", "resolved")),
             "by_event": _split(by_kind, ("give", "swap")),
-            "by_kind_position": _split(by_kp, KIND_POS), "hops": HOPS}
+            "by_kind_position": _split(by_kp, KIND_POS),
+            "by_kind_position_source": _split([by_kps[p] for p in KIND_POS_SRC], KIND_POS_SRC),
+            "hops": HOPS}
 
 
 def _split(counts_, names):
@@ -225,6 +242,11 @@ def _split(counts_, names):
 KIND_POS = ("give_p0", "give_p1", "swap_p0", "swap_p1")
 HOPS = {"give_p0": 1, "give_p1": 1, "swap_p0": 2, "swap_p1": 1}
 HOPS_NAMED = {"give_p0": 1, "give_p1": 1, "swap_p0": 1, "swap_p1": 1}
+# ... and each of them split by the event's source class, because ``swap_p0|cross`` is the only
+# one of the twelve whose write needs BOTH structures. ``swap_p0|same`` is two reads of P, which
+# is the state component's own work at depth 2, and pooling the two makes a model that does the
+# same-source write and floors on the cross one read like a model that composes.
+KIND_POS_SRC = tuple(f"{p}|{s}" for p in KIND_POS for s in V.S5_BIND_V3_PAD_SOURCES)
 
 
 # ---- (3) where the free-running pad breaks -----------------------------------------------------
@@ -255,6 +277,7 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
     by_named = [[0, 0], [0, 0]]
     by_kind = [[0, 0], [0, 0]]
     by_kp = [[0, 0] for _ in KIND_POS]
+    by_kps = {p: [0, 0] for p in KIND_POS_SRC}
     first_err, perfect = [], 0
     model.eval()
     with torch.no_grad():
@@ -264,7 +287,7 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
             cursor = [0] * len(chunk)
             gen = [[] for _ in chunk]
             for ordinal in range(n_slots):
-                for i, (toks, slots, slotset, _g, _k, _s) in enumerate(chunk):
+                for i, (toks, slots, slotset, _g, _k, _s, _src) in enumerate(chunk):
                     while cursor[i] < slots[ordinal]:
                         if cursor[i] not in slotset:
                             ids[i] += tok.encode(toks[cursor[i]])
@@ -273,7 +296,7 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
                     ids[i].append(tid)
                     gen[i].append(tok.id_to_token.get(tid, "<unk>"))
                     cursor[i] += 1
-            for i, (_t, _s, _ss, gold, kinds, swaps) in enumerate(chunk):
+            for i, (_t, _s, _ss, gold, kinds, swaps, srcs) in enumerate(chunk):
                 fe = None
                 for si, (g, p) in enumerate(zip(gold, gen[i])):
                     ok = int(g == p)
@@ -292,6 +315,9 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
                         by_kind[sw][1] += 1
                         by_kp[2 * sw + (si % w)][0] += ok
                         by_kp[2 * sw + (si % w)][1] += 1
+                        key = f"{KIND_POS[2 * sw + (si % w)]}|{srcs[si // w]}"
+                        by_kps[key][0] += ok
+                        by_kps[key][1] += 1
                     if not ok and fe is None:
                         fe = si // w
                 perfect += int(fe is None)
@@ -303,7 +329,9 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
             "by_position": [c[0] / c[1] if c[1] else None for c in by_pos],
             "by_operand": _split(by_named, ("named", "resolved")),
             "by_event": _split(by_kind, ("give", "swap")),
-            "by_kind_position": _split(by_kp, KIND_POS), "hops": HOPS,
+            "by_kind_position": _split(by_kp, KIND_POS),
+            "by_kind_position_source": _split([by_kps[p] for p in KIND_POS_SRC], KIND_POS_SRC),
+            "hops": HOPS,
             "items_perfect": perfect / max(1, len(prepped)),
             "first_error_median": (q[len(q) // 2] if q else None),
             "first_error_hist": dict(Counter(min(x, n_ev) for x in first_err).most_common(10))}

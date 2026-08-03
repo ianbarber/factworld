@@ -180,10 +180,22 @@ THE READING RULE (pre-registered; every threshold below is fixed before any resu
     EXCLUDES, whose readings a floor does not cover: the widest is the fitted 25-feature ranker
     at 1.21x chance on the k=6 composed cell, i.e. 0.042 over informed chance.
 
+    ON THE PAD READ THE MARGIN IS FRACTIONAL, and it is the same margin transferred rather than a
+    second threshold: (a - f) / (1 - f) >= MARGIN_FRAC (= 0.1875 = 0.15 / (1 - 0.2), the additive
+    margin re-expressed at the answer floor it was calibrated on). An additive 0.15 is undefined
+    where a floor runs to 0.93 — the bar it sets there is above 1.0, so no score clears it — and
+    per-slot pad floors do (``clears_headroom``).
+
     FORMS. A cell forms for an arch iff it CLEARS on at least SEEDS_CLEAR (= 2) of the seeds at
     every registered length. Seeds are counted, never averaged: this family is bimodal at the
     emergence threshold and a mean over one converged and two floored seeds is a number no seed
     produced. Per-seed values are reported in every table.
+
+    AND GATES ARE CONJOINED PER SEED, never counted apart. forms, pad_tracks and readout_alive are
+    each a count over seeds, and three independent counts are satisfied by a run in which no
+    single seed satisfies two of them. A seed counts toward a composition claim only where all
+    three hold FOR THAT SEED (``seeds_carrying``), and a verdict that interprets the composed cell
+    without that conjunction RAISES (``SeedsNotConjoined``).
 
     POSITIVE CONTROL, and it gates the whole run. It is a DISJUNCTION over the components —
     some component clears somewhere on the grid THIS READ COVERS — and the (read, cell, length)
@@ -243,6 +255,14 @@ THE VERDICT TABLE (mechanical; ``verdict()`` returns exactly one of these, or ra
                              real and reported, it just does not carry a composition reading. The
                              verdict this replaces is V1, and without the gate V1 is what a rule
                              reading only the answer returns.
+    V8 NO SEED CARRIES IT    every gate passes on its own count over seeds, and no SEEDS_CLEAR
+                             seeds pass all of them AT ONCE. forms, pad_tracks and readout_alive
+                             are three counts, and a run whose components form on seeds 0/1, whose
+                             pad is written on seed 2 and whose readout is alive on seeds 0/1
+                             satisfies every one of them while describing no trained model — the
+                             seed whose pad is good is the seed whose readout is dead. The claim is
+                             conjoined PER SEED (``seeds_carrying``) before any composition verdict
+                             is available, and this is what a failed conjunction returns.
     V1 UNCONTROLLED          both components FORM and the composed cell clears nowhere — the V1
                              pattern — but a matched-cost control was never measured, so "beyond
                              the step multiplier" is not established. The cells separate; the
@@ -432,6 +452,28 @@ N_SCORE = 4000                            # N_FIT_BLOCKS * N_FIT pooled, with th
 Z_CLEAR = 3.0
 MARGIN = 0.15
 SEEDS_CLEAR = 2
+
+# THE MARGIN ON THE PAD READ, and it is the registered one transferred rather than a second
+# threshold. MARGIN is ADDITIVE and was set where the ANSWER floor sits just above informed chance
+# 1/(k-1) = 0.2 at k=6: 0.15 is three quarters of that chance, and every floor it was calibrated
+# against reads 1.05-1.17x it. A per-SLOT pad floor sits at 2.3-5.6x its own chance and runs to
+# 0.93, where the same 0.15 is not a bar but an impossibility — at composed@16 it asks for 1.077,
+# so no score whatever clears it, at exactly the length where the pad is nearly written (0.9836
+# measured). A bar above 1.0 is not a strict rule; it is an undefined one.
+#
+# WHAT REPLACES IT: the same lift, read as a share of the HEADROOM the floor leaves.
+#     (a - f) / (1 - f)  >=  MARGIN_FRAC
+# It is defined at every floor below 1, it is monotone in a, and it asks the same question the
+# additive rule asks — how much of what the floor does not already explain does the model explain.
+#
+# IT IS NOT FITTED TO THIS DATA, and the constant says so: MARGIN_FRAC is MARGIN re-expressed at
+# the operating point MARGIN was registered at, 0.15 / (1 - 0.2) = 0.1875. At the answer floors it
+# was set against it reproduces the registered bar to within a point; nothing about the pad
+# numbers enters it, and it was written down before the pad scores were confronted with it. The
+# free parameter it removes is the one the additive rule had all along: which floor the 0.15 was
+# for.
+ANSWER_CHANCE_AT_REGISTRATION = 0.2       # 1/(k-1) at k=6 — the floor MARGIN was calibrated on
+MARGIN_FRAC = MARGIN / (1.0 - ANSWER_CHANCE_AT_REGISTRATION)
 
 # ---- the trace read ---------------------------------------------------------------------------
 # The read is the model's own FINAL CHECKPOINT's value for the queried slot. It is defined only
@@ -1055,7 +1097,12 @@ def trace_floor_table(cells=LOCAL_CELLS, lengths=None, n_scored=N_GUIDED):
 
 # ---- the rule -------------------------------------------------------------------------------
 def clears(acc, floor, n=N_EVAL, z_min=Z_CLEAR, margin=MARGIN):
-    """CLEARS, exactly as registered: significant AND large enough to be a circuit."""
+    """CLEARS, exactly as registered: significant AND large enough to be a circuit.
+
+    The additive margin. It is the ANSWER read's rule and stays that read's rule unchanged; it is
+    undefined where a floor plus the margin exceeds 1, which is where ``clears_headroom`` is
+    registered instead (see MARGIN_FRAC).
+    """
     if acc is None or floor is None:
         return False, None
     se = math.sqrt(max(1e-12, floor * (1.0 - floor) / n))
@@ -1063,12 +1110,46 @@ def clears(acc, floor, n=N_EVAL, z_min=Z_CLEAR, margin=MARGIN):
     return bool(z > z_min and (acc - floor) >= margin), z
 
 
-def forms(per_seed, floors, lengths, n=N_EVAL, seeds_clear=SEEDS_CLEAR):
+def clears_headroom(acc, floor, n=N_EVAL, z_min=Z_CLEAR, frac=MARGIN_FRAC):
+    """CLEARS on the PAD read: significant, and closing ``frac`` of what the floor leaves.
+
+    ``(a - f) / (1 - f) >= frac`` with the same z conjunct. Registered for the per-slot pad read,
+    where floors run from 0.18 to 0.93 and an additive margin is not a bar at the top of that
+    range but an impossibility (MARGIN_FRAC above). At f = 0.2 it asks for a - f >= 0.15, which is
+    the additive rule at the operating point the additive rule was set at.
+    """
+    if acc is None or floor is None:
+        return False, None
+    se = math.sqrt(max(1e-12, floor * (1.0 - floor) / n))
+    z = (acc - floor) / se
+    head = 1.0 - floor
+    lift = (acc - floor) / head if head > 1e-12 else 0.0
+    return bool(z > z_min and lift >= frac), z
+
+
+def bar_for(floor, frac=MARGIN_FRAC):
+    """The score ``clears_headroom`` requires at this floor — always in (floor, 1]."""
+    return None if floor is None else floor + frac * (1.0 - floor)
+
+
+def per_seed_clears(per_seed, floors, lengths, n=N_EVAL, rule=clears):
+    """{seed: does THIS seed clear at EVERY registered length}.
+
+    The per-seed map the conjunction is taken on. A seed with a missing length, or a length with
+    no floor, is False for that seed: the conjunction may only be built out of measurements.
+    """
+    return {s: bool(lengths) and all(rule(per_seed[s].get(L), floors.get(L), n)[0]
+                                     for L in lengths)
+            for s in per_seed}
+
+
+def forms(per_seed, floors, lengths, n=N_EVAL, seeds_clear=SEEDS_CLEAR, rule=clears):
     """FORMS: clears on >= seeds_clear seeds at EVERY registered length.
 
-    ``per_seed`` is {seed: {L: accuracy}}; ``floors`` is {L: floor}. Returns the verdict and the
-    per-length seed counts, so a cell that clears at 48 and not at 96 is visible as that rather
-    than as a bare False.
+    ``per_seed`` is {seed: {L: accuracy}}; ``floors`` is {L: floor}. Returns the verdict, the
+    per-length seed counts — so a cell that clears at 48 and not at 96 is visible as that rather
+    than as a bare False — and the PER-SEED map, which is what a claim combining this gate with
+    another has to be built on (``seeds_carrying``).
 
     A LENGTH WITH NO FLOOR COUNTS None, NOT 0. Where the protocol leaves the cell unfloorable
     there is nothing for a seed to clear, and a 0 there would report an unfloorable cell and a
@@ -1080,9 +1161,10 @@ def forms(per_seed, floors, lengths, n=N_EVAL, seeds_clear=SEEDS_CLEAR):
     for L in lengths:
         counts[L] = (None if floors.get(L) is None else
                      sum(1 for s in per_seed
-                         if clears(per_seed[s].get(L), floors.get(L), n)[0]))
+                         if rule(per_seed[s].get(L), floors.get(L), n)[0]))
     return (bool(lengths) and all(c is not None and c >= seeds_clear
-                                  for c in counts.values()), counts)
+                                  for c in counts.values()), counts,
+            per_seed_clears(per_seed, floors, lengths, n, rule))
 
 
 # THE LEVEL A PAD PROTOCOL'S SCRATCHPAD HAS TO REACH BEFORE ITS ANSWER MEANS ANYTHING, and it is
@@ -1107,15 +1189,18 @@ def pad_tracks(per_seed, lengths, seeds_clear=SEEDS_CLEAR, level=PAD_TRACKS_MIN)
 
     ``per_seed`` is {seed: {L: ITEMS-PERFECT fraction}} from the SAME free-running read the answer
     comes from — the model's own pad, fed back, not a teacher-forced one, and counted per ITEM
-    rather than per token for the reason above. Shaped like ``forms`` so the two are read the same
-    way: it holds iff at least ``seeds_clear`` seeds reach ``level`` at EVERY registered length,
-    and the per-length counts come back so a cell that tracks at 48 and not at 96 is visible as
-    that.
+    rather than per token for the reason above. Shaped like ``forms`` so the three gates are read
+    the same way: it holds iff at least ``seeds_clear`` seeds reach ``level`` at EVERY registered
+    length, and it returns the per-length counts (a cell that tracks at 48 and not at 96 is
+    visible as that) AND the per-seed map the conjunction is taken on.
     """
     counts = {L: sum(1 for s in per_seed
                      if (per_seed[s].get(L) is not None and per_seed[s][L] >= level))
               for L in lengths}
-    return bool(lengths) and all(c >= seeds_clear for c in counts.values()), counts
+    per = {s: bool(lengths) and all(per_seed[s].get(L) is not None and per_seed[s][L] >= level
+                                    for L in lengths)
+           for s in per_seed}
+    return bool(lengths) and all(c >= seeds_clear for c in counts.values()), counts, per
 
 
 class ReadoutNotEvaluable(RuntimeError):
@@ -1140,13 +1225,45 @@ def readout_alive(gold_per_seed, floors, lengths, n, seeds_clear=SEEDS_CLEAR):
     for its answer to mean something; this says an answer would be there to mean it. A seed whose
     pad is byte-perfect and whose gold-pad answer is still at floor has a dead readout, and its
     floored composed answer is a fact about the readout and not about the composition.
+
+    IT IS PER SEED, and the aggregate alone is not the gate. A readout is a property of ONE model:
+    with three seeds and ``seeds_clear`` 2, an aggregate count returns True while the seed that
+    writes the pad is the dead one, which is the exact configuration this exists to catch. The
+    third return value is the per-seed map, and ``seeds_carrying`` is what a claim is built on.
     """
     counts = {L: (None if floors.get(L) is None else
                   sum(1 for s in gold_per_seed
                       if clears(gold_per_seed[s].get(L), floors.get(L), n)[0]))
               for L in lengths}
     return (bool(lengths) and all(c is not None and c >= seeds_clear for c in counts.values()),
-            counts)
+            counts, per_seed_clears(gold_per_seed, floors, lengths, n))
+
+
+class SeedsNotConjoined(RuntimeError):
+    """A composition verdict was asked for without the per-seed conjunction of its gates.
+
+    Raised rather than defaulted for the reason ``ControlNotEvaluable`` is. Three gates counted
+    independently over seeds pass on a run whose pad-writing seed and whose reading-out seed are
+    DIFFERENT MODELS, and the claim that comes out is a claim about no model that was trained.
+    """
+
+
+def seeds_carrying(gates: dict, seeds_clear=SEEDS_CLEAR):
+    """The seeds on which EVERY gate holds — the conjunction a composition claim is built on.
+
+    ``gates`` is {gate name: {seed: bool}}, the per-seed maps ``forms``, ``pad_tracks`` and
+    ``readout_alive`` return. A seed counts only where all of them hold FOR THAT SEED.
+
+    THIS IS THE RULE, and the counted-separately version is not a weaker form of it but a
+    different claim. Components forming on seeds 0 and 1, a pad written on seed 2 and a readout
+    alive on seeds 0 and 1 satisfies every 2-of-3 count and describes no model: the cell whose pad
+    is good is the cell whose readout is dead. Returns ``(ok, per_seed, n_seeds, {gate: seeds})``.
+    """
+    seeds = sorted({s for g in gates.values() for s in g})
+    per = {s: all(bool(g.get(s)) for g in gates.values()) for s in seeds}
+    n_ok = sum(per.values())
+    return (n_ok >= seeds_clear, per, n_ok,
+            {name: sorted(s for s in g if g[s]) for name, g in gates.items()})
 
 
 class ControlNotEvaluable(RuntimeError):
@@ -1264,7 +1381,7 @@ def guided_grid(matched, cells=LOCAL_CELLS, lengths=GUIDED_LENGTHS,
 
 def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
             composed_floored=True, pad_reach=None, pad_tracked=None, pad_counts=None,
-            readout=None, readout_counts=None):
+            readout=None, readout_counts=None, seed_gates=None):
     """The verdict table, applied mechanically. Raises rather than aborting on a missing control.
 
     Args:
@@ -1302,11 +1419,18 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
             refuse to interpret it, V0 and V6, are returned before this is read. Absent on an
             interpreting path, this raises rather than defaulting.
         readout_counts: the per-length seed counts ``readout_alive`` returns, printed with V7.
+        seed_gates: {gate name: {seed: bool}} — the PER-SEED maps of the three gates, which is
+            what the claim is conjoined on (``seeds_carrying``). REQUIRED on every path that
+            interprets the composed cell under a pad protocol, for the same reason the gold-pad
+            column is: three gates counted independently over seeds are satisfied by a run whose
+            pad-writing seeds and reading-out seeds are disjoint, and the composition claim that
+            comes out is a claim about no trained model. Absent there, this raises.
 
     Raises:
         ControlNotEvaluable: ``control`` is not an evaluated control.
         ReadoutNotEvaluable: the run reaches a composition verdict under a pad protocol with no
             gold-pad answer column.
+        SeedsNotConjoined: it reaches one with no per-seed conjunction of the gates.
     """
     if not isinstance(control, dict) or "seeds" not in control:
         raise ControlNotEvaluable(
@@ -1370,6 +1494,24 @@ def verdict(control, comp_forms, comp_counts, matched_forms, matched_measured,
             f"({readout_counts if readout_counts is not None else 'no'} seeds clearing per "
             "length). The answer this read scores is downstream of a readout that does not work, "
             "so its floored value is a fact about the readout and not about the composition.")
+    if pad_tracked is not None:
+        if seed_gates is None:
+            raise SeedsNotConjoined(
+                "this run reaches a composition verdict under a pad protocol and carries no "
+                "PER-SEED conjunction of its gates. forms, pad_tracks and readout_alive are three "
+                "counts over seeds, and a run whose pad-writing seeds and reading-out seeds are "
+                "disjoint satisfies all three while no single model satisfies any two. Pass "
+                "seed_gates={'forms': ..., 'pad': ..., 'readout': ...} from the maps those "
+                "functions return.")
+        conj_ok, per_seed, n_seeds, by_gate = seeds_carrying(seed_gates)
+        if not conj_ok:
+            return "V8_NO_SEED_CARRIES_THE_CLAIM", (
+                f"every gate passes on its own count, and no {SEEDS_CLEAR} seeds pass all of them "
+                f"together: {by_gate} gives {n_seeds} seed(s) carrying the whole claim "
+                f"({per_seed}). The gates hold on DIFFERENT MODELS, so the composition reading "
+                "they would license is a reading of no model that was trained. It is not a null: "
+                "each cell's number is real and reported, and the next move is a seed on which "
+                "the components form, the pad is written and the readout is alive at once.")
     unmatched = [c for c, ok in matched_forms.items() if ok is False]
     if unmatched:
         return "V3_GAP_IS_THE_COST", (
@@ -1514,6 +1656,56 @@ def trace_read_block(matched, with_floors=True):
     }
 
 
+# ---- the pad-write read ----------------------------------------------------------------------
+# WHAT IS SCORED ON IT, registered here because the two reads it can be taken under measure
+# different things and only one of them is a score.
+#
+# THE SCORED QUANTITY IS THE TEACHER-FORCED PER-EVENT READ of the two-hop token: the gold pad is
+# in context and the model emits the next pad block, so each event is scored ONCE, against the
+# true history. The justification is what teacher-forcing REMOVES, not that it reads higher.
+# A free-running pad is fed back, so a per-event error rate e shows up in the pooled number as
+# 1 - (1 - e)^(events since the error mattered): the free-running score is the per-event quantity
+# COMPOUNDED over the stream, and it falls with L on a model whose per-event behaviour is flat
+# (0.902/0.900/0.897/0.895/0.891 teacher-forced at L=16..96 against 0.773/0.627/0.525/0.466/0.377
+# free-running, same checkpoints). Against a floor whose class is scored the same way, a
+# free-running comparison is therefore a comparison of two compounding rates and answers "can this
+# model hold its own pad for 2L tokens", which is a state-capacity question. The teacher-forced
+# comparison answers "given the state, does this model perform the two-hop write", which is the
+# composition question the cell was built for.
+#
+# WHAT IT THEREFORE CANNOT CLAIM, and this is the whole of it: nothing about the model's behaviour
+# on its own writes. A cell that clears here and floors free-running is a model that computes the
+# composed update and cannot survive its own errors — which is a real and reportable failure, and
+# it is NOT this measurement's. No end-to-end claim, no answer claim, and no claim at any length
+# the free-running read was not also taken at. The free-running read stays measured and printed
+# beside it as the TRACKING DIAGNOSTIC it is.
+#
+# THE FLOOR IT IS SCORED AGAINST is ``validity.s5_bind_v3_pad_two_hop_floor``: the one-hop
+# sub-class — the component cells' registered depth conjunct applied per emitted token — on the
+# CROSS partition of ``swap_p0``, measured on the exact scored items and on a disjoint pool with
+# the larger operative, under the SAME read (a teacher-forced score against a teacher-forced
+# class, a free-running score against a free-running one).
+PAD_WRITE_SCORED_READ = "teacher_forced"
+PAD_WRITE_DIAGNOSTIC_READ = "free_run"
+PAD_WRITE_TOKEN = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
+
+
+def pad_write_read_block():
+    """The pad-write read's declaration for the pre-registration record, as data."""
+    return {
+        "scored_read": PAD_WRITE_SCORED_READ,
+        "diagnostic_read": PAD_WRITE_DIAGNOSTIC_READ,
+        "scored_token": PAD_WRITE_TOKEN,
+        "floor": "validity.s5_bind_v3_pad_two_hop_floor: the one-hop sub-class "
+                 f"(depth <= {V.S5_BIND_V3_MAX_DEPTH}, the component cells' conjunct, applied per "
+                 "emitted token) on the cross partition of swap_p0",
+        "chance": "1/k, a per-slot pad read's own — every pad token is an agent name",
+        "clears_rule": f"clears_headroom: z > {Z_CLEAR} and (a - f)/(1 - f) >= {MARGIN_FRAC:g}",
+        "cannot_claim": "anything about the model on its own writes: the free-running read is "
+                        "kept as the tracking diagnostic and is not this score",
+    }
+
+
 def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
     """Write the pre-registration record: cells, both pairings, costs, floors and every
     threshold, before any solver number exists.
@@ -1563,8 +1755,10 @@ def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
         "registered_lengths": {c: list(registered_lengths(c)) for c in LOCAL_CELLS},
         "profile_lengths": {c: list(v) for c, v in PROFILE_LENGTHS.items()},
         "thresholds": {"n_eval": N_EVAL, "n_guided": N_GUIDED, "z_clear": Z_CLEAR,
-                       "margin": MARGIN, "seeds_clear": SEEDS_CLEAR, "n_fit": N_FIT,
+                       "margin": MARGIN, "margin_frac": MARGIN_FRAC,
+                       "seeds_clear": SEEDS_CLEAR, "n_fit": N_FIT,
                        "n_fit_blocks": N_FIT_BLOCKS, "n_score": N_SCORE},
+        "pad_write_read": pad_write_read_block(),
         "costs": costs,
         # BOTH PAIRINGS, side by side, because they answer different questions: the work pairing
         # is what each component's FORMS verdict is read at, the token pairing is the
@@ -1589,6 +1783,7 @@ def register(out_prefix, axis=MATCHED_AXIS, with_floors=True):
         "floors": floors,
         "trace_read": trace_read_block(ml, with_floors=with_floors),
         "verdicts": ["V5_HARNESS_NULL", "V4_COMPONENT_UNREADABLE", "V0_COMPOSED_UNFLOORABLE",
+                     "V6_TRACKING_GAP", "V7_READOUT_DEAD", "V8_NO_SEED_CARRIES_THE_CLAIM",
                      "V3_GAP_IS_THE_COST", "V1_UNCONTROLLED", "V1_COMPOSITION_GAP",
                      "V2_NO_GAP_HERE"],
         "scout": scout_plan(),
