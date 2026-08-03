@@ -272,12 +272,23 @@ def narrow_document(ex, fmt, agents=None, objs=None):
     return None if got is None else " ".join(got[0]) + " " + ex.answer
 
 
-def stage_documents(specs, weights, train_n, tok, fmt, mix=True, answer_docs=False):
+def stage_documents(specs, weights, train_n, tok, fmt, mix=True, answer_docs=False,
+                    answer_ratio=1, group_masked=False):
     """``(encoded docs, prompt_lens)`` for one stage under a bounded format.
 
     Same discipline as the shipped runner: a pad document takes a full next-token loss (the pad IS
     the supervision, ``prompt_len`` 1) and a plain document takes the answer-masked loss, because
     otherwise the answer is one token in several hundred.
+
+    ``group_masked`` SORTS BY (is_masked, length) instead of length, and ``answer_ratio`` sets how
+    many answer-masked copies each item contributes. Both default to the values that reproduce this
+    module's registered runs exactly. They exist because the loss ``train.run`` optimises is
+    normalised over a BATCH drawn as a contiguous slice of this sorted list, so what an
+    answer-masked document is worth depends on which documents it is sorted next to: its full-loss
+    twin is byte-identical and therefore always adjacent, and one answer token against that twin's
+    2L is 0.003 of the stage's loss with no batch in the stage reaching a 0.9 answer share
+    (``probe_s5bind_v3_answer_share_20260802``). Grouping makes a batch a tracking step or a readout
+    step and nothing in between: 0.333 at ratio 1, 0.667 at ratio 4.
 
     ``answer_docs`` adds a THIRD document per item: the pad prompt with the loss masked to the
     ANSWER. It exists because the bounded pad separates two things the dense format had welded
@@ -289,7 +300,7 @@ def stage_documents(specs, weights, train_n, tok, fmt, mix=True, answer_docs=Fal
     composed cell, which is the same rule the masked loss and the checkpoint mix were chosen under.
     """
     key = (tuple(sorted(weights.items())), train_n, fmt, bool(mix), bool(answer_docs),
-           tuple(sorted(specs)))
+           int(answer_ratio), bool(group_masked), tuple(sorted(specs)))
     if key in _DOC_CACHE:
         return _DOC_CACHE[key]
     pairs = []
@@ -305,9 +316,10 @@ def stage_documents(specs, weights, train_n, tok, fmt, mix=True, answer_docs=Fal
             if doc is not None:
                 pairs.append((doc, 1))
                 if answer_docs:
-                    pairs.append((doc, len(tok.encode(doc[:-len(e.answer) - 1]))))
+                    plen = len(tok.encode(doc[:-len(e.answer) - 1]))
+                    pairs += [(doc, plen)] * max(1, int(answer_ratio))
     enc = [(tok.encode(t, add_eos=True)[:MAX_DOC_TOKENS], pl) for t, pl in pairs]
-    enc.sort(key=lambda x: len(x[0]))
+    enc.sort(key=(lambda x: (x[1] > 1, len(x[0]))) if group_masked else (lambda x: len(x[0])))
     _DOC_CACHE[key] = ([a for a, _ in enc], [b for _, b in enc])
     return _DOC_CACHE[key]
 
@@ -568,7 +580,7 @@ def evaluate_all(model, arch, specs, tok, world, grid, *, eval_n, guided_n, guid
 # ---- the pilot ------------------------------------------------------------------------------
 def pilot_one(arch, seed, fmt, spec, tok, world, *, steps, batch, d_model, n_layers, n_heads, lr,
               train_n, eval_n, guided_n, guided_lengths, device, guided_batch, loss_log_interval,
-              answer_docs=False):
+              answer_docs=False, answer_ratio=1, group_masked=False):
     """One (arch, seed, format) pilot on the STATE COMPONENT ALONE — one stage, one cell.
 
     The composed cell is not in the mix and is not scored. The question the pilot answers is the
@@ -580,7 +592,8 @@ def pilot_one(arch, seed, fmt, spec, tok, world, *, steps, batch, d_model, n_lay
 
     specs = {"state": spec}
     docs, plens = stage_documents(specs, {"state": 1.0}, train_n, tok, fmt,
-                                  answer_docs=answer_docs)
+                                  answer_docs=answer_docs, answer_ratio=answer_ratio,
+                                  group_masked=group_masked)
     t0 = time.time()
     run = T.run(arch, tok, docs, [], steps=steps, batch=batch, d_model=d_model,
                 n_layers=n_layers, n_heads=n_heads, d_ff=4 * d_model, lr=lr, seed=seed,
@@ -644,7 +657,8 @@ def bounded_floors_for(guided_grid, guided_n, pad):
 
 def grid_run_one(arch, seed, specs, tok, world, grid, *, steps, batch, d_model, n_layers,
                  n_heads, lr, train_n, eval_n, guided_n, guided_lengths, device, fmt,
-                 loss_log_interval, guided_batch=128, ckpt_dir=None, answer_docs=False):
+                 loss_log_interval, guided_batch=128, ckpt_dir=None, answer_docs=False,
+                 answer_ratio=1, group_masked=False):
     """One (arch, seed) carried through the registered three-stage curriculum under a BOUNDED pad.
 
     Structurally ``E.run_one`` with ``E.stage_documents`` replaced by the bounded one and the
@@ -659,7 +673,8 @@ def grid_run_one(arch, seed, specs, tok, world, grid, *, steps, batch, d_model, 
         last = si == len(E.SCHEDULE) - 1
         stage_steps = max(1, int(round(steps * share)))
         docs, plens = stage_documents(specs, weights, train_n, tok, fmt,
-                                      answer_docs=answer_docs)
+                                      answer_docs=answer_docs, answer_ratio=answer_ratio,
+                                      group_masked=group_masked)
         t0 = time.time()
         run = T.run(arch, tok, docs, [], steps=stage_steps, batch=batch, d_model=d_model,
                     n_layers=n_layers, n_heads=n_heads, d_ff=4 * d_model, lr=lr, seed=seed,
@@ -678,6 +693,9 @@ def grid_run_one(arch, seed, specs, tok, world, grid, *, steps, batch, d_model, 
                                           "mix": weights, "final_loss": run["final_loss"],
                                           "lr": lr, "batch": batch, "fmt": fmt,
                                           "pad": PAD_WIDTH[fmt], "train_n": train_n,
+                                          "answer_docs": bool(answer_docs),
+                                          "answer_ratio": int(answer_ratio),
+                                          "group_masked": bool(group_masked),
                                           "train_lengths": list(P.TRAIN_LENGTHS)})
         if last:
             ev, gv = evaluate_all(model, arch, specs, tok, world, grid, eval_n=eval_n,
@@ -726,7 +744,9 @@ def run_grid(a):
                                   device=a.device, fmt=a.format,
                                   loss_log_interval=a.loss_log_interval,
                                   guided_batch=a.guided_batch, ckpt_dir=ckpt_dir,
-                                  answer_docs=a.pad_answer_docs)
+                                  answer_docs=a.pad_answer_docs,
+                                  answer_ratio=a.answer_ratio,
+                                  group_masked=a.group_masked)
             row = {"arch": arch, "seed": seed, "stages": stages}
             out["runs"].append(row)
             jl.write(json.dumps(row) + "\n")
@@ -799,6 +819,10 @@ def main():
                     help="CKPT_DIR: attribute the guided answers of saved weights and exit")
     ap.add_argument("--pad_answer_docs", action="store_true",
                     help="add an answer-masked copy of each pad document to the mix")
+    ap.add_argument("--answer_ratio", type=int, default=1,
+                    help="answer-masked copies per item (1 reproduces the registered runs)")
+    ap.add_argument("--group_masked", action="store_true",
+                    help="sort by (is_masked, length) so a batch is a tracking OR a readout step")
     ap.add_argument("--ckpt_dir", default=None)
     ap.add_argument("--archs", default="gdp_hybrid")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
@@ -869,7 +893,8 @@ def main():
                                 eval_n=a.eval_n, guided_n=a.guided_n, guided_lengths=lengths,
                                 device=a.device, guided_batch=a.guided_batch,
                                 loss_log_interval=a.loss_log_interval,
-                                answer_docs=a.pad_answer_docs)
+                                answer_docs=a.pad_answer_docs,
+                                answer_ratio=a.answer_ratio, group_masked=a.group_masked)
                 out["rows"].append(row)
                 jl.write(json.dumps(row) + "\n")
                 jl.flush()

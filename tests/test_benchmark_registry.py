@@ -58,7 +58,7 @@ def _efforts(cells, facet):
 # --- registry -------------------------------------------------------------------
 
 def test_registry_shape():
-    assert len(B.MODELS) == 13
+    assert len(B.MODELS) == 14
     # roster decisions 2026-07-07/08/09: maverick, gpt-5.4, gemini-3.1-pro
     # dropped; the UNMEASURABLE x-ai endpoints stay off the roster (mainline
     # grok bio-filtered on composite prompts; grok-build dropped for provider
@@ -94,8 +94,14 @@ def test_registry_shape():
                                          "chain_instant", "sanity", "gap_stability"}
     for slug, reg in B.MODELS.items():
         assert reg["tier"] in B.TIERS, slug
-        assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
         assert isinstance(reg["open_weights"], bool)
+        # Prices are always present, because a missing price and a zero price
+        # mean different things: a metered endpoint must carry a real rate, and
+        # the self-hosted arm's rate is zero as a measured fact.
+        if reg.get("local_served"):
+            assert (reg["prompt_price_per_M"], reg["completion_price_per_M"]) == (0.0, 0.0)
+        else:
+            assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
     # commutative / gap_stability / s5_chain: EXPERIMENTAL facets (owner-approved
     # 2026-07-11/#18/#16a and 2026-07-16) — no renderer section reads them yet.
     assert set(B.FACETS) == {"zero_budget", "recall_load", "s5_concrete",
@@ -573,6 +579,85 @@ def test_build_backend_direct_endpoint():
     assert str(be2.client.base_url).rstrip("/") == B.DEFAULT_BASE_URL
     assert be2.client.api_key == "or-key"
     assert be2.extra_body["provider"]["quantizations"] == ["fp8", "bf16", "fp16"]
+
+
+LOCAL_SLUG = "local/qwen3.6-35b-a3b-nvfp4"
+
+
+def test_local_arm_is_a_roster_entry_not_a_side_path():
+    """The locally served model enters through the SAME machinery as a paid one.
+
+    What that buys, and what this pins: it resolves through ``endpoint_for`` to
+    this machine's URL and its own key env; it plans the same facets as any
+    cheap_reasoner (nothing is skipped structurally); its cost is zero rather
+    than absent, so a record carries cost_usd_est 0.0; and — the one thing that
+    could silently change the measurement — its effort=none arm resolves to a
+    vendor value. vLLM maps reasoning_effort to the chat template's
+    enable_thinking, so an UNMAPPED "none" would send no parameter, leave
+    thinking on, and turn every instant cell into a thinking cell while still
+    recording effort "none"."""
+    reg = B.MODELS[LOCAL_SLUG]
+    assert reg["local_served"] is True
+    assert B.endpoint_for(LOCAL_SLUG, default_base_url="https://openrouter.ai/api/v1") == \
+        (reg["base_url"], "LOCAL_VLLM_API_KEY")
+    assert reg["base_url"].startswith("http://127.0.0.1"), "the endpoint must be this machine"
+    assert not reg.get("skip_facets")
+    assert {c["facet"] for c in B.arms_for(LOCAL_SLUG)} == set(B.FACETS)
+    # zero cost, priced through the same path a paid model uses
+    est = B.cost_estimate(LOCAL_SLUG, B.arms_for(LOCAL_SLUG))
+    assert est["calls"] > 0 and est["cost_usd"] == 0.0
+    assert B.cell_dollar_cap(LOCAL_SLUG, 25, 32768) is None  # below the $10/M threshold
+    # every planned effort arm maps to a vendor reasoning_effort string
+    for cell in B.arms_for(LOCAL_SLUG):
+        req = RFB.resolved_request_params(LOCAL_SLUG, cell)
+        assert req["reasoning_effort"] == cell["settings"]["effort"], cell["facet"]
+        assert req["reasoning_extra_body"] is None  # not an OpenRouter endpoint
+        assert req["endpoint"] == "chat_completions"
+        assert req["model_name"] == reg["model_name"]
+    off = [c for c in B.arms_for(LOCAL_SLUG) if c["settings"]["effort"] == "none"]
+    assert off and all(
+        RFB.resolved_request_params(LOCAL_SLUG, c)["reasoning_effort"] == "none"
+        for c in off)
+
+
+def test_context_guard_refuses_a_budget_the_server_cannot_hold():
+    """A completion budget past the served window is a cell that cannot run.
+
+    vLLM rejects it 4xx per call and the backend (correctly) does not retry a
+    non-429 4xx, so the cell lands as empty predictions — which scores as a
+    floor. The guard is therefore pre-call, at the plan level AND at the single
+    choke point every backend is built through, and it is inert for vendor
+    endpoints, whose window is not ours to declare."""
+    from unittest import mock
+    assert B.context_limit("z-ai/glm-5.2") is None
+    cell = next(c for c in B.arms_for(LOCAL_SLUG)
+                if c["facet"] == "s5_chain" and c["length"] == 128)
+    assert cell["settings"]["max_new_tokens"] == 98304
+    # the registry's declared window holds the largest budget the registry plans
+    assert B.context_overrun(LOCAL_SLUG, cell) is None
+    for c in B.arms_for(LOCAL_SLUG):
+        assert B.context_overrun(LOCAL_SLUG, c) is None, c["facet"]
+    # a server started at a smaller window is caught, and the message carries
+    # both numbers
+    over = B.context_overrun(LOCAL_SLUG, cell, limit=32768)
+    assert over is not None and over[0] > 98304 and over[1] == 32768
+    assert B.context_overrun("z-ai/glm-5.2", cell, limit=None) is None
+    # the choke point: build_backend refuses rather than calling
+    small = {**B.MODELS[LOCAL_SLUG], "max_model_len": 32768}
+    with mock.patch.dict(B.MODELS, {LOCAL_SLUG: small}), \
+         mock.patch.dict(os.environ, {"LOCAL_VLLM_API_KEY": "k"}):
+        try:
+            RFB.build_backend(LOCAL_SLUG, cell, api_key="k",
+                              base_url=B.DEFAULT_BASE_URL, max_workers=2)
+        except SystemExit as exc:
+            assert "32768" in str(exc) and "98304" in str(exc)
+        else:
+            raise AssertionError("expected SystemExit for an unservable budget")
+    # a contract cell is checked at the TOP of its escalation ladder, not at its
+    # planned 96-token budget (the runner may rerun it there)
+    zb = next(c for c in B.arms_for(LOCAL_SLUG) if c["facet"] == "zero_budget")
+    assert RFB.cell_completion_ceiling(zb) == max(RFB.ESCALATION_BUDGETS)
+    assert RFB.cell_completion_ceiling(cell) == 98304
 
 
 def test_resolved_request_params_records_what_was_sent():
@@ -1379,7 +1464,7 @@ def test_skip_facets_machinery():
     motivating case; grok-4.5 is the LIVE case since 2026-07-12 — no clean
     off-arm, so every "off"-policy facet is unplanned and its cell plan is
     thinking facets only). The full-roster zero_budget plan covers the other
-    10 instant-measured models (all except grok-4.5, muse-spark-1.1, and
+    11 instant-measured models (all except grok-4.5, muse-spark-1.1, and
     claude-fable-5)."""
     from unittest import mock
     # grok-4.5, muse-spark-1.1, and claude-fable-5 are thinking-only by endpoint
@@ -1404,8 +1489,8 @@ def test_skip_facets_machinery():
                                                "sanity", "commutative",
                                                "gap_stability", "s5_chain"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
-    assert sum(len(cells) for cells in plan.values()) == 50  # 10 models x 5 zero_budget cells
-    assert sum(1 for cells in plan.values() if cells) == 10  # grok-4.5, muse-spark-1.1, fable-5 plan none
+    assert sum(len(cells) for cells in plan.values()) == 55  # 11 models x 5 zero_budget cells
+    assert sum(1 for cells in plan.values() if cells) == 11  # grok-4.5, muse-spark-1.1, fable-5 plan none
 
 
 def test_v2_task_cells_get_fresh_resume_keys():

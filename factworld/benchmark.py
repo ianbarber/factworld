@@ -10,8 +10,11 @@ This module is the single source of truth for WHAT the recurring benchmark runs:
     2026-07-10: recall_load pool-64 instant cell, chain_instant d16 off arm).
   - ``arms_for(model_slug)``: the exact list of cell dicts the runner executes.
   - ``endpoint_for(model_slug)``: the (base_url, api_key_env) a model's backend
-    is built against — per-model direct endpoints (the muse-spark slot),
-    defaulting to OpenRouter + OPENROUTER_API_KEY.
+    is built against — per-model direct endpoints (the muse-spark slot, and the
+    locally served arm), defaulting to OpenRouter + OPENROUTER_API_KEY.
+  - ``context_limit(model_slug)`` / ``context_overrun(model_slug, cell)``: the
+    served context window of a self-hosted entry and the cells whose completion
+    budget cannot fit it (checked before any call — see context_overrun).
   - ``settings_hash(cell)``: stable resume key for a cell's settings.
   - ``with_system_prompt(settings, text)``: stamp a cell's RESOLVED system prompt
     into its settings as a fingerprint, sentinel-dropped at the frozen
@@ -318,6 +321,54 @@ MODELS = {
         "tier": "cheap_reasoner", "prompt_price_per_M": 0.5,
         "completion_price_per_M": 2.2, "open_weights": True,
         "quantization_filter": False},
+    # LOCAL ARM (2026-08-02): nvidia/Qwen3.6-35B-A3B-NVFP4 served by vLLM 0.26.0
+    # on this machine's RTX 5090 (scripts/serve_local_model.py brings it up and
+    # down; that script reads THIS entry for the host/port, the served name and
+    # the context length, so server and registry cannot disagree). A roster
+    # entry that happens to be local, not a side path: it resolves through
+    # endpoint_for like the muse-spark slot and therefore inherits every runner
+    # diagnostic — empty rate, finish reasons, contract/covert-CoT rates, the
+    # regime-scoped system prompt, the cost guard and the resume keys.
+    # PRICING IS ZERO, and zero is a measured fact here, not a missing field:
+    # the endpoint is this machine, so usage * 0.0 records cost_usd_est 0.0 on
+    # every cell (cell_dollar_cap returns None below the $10/M threshold, and
+    # the ctok guard still bounds a runaway generator).
+    # Reasoning: vLLM takes the OpenAI-style TOP-LEVEL reasoning_effort
+    # parameter (supports_reasoning_effort False keeps the OpenRouter
+    # extra_body block off the wire), and maps it to the chat template's
+    # enable_thinking = (effort != "none"). "none" MUST stay in the map: an
+    # unmapped arm sends no parameter at all and the template then defaults to
+    # thinking ON, which would silently turn every instant cell into a thinking
+    # cell. The template reads only that on/off bit — it has no effort ladder —
+    # so low/medium/high/xhigh/max are the same measurement on this model, and
+    # a battery should buy one of them, not a sweep.
+    # ONE DIAGNOSTIC READS DIFFERENTLY HERE: vLLM's chat-completions usage has no
+    # reasoning-token field, so every call records rtok 0 and the rtok_any_rate /
+    # rtok_mean_per_call columns are 0 for this arm whether or not it thought —
+    # they are not evidence that it did not. The thinking tokens are inside
+    # ctok (the template opens <think> in the generation prompt and the answer
+    # follows </think>, which backends.APIBackend already splits on), so
+    # covert_cot_rate — visible ctok past COVERT_COT_CTOK_THRESHOLD — is the
+    # diagnostic that still bites, and the off arm is structural rather than
+    # instructed: at effort "none" the template emits a CLOSED empty think block,
+    # so there is no trace to suppress.
+    # max_model_len is the context the server is started with and the cap the
+    # runner checks every planned budget against (context_limit / the runner's
+    # preflight): 131,072 covers the largest budget the registry can plan
+    # (s5_chain@L128, 98,304 completion tokens) plus its prompt.
+    "local/qwen3.6-35b-a3b-nvfp4": {
+        "tier": "cheap_reasoner", "prompt_price_per_M": 0.0,
+        "completion_price_per_M": 0.0, "open_weights": True,
+        "base_url": "http://127.0.0.1:8000/v1",
+        "api_key_env": "LOCAL_VLLM_API_KEY",
+        "model_name": "nvidia/Qwen3.6-35B-A3B-NVFP4",
+        "supports_reasoning_effort": False,
+        "reasoning_effort_values": {"none": "none", "minimal": "minimal",
+                                    "low": "low", "medium": "medium",
+                                    "high": "high", "xhigh": "xhigh",
+                                    "max": "max"},
+        "local_served": True,
+        "max_model_len": 131072},
     # meta-llama/llama-4-maverick DROPPED 2026-07-07 (owner decision); the
     # non_reasoning tier is currently empty but kept for future roster additions.
     # Candidate additions (noted, NOT added pending a pricing/behavior sanity pass;
@@ -348,6 +399,51 @@ def endpoint_for(model_slug: str, default_base_url: str = DEFAULT_BASE_URL) -> t
     reg = MODELS.get(model_slug) or {}
     return (reg.get("base_url") or default_base_url,
             reg.get("api_key_env") or DEFAULT_API_KEY_ENV)
+
+
+# Prompt-side safety factor for the context check below. _prompt_tokens_est
+# counts at CHARS_PER_TOKEN and can under-count a given tokenizer, so the check
+# reserves twice the estimate: the guard exists to stop a budget that cannot fit
+# at all, and it must not pass a cell that then 400s at the first call.
+CONTEXT_PROMPT_HEADROOM = 2.0
+
+
+def context_limit(model_slug: str) -> int | None:
+    """The served context window (prompt + completion) of a model, or None.
+
+    Only a self-hosted entry declares one (``max_model_len``, the length its
+    server is started with — see the local arm). For a vendor endpoint the
+    window is the vendor's business and the value is None, which makes
+    ``context_overrun`` inert.
+    """
+    return (MODELS.get(model_slug) or {}).get("max_model_len")
+
+
+def context_overrun(model_slug: str, cell: dict, *, limit: int | None = None,
+                    min_completion_tokens: int = 0) -> tuple[int, int] | None:
+    """``(tokens_needed, limit)`` when a cell cannot fit the context, else None.
+
+    A completion budget larger than the served context is not a slow cell, it is
+    a cell that cannot run: vLLM rejects the request 4xx, and while the backend
+    now fails such a request fast (backends.APIBackend: a non-429 4xx is not
+    retried — the lesson of ~1,000 rejected calls over 51 minutes), every call
+    still returns an empty prediction that scores as wrong. So the plan is
+    checked against the limit BEFORE any call is made.
+
+    ``limit`` overrides the registry value with what a live server reports (the
+    engine may clamp ``--max-model-len``); ``min_completion_tokens`` raises the
+    budget to cover a cell whose runner may rerun it at a bigger one (the
+    contract-cell escalation ladder).
+    """
+    limit = limit if limit is not None else context_limit(model_slug)
+    if not limit:
+        return None
+    s = cell["settings"]
+    budget = max(s["max_new_tokens"], min_completion_tokens)
+    prompt = _prompt_tokens_est(cell["task"], cell["length"], s.get("rendering"),
+                                s.get("breadth"), s.get("k_fixed"))
+    needed = budget + int(CONTEXT_PROMPT_HEADROOM * prompt)
+    return (needed, limit) if needed > limit else None
 
 # tier -> reasoning capability + the effort sweep a "dose"-policy facet would get
 # (no current facet uses "dose"; the policy machinery is kept for future sweeps).

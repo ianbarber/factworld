@@ -2,10 +2,12 @@
 
 Executes the cell plan from ``factworld.benchmark.arms_for`` (contract C4) against
 each model's API endpoint — OpenRouter by default; a registry entry carrying
-``{"base_url", "api_key_env"}`` runs against its direct vendor endpoint with its
-own key env (``factworld.benchmark.endpoint_for`` — the muse-spark slot) — one
-model at a time, one cell at a time (examples fan out concurrently inside
-``APIBackend``). Each completed cell appends ONE crash-safe JSONL record to
+``{"base_url", "api_key_env"}`` runs against its direct endpoint with its own key
+env (``factworld.benchmark.endpoint_for`` — the muse-spark slot, and the locally
+served arm, whose endpoint is this machine and whose prices are 0.0, so its cells
+record cost_usd_est 0.0) — one model at a time, one cell at a time (examples fan
+out concurrently inside ``APIBackend``). Each completed cell appends ONE
+crash-safe JSONL record to
 the history file (contract C3) — metrics, diagnostics (empty-pred rate, api errors,
 finish reasons), token usage and an estimated cost. Every example record carries the
 per-call ``{ctok, rtok, finish}`` (completion tokens, reasoning tokens, finish
@@ -60,6 +62,11 @@ Protocol rules:
     canonical values (B=16 / no k_fixed) so pre-breadth history resume keys are
     unchanged; when present (non-canonical) they are part of the settings hash,
     so every rung resumes independently.
+  - Self-hosted arms declare the context window they are served at
+    (``max_model_len``). Before any call, ``preflight_context`` checks every
+    planned budget against what the live server reports and refuses to start
+    otherwise: a completion budget past the window is rejected 4xx per call and
+    lands as a cell of empty predictions, which reads exactly like a floor.
   - finish_reason=="error" calls are counted into diagnostics.finish_errors
     (distinct from api_errors, the exception-path count — review F8 found 12
     finish=error calls invisible at api_errors=0) and warned about loudly.
@@ -90,6 +97,11 @@ Examples:
     # Re-run the drift canary even where history already has its cells
     .venv-api/bin/python scripts/run_frontier_benchmark.py \\
         --models z-ai/glm-5.2 --canary
+
+    # The local arm (no paid endpoint is touched; bring the server up first with
+    # scripts/serve_local_model.py up)
+    .venv-api/bin/python scripts/run_frontier_benchmark.py \\
+        --models local/qwen3.6-35b-a3b-nvfp4 --facets sanity
 """
 from __future__ import annotations
 
@@ -102,6 +114,8 @@ import subprocess
 import sys
 import time
 import traceback
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -123,6 +137,8 @@ from factworld.benchmark import (
     REASONING_EFFORTS,
     arms_for,
     cell_dollar_cap,
+    context_limit,
+    context_overrun,
     cost_estimate,
     endpoint_for,
     settings_hash,
@@ -617,8 +633,110 @@ def system_prompt_for(cell: dict) -> str:
     return _build_system_prompt(base, cell["task"], TASK_PROMPTS)
 
 
+def cell_completion_ceiling(cell: dict) -> int:
+    """The largest completion budget this cell can ask for across its attempts.
+
+    Contract cells may be rerun at the escalation ladder, so their ceiling is the
+    top of it; every other cell only ever asks for its planned budget.
+    """
+    planned = cell["settings"]["max_new_tokens"]
+    if cell["settings"].get("contract"):
+        return max(planned, *ESCALATION_BUDGETS)
+    return planned
+
+
+def served_context(model: str, base_url: str, timeout: float = 10.0) -> dict:
+    """``{served, max_model_len}`` reported by a self-hosted endpoint's /models.
+
+    The SERVER is the authority on the context window: ``--max-model-len`` can be
+    clamped by the engine, and a server left up from an earlier session can be
+    serving something else entirely. Raises SystemExit if the endpoint does not
+    answer or does not serve the registry's model name — for a local arm that is
+    "the server is not up", which must stop the run before it turns into n
+    connection errors per cell.
+    """
+    url, key_env = endpoint_for(model, default_base_url=base_url)
+    key = os.environ.get(key_env)
+    req = urllib.request.Request(f"{url}/models")
+    if key:
+        req.add_header("Authorization", f"Bearer {key}")
+    want = MODELS[model].get("model_name") or model
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            cards = json.loads(resp.read().decode("utf-8")).get("data") or []
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError) as exc:
+        raise SystemExit(
+            f"{model}: {url} did not answer ({type(exc).__name__}: {exc}). "
+            f"Bring the server up first (.venv-serve/bin/python "
+            f"scripts/serve_local_model.py up), or select the models to run with "
+            f"--models. No calls were made.") from exc
+    for card in cards:
+        if card.get("id") == want:
+            return {"served": card["id"], "max_model_len": card.get("max_model_len")}
+    raise SystemExit(f"{model}: {url} serves {[c.get('id') for c in cards]}, "
+                     f"not {want!r}. Refusing to measure a different model under "
+                     f"this roster slug.")
+
+
+def preflight_context(plan: dict[str, list[dict]], base_url: str,
+                      probe: bool = True) -> None:
+    """Check every planned cell's completion budget against the served context.
+
+    Two failure modes this closes, both seen live: a budget larger than the
+    served window (rejected 4xx per call, recorded as empty predictions — a
+    whole cell of zeros that looks like a floor), and a self-hosted endpoint
+    that is simply not up (n connection errors per cell). Both are plan-level
+    faults, so they abort the run here rather than being absorbed per cell.
+
+    ``probe`` off (the dry run) checks against the REGISTRY's declared window
+    only and touches no endpoint.
+    """
+    problems: list[str] = []
+    for model, cells in plan.items():
+        limit = context_limit(model)
+        if limit is None or not cells:
+            continue  # vendor endpoint (the window is the vendor's business),
+                      # or nothing left to run for this model after resume
+        if probe and MODELS[model].get("local_served"):
+            live = served_context(model, base_url)
+            served = live["max_model_len"]
+            if served is not None and served != limit:
+                problems.append(
+                    f"{model}: server reports max_model_len={served}, registry "
+                    f"declares {limit} — the registry is what every budget was "
+                    f"checked against, so restart the server at {limit} "
+                    f"(scripts/serve_local_model.py) or fix the registry")
+            limit = served or limit
+        for cell in cells:
+            over = context_overrun(
+                model, cell, limit=limit,
+                min_completion_tokens=cell_completion_ceiling(cell))
+            if over:
+                needed, lim = over
+                problems.append(
+                    f"{model} {cell['facet']}/{cell['task']}@L{cell['length']}: "
+                    f"needs ~{needed} tokens (budget "
+                    f"{cell_completion_ceiling(cell)} + prompt headroom) but the "
+                    f"served context is {lim}")
+    if problems:
+        raise SystemExit("context check failed; no calls made:\n  "
+                         + "\n  ".join(problems))
+
+
 def build_backend(model: str, cell: dict, api_key: str, base_url: str, max_workers: int) -> APIBackend:
     reg = MODELS[model]
+    # Last line of defence for the budget/context check (preflight_context runs
+    # over the whole plan first): this is the single choke point every cell's
+    # backend is built through, so no call site can ask a self-hosted server for
+    # more tokens than it can hold.
+    over = context_overrun(model, cell,
+                           min_completion_tokens=cell_completion_ceiling(cell))
+    if over:
+        needed, limit = over
+        raise SystemExit(
+            f"{model} {cell['facet']}/{cell['task']}@L{cell['length']}: completion "
+            f"budget {cell_completion_ceiling(cell)} needs ~{needed} tokens of "
+            f"context but the served window is {limit}.")
     # Per-model direct endpoint (muse-spark readiness): a registry entry may
     # carry {"base_url", "api_key_env"}; endpoint_for resolves them against the
     # CLI --base-url + OPENROUTER_API_KEY defaults. A direct-endpoint model
@@ -1244,6 +1362,15 @@ def main():
                   f"{d['endpoint']}/{d['reasoning_effort'] or d['effort_arm']}")
         if len(drift) > 20:
             print(f"  ... and {len(drift) - 20} more")
+
+    # Budget-vs-context check. On the dry run it is registry-only (no endpoint is
+    # touched); on a live run the self-hosted endpoints are probed, so "the
+    # server is not up" and "this cell cannot fit" both fail here instead of
+    # becoming a cell of empty predictions.
+    preflight_context({m: [c for c in cells
+                           if not should_skip(m, c, done, a.force, a.canary)]
+                       for m, cells in plan.items()},
+                      a.base_url, probe=not a.dry_run)
 
     if a.dry_run:
         print_plan(plan, done, a.assumed_output_tokens, a.force, a.canary)

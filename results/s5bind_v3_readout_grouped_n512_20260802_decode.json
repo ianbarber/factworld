@@ -1,0 +1,71 @@
+{
+ "composed@48": {
+  "floor": 0.228515625,
+  "runs": {
+   "gdp_hybrid_s0": {
+    "match": 0.19921875,
+    "slot_acc": 0.6185709635416666,
+    "clears": false,
+    "z": -1.5788277854919706
+   },
+   "gdp_hybrid_s1": {
+    "match": 0.1640625,
+    "slot_acc": 0.39776611328125,
+    "clears": false,
+    "z": -3.473421128082335
+   },
+   "gdp_hybrid_s2": {
+    "match": 0.341796875,
+    "slot_acc": 0.7420654296875,
+    "clears": false,
+    "z": 6.104800770568953
+   }
+  }
+ },
+ "composed@64": {
+  "floor": 0.21125,
+  "runs": {
+   "gdp_hybrid_s0": {
+    "match": 0.2109375,
+    "slot_acc": 0.5216064453125,
+    "clears": false,
+    "z": -0.017322754766140418
+   },
+   "gdp_hybrid_s1": {
+    "match": 0.193359375,
+    "slot_acc": 0.3383331298828125,
+    "clears": false,
+    "z": -0.9917277103615598
+   },
+   "gdp_hybrid_s2": {
+    "match": 0.228515625,
+    "slot_acc": 0.642913818359375,
+    "clears": false,
+    "z": 0.957082200829279
+   }
+  }
+ },
+ "composed@96": {
+  "floor": 0.216796875,
+  "runs": {
+   "gdp_hybrid_s0": {
+    "match": 0.169921875,
+    "slot_acc": 0.417266845703125,
+    "clears": false,
+    "z": -2.5740237308046128
+   },
+   "gdp_hybrid_s1": {
+    "match": 0.1640625,
+    "slot_acc": 0.2871195475260417,
+    "clears": false,
+    "z": -2.8957766971551893
+   },
+   "gdp_hybrid_s2": {
+    "match": 0.203125,
+    "slot_acc": 0.5113321940104166,
+    "clears": false,
+    "z": -0.7507569214846788
+   }
+  }
+ }
+}
