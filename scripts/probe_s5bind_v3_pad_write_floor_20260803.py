@@ -92,6 +92,43 @@ def row_table(sc, k, m, ns, ng, pad):
     return out
 
 
+def gold_family(sc, part, top=32):
+    """THE SWEPT GOLD-PAD SURFACE, as the report has to print it.
+
+    The class contains every FIXED POSITIONAL READ of the gold pad — any (block class, index,
+    token position) — because under teacher forcing the pad is in the context and copying one
+    token out of it costs 0 hops, 0 slots and 0 steps. It is closed by that rule and not by a
+    list, so what is kept here is the whole surface for the SCORED partition (every address at
+    every offset, both positions) and the best ``top`` addresses elsewhere: a reader can then see
+    where the max sits instead of taking the max on trust.
+    """
+    gr = sc.get("gold_reads")
+    if not gr:
+        return None
+    return {"best": gr["best"], "cells": gr["cells"], "n_addresses": gr["n_addresses"],
+            "counts": gr["counts"],
+            "surface": {p: (v if p == part else dict(list(v.items())[:top]))
+                        for p, v in gr["surface"].items()}}
+
+
+def gold_profile(surface, part):
+    """The scored partition's surface as a (class, position) x backward-offset table.
+
+    The family's power is ADJACENCY — the max sits at offset 1 in whichever class — and printing
+    the profile is what shows that rather than asserting it.
+    """
+    prof = {}
+    for addr, v in (surface.get(part) or {}).items():
+        if "[" not in addr:
+            continue
+        cls, rest = addr.split("[", 1)
+        idx, q = rest.split("]p")
+        if not idx.startswith("-"):
+            continue
+        prof.setdefault(f"{cls}|p{q}", {})[int(idx[1:])] = v
+    return prof
+
+
 def saturation_control(items, k, m, ns, ng, pad):
     """THE SATURATION CONTROL THAT CAN BE BUILT, and it is a POLICY and not a model.
 
@@ -156,7 +193,10 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
                 "one_hop": V.s5_bind_v3_pad_write_floor(sc, k, m, nsi, ngi, pad=pad, max_hops=1),
                 # EVERY ROW'S SCORE, not just the max: a floor is a max over a class and the
                 # class has to be readable, so each admitted policy's own number is kept.
-                "rows": row_table(sc, k, m, nsi, ngi, pad)}
+                "rows": row_table(sc, k, m, nsi, ngi, pad),
+                # AND THE WHOLE GOLD-PAD SURFACE, for the same reason one rung up: the family is
+                # closed by a rule, so what the rule admits has to be printable.
+                "gold_family": gold_family(sc, P.PAD_WRITE_TOKEN)}
         op = {}
         for cls in ("all", "one_hop"):
             best = {"per_slot": None, "per_slot_row": None, "cells": {}, "cell_rows": {},
@@ -196,7 +236,22 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
                         "unrestricted": op["all"]["parts"].get(key),
                         "unrestricted_row": op["all"]["part_rows"].get(key),
                         "bar": P.bar_for(op["one_hop"]["parts"].get(key))}
-        out[tag] = {"legs": legs, "operative": op, "two_hop": two}
+        # THE GOLD-PAD FAMILY, operative over the two legs on the scored partition, with the
+        # address that attains it and the backward-offset profile it sits on.
+        fam = {}
+        for nm in legs:
+            gf = legs[nm].get("gold_family")
+            if gf and (gf["best"].get(P.PAD_WRITE_TOKEN) or {}).get("acc") is not None:
+                fam[nm] = gf["best"][P.PAD_WRITE_TOKEN]
+        gold = None
+        if fam:
+            leg = max(fam, key=lambda z: fam[z]["acc"])
+            gold = {"acc": fam[leg]["acc"], "address": fam[leg]["address"], "leg": leg,
+                    "per_leg": fam,
+                    "n_addresses": legs[leg]["gold_family"]["n_addresses"],
+                    "profile": gold_profile(legs[leg]["gold_family"]["surface"],
+                                            P.PAD_WRITE_TOKEN)}
+        out[tag] = {"legs": legs, "operative": op, "two_hop": two, "gold_family": gold}
     return out
 
 
@@ -227,6 +282,18 @@ def print_cell(r):
             print(f"      {key:16s} one-hop floor {f4(t['floor'])} "
                   f"({t['floor'] / ch['uniform']:.2f}x) bar {t['bar']:.4f}  [{t['row']}]   "
                   f"unrestricted {f4(t['unrestricted'])} [{t['unrestricted_row']}]")
+        gold = r[tag].get("gold_family")
+        if gold:
+            print(f"      GOLD-PAD FAMILY, all {gold['n_addresses']} fixed addresses swept: best "
+                  f"{gold['acc']:.4f} at {gold['address']} [{gold['leg']}]"
+                  + "  per leg " + " ".join(f"{nm}={v['acc']:.4f}@{v['address']}"
+                                            for nm, v in sorted(gold["per_leg"].items())))
+            prof = gold["profile"]
+            for lab in sorted(prof, key=lambda z: -max(prof[z].values()))[:4]:
+                tail = [v for d, v in prof[lab].items() if d >= 9]
+                print(f"        {lab:18s} back-offset 1..8 "
+                      + " ".join(f4(prof[lab].get(d)) for d in range(1, 9))
+                      + f"   max over d>=9 {f4(max(tail) if tail else None)}")
     tab = r["free_run"]["legs"]["scored"]["rows"]
     top = sorted(tab.items(), key=lambda z: -(z[1]["per_slot"] or 0))[:6]
     print("  every row, best 6 by per_slot (of "

@@ -3242,21 +3242,16 @@ def s5_bind_v3_ckpt_copy_per_slot(examples, k: int, m: int, agents, objs) -> flo
 #   copy the previous checkpoint's slot      ``copy_prev`` — the row emits its own last block, so
 #                                            the pad never moves; the first block is its stated-map
 #                                            read, which is the strongest reading of it.
-#   copy EITHER token of the previous GOLD   ``prev_gold_same`` / ``prev_gold_other``. THE FAMILY
-#   block                                    IS CLOSED UNDER BLOCK POSITION, and it was not. The
-#                                            class grants ``copy_prev`` at zero cost because the
-#                                            row holds its own last block; under the TEACHER-FORCED
-#                                            read the context IS the gold pad, so the row holds the
-#                                            last GOLD block, and emitting either of its two tokens
-#                                            costs 0 hops, 0 slots and 0 steps. Leaving the
-#                                            cross-position member out left a zero-cost policy
-#                                            outside the class, which understates the floor — the
-#                                            direction that invalidates a cleared reading. Both are
-#                                            defined at all four pad cells (the emission is a pair
-#                                            and both positions are scored), and both are available
-#                                            ONLY teacher-forced: free-running the row holds only
-#                                            what it emitted, which is what ``copy_prev`` already
-#                                            prices.
+#   read the GOLD PAD at a fixed address     ``gold_pad_fixed`` — THE WHOLE FAMILY, swept, not a
+#                                            list of names (``s5_bind_v3_pad_gold_reads``). Under
+#                                            the teacher-forced read the context IS the gold pad,
+#                                            so every position of it already written is readable at
+#                                            O(1) by address (W5), at 0 hops, 0 slots and 0 steps.
+#                                            The class therefore contains EVERY fixed positional
+#                                            read of it and the floor maximises over all of them.
+#                                            Available ONLY teacher-forced: free-running the row
+#                                            holds what it emitted itself, which is what
+#                                            ``copy_prev`` already prices.
 #   apply only the one-hop part of the event ``operand`` at swap_p0 — the resolved operand written
 #                                            without the second read — and every code the
 #                                            ``max_hops=1`` sub-class admits.
@@ -3275,13 +3270,19 @@ S5_BIND_V3_PAD_CELLS = ("give_p0", "give_p1", "swap_p0", "swap_p1")
 # event WRITES, 'cross' through the other one (``composition.is_cross``, the registered reading).
 S5_BIND_V3_PAD_SOURCES = ("named", "same", "cross")
 
+# THE WHOLE GOLD-PAD FAMILY, AS ONE CODE. It is not a policy but a maximisation over every fixed
+# positional read of the pad (``s5_bind_v3_pad_gold_reads``), which is why it is named once here
+# and swept there: a registered LIST of gold-pad emissions has been beaten twice by a member
+# nobody listed, and the class is closed by the rule instead.
+S5_BIND_V3_PAD_GOLD_READ = "gold_pad_fixed"
+
 S5_BIND_V3_PAD_CODES = ("own_gold", "operand", "target_val", "target_sym", "ref_sym",
                         "stated_ref_val", "stated_target_val", "stated_operand_val",
-                        "copy_prev", "prev_gold_same", "prev_gold_other", "const", "uniform")
-# The emissions that read the ADJACENT GOLD BLOCK, which exists only under the teacher-forced
-# read. Kept as data so ``_pad_write_item`` and any consumer agree on which codes are unavailable
-# free-running rather than each deciding for itself.
-S5_BIND_V3_PAD_FORCED_ONLY_CODES = ("prev_gold_same", "prev_gold_other")
+                        "copy_prev", S5_BIND_V3_PAD_GOLD_READ, "const", "uniform")
+# The emissions that read the GOLD PAD, which exists only under the teacher-forced read. Kept as
+# data so ``_pad_write_item`` and any consumer agree on which codes are unavailable free-running
+# rather than each deciding for itself.
+S5_BIND_V3_PAD_FORCED_ONLY_CODES = (S5_BIND_V3_PAD_GOLD_READ,)
 
 # HOPS PER (code, cell), AS THE TWO READS THEY ARE MADE OF, so the count is a property of the
 # EVENT and not of the cell's name: ``(resolves_the_operand, map_reads)``. An emission's depth is
@@ -3300,10 +3301,10 @@ S5_BIND_V3_PAD_HOP_PARTS = {
     "target_sym": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "ref_sym": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "copy_prev": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
-    # the adjacent gold block is readable at O(1) under teacher forcing (W5) and neither token of
-    # it is a map read or an operand resolve, so both members are depth 0 at every cell
-    "prev_gold_same": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
-    "prev_gold_other": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
+    # the gold pad is readable at O(1) by address under teacher forcing (W5) and copying a token
+    # out of it is neither a map read nor an operand resolve, so EVERY member of the family is
+    # depth 0 at every cell — which is why the family can be maximised over rather than listed
+    S5_BIND_V3_PAD_GOLD_READ: {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "const": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "uniform": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
 }
@@ -3372,6 +3373,174 @@ def s5_bind_v3_pad_gold(rec) -> list[tuple[str, str]] | None:
             Bm[tgt] = x
             out.append((x, disp))
     return out
+
+
+# ===========================================================================================
+# THE GOLD-PAD FIXED READ — a family closed by a rule, because a list has been beaten twice
+# ===========================================================================================
+# THE RULE. Under the TEACHER-FORCED read the context IS the gold pad: every block already written
+# is in it, verbatim. Reading one token out of it at an address that does not have to be SEARCHED
+# for is depth 0 (it is neither an operand resolve nor a map read), costs no live slot (the value
+# is in the context, not in a register — the same W5 convention that lets an uncached read hit the
+# stated header block), and costs no step beyond the event line the row already reads. So the
+# admitted class contains EVERY such read, and the floor is a maximisation over the whole family
+# rather than over the members someone thought to register. Two successive registered LISTS were
+# each beaten by a member outside them — the cross-position token of the previous block, then the
+# position-1 token of the most recent previous SWAP block — and each rise moved a floor a result
+# was being read against. Both are members of the family below, and neither is named in it.
+#
+# WHAT AN ADDRESS MAY BE MADE OF, and this is the whole of the rule:
+#   THE BLOCK CLASS   any class of blocks that the row's emission is ALREADY partitioned by — the
+#                     event's kind and its source class (``S5_BIND_V3_PAD_BLOCK_CLASSES``). The
+#                     registered class lets a row choose its emission per (kind, position, source)
+#                     because those labels are on the surface of the event line it already reads;
+#                     a row that has extracted them for its own event has them for every event, so
+#                     naming "the blocks whose event was a cross-source swap" costs nothing the
+#                     class does not already grant. THIS IS THE BOUNDARY: a finer predicate — the
+#                     blocks whose event named agent a3, the block that last wrote THIS event's
+#                     referenced object — needs a per-event comparison the class does not pay for,
+#                     and that is a SCAN (below).
+#   THE INDEX         a constant in one of the two canonical indexings of that class's prefix: the
+#                     d-th most recent (d >= 1) or the a-th from the start (a >= 0). Both are
+#                     swept in full. An index that is any other function of the prefix length is
+#                     not a constant and is not in the family.
+#   THE TOKEN         either position of the addressed block; and, at block position 1, the gold
+#                     token at position 0 of the row's OWN block, which teacher forcing has
+#                     already put in the context (``self[0]p0``).
+#
+# THE FAMILY IS FINITE AT EVERY MEASURED LENGTH and the sweep is exhaustive, so the max is
+# attained inside what is swept by construction: a stream of L events has L blocks, so there are
+# at most ``len(S5_BIND_V3_PAD_BLOCK_CLASSES) * 2L`` addresses per token position, and every one
+# of them is scored. Nothing is capped and no offset is assumed to be uninformative.
+#
+# WHAT IS NOT IN IT, in the same place, because the distinction is the load-bearing one: a
+# per-event BACKWARD SCAN. ``pad_scan_last_write`` recovers a cross swap's operand by walking back
+# to the last give that wrote the referenced object. Its address is not fixed — it is found by
+# MATCHING the current event's operand against earlier events, one comparison per event passed —
+# so it is not a positional read at all, it costs ~2 m / p_give steps per swap where the
+# algorithm pays 6, and the step conjunct excludes it. It is measured on the scored read anyway
+# (``s5_bind_v3_pad_scan_last_write``) so the exclusion is a judgement about cost and not about
+# the number it would have produced.
+S5_BIND_V3_PAD_BLOCK_CLASSES = ("any",) + tuple(
+    lab for kind in ("swap", "give")
+    for lab in (kind,) + tuple(f"{kind}:{s}" for s in S5_BIND_V3_PAD_SOURCES)
+) + S5_BIND_V3_PAD_SOURCES
+S5_BIND_V3_PAD_SELF_READ = "self[0]p0"      # the row's own block, position 0, at position 1
+
+
+def s5_bind_v3_pad_block_classes(kind: str, source: str) -> tuple[str, ...]:
+    """Every block class one event's block belongs to, under the labels the row already reads."""
+    return ("any", kind, source, f"{kind}:{source}")
+
+
+def s5_bind_v3_pad_gold_address(cls: str, idx: int, q: int) -> str:
+    """One address as it is printed: ``class[-d]pq`` back from the current block, ``class[+a]pq``
+    from the start of that class's prefix."""
+    return f"{cls}[{'+' if idx >= 0 else '-'}{abs(idx)}]p{q}"
+
+
+def _pad_gold_read_sweep(prepped) -> dict:
+    """Hits per (partition, address) over every fixed positional read, and partition counts.
+
+    One pass per item. At each event the row's target is the gold token it must emit, so an
+    address SCORES here iff the token it addresses equals that target; the loop therefore walks
+    only the earlier positions of the class holding that value (kept as a value -> indices map)
+    rather than the whole prefix, which makes the exhaustive sweep linear in hits rather than in
+    addresses. The denominator is every scored token in the partition: an address that is
+    undefined on an item (no such block yet) is a MISS there, exactly as a policy that has nothing
+    to copy is.
+    """
+    from .composition import SWAP
+
+    counts: Counter = Counter()
+    hits: dict[str, Counter] = {}
+    for rec, g in prepped:
+        cls: dict[str, list] = {}
+        for i, (kind, _t, _r, src) in enumerate(rec["events"]):
+            source = s5_bind_v3_pad_event_source(kind, src)
+            names = ("swap_p0", "swap_p1") if kind == SWAP else ("give_p0", "give_p1")
+            for p in (0, 1):
+                part = f"{names[p]}|{source}"
+                counts[part] += 1
+                h = hits.setdefault(part, Counter())
+                t = g[i][p]
+                for lab, ent in cls.items():
+                    n_blk, per_q = ent
+                    for q in (0, 1):
+                        for j in per_q[q].get(t, ()):
+                            h[(lab, j, q)] += 1                    # a-th from the start
+                            h[(lab, j - n_blk, q)] += 1            # d-th most recent
+                if p and g[i][0] == t:
+                    h[S5_BIND_V3_PAD_SELF_READ] += 1
+            for lab in s5_bind_v3_pad_block_classes(kind, source):
+                ent = cls.setdefault(lab, [0, ({}, {})])
+                for q in (0, 1):
+                    ent[1][q].setdefault(g[i][q], []).append(ent[0])
+                ent[0] += 1
+    return {"counts": dict(counts), "hits": hits}
+
+
+def _pad_gold_best(sweep: dict, parts) -> tuple[float | None, str | None]:
+    """The family's best address over one or more partitions, and its accuracy there.
+
+    Over several partitions it is ONE address applied to all of them — a row emits one thing per
+    partition it may switch on, and the coarse (kind, position) reading has no partition to switch
+    on, so the max there is over addresses and not over per-partition winners.
+    """
+    tot = sum(sweep["counts"].get(p, 0) for p in parts)
+    if not tot:
+        return (None, None)
+    agg: Counter = Counter()
+    for p in parts:
+        agg.update(sweep["hits"].get(p, {}))
+    if not agg:
+        return (0.0, None)
+    best = min(((-v, (a if isinstance(a, str) else s5_bind_v3_pad_gold_address(*a)))
+                for a, v in agg.items()))
+    return (-best[0] / tot, best[1])
+
+
+def s5_bind_v3_pad_gold_reads(examples, top: int = 0) -> dict:
+    """EVERY fixed positional read of the gold pad, scored per (cell, source) partition.
+
+    Returns ``{"n", "counts", "best", "cells", "n_addresses", "surface"}``: ``best`` is the family
+    max per ``"cell|source"`` partition with the address that attains it, ``cells`` the same under
+    one address per cell, and ``surface`` the whole per-(class, index, position) table for each
+    partition — the numbers a reader needs to see WHERE the max sits rather than take it on trust.
+    ``top`` trims the surface to that many addresses per partition (0 keeps all).
+    """
+    from .composition import read
+
+    prepped = []
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is None:
+            continue
+        g = s5_bind_v3_pad_gold(rec)
+        if g is not None:
+            prepped.append((rec, g))
+    sweep = _pad_gold_read_sweep(prepped)
+    return _pad_gold_report(sweep, len(prepped), top)
+
+
+def _pad_gold_report(sweep: dict, n: int, top: int = 0) -> dict:
+    parts = tuple(sweep["counts"])
+    best = {p: _pad_gold_best(sweep, (p,)) for p in parts}
+    cells = {c: _pad_gold_best(sweep, [f"{c}|{s}" for s in S5_BIND_V3_PAD_SOURCES])
+             for c in S5_BIND_V3_PAD_CELLS}
+    surface, seen = {}, set()
+    for p in parts:
+        tot = sweep["counts"][p]
+        rows = sorted(((v / tot,
+                        a if isinstance(a, str) else s5_bind_v3_pad_gold_address(*a))
+                       for a, v in sweep["hits"].get(p, {}).items()),
+                      key=lambda z: (-z[0], z[1]))
+        seen.update(a for _v, a in rows)
+        surface[p] = {a: v for v, a in (rows[:top] if top else rows)}
+    return {"n": n, "counts": dict(sweep["counts"]), "n_addresses": len(seen),
+            "best": {p: {"acc": v[0], "address": v[1]} for p, v in best.items()},
+            "cells": {c: {"acc": v[0], "address": v[1]} for c, v in cells.items()},
+            "surface": surface}
 
 
 def s5_bind_v3_pad_carry_rows(k: int, m: int, pad: int) -> tuple[str, ...]:
@@ -3467,12 +3636,13 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
     it. Only that one: a swap's second gold token is the value now at the RESOLVED operand, and
     which slot that is is exactly the two-hop fact the row does not have.
 
-    ``forced`` ALSO OPENS TWO EMISSIONS, and that is the same fact read forwards: if the gold pad
-    is in the context then the previous gold BLOCK is, and either of its two tokens can be copied
-    out at no cost in hops, slots or steps. ``prev_gold_same`` copies the token at the same block
-    position, ``prev_gold_other`` the cross-position one. Neither is defined on the FIRST event —
-    there is no previous block — and both are unavailable free-running, where the row holds only
-    what it emitted itself; that is what ``copy_prev`` already prices.
+    ``forced`` ALSO OPENS THE WHOLE GOLD-PAD FAMILY, and that is the same fact read forwards: if
+    the gold pad is in the context then every position of it already written can be copied out at
+    no cost in hops, slots or steps. That family is not scored here — it does not depend on the
+    carry, so scoring it once per item set rather than once per row is the same number for a
+    fraction of the work (``_pad_gold_read_sweep``, folded in by
+    ``s5_bind_v3_pad_write_scores``). Free-running it is unavailable: the row holds what it
+    emitted itself, which is what ``copy_prev`` already prices.
     """
     from .composition import SWAP
 
@@ -3528,12 +3698,6 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
                   "stated_operand_val": (None, None)}
         em["copy_prev"] = prev if prev is not None else em["own_gold"]
         prev = em["copy_prev"]
-        # THE ADJACENT GOLD BLOCK, available only where the context carries it. Both tokens of it,
-        # because the emission is chosen per block position and a class that may take one and not
-        # the other is a class with a zero-cost policy left out of it.
-        gp = gold[i - 1] if (forced and i) else None
-        em["prev_gold_same"] = (gp[0], gp[1]) if gp else (None, None)
-        em["prev_gold_other"] = (gp[1], gp[0]) if gp else (None, None)
         g = gold[i]
         source = s5_bind_v3_pad_event_source(kind, src)
         for p in (0, 1):
@@ -3582,6 +3746,12 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
     the slot the surface NAMES from the adjacent gold block — and the comparison answers "given
     the state, is the two-hop write performed", which is the composition question.
 
+    IT ALSO HANDS EVERY ROW THE WHOLE GOLD PAD, and the class is closed over that by a rule rather
+    than by a list: ``S5_BIND_V3_PAD_GOLD_READ`` is not a policy but the maximum over EVERY fixed
+    positional read of the pad (``s5_bind_v3_pad_gold_reads``), which is available to every row at
+    0 hops, 0 slots and 0 steps and is therefore folded into all of them. The whole swept surface
+    is returned under ``gold_reads`` so the max can be read rather than trusted.
+
     WHAT THE TEACHER-FORCED NUMBER THEREFORE CANNOT CLAIM: anything about behaviour on the model's
     own writes, at any length, end to end. A cell that clears teacher-forced and floors
     free-running is a model that computes the composed update and cannot survive its own errors.
@@ -3620,9 +3790,21 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
                       "swap_p0": counts["swap"], "swap_p1": counts["swap"]},
            "counts_src": {f"{c}|{s}": counts_src[f"{c}|{s}"] for c, s in parts},
            "rows": {}, "rows_src": {}}
+    # THE GOLD-PAD FAMILY, once for the whole item set: it reads the context and not the carry, so
+    # it is the same number for every row and is folded into all of them. Free-running there is no
+    # gold pad in the context and the family is empty, which is 0.0 and never sets a floor.
+    gold_reads = _pad_gold_read_sweep(prepped) if forced else None
+    out["gold_reads"] = _pad_gold_report(gold_reads, len(prepped)) if forced else None
+    fam = {}
+    for c in S5_BIND_V3_PAD_CELLS:
+        fam[(c,)] = (_pad_gold_best(gold_reads, [f"{c}|{s}" for s in S5_BIND_V3_PAD_SOURCES])[0]
+                     if forced else 0.0)
+        for s in S5_BIND_V3_PAD_SOURCES:
+            fam[(c, s)] = _pad_gold_best(gold_reads, (f"{c}|{s}",))[0] if forced else 0.0
     for row in rows:
         jp, jb, ev = s5_bind_v3_pad_carry_parse(row)
-        acc = {p: {code: [0, 0] for code in S5_BIND_V3_PAD_CODES if code != "const"}
+        acc = {p: {code: [0, 0] for code in S5_BIND_V3_PAD_CODES
+                   if code not in ("const", S5_BIND_V3_PAD_GOLD_READ)}
                for p in parts}
         for p in acc:
             acc[p]["const"] = {a: [0, 0] for a in agents}
@@ -3635,6 +3817,11 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
             for code in S5_BIND_V3_PAD_CODES:
                 if code == "uniform":
                     d["uniform"] = 1.0 / k
+                elif code == S5_BIND_V3_PAD_GOLD_READ:
+                    # the family max over exactly these partitions, computed once for the item set
+                    key = pairs[0] if len(pairs) == 1 else (pairs[0][0],)
+                    d[code] = (fam.get(key)
+                               if sum(acc[p]["copy_prev"][1] for p in pairs) else None)
                 elif code == "const":
                     per = {a: [0, 0] for a in agents}
                     for p in pairs:
@@ -3670,8 +3857,17 @@ def s5_bind_v3_pad_write_floor(scores: dict, k: int, m: int, n_swap: int, n_give
     (kind, position) figure, which is reported as the lower number it is.
 
     Returns the per-cell and pooled floors plus ``parts``/``part_rows`` keyed ``"cell|source"``,
-    which is where the two-hop token's cross and same halves are read apart.
+    which is where the two-hop token's cross and same halves are read apart. A row that wins on
+    the GOLD-PAD FAMILY is named with the ADDRESS that attains it, since the code stands for a
+    maximisation and not for a policy.
     """
+    def label(code, key):
+        if code != S5_BIND_V3_PAD_GOLD_READ:
+            return code
+        gr = scores.get("gold_reads") or {}
+        got = (gr.get("best") if "|" in key else gr.get("cells")) or {}
+        return f"{code}@{(got.get(key) or {}).get('address')}"
+
     per_cell: dict = {c: (None, None) for c in S5_BIND_V3_PAD_CELLS}
     per_part: dict = {}
     pooled = (None, None)
@@ -3707,7 +3903,8 @@ def s5_bind_v3_pad_write_floor(scores: dict, k: int, m: int, n_swap: int, n_give
                 if not cand:
                     ok = False
                     continue
-                best = max(cand)
+                top = max(cand)
+                best = (top[0], label(top[1], key))
                 if "|" in key and (key not in per_part or best[0] > per_part[key][0]):
                     per_part[key] = (best[0], f"{row}:{best[1]}")
                 picked.append(f"{source}:{best[1]}" if "|" in key else best[1])

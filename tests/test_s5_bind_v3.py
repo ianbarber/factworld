@@ -90,6 +90,7 @@ from factworld.validity import (  # noqa: E402
     s5_bind_v3_pad_floorable,
     s5_bind_v3_pad_floors,
     s5_bind_v3_pad_gold,
+    s5_bind_v3_pad_gold_reads,
     s5_bind_v3_pad_max_width,
     s5_bind_v3_pad_operative_floor,
     s5_bind_v3_pad_reach,
@@ -1971,18 +1972,49 @@ def test_the_pad_write_class_excludes_the_task_and_prices_the_backward_scan_out(
     assert scan["swap_p0"] > 0.4, scan                  # and it is excluded on cost, not on merit
 
 
-def test_the_pad_emission_family_is_closed_under_block_position():
-    """A ZERO-COST EMISSION MAY NOT SIT OUTSIDE THE CLASS, and one did.
+def _invented_fixed_read(examples, cell, source, cls, idx, q):
+    """One fixed positional read of the gold pad, scored HERE and not by the sweep under test.
 
-    The class grants ``copy_prev`` because the row holds its own last block. Under the
-    TEACHER-FORCED read — the one the two-hop token is scored on — the context is the gold pad, so
-    the row also holds the last GOLD block, and emitting either of its two tokens costs 0 hops, 0
-    live slots and 0 steps. The cross-position member was not registered, which understated the
-    floor at four of the five composed lengths; a floor that is too low is the direction that
-    invalidates a cleared reading, so the family is pinned closed here.
+    ``cls`` is a predicate on ``(kind, source)`` naming the blocks to index; ``idx`` is a constant
+    in that class's prefix — negative counts back from the current block, non-negative counts
+    forward from the start — and ``q`` is the token position read. Written from the definition so
+    that a read invented after the fact is scored by code the floor never sees.
+    """
+    hits = tot = 0
+    for e in examples:
+        rec = C.read(e.prompt)
+        gold = s5_bind_v3_pad_gold(rec)
+        if gold is None:
+            continue
+        prefix = []
+        for i, (kind, _t, _r, src) in enumerate(rec["events"]):
+            s = V.s5_bind_v3_pad_event_source(kind, src)
+            names = ("swap_p0", "swap_p1") if kind == C.SWAP else ("give_p0", "give_p1")
+            if source == s and cell in names:
+                p = names.index(cell)
+                tot += 1
+                j = idx if idx >= 0 else len(prefix) + idx
+                if 0 <= j < len(prefix) and gold[prefix[j]][q] == gold[i][p]:
+                    hits += 1
+            if cls(kind, s):
+                prefix.append(i)
+    return hits / tot if tot else None
 
-    THE TWO MEMBERS ARE TEACHER-FORCED ONLY. Free-running the row holds what it emitted itself,
-    which is what ``copy_prev`` already prices, so both read exactly 0 there and can never raise a
+
+def test_no_fixed_positional_read_of_the_gold_pad_can_beat_the_registered_floor():
+    """THE RULE, NOT THE LIST. The class is closed over gold-pad reads by a structural statement,
+    and this test invents members it was never told about.
+
+    Under the TEACHER-FORCED read the context IS the gold pad, so copying one token out of it at
+    an address that does not have to be searched for costs 0 hops, 0 live slots and 0 steps. A
+    REGISTERED LIST of such emissions has been beaten twice by a member nobody listed — first the
+    cross-position token of the previous block, then the position-1 token of the most recent
+    previous SWAP block, which is what ``last_swap`` is below. So the floor maximises over the
+    whole family (``s5_bind_v3_pad_gold_reads``) and what is pinned here is that property: reads
+    invented AFTER the closure, scored by code the floor never runs, do not beat it.
+
+    THE FAMILY IS TEACHER-FORCED ONLY. Free-running the row holds what it emitted itself, which is
+    what ``copy_prev`` already prices, so the code reads exactly 0 there and can never raise a
     free-running floor.
     """
     for code in S5_BIND_V3_PAD_FORCED_ONLY_CODES:
@@ -1994,7 +2026,8 @@ def test_the_pad_emission_family_is_closed_under_block_position():
     k, m = spec.k, spec.n_objects_active
     ex = TK.generate(spec, "test", n=96, length=48)
     ns, ng = s5_bind_v3_shape(ex)
-    part = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
+    cell, src = V.S5_BIND_V3_TWO_HOP_CELL, V.S5_BIND_V3_TWO_HOP_SOURCE
+    part = f"{cell}|{src}"
 
     free = s5_bind_v3_pad_write_scores(ex, k, m, pad=2)
     forced = s5_bind_v3_pad_write_scores(ex, k, m, pad=2, forced=True)
@@ -2002,14 +2035,79 @@ def test_the_pad_emission_family_is_closed_under_block_position():
     for code in S5_BIND_V3_PAD_FORCED_ONLY_CODES:
         assert free["rows_src"][row][part][code] == 0.0, code
         assert forced["rows_src"][row][part][code] > 0.0, code
-    # it is not a re-labelling of copy_prev: the cross-position member reads differently, and on
-    # this cell it is the larger of the two
-    other = forced["rows_src"][row][part]["prev_gold_other"]
-    assert other != forced["rows_src"][row][part]["copy_prev"]
-    # and the registered two-hop floor now covers it: no admitted zero-cost emission beats it
+    assert free["gold_reads"] is None and forced["gold_reads"]["n"] == len(ex)
     two = s5_bind_v3_pad_two_hop_floor(forced, k, m, ns, ng, pad=2)
-    assert two["floor"] >= other - 1e-12, (two["floor"], other)
-    assert two["floor"] >= forced["rows_src"][row][part]["copy_prev"] - 1e-12, two
+    floor = two["floor"]
+
+    # EVERY ADDRESS THE RULE ADMITS, invented here and scored here. The two members that beat the
+    # two closed lists are named so the regression is explicit; the rest is a sweep of the address
+    # space, including offsets and classes no registered code ever had a name for.
+    invented = {
+        "prev_gold_same": (lambda kd, s: True, -1, 0),
+        "prev_gold_other": (lambda kd, s: True, -1, 1),
+        "last_swap_gold_p1": (lambda kd, s: kd == C.SWAP, -1, 1),
+        "last_cross_swap_gold_p1": (lambda kd, s: kd == C.SWAP and s == "cross", -1, 1),
+        "last_give_gold_p0": (lambda kd, s: kd == C.GIVE, -1, 0),
+        "first_block_p0": (lambda kd, s: True, 0, 0),
+        "third_swap_from_start_p1": (lambda kd, s: kd == C.SWAP, 2, 1),
+        "four_back_p1": (lambda kd, s: True, -4, 1),
+        "last_same_source_p0": (lambda kd, s: s == "same", -1, 0),
+        "last_named_p1": (lambda kd, s: s == "named", -1, 1),
+    }
+    for name, (cls, idx, q) in invented.items():
+        got = _invented_fixed_read(ex, cell, src, cls, idx, q)
+        assert got is not None, name
+        assert got <= floor + 1e-12, (name, got, floor, two["row"])
+    # and the two that beat the lists are live members and not degenerate ones: each reads well
+    # above chance, so the closure is doing work rather than covering empty addresses
+    assert _invented_fixed_read(ex, cell, src, lambda kd, s: kd == C.SWAP, -1, 1) > 1.2 / k
+    # the winning address is REPORTED, so the max can be read rather than trusted
+    best = forced["gold_reads"]["best"][part]
+    assert best["address"] in forced["gold_reads"]["surface"][part], best
+    assert abs(forced["gold_reads"]["surface"][part][best["address"]] - best["acc"]) < 1e-12
+    assert best["address"] in two["row"], (best, two["row"])
+    assert floor >= best["acc"] - 1e-12, (floor, best)
+
+
+def test_the_gold_pad_family_is_swept_whole_and_the_scan_is_not_in_it():
+    """WHAT THE ADDRESS SPACE IS, and where its edge is.
+
+    An address is a block CLASS the row's emission is already partitioned by (kind, source), an
+    INDEX that is a constant in that class's prefix under either canonical indexing, and a token
+    POSITION. The sweep is exhaustive at every length — a stream of L events has L blocks — so the
+    max is attained inside what is swept by construction and no offset is assumed away.
+
+    THE SCAN IS NOT AN ADDRESS. ``pad_scan_last_write`` finds its block by MATCHING the current
+    event's operand against earlier events, one comparison per event passed; its cost is per event
+    and the step conjunct excludes it. It is measured anyway, and here it is confirmed to read
+    ABOVE the family — the exclusion is a judgement about cost, not about the number.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=64, length=32)
+    ns, ng = s5_bind_v3_shape(ex)
+    part = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
+    gr = s5_bind_v3_pad_gold_reads(ex)
+    # every class × every offset in it × both token positions, and nothing capped: the longest
+    # backward offset reachable on a 32-event stream is present, under both indexings
+    addrs = {a for p in gr["surface"] for a in gr["surface"][p]}
+    assert "any[-31]p0" in addrs and "any[+30]p1" in addrs, sorted(addrs)[:8]
+    seen = {cls for e in ex for kind, _t, _r, s in C.read(e.prompt)["events"]
+            for cls in V.s5_bind_v3_pad_block_classes(
+                kind, V.s5_bind_v3_pad_event_source(kind, s))}
+    assert seen <= set(V.S5_BIND_V3_PAD_BLOCK_CLASSES), seen
+    for cls in seen:
+        assert any(a.startswith(f"{cls}[") for a in addrs), cls
+    # the family max is the max of the surface it reports, and it sits at a SMALL offset: the
+    # power of the family is adjacency, not depth into the pad
+    best = gr["best"][part]
+    assert abs(max(gr["surface"][part].values()) - best["acc"]) < 1e-12
+    assert best["address"].split("[")[1].startswith("-1]"), best
+    # and the excluded scan reads above it, which is why the exclusion has to rest on cost
+    scan = s5_bind_v3_pad_scan_last_write(ex, k, m, forced=True)
+    assert scan["parts"][part] > best["acc"], (scan["parts"][part], best)
+    assert not s5_bind_v3_pad_write_admits("pad_scan_last_write", "own_gold", "swap_p0",
+                                           k, m, ns, ng, pad=2)
 
 
 def test_the_excluded_scan_row_is_priced_on_the_scored_read():

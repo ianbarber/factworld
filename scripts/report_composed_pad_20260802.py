@@ -214,9 +214,14 @@ def findings(res, counts, forced, decomp, fw, out):
                 "COMPONENT cells' floors are already set by, read on the emission instead of on "
                 "the policy: a row may not chain two events' contents, and this token is two "
                 "dependent reads.\n")
+            missed = [(s, L) for s in seeds for L in two
+                      if not conf[(s, f"composed@{L}")].get(f"{P.PAD_WRITE_TOKEN}_clears")]
             out.append(
-                "THE SCORED READ IS THE TEACHER-FORCED PER-EVENT ONE, and it clears on every seed "
-                "at every registered length. Per seed at L="
+                "THE SCORED READ IS THE TEACHER-FORCED PER-EVENT ONE, and it "
+                + ("clears on every seed at every registered length"
+                   if not missed else
+                   "does NOT clear at " + ", ".join(f"seed {s} L={L}" for s, L in missed))
+                + ". Per seed at L="
                 + "/".join(str(L) for L in two) + ": "
                 + "; ".join(
                     f"seed {s} " + "/".join(
@@ -258,6 +263,19 @@ def findings(res, counts, forced, decomp, fw, out):
                 "may not chain two reads. It is not an ANSWER result and not an end-to-end one — "
                 "the same grid's answer read returns a tracking gap on the same seeds, and the "
                 "free-running column above is why.\n")
+            head = sorted(
+                (conf[(s, f"composed@{L}")][P.PAD_WRITE_TOKEN] - P.bar_for(two[L]["floor"]),
+                 s, L) for s in carry for L in two if (s, f"composed@{L}") in conf)
+            if head:
+                out.append(
+                    f"AND THE HEADROOM IT CLEARS BY IS {head[0][0]:.3f} at its tightest — seed "
+                    f"{head[0][1]} at L={head[0][2]}, "
+                    f"{conf[(head[0][1], f'composed@{head[0][2]}')][P.PAD_WRITE_TOKEN]:.4f} "
+                    f"against a bar of {P.bar_for(two[head[0][2]]['floor']):.4f} — over the seeds "
+                    f"that carry the claim and the registered lengths, and {head[-1][0]:.3f} at "
+                    "its widest. The floor is a max over an admitted class, so a class that "
+                    "gains a member moves it up: this result stands on that headroom and not on "
+                    "the ratio to chance.\n")
         L16 = fw["cells"].get("composed@16")
         if L16:
             b16 = L16["free_run"]["operative"]["all"]["per_slot"]
@@ -372,6 +390,59 @@ def apply_verdict(res, decomp, gold, out):
     return gated
 
 
+def gold_pad_family(fw, cells, out):
+    """THE GOLD-PAD READ, closed by a rule and printed as the surface it maximises over."""
+    read = P.PAD_WRITE_SCORED_READ
+    fams = [(key, fw["cells"][key][read]["gold_family"]) for key in cells
+            if (fw["cells"][key].get(read) or {}).get("gold_family")]
+    if not fams:
+        return
+    out.append("### The gold-pad emission family, closed by a rule\n")
+    out.append("Under the teacher-forced read the context IS the gold pad, so copying one token "
+               "out of it at an address that does not have to be searched for costs 0 hops, 0 "
+               "live slots and 0 steps. The admitted class therefore contains EVERY fixed "
+               "positional read of the pad, and the floor maximises over the whole family rather "
+               "than over registered names (`validity.s5_bind_v3_pad_gold_reads`). An address is "
+               "a block CLASS the row's emission is already partitioned by — the event's kind and "
+               "its source, which it reads off the event line anyway — an INDEX that is a "
+               "constant in that class's prefix under either canonical indexing (the d-th most "
+               "recent, the a-th from the start), and a token POSITION. The sweep is exhaustive "
+               "at each length: a stream of L events has L blocks, so the family is finite and "
+               "the max is attained inside what is swept by construction.\n")
+    out.append("A per-event BACKWARD SCAN is not a fixed positional read and stays excluded. Its "
+               "block is found by MATCHING the current event's operand against earlier events, "
+               "one comparison per event passed, so the address is not a constant and the cost is "
+               "per event; the step conjunct excludes it and it is priced under the scored read "
+               "below rather than argued away.\n")
+    out.append("| cell | addresses swept | best address | its score | leg | back-offset 1 / 2 / "
+               "3 / 4 | max at d>=9 |")
+    out.append("|---|---|---|---|---|---|---|")
+    for key, g in fams:
+        cls = g["address"].split("[")[0]
+        q = g["address"].split("]p")[-1]
+        prof = (g.get("profile") or {}).get(f"{cls}|p{q}") or {}
+        tail = [v for d, v in prof.items() if int(d) >= 9]
+        out.append(f"| {key} | {g['n_addresses']} | `{g['address']}` | {g['acc']:.4f} | "
+                   f"{g['leg']} | "
+                   + " / ".join(f4(prof.get(str(d), prof.get(d))) for d in (1, 2, 3, 4))
+                   + f" | {f4(max(tail) if tail else None)} |")
+    out.append("")
+    key, g = fams[-1]
+    tail = [v for lab, prof in (g.get("profile") or {}).items() if lab.startswith("any|")
+            for d, v in prof.items() if int(d) >= 9]
+    ch = fw["cells"][key]["chance"]["uniform"]
+    out.append("The max sits at the most recent block of its class at every length and the "
+               "profile decays away from it: what the family buys is ADJACENCY, not depth into "
+               "the pad. At "
+               + (f"{key} the coarsest class reads at most {max(tail):.4f} at offsets 9 and "
+                  f"beyond, against a per-slot chance of {ch:.4f}" if tail else "long offsets the "
+                  "profile flattens toward chance")
+               + " — far into the pad a fixed read is an uninformative draw from its marginal, "
+               "which is `uniform` and already in the class. Both legs are swept and the larger "
+               "is operative, so the address that wins on the scored items does not have to be "
+               "the one that wins on the disjoint pool for the floor to cover it.\n")
+
+
 def pad_write_floor_table(fw, decomp, out):
     """The pad-write floors, the SCORED two-hop read against its own floor, and the controls."""
     cells = [k for k in fw["cells"] if k.startswith("composed@")]
@@ -410,22 +481,7 @@ def pad_write_floor_table(fw, decomp, out):
                "same table on the free-running read is in the JSON. A floor is measured on the "
                "exact scored items AND on a disjoint pool with the larger operative, since a max "
                "over 78 rows carries an upward selection bias at small n.\n")
-    out.append("> **CORRECTED — the emission family is now closed under block position.** The "
-               "class grants `copy_prev` at zero cost because the row holds its own last block. "
-               "Teacher-forced, the context IS the gold pad, so the row also holds the last GOLD "
-               "block, and emitting EITHER of its two tokens costs 0 hops, 0 slots and 0 steps. "
-               "The cross-position member was not among the registered codes, which left a "
-               "zero-cost policy outside the class and understated the floor — the direction that "
-               "invalidates a cleared reading. `prev_gold_same` and `prev_gold_other` are now "
-               "registered at all four pad cells (`validity.S5_BIND_V3_PAD_CODES`), available "
-               "only on the teacher-forced read, and the disjoint leg was re-run. The two-hop "
-               "floor was 0.2382/0.1861/0.1864/0.1818/0.1740 at L=16/32/48/64/96 and is "
-               + "/".join(f4((fw["cells"][f"composed@{L}"][P.PAD_WRITE_SCORED_READ]["two_hop"]
-                              .get(P.PAD_WRITE_TOKEN) or {}).get("floor"))
-                          for L in (16, 32, 48, 64, 96)
-                          if f"composed@{L}" in fw["cells"])
-               + ". Every seed still clears at every registered length and the per-seed "
-                 "conjunction is unchanged, so closing the hole costs the result nothing.\n")
+    gold_pad_family(fw, cells, out)
     scans = [(k, fw["cells"][k]) for k in cells if fw["cells"][k].get("scan_row")]
     if scans:
         out.append("### The excluded backward scan, priced on the read the model is scored on\n")
@@ -435,10 +491,9 @@ def pad_write_floor_table(fw, decomp, out):
                    "it; it is excluded on TOTAL STEPS (~2m/p_give per swap against the "
                    "algorithm's 6) and its score is printed so the exclusion is a judgement about "
                    "cost and not about the number.\n")
-        out.append("> **CORRECTED.** This row was previously read free-running and pooled over "
-                   "source classes. The model is scored teacher-forced on the CROSS partition, so "
-                   "that is the reading printed first; the free-running pooled figure is kept "
-                   "beside it as the different quantity it is.\n")
+        out.append("The model is scored teacher-forced on the CROSS partition, so that is the "
+                   "reading printed first; the free-running pooled figure is the different "
+                   "quantity it is and is kept beside it rather than standing in for it.\n")
         out.append("| cell | admitted | scored read (teacher-forced) swap_p0\\|cross | "
                    "teacher-forced swap_p0 pooled | free-running swap_p0 pooled |")
         out.append("|---|---|---|---|---|")
@@ -449,9 +504,25 @@ def pad_write_floor_table(fw, decomp, out):
                        f"{f4(sr['scores'].get('swap_p0'))} | "
                        f"{f4((sr.get('free_run') or {}).get('swap_p0'))} |")
         out.append("")
-        out.append("It reads far above every seed at the short lengths and above the two claiming "
-                   "seeds everywhere, which is the point of printing it: the exclusion is doing "
-                   "work, and it rests on the step conjunct rather than on the row being weak.\n")
+        claim = fw.get("claim") or {}
+        carry = sorted(int(s) for s, v in (claim.get("per_seed") or {}).items() if v)
+        conf_t = {(r["seed"], r["cell"]): r
+                  for r in (fw.get(f"confront_{P.PAD_WRITE_SCORED_READ}") or [])}
+        above, below = [], []
+        for key, c in scans:
+            v = ((c["scan_row"]["scores"].get("parts") or {}).get(P.PAD_WRITE_TOKEN))
+            got = [conf_t[(s, key)][P.PAD_WRITE_TOKEN] for s in carry if (s, key) in conf_t]
+            if v is None or not got:
+                continue
+            (above if v > max(got) else below).append(key.split("@")[-1])
+        if above or below:
+            out.append(
+                "AGAINST THE SEEDS THAT CARRY THE CLAIM it reads above every one of them at L="
+                + ("/".join(above) if above else "no length")
+                + " and below every one of them at L="
+                + ("/".join(below) if below else "no length")
+                + ". The exclusion holds at all of them either way: it rests on the step conjunct "
+                  "and not on where the number lands, which is why the number is printed.\n")
     conf = fw.get(f"confront_{P.PAD_WRITE_SCORED_READ}") or []
     if conf:
         n = fw["cfg"]["n"]
