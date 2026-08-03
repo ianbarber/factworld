@@ -410,6 +410,48 @@ def pad_write_floor_table(fw, decomp, out):
                "same table on the free-running read is in the JSON. A floor is measured on the "
                "exact scored items AND on a disjoint pool with the larger operative, since a max "
                "over 78 rows carries an upward selection bias at small n.\n")
+    out.append("> **CORRECTED — the emission family is now closed under block position.** The "
+               "class grants `copy_prev` at zero cost because the row holds its own last block. "
+               "Teacher-forced, the context IS the gold pad, so the row also holds the last GOLD "
+               "block, and emitting EITHER of its two tokens costs 0 hops, 0 slots and 0 steps. "
+               "The cross-position member was not among the registered codes, which left a "
+               "zero-cost policy outside the class and understated the floor — the direction that "
+               "invalidates a cleared reading. `prev_gold_same` and `prev_gold_other` are now "
+               "registered at all four pad cells (`validity.S5_BIND_V3_PAD_CODES`), available "
+               "only on the teacher-forced read, and the disjoint leg was re-run. The two-hop "
+               "floor was 0.2382/0.1861/0.1864/0.1818/0.1740 at L=16/32/48/64/96 and is "
+               + "/".join(f4((fw["cells"][f"composed@{L}"][P.PAD_WRITE_SCORED_READ]["two_hop"]
+                              .get(P.PAD_WRITE_TOKEN) or {}).get("floor"))
+                          for L in (16, 32, 48, 64, 96)
+                          if f"composed@{L}" in fw["cells"])
+               + ". Every seed still clears at every registered length and the per-seed "
+                 "conjunction is unchanged, so closing the hole costs the result nothing.\n")
+    scans = [(k, fw["cells"][k]) for k in cells if fw["cells"][k].get("scan_row")]
+    if scans:
+        out.append("### The excluded backward scan, priced on the read the model is scored on\n")
+        out.append("`pad_scan_last_write` carries P in full and recovers a cross swap's operand "
+                   "by scanning back to the last give that wrote the referenced object. Its "
+                   "per-event cost does not grow with L, so an L-independence rule would admit "
+                   "it; it is excluded on TOTAL STEPS (~2m/p_give per swap against the "
+                   "algorithm's 6) and its score is printed so the exclusion is a judgement about "
+                   "cost and not about the number.\n")
+        out.append("> **CORRECTED.** This row was previously read free-running and pooled over "
+                   "source classes. The model is scored teacher-forced on the CROSS partition, so "
+                   "that is the reading printed first; the free-running pooled figure is kept "
+                   "beside it as the different quantity it is.\n")
+        out.append("| cell | admitted | scored read (teacher-forced) swap_p0\\|cross | "
+                   "teacher-forced swap_p0 pooled | free-running swap_p0 pooled |")
+        out.append("|---|---|---|---|---|")
+        for key, c in scans:
+            sr = c["scan_row"]
+            out.append(f"| {key} | {sr['admitted']} | "
+                       f"{f4((sr['scores'].get('parts') or {}).get(P.PAD_WRITE_TOKEN))} | "
+                       f"{f4(sr['scores'].get('swap_p0'))} | "
+                       f"{f4((sr.get('free_run') or {}).get('swap_p0'))} |")
+        out.append("")
+        out.append("It reads far above every seed at the short lengths and above the two claiming "
+                   "seeds everywhere, which is the point of printing it: the exclusion is doing "
+                   "work, and it rests on the step conjunct rather than on the row being weak.\n")
     conf = fw.get(f"confront_{P.PAD_WRITE_SCORED_READ}") or []
     if conf:
         n = fw["cfg"]["n"]

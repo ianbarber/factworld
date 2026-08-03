@@ -46,6 +46,7 @@ from dataclasses import fields, replace
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from factworld import composition as C  # noqa: E402
+from factworld import validity as V  # noqa: E402
 from factworld import tasks as TK  # noqa: E402
 from factworld.render import Renderer  # noqa: E402
 from factworld.tokenizer import Tokenizer  # noqa: E402
@@ -61,6 +62,9 @@ from factworld.validity import (  # noqa: E402
     floor_eligible,
     one_structure_bound,
     S5_BIND_V3_CKPT_ROWS,
+    S5_BIND_V3_PAD_CELLS,
+    S5_BIND_V3_PAD_CODES,
+    S5_BIND_V3_PAD_FORCED_ONLY_CODES,
     s5_bind_v3_admits,
     s5_bind_v3_block_drop,
     s5_bind_v3_carrier_hops,
@@ -1965,6 +1969,77 @@ def test_the_pad_write_class_excludes_the_task_and_prices_the_backward_scan_out(
                                                k, m, nsl, ngl, pad=2)
     scan = s5_bind_v3_pad_scan_last_write(ex, k, m)
     assert scan["swap_p0"] > 0.4, scan                  # and it is excluded on cost, not on merit
+
+
+def test_the_pad_emission_family_is_closed_under_block_position():
+    """A ZERO-COST EMISSION MAY NOT SIT OUTSIDE THE CLASS, and one did.
+
+    The class grants ``copy_prev`` because the row holds its own last block. Under the
+    TEACHER-FORCED read — the one the two-hop token is scored on — the context is the gold pad, so
+    the row also holds the last GOLD block, and emitting either of its two tokens costs 0 hops, 0
+    live slots and 0 steps. The cross-position member was not registered, which understated the
+    floor at four of the five composed lengths; a floor that is too low is the direction that
+    invalidates a cleared reading, so the family is pinned closed here.
+
+    THE TWO MEMBERS ARE TEACHER-FORCED ONLY. Free-running the row holds what it emitted itself,
+    which is what ``copy_prev`` already prices, so both read exactly 0 there and can never raise a
+    free-running floor.
+    """
+    for code in S5_BIND_V3_PAD_FORCED_ONLY_CODES:
+        assert code in S5_BIND_V3_PAD_CODES, code
+        for cell in S5_BIND_V3_PAD_CELLS:
+            for source in ("named", "same", "cross"):
+                assert s5_bind_v3_pad_hops(code, cell, source) == 0, (code, cell, source)
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=96, length=48)
+    ns, ng = s5_bind_v3_shape(ex)
+    part = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
+
+    free = s5_bind_v3_pad_write_scores(ex, k, m, pad=2)
+    forced = s5_bind_v3_pad_write_scores(ex, k, m, pad=2, forced=True)
+    row = next(iter(free["rows_src"]))
+    for code in S5_BIND_V3_PAD_FORCED_ONLY_CODES:
+        assert free["rows_src"][row][part][code] == 0.0, code
+        assert forced["rows_src"][row][part][code] > 0.0, code
+    # it is not a re-labelling of copy_prev: the cross-position member reads differently, and on
+    # this cell it is the larger of the two
+    other = forced["rows_src"][row][part]["prev_gold_other"]
+    assert other != forced["rows_src"][row][part]["copy_prev"]
+    # and the registered two-hop floor now covers it: no admitted zero-cost emission beats it
+    two = s5_bind_v3_pad_two_hop_floor(forced, k, m, ns, ng, pad=2)
+    assert two["floor"] >= other - 1e-12, (two["floor"], other)
+    assert two["floor"] >= forced["rows_src"][row][part]["copy_prev"] - 1e-12, two
+
+
+def test_the_excluded_scan_row_is_priced_on_the_scored_read():
+    """THE EXCLUDED ROW HAS TO BE READ THE WAY THE MODEL IS, or the comparison is between two
+    different quantities.
+
+    The protocol scores the two-hop token TEACHER-FORCED on the CROSS partition. A free-running,
+    source-pooled figure for ``pad_scan_last_write`` is neither, and it is systematically lower —
+    so printing it beside a teacher-forced cross-partition model score understates the row the
+    exclusion is about.
+    """
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=64, length=48)
+    part = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
+    free = s5_bind_v3_pad_scan_last_write(ex, k, m)
+    scored = s5_bind_v3_pad_scan_last_write(ex, k, m, forced=True)
+    assert free["forced"] is False and scored["forced"] is True
+    # the per-cell figures survive unchanged in shape, and the partition is carried beside them
+    for cell in S5_BIND_V3_PAD_CELLS:
+        assert cell in free and cell in scored, cell
+    assert scored["parts"][part] is not None and scored["n_parts"][part] > 0
+    # teacher-forcing can only help a row that carries P, and the cross partition is the harder
+    # half of swap_p0, so the scored reading sits between them
+    assert scored["swap_p0"] >= free["swap_p0"], (scored["swap_p0"], free["swap_p0"])
+    assert scored["parts"][part] < scored["swap_p0"], scored
+    # and it is still excluded, which is the whole point of measuring it
+    ns, ng = s5_bind_v3_shape(ex)
+    assert not s5_bind_v3_pad_write_admits("pad_scan_last_write", "own_gold", "swap_p0",
+                                           k, m, ns, ng, pad=2)
 
 
 def test_the_pad_write_chance_baseline_is_one_over_k():

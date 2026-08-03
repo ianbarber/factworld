@@ -131,10 +131,15 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
            "chance": V.s5_bind_v3_pad_write_chance(scored, k),
            "task_pad_cost": V.s5_bind_v3_pad_write_task_cost(k, m, ns, ng),
            "n_rows": len(V.s5_bind_v3_pad_carry_rows(k, m, pad)),
+           # THE EXCLUDED ROW, priced on the read the model is scored on. The registered score is
+           # the two-hop token teacher-forced on the CROSS partition, so that is the number this
+           # row has to be printed at; the free-running source-pooled figure is a different
+           # quantity and is kept beside it rather than standing in for it.
            "scan_row": {"cost": V.s5_bind_v3_pad_write_cost("pad_scan_last_write", k, m, ns, ng),
                         "admitted": V.s5_bind_v3_pad_write_admits(
                             "pad_scan_last_write", "own_gold", "swap_p0", k, m, ns, ng, pad),
-                        "scores": V.s5_bind_v3_pad_scan_last_write(scored, k, m)},
+                        "scores": V.s5_bind_v3_pad_scan_last_write(scored, k, m, forced=True),
+                        "free_run": V.s5_bind_v3_pad_scan_last_write(scored, k, m)},
            "saturation": saturation_control(scored, k, m, ns, ng, pad)}
     out["chance"].pop("marginal", None)
     for tag, forced_flag in (("free_run", False), ("teacher_forced", True)):
@@ -231,8 +236,11 @@ def print_cell(r):
           + ", ".join(f"{nm} {f4((v['cells'].get('swap_p0') or [None])[0])}" for nm, v in top))
     sr = r["scan_row"]
     print(f"  EXCLUDED pad_scan_last_write (W,S)={sr['cost']} vs task {r['task_pad_cost']} "
-          f"-> admitted={sr['admitted']}; scores "
-          + " ".join(f"{c}={f4(sr['scores'][c])}" for c in CELLS))
+          f"-> admitted={sr['admitted']}; SCORED READ (teacher-forced) "
+          f"{P.PAD_WRITE_TOKEN}={f4((sr['scores'].get('parts') or {}).get(P.PAD_WRITE_TOKEN))}"
+          f"  per cell " + " ".join(f"{c}={f4(sr['scores'][c])}" for c in CELLS)
+          + "; free-running pooled "
+          + " ".join(f"{c}={f4(sr['free_run'][c])}" for c in CELLS))
     sat = r["saturation"]
     print(f"  SATURATION (policy) {sat['row']} W={sat['W']} vs bound {sat['bound']} -> "
           f"admitted={sat['admitted']}; own_gold "

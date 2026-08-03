@@ -267,6 +267,9 @@ def load_rows(min_n: int = 1) -> dict:
                    "ptok_item": u["prompt_tokens"] / n, "ctok_item": u["completion_tokens"] / n,
                    "ctok_median": sorted(ctoks)[len(ctoks) // 2] if ctoks else None,
                    "ctok_max": max(ctoks) if ctoks else None,
+                   # the per-item spread, not just its summary: whether this endpoint returns a
+                   # long generation is answered by the items, and a median hides exactly that
+                   "ctoks": sorted(ctoks),
                    "elapsed_s": rec["elapsed_s"], "ts": rec["ts"],
                    "partner_of": rec.get("partner_of")}
             key = (rec["sweep_cell"], rec["k_sweep"], rec["length"])

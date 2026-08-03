@@ -14,11 +14,11 @@ AND THE RESIDUAL SITS ON THE TWO-HOP WRITE. Teacher-forced, the one pad token th
 
 THE PAD WRITE HAS A FLOOR AND THE MEASURED PAD IS UNDER IT. The bounded pad hands every policy 2 free live slots, so the registered live-slot rule admits any policy holding 8 of the 12 map cells, and such a policy writes the composed pad at 0.584/0.491/0.390 at L=48/64/96 (3.5/2.9/2.3x the per-slot chance of 1/k = 0.167). The pad width that costs the ANSWER floor nothing costs the PAD floor almost everything: on the answer a partial carry buys 1.05-1.17x chance, on the pad it buys 3-5x, because most pad tokens are one-hop reads of cells the carry holds.
 
-AND THE TWO-HOP TOKEN IS SCORED AGAINST A CLASS THAT MAY NOT COMPOSE IT. The registered live-slot rule is the composed cell's own and is the floor for the three one-hop tokens; the two-hop token takes the COMPONENT cells' conjunct instead — depth <= 1, applied per emitted token — so an admitted row may hold 8 of the 12 map cells and still not perform the resolve-then-read the token is. On the events whose operand is resolved through the OTHER structure, that class reaches 0.1864/0.1818/0.1740 at L=48/64/96 against a per-slot chance of 0.1667, where the class WITHOUT the depth conjunct reaches 0.6032/0.5637/0.5138.
+AND THE TWO-HOP TOKEN IS SCORED AGAINST A CLASS THAT MAY NOT COMPOSE IT. The registered live-slot rule is the composed cell's own and is the floor for the three one-hop tokens; the two-hop token takes the COMPONENT cells' conjunct instead — depth <= 1, applied per emitted token — so an admitted row may hold 8 of the 12 map cells and still not perform the resolve-then-read the token is. On the events whose operand is resolved through the OTHER structure, that class reaches 0.2249/0.2233/0.2286 at L=48/64/96 against a per-slot chance of 0.1667, where the class WITHOUT the depth conjunct reaches 0.6032/0.5637/0.5138.
 
 WHICH CONJUNCT IS APPLIED DECIDES THE RESULT, so it is stated rather than assumed. Under the W-only conjunct — the composed cell's own, no depth bound — a row holding 8 of the 12 map cells resolves the operand against a map it holds most of and reaches 0.6032/0.5637/0.5138, and the two seeds that carry a claim are UNDER it at every registered length. The result below rests entirely on the depth conjunct being the right class for this token, and the argument for that is that it is the conjunct both COMPONENT cells' floors are already set by, read on the emission instead of on the policy: a row may not chain two events' contents, and this token is two dependent reads.
 
-THE SCORED READ IS THE TEACHER-FORCED PER-EVENT ONE, and it clears on every seed at every registered length. Per seed at L=48/64/96: seed 0 0.526/0.523/0.513; seed 1 0.486/0.496/0.513; seed 2 0.853/0.842/0.828, against bars 0.3389/0.3352/0.3289. Teacher-forcing removes the COMPOUNDING of a per-event residual over the model's own writes and therefore claims nothing about them: free-running, the same token on the same events reads seed 0 0.279/0.259/0.234; seed 1 0.221/0.217/0.199; seed 2 0.669/0.576/0.454 and clears 6 of 15 cells. The free-running read stays the tracking diagnostic and is printed at every cell.
+THE SCORED READ IS THE TEACHER-FORCED PER-EVENT ONE, and it clears on every seed at every registered length. Per seed at L=48/64/96: seed 0 0.526/0.523/0.513; seed 1 0.486/0.496/0.513; seed 2 0.853/0.842/0.828, against bars 0.3702/0.3689/0.3732. Teacher-forcing removes the COMPOUNDING of a per-event residual over the model's own writes and therefore claims nothing about them: free-running, the same token on the same events reads seed 0 0.279/0.259/0.234; seed 1 0.221/0.217/0.199; seed 2 0.669/0.576/0.454 and clears 6 of 15 cells. The free-running read stays the tracking diagnostic and is printed at every cell.
 
 THE CLAIM IS CONJOINED PER SEED, so it cannot be assembled across models. `components_form_and_read_out` on [0, 1]; `two_hop_clears` on [0, 1, 2] — 2 seed(s) carry all of it ([0, 1]), against 2 required, so a scored composition result on this token EXISTS on this grid. The seed with the best pad is excluded by its own components: its answer is at floor on all eight component cells with a byte-perfect pad, so it reads nothing out and carries no claim about anything downstream of a readout. The result survives its exclusion.
 
@@ -67,12 +67,30 @@ Two floors, because the pad has two kinds of token in it. The REGISTERED CLASS i
 | cell | chance | per-slot floor (registered class) | row | swap_p0\|cross, one-hop floor | row | same-source, one-hop | swap_p0\|cross unrestricted |
 |---|---|---|---|---|---|---|---|
 | composed@16 | 0.1667 | 0.9366 (5.62x) | `pad_carry_P4B4_first[scored]` | 0.2382 (1.43x) | `pad_carry_P0B0_first:copy_prev[scored]` | 0.2473 | 0.8903 |
-| composed@32 | 0.1667 | 0.8130 (4.88x) | `pad_carry_P4B4_first[scored]` | 0.1861 (1.12x) | `pad_carry_P0B0_first:copy_prev[disjoint]` | 0.2918 | 0.6994 |
-| composed@48 | 0.1667 | 0.7363 (4.42x) | `pad_carry_P3B5_first[scored]` | 0.1864 (1.12x) | `pad_carry_P0B0_first:copy_prev[scored]` | 0.3037 | 0.6032 |
-| composed@64 | 0.1667 | 0.7031 (4.22x) | `pad_carry_P2B6_recent[scored]` | 0.1818 (1.09x) | `pad_carry_P0B0_first:target_sym[disjoint]` | 0.3202 | 0.5637 |
-| composed@96 | 0.1667 | 0.6853 (4.11x) | `pad_carry_P2B6_recent[scored]` | 0.1740 (1.04x) | `pad_carry_P0B0_first:copy_prev[disjoint]` | 0.3167 | 0.5138 |
+| composed@32 | 0.1667 | 0.8130 (4.88x) | `pad_carry_P4B4_first[scored]` | 0.2250 (1.35x) | `pad_carry_P0B0_first:prev_gold_other[scored]` | 0.2918 | 0.6994 |
+| composed@48 | 0.1667 | 0.7363 (4.42x) | `pad_carry_P3B5_first[scored]` | 0.2249 (1.35x) | `pad_carry_P0B0_first:prev_gold_other[disjoint]` | 0.3037 | 0.6032 |
+| composed@64 | 0.1667 | 0.7031 (4.22x) | `pad_carry_P2B6_recent[scored]` | 0.2233 (1.34x) | `pad_carry_P0B0_first:prev_gold_other[scored]` | 0.3202 | 0.5637 |
+| composed@96 | 0.1667 | 0.6853 (4.11x) | `pad_carry_P2B6_recent[scored]` | 0.2286 (1.37x) | `pad_carry_P0B0_first:prev_gold_other[scored]` | 0.3167 | 0.5138 |
 
 Floors are on the teacher_forced read, which is the scored one; the same table on the free-running read is in the JSON. A floor is measured on the exact scored items AND on a disjoint pool with the larger operative, since a max over 78 rows carries an upward selection bias at small n.
+
+> **CORRECTED — the emission family is now closed under block position.** The class grants `copy_prev` at zero cost because the row holds its own last block. Teacher-forced, the context IS the gold pad, so the row also holds the last GOLD block, and emitting EITHER of its two tokens costs 0 hops, 0 slots and 0 steps. The cross-position member was not among the registered codes, which left a zero-cost policy outside the class and understated the floor — the direction that invalidates a cleared reading. `prev_gold_same` and `prev_gold_other` are now registered at all four pad cells (`validity.S5_BIND_V3_PAD_CODES`), available only on the teacher-forced read, and the disjoint leg was re-run. The two-hop floor was 0.2382/0.1861/0.1864/0.1818/0.1740 at L=16/32/48/64/96 and is 0.2382/0.2250/0.2249/0.2233/0.2286. Every seed still clears at every registered length and the per-seed conjunction is unchanged, so closing the hole costs the result nothing.
+
+### The excluded backward scan, priced on the read the model is scored on
+
+`pad_scan_last_write` carries P in full and recovers a cross swap's operand by scanning back to the last give that wrote the referenced object. Its per-event cost does not grow with L, so an L-independence rule would admit it; it is excluded on TOTAL STEPS (~2m/p_give per swap against the algorithm's 6) and its score is printed so the exclusion is a judgement about cost and not about the number.
+
+> **CORRECTED.** This row was previously read free-running and pooled over source classes. The model is scored teacher-forced on the CROSS partition, so that is the reading printed first; the free-running pooled figure is kept beside it as the different quantity it is.
+
+| cell | admitted | scored read (teacher-forced) swap_p0\|cross | teacher-forced swap_p0 pooled | free-running swap_p0 pooled |
+|---|---|---|---|---|
+| composed@16 | False | 0.8244 | 0.8907 | 0.8799 |
+| composed@32 | False | 0.5930 | 0.7116 | 0.6730 |
+| composed@48 | False | 0.4651 | 0.5849 | 0.5131 |
+| composed@64 | False | 0.4184 | 0.5353 | 0.4532 |
+| composed@96 | False | 0.3370 | 0.4501 | 0.3533 |
+
+It reads far above every seed at the short lengths and above the two claiming seeds everywhere, which is the point of printing it: the exclusion is doing work, and it rests on the step conjunct rather than on the row being weak.
 
 ### The scored read, per seed and per length
 
@@ -81,20 +99,20 @@ Teacher-forced per event, n=512, under `clears_headroom` (z>3.0 and `(a-f)/(1-f)
 | seed | cell | swap_p0\|cross | floor | bar | clears | same-source | free-running cross | its floor | clears |
 |---|---|---|---|---|---|---|---|---|---|
 | 0 | composed@16 | 0.5294 | 0.2382 | 0.3811 | yes | 0.6040 | 0.4351 | 0.2382 | yes |
-| 0 | composed@32 | 0.5311 | 0.1861 | 0.3387 | yes | 0.5999 | 0.3249 | 0.1861 | no |
-| 0 | composed@48 | 0.5256 | 0.1864 | 0.3389 | yes | 0.5979 | 0.2789 | 0.1864 | no |
-| 0 | composed@64 | 0.5233 | 0.1818 | 0.3352 | yes | 0.5982 | 0.2586 | 0.1818 | no |
-| 0 | composed@96 | 0.5131 | 0.1740 | 0.3289 | yes | 0.5784 | 0.2336 | 0.1740 | no |
+| 0 | composed@32 | 0.5311 | 0.2250 | 0.3703 | yes | 0.5999 | 0.3249 | 0.1861 | no |
+| 0 | composed@48 | 0.5256 | 0.2249 | 0.3702 | yes | 0.5979 | 0.2789 | 0.1864 | no |
+| 0 | composed@64 | 0.5233 | 0.2233 | 0.3689 | yes | 0.5982 | 0.2586 | 0.1818 | no |
+| 0 | composed@96 | 0.5131 | 0.2286 | 0.3732 | yes | 0.5784 | 0.2336 | 0.1740 | no |
 | 1 | composed@16 | 0.3977 | 0.2382 | 0.3811 | yes | 0.5161 | 0.2744 | 0.2382 | no |
-| 1 | composed@32 | 0.4720 | 0.1861 | 0.3387 | yes | 0.5041 | 0.2244 | 0.1861 | no |
-| 1 | composed@48 | 0.4856 | 0.1864 | 0.3389 | yes | 0.5172 | 0.2206 | 0.1864 | no |
-| 1 | composed@64 | 0.4960 | 0.1818 | 0.3352 | yes | 0.5160 | 0.2175 | 0.1818 | no |
-| 1 | composed@96 | 0.5135 | 0.1740 | 0.3289 | yes | 0.5113 | 0.1993 | 0.1740 | no |
+| 1 | composed@32 | 0.4720 | 0.2250 | 0.3703 | yes | 0.5041 | 0.2244 | 0.1861 | no |
+| 1 | composed@48 | 0.4856 | 0.2249 | 0.3702 | yes | 0.5172 | 0.2206 | 0.1864 | no |
+| 1 | composed@64 | 0.4960 | 0.2233 | 0.3689 | yes | 0.5160 | 0.2175 | 0.1818 | no |
+| 1 | composed@96 | 0.5135 | 0.2286 | 0.3732 | yes | 0.5113 | 0.1993 | 0.1740 | no |
 | 2 | composed@16 | 0.9464 | 0.2382 | 0.3811 | yes | 0.9817 | 0.9342 | 0.2382 | yes |
-| 2 | composed@32 | 0.8865 | 0.1861 | 0.3387 | yes | 0.9628 | 0.7863 | 0.1861 | yes |
-| 2 | composed@48 | 0.8534 | 0.1864 | 0.3389 | yes | 0.9372 | 0.6689 | 0.1864 | yes |
-| 2 | composed@64 | 0.8420 | 0.1818 | 0.3352 | yes | 0.9222 | 0.5764 | 0.1818 | yes |
-| 2 | composed@96 | 0.8282 | 0.1740 | 0.3289 | yes | 0.9185 | 0.4541 | 0.1740 | yes |
+| 2 | composed@32 | 0.8865 | 0.2250 | 0.3703 | yes | 0.9628 | 0.7863 | 0.1861 | yes |
+| 2 | composed@48 | 0.8534 | 0.2249 | 0.3702 | yes | 0.9372 | 0.6689 | 0.1864 | yes |
+| 2 | composed@64 | 0.8420 | 0.2233 | 0.3689 | yes | 0.9222 | 0.5764 | 0.1818 | yes |
+| 2 | composed@96 | 0.8282 | 0.2286 | 0.3732 | yes | 0.9185 | 0.4541 | 0.1740 | yes |
 
 ### The claim, conjoined per seed
 

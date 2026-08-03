@@ -3242,6 +3242,21 @@ def s5_bind_v3_ckpt_copy_per_slot(examples, k: int, m: int, agents, objs) -> flo
 #   copy the previous checkpoint's slot      ``copy_prev`` — the row emits its own last block, so
 #                                            the pad never moves; the first block is its stated-map
 #                                            read, which is the strongest reading of it.
+#   copy EITHER token of the previous GOLD   ``prev_gold_same`` / ``prev_gold_other``. THE FAMILY
+#   block                                    IS CLOSED UNDER BLOCK POSITION, and it was not. The
+#                                            class grants ``copy_prev`` at zero cost because the
+#                                            row holds its own last block; under the TEACHER-FORCED
+#                                            read the context IS the gold pad, so the row holds the
+#                                            last GOLD block, and emitting either of its two tokens
+#                                            costs 0 hops, 0 slots and 0 steps. Leaving the
+#                                            cross-position member out left a zero-cost policy
+#                                            outside the class, which understates the floor — the
+#                                            direction that invalidates a cleared reading. Both are
+#                                            defined at all four pad cells (the emission is a pair
+#                                            and both positions are scored), and both are available
+#                                            ONLY teacher-forced: free-running the row holds only
+#                                            what it emitted, which is what ``copy_prev`` already
+#                                            prices.
 #   apply only the one-hop part of the event ``operand`` at swap_p0 — the resolved operand written
 #                                            without the second read — and every code the
 #                                            ``max_hops=1`` sub-class admits.
@@ -3262,7 +3277,11 @@ S5_BIND_V3_PAD_SOURCES = ("named", "same", "cross")
 
 S5_BIND_V3_PAD_CODES = ("own_gold", "operand", "target_val", "target_sym", "ref_sym",
                         "stated_ref_val", "stated_target_val", "stated_operand_val",
-                        "copy_prev", "const", "uniform")
+                        "copy_prev", "prev_gold_same", "prev_gold_other", "const", "uniform")
+# The emissions that read the ADJACENT GOLD BLOCK, which exists only under the teacher-forced
+# read. Kept as data so ``_pad_write_item`` and any consumer agree on which codes are unavailable
+# free-running rather than each deciding for itself.
+S5_BIND_V3_PAD_FORCED_ONLY_CODES = ("prev_gold_same", "prev_gold_other")
 
 # HOPS PER (code, cell), AS THE TWO READS THEY ARE MADE OF, so the count is a property of the
 # EVENT and not of the cell's name: ``(resolves_the_operand, map_reads)``. An emission's depth is
@@ -3281,6 +3300,10 @@ S5_BIND_V3_PAD_HOP_PARTS = {
     "target_sym": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "ref_sym": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "copy_prev": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
+    # the adjacent gold block is readable at O(1) under teacher forcing (W5) and neither token of
+    # it is a map read or an operand resolve, so both members are depth 0 at every cell
+    "prev_gold_same": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
+    "prev_gold_other": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "const": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "uniform": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
 }
@@ -3443,6 +3466,13 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
     after each event the row refreshes the slot that event NAMES to its true value where it holds
     it. Only that one: a swap's second gold token is the value now at the RESOLVED operand, and
     which slot that is is exactly the two-hop fact the row does not have.
+
+    ``forced`` ALSO OPENS TWO EMISSIONS, and that is the same fact read forwards: if the gold pad
+    is in the context then the previous gold BLOCK is, and either of its two tokens can be copied
+    out at no cost in hops, slots or steps. ``prev_gold_same`` copies the token at the same block
+    position, ``prev_gold_other`` the cross-position one. Neither is defined on the FIRST event —
+    there is no previous block — and both are unavailable free-running, where the row holds only
+    what it emitted itself; that is what ``copy_prev`` already prices.
     """
     from .composition import SWAP
 
@@ -3498,6 +3528,12 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
                   "stated_operand_val": (None, None)}
         em["copy_prev"] = prev if prev is not None else em["own_gold"]
         prev = em["copy_prev"]
+        # THE ADJACENT GOLD BLOCK, available only where the context carries it. Both tokens of it,
+        # because the emission is chosen per block position and a class that may take one and not
+        # the other is a class with a zero-cost policy left out of it.
+        gp = gold[i - 1] if (forced and i) else None
+        em["prev_gold_same"] = (gp[0], gp[1]) if gp else (None, None)
+        em["prev_gold_other"] = (gp[1], gp[0]) if gp else (None, None)
         g = gold[i]
         source = s5_bind_v3_pad_event_source(kind, src)
         for p in (0, 1):
@@ -3782,7 +3818,7 @@ def s5_bind_v3_pad_write_chance(examples, k: int) -> dict:
             "marginal": {a: c / tot for a, c in sorted(hits.items())}}
 
 
-def s5_bind_v3_pad_scan_last_write(examples, k: int, m: int) -> dict:
+def s5_bind_v3_pad_scan_last_write(examples, k: int, m: int, forced: bool = False) -> dict:
     """THE EXCLUDED ROW, measured: carry P in full and recover a cross swap's operand by scanning
     back to the last give that wrote the referenced object.
 
@@ -3796,10 +3832,20 @@ def s5_bind_v3_pad_scan_last_write(examples, k: int, m: int) -> dict:
     The scan recovers the last give's RECIPIENT, which is itself a live reference on a
     source-structure stream, so it is resolved with the row's current pointer map and is exact only
     where that map has not moved since.
+
+    ``forced`` PUTS IT ON THE SCORED READ, which is the only reading it may be compared with. The
+    protocol scores the two-hop token teacher-forced on the CROSS partition; a free-running,
+    source-pooled number for this row is neither of those things, and printing it beside a
+    teacher-forced cross-partition model score compares two different quantities. Under ``forced``
+    the row refreshes the slot each event NAMES from the adjacent gold block, exactly as
+    ``_pad_write_item`` does. The returned dict carries the per-cell figures as before plus
+    ``parts``, keyed ``"cell|source"``, which is the partition the floor is registered on.
     """
     from .composition import SWAP, read
 
     hit = {c: [0, 0] for c in S5_BIND_V3_PAD_CELLS}
+    part: dict[str, list] = {f"{c}|{s}": [0, 0]
+                             for c in S5_BIND_V3_PAD_CELLS for s in S5_BIND_V3_PAD_SOURCES}
     for e in examples:
         rec = read(e.prompt)
         if rec is None:
@@ -3827,12 +3873,23 @@ def s5_bind_v3_pad_scan_last_write(examples, k: int, m: int) -> dict:
             else:
                 pred = (x, B0.get(tgt))
                 cells = ("give_p0", "give_p1")
+            source = s5_bind_v3_pad_event_source(kind, src)
             for p in (0, 1):
-                hit[cells[p]][0] += int(pred[p] is not None and pred[p] == g[i][p])
+                ok = int(pred[p] is not None and pred[p] == g[i][p])
+                hit[cells[p]][0] += ok
                 hit[cells[p]][1] += 1
+                key = f"{cells[p]}|{source}"
+                part[key][0] += ok
+                part[key][1] += 1
             if kind == SWAP and x in Pm and tgt in Pm:
                 Pm[tgt], Pm[x] = Pm[x], Pm[tgt]
-    return {c: (v[0] / v[1] if v[1] else None) for c, v in hit.items()}
+            if forced and kind == SWAP and tgt in Pm:
+                Pm[tgt] = g[i][0]                 # the slot the surface names, from the gold block
+    out = {c: (v[0] / v[1] if v[1] else None) for c, v in hit.items()}
+    out["parts"] = {key: (v[0] / v[1] if v[1] else None) for key, v in sorted(part.items())}
+    out["n_parts"] = {key: v[1] for key, v in sorted(part.items())}
+    out["forced"] = bool(forced)
+    return out
 
 
 if __name__ == "__main__":

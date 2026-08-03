@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-03T13:29:56.476228+00:00",
+ "generated": "2026-08-03T16:26:34.478277+00:00",
  "cfg": {
   "lengths": "16,32,48,64,96",
   "cells": "composed,state,bind",
@@ -52,10 +52,74 @@
     ],
     "admitted": false,
     "scores": {
+     "give_p0": 0.9247333069932833,
+     "give_p1": 0.525483998419597,
+     "swap_p0": 0.8907348242811501,
+     "swap_p1": 0.9753993610223642,
+     "parts": {
+      "give_p0|cross": 0.9826361483820047,
+      "give_p0|named": null,
+      "give_p0|same": 0.8666930379746836,
+      "give_p1|cross": 0.5299921073401737,
+      "give_p1|named": null,
+      "give_p1|same": 0.5209651898734177,
+      "swap_p0|cross": 0.8244028405422853,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.9557242251739405,
+      "swap_p1|cross": 0.9767591994835377,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.9740670461733081
+     },
+     "n_parts": {
+      "give_p0|cross": 2534,
+      "give_p0|named": 0,
+      "give_p0|same": 2528,
+      "give_p1|cross": 2534,
+      "give_p1|named": 0,
+      "give_p1|same": 2528,
+      "swap_p0|cross": 1549,
+      "swap_p0|named": 0,
+      "swap_p0|same": 1581,
+      "swap_p1|cross": 1549,
+      "swap_p1|named": 0,
+      "swap_p1|same": 1581
+     },
+     "forced": true
+    },
+    "free_run": {
      "give_p0": 0.9192018964836033,
      "give_p1": 0.525483998419597,
      "swap_p0": 0.8798722044728434,
-     "swap_p1": 0.9514376996805112
+     "swap_p1": 0.9514376996805112,
+     "parts": {
+      "give_p0|cross": 0.9715864246250987,
+      "give_p0|named": null,
+      "give_p0|same": 0.8666930379746836,
+      "give_p1|cross": 0.5299921073401737,
+      "give_p1|named": null,
+      "give_p1|same": 0.5209651898734177,
+      "swap_p0|cross": 0.8224661071659135,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.9361163820366857,
+      "swap_p1|cross": 0.9522272433828276,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.9506641366223909
+     },
+     "n_parts": {
+      "give_p0|cross": 2534,
+      "give_p0|named": 0,
+      "give_p0|same": 2528,
+      "give_p1|cross": 2534,
+      "give_p1|named": 0,
+      "give_p1|same": 2528,
+      "swap_p0|cross": 1549,
+      "swap_p0|named": 0,
+      "swap_p0|same": 1581,
+      "swap_p1|cross": 1549,
+      "swap_p1|named": 0,
+      "swap_p1|same": 1581
+     },
+     "forced": false
     }
    },
    "saturation": {
@@ -3700,24 +3764,24 @@
        "swap_p1": "pad_carry_P5B3_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.8773402194964494,
-       "give_p1|same": 0.9800936768149883,
-       "give_p0|same": 0.9932753164556962,
-       "swap_p1|cross": 0.959974176888315,
        "give_p0|cross": 0.9771112865035517,
+       "swap_p0|same": 0.9415542710340398,
+       "swap_p0|cross": 0.8773402194964494,
+       "give_p0|same": 0.9932753164556962,
        "give_p1|cross": 0.9818468823993686,
        "swap_p1|same": 0.9563262684649968,
-       "swap_p0|same": 0.9415542710340398
+       "swap_p1|cross": 0.959974176888315,
+       "give_p1|same": 0.9800936768149883
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
-       "give_p1|same": "pad_carry_P3B5_first:target_val[disjoint]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P5B3_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P3B5_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[disjoint]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[disjoint]"
+       "swap_p1|cross": "pad_carry_P5B3_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P3B5_first:target_val[disjoint]"
       },
       "bar_additive": 1.0771240234375,
       "buyable_additive": false,
@@ -3739,24 +3803,24 @@
        "swap_p1": "pad_carry_P5B3_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.23821820529373788,
-       "give_p1|same": 0.9800936768149883,
-       "give_p0|same": 0.9932753164556962,
-       "swap_p1|cross": 0.959974176888315,
        "give_p0|cross": 0.9771112865035517,
+       "swap_p0|same": 0.24731182795698925,
+       "swap_p0|cross": 0.23821820529373788,
+       "give_p0|same": 0.9932753164556962,
        "give_p1|cross": 0.9818468823993686,
        "swap_p1|same": 0.9563262684649968,
-       "swap_p0|same": 0.24731182795698925
+       "swap_p1|cross": 0.959974176888315,
+       "give_p1|same": 0.9800936768149883
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[scored]",
-       "give_p1|same": "pad_carry_P3B5_first:target_val[disjoint]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P5B3_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[scored]",
+       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[scored]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P3B5_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[disjoint]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[scored]"
+       "swap_p1|cross": "pad_carry_P5B3_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P3B5_first:target_val[disjoint]"
       },
       "bar_additive": 0.96146240234375,
       "buyable_additive": true,
@@ -7408,24 +7472,24 @@
        "swap_p1": "pad_carry_P6B2_recent:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.8902517753389283,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.9780503550677857,
        "give_p0|cross": 0.9834254143646409,
+       "swap_p0|same": 0.9627488760436738,
+       "swap_p0|cross": 0.8902517753389283,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.978494623655914,
-       "swap_p0|same": 0.9627488760436738
+       "swap_p1|cross": 0.9780503550677857,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_recent:target_val[scored]",
        "give_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_recent:target_val[scored]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_recent:target_val[scored]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 1.0866455078125,
       "buyable_additive": false,
@@ -7447,24 +7511,24 @@
        "swap_p1": "pad_carry_P6B2_recent:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.23821820529373788,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.9780503550677857,
        "give_p0|cross": 0.9834254143646409,
+       "swap_p0|same": 0.24731182795698925,
+       "swap_p0|cross": 0.23821820529373788,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.978494623655914,
-       "swap_p0|same": 0.24731182795698925
+       "swap_p1|cross": 0.9780503550677857,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[scored]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_recent:target_val[scored]",
        "give_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[scored]",
+       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_recent:target_val[scored]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_recent:target_val[scored]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 0.967626953125,
       "buyable_additive": true,
@@ -7517,10 +7581,74 @@
     ],
     "admitted": false,
     "scores": {
+     "give_p0": 0.7576622882162574,
+     "give_p1": 0.3536074624024367,
+     "swap_p0": 0.7116366110922082,
+     "swap_p1": 0.8916298060564818,
+     "parts": {
+      "give_p0|cross": 0.8897266729500471,
+      "give_p0|named": null,
+      "give_p0|same": 0.6229571236300712,
+      "give_p1|cross": 0.3530631479736098,
+      "give_p1|named": null,
+      "give_p1|same": 0.3541626610267256,
+      "swap_p0|cross": 0.5930232558139535,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.8290453622207177,
+      "swap_p1|cross": 0.893296853625171,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.8899796885578876
+     },
+     "n_parts": {
+      "give_p0|cross": 5305,
+      "give_p0|named": 0,
+      "give_p0|same": 5201,
+      "give_p1|cross": 5305,
+      "give_p1|named": 0,
+      "give_p1|same": 5201,
+      "swap_p0|cross": 2924,
+      "swap_p0|named": 0,
+      "swap_p0|same": 2954,
+      "swap_p1|cross": 2924,
+      "swap_p1|named": 0,
+      "swap_p1|same": 2954
+     },
+     "forced": true
+    },
+    "free_run": {
      "give_p0": 0.7158766419189034,
      "give_p1": 0.3536074624024367,
      "swap_p0": 0.673018033344675,
-     "swap_p1": 0.79346716570262
+     "swap_p1": 0.79346716570262,
+     "parts": {
+      "give_p0|cross": 0.8054665409990575,
+      "give_p0|named": null,
+      "give_p0|same": 0.6244952893674294,
+      "give_p1|cross": 0.3530631479736098,
+      "give_p1|named": null,
+      "give_p1|same": 0.3541626610267256,
+      "swap_p0|cross": 0.5834473324213406,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.7616790792146242,
+      "swap_p1|cross": 0.7961696306429549,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.7907921462423833
+     },
+     "n_parts": {
+      "give_p0|cross": 5305,
+      "give_p0|named": 0,
+      "give_p0|same": 5201,
+      "give_p1|cross": 5305,
+      "give_p1|named": 0,
+      "give_p1|same": 5201,
+      "swap_p0|cross": 2924,
+      "swap_p0|named": 0,
+      "swap_p0|same": 2954,
+      "swap_p1|cross": 2924,
+      "swap_p1|named": 0,
+      "swap_p1|same": 2954
+     },
+     "forced": false
     }
    },
    "saturation": {
@@ -11165,24 +11293,24 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.626386359874193,
-       "give_p1|same": 0.8569505864256873,
-       "give_p0|same": 0.8952124591424726,
-       "swap_p1|cross": 0.7776858136070187,
        "give_p0|cross": 0.800942507068803,
+       "swap_p0|same": 0.7582938388625592,
+       "swap_p0|cross": 0.626386359874193,
+       "give_p0|same": 0.8952124591424726,
        "give_p1|cross": 0.8495758718190386,
        "swap_p1|same": 0.8012863913337847,
-       "swap_p0|same": 0.7582938388625592
+       "swap_p1|cross": 0.7776858136070187,
+       "give_p1|same": 0.8569505864256873
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[disjoint]",
-       "give_p1|same": "pad_carry_P2B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[disjoint]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P2B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
+       "give_p1|same": "pad_carry_P2B6_first:target_val[scored]"
       },
       "bar_additive": 0.888983154296875,
       "buyable_additive": true,
@@ -11204,24 +11332,24 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.186061910279755,
-       "give_p1|same": 0.8569505864256873,
-       "give_p0|same": 0.8952124591424726,
-       "swap_p1|cross": 0.7776858136070187,
        "give_p0|cross": 0.800942507068803,
+       "swap_p0|same": 0.291750167000668,
+       "swap_p0|cross": 0.186061910279755,
+       "give_p0|same": 0.8952124591424726,
        "give_p1|cross": 0.8495758718190386,
        "swap_p1|same": 0.8012863913337847,
-       "swap_p0|same": 0.291750167000668
+       "swap_p1|cross": 0.7776858136070187,
+       "give_p1|same": 0.8569505864256873
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[disjoint]",
-       "give_p1|same": "pad_carry_P2B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]",
+       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[disjoint]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P2B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
+       "give_p1|same": "pad_carry_P2B6_first:target_val[scored]"
       },
       "bar_additive": 0.8189453125,
       "buyable_additive": true,
@@ -11291,18 +11419,18 @@
        "forced": true
       },
       "one_hop": {
-       "per_slot": 0.738494873046875,
+       "per_slot": 0.742034912109375,
        "per_slot_row": "pad_carry_P3B5_first",
        "cells": {
         "give_p0": 0.8394250904245193,
         "give_p1": 1.0,
-        "swap_p0": 0.2349438584552569,
+        "swap_p0": 0.25467846206192585,
         "swap_p1": 0.9020074855392991
        },
        "cell_rows": {
         "give_p0": "pad_carry_P4B4_first:same:own_gold/cross:own_gold",
         "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val",
-        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev",
+        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other",
         "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val"
        },
        "parts": {
@@ -11310,7 +11438,7 @@
         "give_p0|same": 1.0,
         "give_p1|cross": 1.0,
         "give_p1|same": 1.0,
-        "swap_p0|cross": 0.1853625170998632,
+        "swap_p0|cross": 0.22503419972640218,
         "swap_p0|same": 0.2840216655382532,
         "swap_p1|cross": 0.8953488372093024,
         "swap_p1|same": 0.9085985104942451
@@ -11320,7 +11448,7 @@
         "give_p0|same": "pad_carry_P0B6_first:own_gold",
         "give_p1|cross": "pad_carry_P0B6_first:target_val",
         "give_p1|same": "pad_carry_P0B6_first:target_val",
-        "swap_p0|cross": "pad_carry_P0B0_first:copy_prev",
+        "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other",
         "swap_p0|same": "pad_carry_P0B0_first:ref_sym",
         "swap_p1|cross": "pad_carry_P6B2_first:target_val",
         "swap_p1|same": "pad_carry_P6B2_first:target_val"
@@ -13095,18 +13223,18 @@
        "forced": true
       },
       "one_hop": {
-       "per_slot": 0.728729248046875,
+       "per_slot": 0.7308502197265625,
        "per_slot_row": "pad_carry_P3B5_first",
        "cells": {
         "give_p0": 0.8345146824822798,
         "give_p1": 1.0,
-        "swap_p0": 0.23867320641782358,
+        "swap_p0": 0.25022861418239256,
         "swap_p1": 0.8936736220799734
        },
        "cell_rows": {
         "give_p0": "pad_carry_P4B4_first:same:own_gold/cross:own_gold",
         "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val",
-        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev",
+        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other",
         "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val"
        },
        "parts": {
@@ -13114,7 +13242,7 @@
         "give_p0|same": 1.0,
         "give_p1|cross": 1.0,
         "give_p1|same": 1.0,
-        "swap_p0|cross": 0.186061910279755,
+        "swap_p0|cross": 0.2090713458036749,
         "swap_p0|same": 0.291750167000668,
         "swap_p1|cross": 0.8895878165866579,
         "swap_p1|same": 0.8977955911823647
@@ -13124,7 +13252,7 @@
         "give_p0|same": "pad_carry_P0B6_first:own_gold",
         "give_p1|cross": "pad_carry_P0B6_first:target_val",
         "give_p1|same": "pad_carry_P0B6_first:target_val",
-        "swap_p0|cross": "pad_carry_P0B0_first:copy_prev",
+        "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other",
         "swap_p0|same": "pad_carry_P0B0_first:ref_sym",
         "swap_p1|cross": "pad_carry_P6B2_first:target_val",
         "swap_p1|same": "pad_carry_P6B2_first:target_val"
@@ -14873,76 +15001,76 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.6993844049247606,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.8953488372093024,
        "give_p0|cross": 0.9046182846371348,
+       "swap_p0|same": 0.8490182802979012,
+       "swap_p0|cross": 0.6993844049247606,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.9085985104942451,
-       "swap_p0|same": 0.8490182802979012
+       "swap_p1|cross": 0.8953488372093024,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P4B4_recent:own_gold[scored]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|cross": "pad_carry_P4B4_recent:own_gold[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 0.963018798828125,
       "buyable_additive": true,
       "bar": 0.8480777740478516
      },
      "one_hop": {
-      "per_slot": 0.738494873046875,
+      "per_slot": 0.742034912109375,
       "per_slot_row": "pad_carry_P3B5_first[scored]",
       "cells": {
        "give_p0": 0.8394250904245193,
        "give_p1": 1.0,
-       "swap_p0": 0.23867320641782358,
+       "swap_p0": 0.25467846206192585,
        "swap_p1": 0.9020074855392991
       },
       "cell_rows": {
        "give_p0": "pad_carry_P4B4_first:same:own_gold/cross:own_gold[scored]",
        "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val[scored]",
-       "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev[disjoint]",
+       "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other[scored]",
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.186061910279755,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.8953488372093024,
        "give_p0|cross": 0.9046182846371348,
+       "swap_p0|same": 0.291750167000668,
+       "swap_p0|cross": 0.22503419972640218,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.9085985104942451,
-       "swap_p0|same": 0.291750167000668
+       "swap_p1|cross": 0.8953488372093024,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[disjoint]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]",
+       "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
-      "bar_additive": 0.888494873046875,
+      "bar_additive": 0.892034912109375,
       "buyable_additive": true,
-      "bar": 0.7875270843505859
+      "bar": 0.7904033660888672
      }
     },
     "two_hop": {
      "swap_p0|cross": {
-      "floor": 0.186061910279755,
-      "row": "pad_carry_P0B0_first:copy_prev[disjoint]",
+      "floor": 0.22503419972640218,
+      "row": "pad_carry_P0B0_first:prev_gold_other[scored]",
       "unrestricted": 0.6993844049247606,
       "unrestricted_row": "pad_carry_P4B4_recent:own_gold[scored]",
-      "bar": 0.3386753021023009
+      "bar": 0.37034028727770174
      },
      "swap_p0|same": {
       "floor": 0.291750167000668,
@@ -14982,10 +15110,74 @@
     ],
     "admitted": false,
     "scores": {
+     "give_p0": 0.6315524193548387,
+     "give_p1": 0.29158266129032256,
+     "swap_p0": 0.5849034926470589,
+     "swap_p1": 0.8025045955882353,
+     "parts": {
+      "give_p0|cross": 0.7978644151974175,
+      "give_p0|named": null,
+      "give_p0|same": 0.46022000511639805,
+      "give_p1|cross": 0.29227712937670725,
+      "give_p1|named": null,
+      "give_p1|same": 0.2908672294704528,
+      "swap_p0|cross": 0.46505125815470644,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.7014959202175884,
+      "swap_p1|cross": 0.8080149114631874,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.7971441523118767
+     },
+     "n_parts": {
+      "give_p0|cross": 8054,
+      "give_p0|named": 0,
+      "give_p0|same": 7818,
+      "give_p1|cross": 8054,
+      "give_p1|named": 0,
+      "give_p1|same": 7818,
+      "swap_p0|cross": 4292,
+      "swap_p0|named": 0,
+      "swap_p0|same": 4412,
+      "swap_p1|cross": 4292,
+      "swap_p1|named": 0,
+      "swap_p1|same": 4412
+     },
+     "forced": true
+    },
+    "free_run": {
      "give_p0": 0.547820060483871,
      "give_p1": 0.29158266129032256,
      "swap_p0": 0.5130974264705882,
-     "swap_p1": 0.6208639705882353
+     "swap_p1": 0.6208639705882353,
+     "parts": {
+      "give_p0|cross": 0.629376707226223,
+      "give_p0|named": null,
+      "give_p0|same": 0.4638014837554362,
+      "give_p1|cross": 0.29227712937670725,
+      "give_p1|named": null,
+      "give_p1|same": 0.2908672294704528,
+      "swap_p0|cross": 0.44594594594594594,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.5784224841341795,
+      "swap_p1|cross": 0.6241845293569431,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.6176337262012692
+     },
+     "n_parts": {
+      "give_p0|cross": 8054,
+      "give_p0|named": 0,
+      "give_p0|same": 7818,
+      "give_p1|cross": 8054,
+      "give_p1|named": 0,
+      "give_p1|same": 7818,
+      "swap_p0|cross": 4292,
+      "swap_p0|named": 0,
+      "swap_p0|same": 4412,
+      "swap_p1|cross": 4292,
+      "swap_p1|named": 0,
+      "swap_p1|same": 4412
+     },
+     "forced": false
     }
    },
    "saturation": {
@@ -18630,24 +18822,24 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.5142124883504194,
-       "give_p1|same": 0.7240982348426708,
-       "give_p0|same": 0.7701458173445894,
-       "swap_p1|cross": 0.6421248835041938,
        "give_p0|cross": 0.6304142830200541,
+       "swap_p0|same": 0.585481148002251,
+       "swap_p0|cross": 0.5142124883504194,
+       "give_p0|same": 0.7701458173445894,
        "give_p1|cross": 0.7201390613359822,
        "swap_p1|same": 0.6230725942599887,
-       "swap_p0|same": 0.585481148002251
+       "swap_p1|cross": 0.6421248835041938,
+       "give_p1|same": 0.7240982348426708
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
-       "give_p1|same": "pad_carry_P2B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P2B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[disjoint]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P2B6_first:target_val[scored]"
       },
       "bar_additive": 0.7335367838541667,
       "buyable_additive": true,
@@ -18669,24 +18861,24 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.1863932898415657,
-       "give_p1|same": 0.7240982348426708,
-       "give_p0|same": 0.7701458173445894,
-       "swap_p1|cross": 0.6421248835041938,
        "give_p0|cross": 0.6304142830200541,
+       "swap_p0|same": 0.3036578503095104,
+       "swap_p0|cross": 0.1863932898415657,
+       "give_p0|same": 0.7701458173445894,
        "give_p1|cross": 0.7201390613359822,
        "swap_p1|same": 0.6230725942599887,
-       "swap_p0|same": 0.3036578503095104
+       "swap_p1|cross": 0.6421248835041938,
+       "give_p1|same": 0.7240982348426708
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[scored]",
-       "give_p1|same": "pad_carry_P2B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]",
+       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[scored]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P2B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[disjoint]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P2B6_first:target_val[scored]"
       },
       "bar_additive": 0.6978312174479167,
       "buyable_additive": true,
@@ -18756,18 +18948,18 @@
        "forced": true
       },
       "one_hop": {
-       "per_slot": 0.69384765625,
+       "per_slot": 0.6961263020833334,
        "per_slot_row": "pad_carry_P2B6_first",
        "cells": {
         "give_p0": 0.7619707661290323,
         "give_p1": 1.0,
-        "swap_p0": 0.24195772058823528,
+        "swap_p0": 0.2548253676470588,
         "swap_p1": 0.8345588235294118
        },
        "cell_rows": {
         "give_p0": "pad_carry_P3B5_first:same:own_gold/cross:own_gold",
         "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val",
-        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev",
+        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other",
         "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val"
        },
        "parts": {
@@ -18775,7 +18967,7 @@
         "give_p0|same": 1.0,
         "give_p1|cross": 1.0,
         "give_p1|same": 1.0,
-        "swap_p0|cross": 0.1863932898415657,
+        "swap_p0|cross": 0.2124883504193849,
         "swap_p0|same": 0.2960108794197643,
         "swap_p1|cross": 0.8352749301025163,
         "swap_p1|same": 0.8338621940163191
@@ -18785,7 +18977,7 @@
         "give_p0|same": "pad_carry_P0B6_first:own_gold",
         "give_p1|cross": "pad_carry_P0B6_first:target_val",
         "give_p1|same": "pad_carry_P0B6_first:target_val",
-        "swap_p0|cross": "pad_carry_P0B0_first:copy_prev",
+        "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other",
         "swap_p0|same": "pad_carry_P0B0_first:ref_sym",
         "swap_p1|cross": "pad_carry_P6B2_first:target_val",
         "swap_p1|same": "pad_carry_P6B2_first:target_val"
@@ -18799,15 +18991,15 @@
       },
       "rows": {
        "pad_carry_P0B0_first": {
-        "per_slot": 0.3071695963541667,
+        "per_slot": 0.3105265299479167,
         "cells": {
          "give_p0": [
           0.35622479838709675,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2502297794117647,
@@ -18821,15 +19013,15 @@
         "W": 1
        },
        "pad_carry_P0B0_recent": {
-        "per_slot": 0.3071695963541667,
+        "per_slot": 0.3105265299479167,
         "cells": {
          "give_p0": [
           0.35622479838709675,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2502297794117647,
@@ -19107,15 +19299,15 @@
         "W": 7
        },
        "pad_carry_P1B0_first": {
-        "per_slot": 0.3376261393229167,
+        "per_slot": 0.3409830729166667,
         "cells": {
          "give_p0": [
           0.3879788306451613,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2883731617647059,
@@ -19129,15 +19321,15 @@
         "W": 2
        },
        "pad_carry_P1B0_recent": {
-        "per_slot": 0.3229166666666667,
+        "per_slot": 0.3262736002604167,
         "cells": {
          "give_p0": [
           0.3654233870967742,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.283203125,
@@ -19415,15 +19607,15 @@
         "W": 8
        },
        "pad_carry_P2B0_first": {
-        "per_slot": 0.3693440755208333,
+        "per_slot": 0.3727010091145833,
         "cells": {
          "give_p0": [
           0.4196068548387097,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3337545955882353,
@@ -19437,15 +19629,15 @@
         "W": 3
        },
        "pad_carry_P2B0_recent": {
-        "per_slot": 0.3711954752604167,
+        "per_slot": 0.3745524088541667,
         "cells": {
          "give_p0": [
           0.41557459677419356,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3369715073529412,
@@ -19723,15 +19915,15 @@
         "W": 9
        },
        "pad_carry_P3B0_first": {
-        "per_slot": 0.4029541015625,
+        "per_slot": 0.40631103515625,
         "cells": {
          "give_p0": [
           0.4543850806451613,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3786764705882353,
@@ -19745,15 +19937,15 @@
         "W": 4
        },
        "pad_carry_P3B0_recent": {
-        "per_slot": 0.4030558268229167,
+        "per_slot": 0.4064127604166667,
         "cells": {
          "give_p0": [
           0.4490297379032258,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3856847426470588,
@@ -19987,15 +20179,15 @@
         "W": 9
        },
        "pad_carry_P4B0_first": {
-        "per_slot": 0.4359537760416667,
+        "per_slot": 0.4393107096354167,
         "cells": {
          "give_p0": [
           0.4889742943548387,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.42658547794117646,
@@ -20009,15 +20201,15 @@
         "W": 5
        },
        "pad_carry_P4B0_recent": {
-        "per_slot": 0.4391886393229167,
+        "per_slot": 0.4425455729166667,
         "cells": {
          "give_p0": [
           0.48979334677419356,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.43221507352941174,
@@ -20207,15 +20399,15 @@
         "W": 9
        },
        "pad_carry_P5B0_first": {
-        "per_slot": 0.4709676106770833,
+        "per_slot": 0.4743245442708333,
         "cells": {
          "give_p0": [
           0.526335685483871,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4733455882352941,
@@ -20229,15 +20421,15 @@
         "W": 6
        },
        "pad_carry_P5B0_recent": {
-        "per_slot": 0.4741414388020833,
+        "per_slot": 0.4774983723958333,
         "cells": {
          "give_p0": [
           0.5300529233870968,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4797794117647059,
@@ -20383,15 +20575,15 @@
         "W": 9
        },
        "pad_carry_P6B0_first": {
-        "per_slot": 0.4974568684895833,
+        "per_slot": 0.5008138020833334,
         "cells": {
          "give_p0": [
           0.5554435483870968,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.5102251838235294,
@@ -20405,15 +20597,15 @@
         "W": 7
        },
        "pad_carry_P6B0_recent": {
-        "per_slot": 0.4974568684895833,
+        "per_slot": 0.5008138020833334,
         "cells": {
          "give_p0": [
           0.5554435483870968,
           "own_gold"
          ],
          "give_p1": [
-          0.29158266129032256,
-          "target_val"
+          0.30197832661290325,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.5102251838235294,
@@ -20560,18 +20752,18 @@
        "forced": true
       },
       "one_hop": {
-       "per_slot": 0.69171142578125,
+       "per_slot": 0.6953531901041666,
        "per_slot_row": "pad_carry_P2B6_first",
        "cells": {
         "give_p0": 0.7614119738429306,
         "give_p1": 1.0,
-        "swap_p0": 0.24424929178470256,
+        "swap_p0": 0.26453257790368273,
         "swap_p1": 0.8366005665722379
        },
        "cell_rows": {
         "give_p0": "pad_carry_P3B5_first:same:own_gold/cross:own_gold",
         "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val",
-        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev",
+        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other",
         "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val"
        },
        "parts": {
@@ -20579,7 +20771,7 @@
         "give_p0|same": 1.0,
         "give_p1|cross": 1.0,
         "give_p1|same": 1.0,
-        "swap_p0|cross": 0.18402738163148888,
+        "swap_p0|cross": 0.2248716486023959,
         "swap_p0|same": 0.3036578503095104,
         "swap_p1|cross": 0.8424415288077581,
         "swap_p1|same": 0.8308384918401801
@@ -20589,7 +20781,7 @@
         "give_p0|same": "pad_carry_P0B6_first:own_gold",
         "give_p1|cross": "pad_carry_P0B6_first:target_val",
         "give_p1|same": "pad_carry_P0B6_first:target_val",
-        "swap_p0|cross": "pad_carry_P0B0_first:copy_prev",
+        "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other",
         "swap_p0|same": "pad_carry_P0B0_first:ref_sym",
         "swap_p1|cross": "pad_carry_P6B2_first:target_val",
         "swap_p1|same": "pad_carry_P6B2_first:target_val"
@@ -20603,15 +20795,15 @@
       },
       "rows": {
        "pad_carry_P0B0_first": {
-        "per_slot": 0.3072001139322917,
+        "per_slot": 0.310577392578125,
         "cells": {
          "give_p0": [
           0.3579772712843629,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.253314447592068,
@@ -20625,15 +20817,15 @@
         "W": 1
        },
        "pad_carry_P0B0_recent": {
-        "per_slot": 0.3072001139322917,
+        "per_slot": 0.310577392578125,
         "cells": {
          "give_p0": [
           0.3579772712843629,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.253314447592068,
@@ -20911,15 +21103,15 @@
         "W": 7
        },
        "pad_carry_P1B0_first": {
-        "per_slot": 0.3375956217447917,
+        "per_slot": 0.340972900390625,
         "cells": {
          "give_p0": [
           0.3904196558948638,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.28776203966005665,
@@ -20933,15 +21125,15 @@
         "W": 2
        },
        "pad_carry_P1B0_recent": {
-        "per_slot": 0.3216756184895833,
+        "per_slot": 0.3250528971354167,
         "cells": {
          "give_p0": [
           0.36711954796520857,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2811331444759207,
@@ -21219,15 +21411,15 @@
         "W": 8
        },
        "pad_carry_P2B0_first": {
-        "per_slot": 0.3709004720052083,
+        "per_slot": 0.3742777506510417,
         "cells": {
          "give_p0": [
           0.42241762427782364,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.33314447592067986,
@@ -21241,15 +21433,15 @@
         "W": 3
        },
        "pad_carry_P2B0_recent": {
-        "per_slot": 0.3701578776041667,
+        "per_slot": 0.37353515625,
         "cells": {
          "give_p0": [
           0.4174020697098597,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.32991501416430596,
@@ -21527,15 +21719,15 @@
         "W": 9
        },
        "pad_carry_P3B0_first": {
-        "per_slot": 0.4057413736979167,
+        "per_slot": 0.40911865234375,
         "cells": {
          "give_p0": [
           0.45879626690368863,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3789801699716714,
@@ -21549,15 +21741,15 @@
         "W": 4
        },
        "pad_carry_P3B0_recent": {
-        "per_slot": 0.4022420247395833,
+        "per_slot": 0.4056193033854167,
         "cells": {
          "give_p0": [
           0.4494317821090724,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.38056657223796037,
@@ -21791,15 +21983,15 @@
         "W": 9
        },
        "pad_carry_P4B0_first": {
-        "per_slot": 0.4417622884114583,
+        "per_slot": 0.4451395670572917,
         "cells": {
          "give_p0": [
           0.4976191987810298,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.42900849858356943,
@@ -21813,15 +22005,15 @@
         "W": 5
        },
        "pad_carry_P4B0_recent": {
-        "per_slot": 0.440765380859375,
+        "per_slot": 0.4441426595052083,
         "cells": {
          "give_p0": [
           0.4909846993841661,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4326345609065156,
@@ -22011,15 +22203,15 @@
         "W": 9
        },
        "pad_carry_P5B0_first": {
-        "per_slot": 0.4737141927083333,
+        "per_slot": 0.4770914713541667,
         "cells": {
          "give_p0": [
           0.5311726239603834,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.47274787535410767,
@@ -22033,15 +22225,15 @@
         "W": 6
        },
        "pad_carry_P5B0_recent": {
-        "per_slot": 0.4753011067708333,
+        "per_slot": 0.4786783854166667,
         "cells": {
          "give_p0": [
           0.5313313440416482,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4771671388101983,
@@ -22187,15 +22379,15 @@
         "W": 9
        },
        "pad_carry_P6B0_first": {
-        "per_slot": 0.49871826171875,
+        "per_slot": 0.5020955403645834,
         "cells": {
          "give_p0": [
           0.5591073582629674,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.5064022662889518,
@@ -22209,15 +22401,15 @@
         "W": 7
        },
        "pad_carry_P6B0_recent": {
-        "per_slot": 0.49871826171875,
+        "per_slot": 0.5020955403645834,
         "cells": {
          "give_p0": [
           0.5591073582629674,
           "own_gold"
          ],
          "give_p1": [
-          0.2922036696082788,
-          "target_val"
+          0.3027426830042537,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.5064022662889518,
@@ -22338,76 +22530,76 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[disjoint]"
       },
       "parts": {
-       "swap_p0|cross": 0.603215284249767,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.8424415288077581,
        "give_p0|cross": 0.8360470233230654,
+       "swap_p0|same": 0.7472801450589301,
+       "swap_p0|cross": 0.603215284249767,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.8338621940163191,
-       "swap_p0|same": 0.7472801450589301
+       "swap_p1|cross": 0.8424415288077581,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 0.88626708984375,
       "buyable_additive": true,
       "bar": 0.7857170104980469
      },
      "one_hop": {
-      "per_slot": 0.69384765625,
+      "per_slot": 0.6961263020833334,
       "per_slot_row": "pad_carry_P2B6_first[scored]",
       "cells": {
        "give_p0": 0.7619707661290323,
        "give_p1": 1.0,
-       "swap_p0": 0.24424929178470256,
+       "swap_p0": 0.26453257790368273,
        "swap_p1": 0.8366005665722379
       },
       "cell_rows": {
        "give_p0": "pad_carry_P3B5_first:same:own_gold/cross:own_gold[scored]",
        "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val[scored]",
-       "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev[disjoint]",
+       "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other[disjoint]",
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[disjoint]"
       },
       "parts": {
-       "swap_p0|cross": 0.1863932898415657,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.8424415288077581,
        "give_p0|cross": 0.8360470233230654,
+       "swap_p0|same": 0.3036578503095104,
+       "swap_p0|cross": 0.2248716486023959,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.8338621940163191,
-       "swap_p0|same": 0.3036578503095104
+       "swap_p1|cross": 0.8424415288077581,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[scored]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]",
+       "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other[disjoint]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
-      "bar_additive": 0.84384765625,
+      "bar_additive": 0.8461263020833334,
       "buyable_additive": true,
-      "bar": 0.751251220703125
+      "bar": 0.7531026204427084
      }
     },
     "two_hop": {
      "swap_p0|cross": {
-      "floor": 0.1863932898415657,
-      "row": "pad_carry_P0B0_first:copy_prev[scored]",
+      "floor": 0.2248716486023959,
+      "row": "pad_carry_P0B0_first:prev_gold_other[disjoint]",
       "unrestricted": 0.603215284249767,
       "unrestricted_row": "pad_carry_P5B3_first:own_gold[scored]",
-      "bar": 0.3389445479962721
+      "bar": 0.37020821448944663
      },
      "swap_p0|same": {
       "floor": 0.3036578503095104,
@@ -22447,10 +22639,74 @@
     ],
     "admitted": false,
     "scores": {
+     "give_p0": 0.5740688086437304,
+     "give_p1": 0.25765330300445455,
+     "swap_p0": 0.5353163037887879,
+     "swap_p1": 0.7592148122749871,
+     "parts": {
+      "give_p0|cross": 0.7536857920931543,
+      "give_p0|named": null,
+      "give_p0|same": 0.3910838993590357,
+      "give_p1|cross": 0.25392055592074375,
+      "give_p1|named": null,
+      "give_p1|same": 0.26145604132784844,
+      "swap_p0|cross": 0.4184421339696608,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.6535609587859976,
+      "swap_p1|cross": 0.7577978523947503,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.7606483876530437
+     },
+     "n_parts": {
+      "give_p0|cross": 10649,
+      "give_p0|named": 0,
+      "give_p0|same": 10453,
+      "give_p1|cross": 10649,
+      "give_p1|named": 0,
+      "give_p1|same": 10453,
+      "swap_p0|cross": 5867,
+      "swap_p0|named": 0,
+      "swap_p0|same": 5799,
+      "swap_p1|cross": 5867,
+      "swap_p1|named": 0,
+      "swap_p1|same": 5799
+     },
+     "forced": true
+    },
+    "free_run": {
      "give_p0": 0.4654535115154962,
      "give_p1": 0.25765330300445455,
      "swap_p0": 0.45319732556146064,
-     "swap_p1": 0.5318875364306532
+     "swap_p1": 0.5318875364306532,
+     "parts": {
+      "give_p0|cross": 0.5371396375246502,
+      "give_p0|named": null,
+      "give_p0|same": 0.39242322778149813,
+      "give_p1|cross": 0.25392055592074375,
+      "give_p1|named": null,
+      "give_p1|same": 0.26145604132784844,
+      "swap_p0|cross": 0.39065962161240836,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.5164683566132092,
+      "swap_p1|cross": 0.532469746037157,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.5312984997413347
+     },
+     "n_parts": {
+      "give_p0|cross": 10649,
+      "give_p0|named": 0,
+      "give_p0|same": 10453,
+      "give_p1|cross": 10649,
+      "give_p1|named": 0,
+      "give_p1|same": 10453,
+      "swap_p0|cross": 5867,
+      "swap_p0|named": 0,
+      "swap_p0|same": 5799,
+      "swap_p1|cross": 5867,
+      "swap_p1|named": 0,
+      "swap_p1|same": 5799
+     },
+     "forced": false
     }
    },
    "saturation": {
@@ -26095,24 +26351,24 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.4172818063395571,
-       "give_p1|same": 0.6132715459583413,
-       "give_p0|same": 0.6473739596288147,
-       "swap_p1|cross": 0.5287199590932333,
        "give_p0|cross": 0.528312517607287,
+       "swap_p0|same": 0.5062941886532161,
+       "swap_p0|cross": 0.4172818063395571,
+       "give_p0|same": 0.6473739596288147,
        "give_p1|cross": 0.6079444079256269,
        "swap_p1|same": 0.5319882738403173,
-       "swap_p0|same": 0.5062941886532161
+       "swap_p1|cross": 0.5287199590932333,
+       "give_p1|same": 0.6132715459583413
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[disjoint]",
-       "give_p1|same": "pad_carry_P2B6_first:target_val[disjoint]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[disjoint]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P2B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P2B6_first:target_val[disjoint]"
       },
       "bar_additive": 0.640570068359375,
       "buyable_additive": true,
@@ -26134,24 +26390,24 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.1817629179331307,
-       "give_p1|same": 0.6132715459583413,
-       "give_p0|same": 0.6473739596288147,
-       "swap_p1|cross": 0.5287199590932333,
        "give_p0|cross": 0.528312517607287,
+       "swap_p0|same": 0.32022762545266426,
+       "swap_p0|cross": 0.1817629179331307,
+       "give_p0|same": 0.6473739596288147,
        "give_p1|cross": 0.6079444079256269,
        "swap_p1|same": 0.5319882738403173,
-       "swap_p0|same": 0.32022762545266426
+       "swap_p1|cross": 0.5287199590932333,
+       "give_p1|same": 0.6132715459583413
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:target_sym[disjoint]",
-       "give_p1|same": "pad_carry_P2B6_first:target_val[disjoint]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[scored]",
+       "swap_p0|cross": "pad_carry_P0B0_first:target_sym[disjoint]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P2B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P2B6_first:target_val[disjoint]"
       },
       "bar_additive": 0.6144241333007813,
       "buyable_additive": true,
@@ -26221,18 +26477,18 @@
        "forced": true
       },
       "one_hop": {
-       "per_slot": 0.677825927734375,
+       "per_slot": 0.68182373046875,
        "per_slot_row": "pad_carry_P2B6_recent",
        "cells": {
         "give_p0": 0.7264240356364325,
         "give_p1": 1.0,
-        "swap_p0": 0.24901422938453627,
+        "swap_p0": 0.27147265558031886,
         "swap_p1": 0.7943596776958683
        },
        "cell_rows": {
         "give_p0": "pad_carry_P3B5_recent:same:own_gold/cross:own_gold",
         "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val",
-        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev",
+        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other",
         "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val"
        },
        "parts": {
@@ -26240,7 +26496,7 @@
         "give_p0|same": 1.0,
         "give_p1|cross": 1.0,
         "give_p1|same": 1.0,
-        "swap_p0|cross": 0.17862621441963525,
+        "swap_p0|cross": 0.22328276802454405,
         "swap_p0|same": 0.32022762545266426,
         "swap_p1|cross": 0.7893301516959264,
         "swap_p1|same": 0.7994481807208139
@@ -26250,7 +26506,7 @@
         "give_p0|same": "pad_carry_P0B6_first:own_gold",
         "give_p1|cross": "pad_carry_P0B6_first:target_val",
         "give_p1|same": "pad_carry_P0B6_first:target_val",
-        "swap_p0|cross": "pad_carry_P0B0_first:copy_prev",
+        "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other",
         "swap_p0|same": "pad_carry_P0B0_first:ref_sym",
         "swap_p1|cross": "pad_carry_P6B2_first:target_val",
         "swap_p1|same": "pad_carry_P6B2_first:target_val"
@@ -26264,15 +26520,15 @@
       },
       "rows": {
        "pad_carry_P0B0_first": {
-        "per_slot": 0.27178955078125,
+        "per_slot": 0.288604736328125,
         "cells": {
          "give_p0": [
           0.31091839636053453,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.23427052974455684,
@@ -26286,15 +26542,15 @@
         "W": 1
        },
        "pad_carry_P0B0_recent": {
-        "per_slot": 0.27178955078125,
+        "per_slot": 0.288604736328125,
         "cells": {
          "give_p0": [
           0.31091839636053453,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.23427052974455684,
@@ -26572,15 +26828,15 @@
         "W": 7
        },
        "pad_carry_P1B0_first": {
-        "per_slot": 0.2996368408203125,
+        "per_slot": 0.3164520263671875,
         "cells": {
          "give_p0": [
           0.3423372192209269,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2631578947368421,
@@ -26594,15 +26850,15 @@
         "W": 2
        },
        "pad_carry_P1B0_recent": {
-        "per_slot": 0.2872772216796875,
+        "per_slot": 0.3040924072265625,
         "cells": {
          "give_p0": [
           0.32428205857264714,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2616149494256815,
@@ -26880,15 +27136,15 @@
         "W": 8
        },
        "pad_carry_P2B0_first": {
-        "per_slot": 0.32916259765625,
+        "per_slot": 0.345977783203125,
         "cells": {
          "give_p0": [
           0.37309259785802296,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2996742671009772,
@@ -26902,15 +27158,15 @@
         "W": 3
        },
        "pad_carry_P2B0_recent": {
-        "per_slot": 0.3361358642578125,
+        "per_slot": 0.3529510498046875,
         "cells": {
          "give_p0": [
           0.38062742867974597,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3043031030344591,
@@ -27188,15 +27444,15 @@
         "W": 9
        },
        "pad_carry_P3B0_first": {
-        "per_slot": 0.3614501953125,
+        "per_slot": 0.378265380859375,
         "cells": {
          "give_p0": [
           0.40816036394654537,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.33653351620092575,
@@ -27210,15 +27466,15 @@
         "W": 4
        },
        "pad_carry_P3B0_recent": {
-        "per_slot": 0.366607666015625,
+        "per_slot": 0.3834228515625,
         "cells": {
          "give_p0": [
           0.41451047294095344,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3485342019543974,
@@ -27452,15 +27708,15 @@
         "W": 9
        },
        "pad_carry_P4B0_first": {
-        "per_slot": 0.3967742919921875,
+        "per_slot": 0.4135894775390625,
         "cells": {
          "give_p0": [
           0.4455501848166051,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.38539345105434597,
@@ -27474,15 +27730,15 @@
         "W": 5
        },
        "pad_carry_P4B0_recent": {
-        "per_slot": 0.405059814453125,
+        "per_slot": 0.421875,
         "cells": {
          "give_p0": [
           0.4564496256279026,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.39996571232641864,
@@ -27672,15 +27928,15 @@
         "W": 9
        },
        "pad_carry_P5B0_first": {
-        "per_slot": 0.4311065673828125,
+        "per_slot": 0.4479217529296875,
         "cells": {
          "give_p0": [
           0.48573594919912805,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.42773872792731016,
@@ -27694,15 +27950,15 @@
         "W": 6
        },
        "pad_carry_P5B0_recent": {
-        "per_slot": 0.4368133544921875,
+        "per_slot": 0.4536285400390625,
         "cells": {
          "give_p0": [
           0.49421855748270305,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4371678381621807,
@@ -27848,15 +28104,15 @@
         "W": 9
        },
        "pad_carry_P6B0_first": {
-        "per_slot": 0.4600830078125,
+        "per_slot": 0.476898193359375,
         "cells": {
          "give_p0": [
           0.5198559378257985,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4670838333619064,
@@ -27870,15 +28126,15 @@
         "W": 7
        },
        "pad_carry_P6B0_recent": {
-        "per_slot": 0.4600830078125,
+        "per_slot": 0.476898193359375,
         "cells": {
          "give_p0": [
           0.5198559378257985,
           "own_gold"
          ],
          "give_p1": [
-          0.25765330300445455,
-          "target_val"
+          0.3098758411524974,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4670838333619064,
@@ -28025,18 +28281,18 @@
        "forced": true
       },
       "one_hop": {
-       "per_slot": 0.6784820556640625,
+       "per_slot": 0.68212890625,
        "per_slot_row": "pad_carry_P2B6_first",
        "cells": {
         "give_p0": 0.7266377820394441,
         "give_p1": 1.0,
-        "swap_p0": 0.2440877290870853,
+        "swap_p0": 0.2646036310571269,
         "swap_p1": 0.789776385252586
        },
        "cell_rows": {
         "give_p0": "pad_carry_P3B5_first:same:own_gold/cross:own_gold",
         "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val",
-        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:target_sym",
+        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other",
         "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val"
        },
        "parts": {
@@ -28044,7 +28300,7 @@
         "give_p0|same": 1.0,
         "give_p1|cross": 1.0,
         "give_p1|same": 1.0,
-        "swap_p0|cross": 0.1817629179331307,
+        "swap_p0|cross": 0.22327399044724272,
         "swap_p0|same": 0.304989816700611,
         "swap_p1|cross": 0.7915762049500651,
         "swap_p1|same": 0.7880176510522743
@@ -28054,7 +28310,7 @@
         "give_p0|same": "pad_carry_P0B6_first:own_gold",
         "give_p1|cross": "pad_carry_P0B6_first:target_val",
         "give_p1|same": "pad_carry_P0B6_first:target_val",
-        "swap_p0|cross": "pad_carry_P0B0_first:target_sym",
+        "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other",
         "swap_p0|same": "pad_carry_P0B0_first:ref_sym",
         "swap_p1|cross": "pad_carry_P6B2_first:target_val",
         "swap_p1|same": "pad_carry_P6B2_first:target_val"
@@ -28068,15 +28324,15 @@
       },
       "rows": {
        "pad_carry_P0B0_first": {
-        "per_slot": 0.2726898193359375,
+        "per_slot": 0.2888336181640625,
         "cells": {
          "give_p0": [
           0.3109832611217653,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.23073951671745568,
@@ -28090,15 +28346,15 @@
         "W": 1
        },
        "pad_carry_P0B0_recent": {
-        "per_slot": 0.2726898193359375,
+        "per_slot": 0.2888336181640625,
         "cells": {
          "give_p0": [
           0.3109832611217653,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.23073951671745568,
@@ -28376,15 +28632,15 @@
         "W": 7
        },
        "pad_carry_P1B0_first": {
-        "per_slot": 0.30049896240234375,
+        "per_slot": 0.31664276123046875,
         "cells": {
          "give_p0": [
           0.3416909344887184,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2593673548220954,
@@ -28398,15 +28654,15 @@
         "W": 2
        },
        "pad_carry_P1B0_recent": {
-        "per_slot": 0.2883148193359375,
+        "per_slot": 0.3044586181640625,
         "cells": {
          "give_p0": [
           0.32284489902218433,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2622859350186703,
@@ -28684,15 +28940,15 @@
         "W": 8
        },
        "pad_carry_P2B0_first": {
-        "per_slot": 0.33113861083984375,
+        "per_slot": 0.34728240966796875,
         "cells": {
          "give_p0": [
           0.37393754291261216,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2948624404480879,
@@ -28706,15 +28962,15 @@
         "W": 3
        },
        "pad_carry_P2B0_recent": {
-        "per_slot": 0.3364105224609375,
+        "per_slot": 0.3525543212890625,
         "cells": {
          "give_p0": [
           0.37599734829651726,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3077385295506245,
@@ -28992,15 +29248,15 @@
         "W": 9
        },
        "pad_carry_P3B0_first": {
-        "per_slot": 0.36275482177734375,
+        "per_slot": 0.37889862060546875,
         "cells": {
          "give_p0": [
           0.4092620214503871,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.332203098845444,
@@ -29014,15 +29270,15 @@
         "W": 4
        },
        "pad_carry_P3B0_recent": {
-        "per_slot": 0.36588287353515625,
+        "per_slot": 0.38202667236328125,
         "cells": {
          "give_p0": [
           0.4080308734048346,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3491995364607923,
@@ -29256,15 +29512,15 @@
         "W": 9
        },
        "pad_carry_P4B0_first": {
-        "per_slot": 0.39667510986328125,
+        "per_slot": 0.41281890869140625,
         "cells": {
          "give_p0": [
           0.44553353694627934,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.37941542555474483,
@@ -29278,15 +29534,15 @@
         "W": 5
        },
        "pad_carry_P4B0_recent": {
-        "per_slot": 0.4025421142578125,
+        "per_slot": 0.4186859130859375,
         "cells": {
          "give_p0": [
           0.4491086014631721,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.39349328297351815,
@@ -29476,15 +29732,15 @@
         "W": 9
        },
        "pad_carry_P5B0_first": {
-        "per_slot": 0.42974853515625,
+        "per_slot": 0.445892333984375,
         "cells": {
          "give_p0": [
           0.48194710798588913,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.42216404137516633,
@@ -29498,15 +29754,15 @@
         "W": 6
        },
        "pad_carry_P5B0_recent": {
-        "per_slot": 0.435791015625,
+        "per_slot": 0.451934814453125,
         "cells": {
          "give_p0": [
           0.4884579870729455,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4339671230524915,
@@ -29652,15 +29908,15 @@
         "W": 9
        },
        "pad_carry_P6B0_first": {
-        "per_slot": 0.457977294921875,
+        "per_slot": 0.47412109375,
         "cells": {
          "give_p0": [
           0.5137201979307242,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.46053478690072536,
@@ -29674,15 +29930,15 @@
         "W": 7
        },
        "pad_carry_P6B0_recent": {
-        "per_slot": 0.457977294921875,
+        "per_slot": 0.47412109375,
         "cells": {
          "give_p0": [
           0.5137201979307242,
           "own_gold"
          ],
          "give_p1": [
-          0.2611691171247958,
-          "target_val"
+          0.3112673722092005,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.46053478690072536,
@@ -29803,76 +30059,76 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.5636611556161581,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.7915762049500651,
        "give_p0|cross": 0.8035496290731524,
+       "swap_p0|same": 0.7013278151405414,
+       "swap_p0|cross": 0.5636611556161581,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.7994481807208139,
-       "swap_p0|same": 0.7013278151405414
+       "swap_p1|cross": 0.7915762049500651,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P4B4_recent:own_gold[scored]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|cross": "pad_carry_P4B4_recent:own_gold[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 0.8531402587890625,
       "buyable_additive": true,
       "bar": 0.7588014602661133
      },
      "one_hop": {
-      "per_slot": 0.6784820556640625,
+      "per_slot": 0.68212890625,
       "per_slot_row": "pad_carry_P2B6_first[disjoint]",
       "cells": {
        "give_p0": 0.7266377820394441,
        "give_p1": 1.0,
-       "swap_p0": 0.24901422938453627,
+       "swap_p0": 0.27147265558031886,
        "swap_p1": 0.7943596776958683
       },
       "cell_rows": {
        "give_p0": "pad_carry_P3B5_first:same:own_gold/cross:own_gold[disjoint]",
        "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val[scored]",
-       "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev[scored]",
+       "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other[scored]",
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[scored]"
       },
       "parts": {
-       "swap_p0|cross": 0.1817629179331307,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.7915762049500651,
        "give_p0|cross": 0.8035496290731524,
+       "swap_p0|same": 0.32022762545266426,
+       "swap_p0|cross": 0.22328276802454405,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.7994481807208139,
-       "swap_p0|same": 0.32022762545266426
+       "swap_p1|cross": 0.7915762049500651,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:target_sym[disjoint]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[scored]",
+       "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[scored]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
-      "bar_additive": 0.8284820556640625,
+      "bar_additive": 0.83212890625,
       "buyable_additive": true,
-      "bar": 0.7387666702270508
+      "bar": 0.741729736328125
      }
     },
     "two_hop": {
      "swap_p0|cross": {
-      "floor": 0.1817629179331307,
-      "row": "pad_carry_P0B0_first:target_sym[disjoint]",
+      "floor": 0.22328276802454405,
+      "row": "pad_carry_P0B0_first:prev_gold_other[scored]",
       "unrestricted": 0.5636611556161581,
       "unrestricted_row": "pad_carry_P4B4_recent:own_gold[scored]",
-      "bar": 0.3351823708206687
+      "bar": 0.36891724901994205
      },
      "swap_p0|same": {
       "floor": 0.32022762545266426,
@@ -29912,10 +30168,74 @@
     ],
     "admitted": false,
     "scores": {
+     "give_p0": 0.5077504725897921,
+     "give_p1": 0.22895400126023946,
+     "swap_p0": 0.4501493223064553,
+     "swap_p1": 0.6949230415805192,
+     "parts": {
+      "give_p0|cross": 0.6909541511771995,
+      "give_p0|named": null,
+      "give_p0|same": 0.3182051282051282,
+      "give_p1|cross": 0.22905824039653036,
+      "give_p1|named": null,
+      "give_p1|same": 0.22884615384615384,
+      "swap_p0|cross": 0.33700769319095186,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.5633689532345169,
+      "swap_p1|cross": 0.7014582615684923,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.6883833160978973
+     },
+     "n_parts": {
+      "give_p0|cross": 16140,
+      "give_p0|named": 0,
+      "give_p0|same": 15600,
+      "give_p1|cross": 16140,
+      "give_p1|named": 0,
+      "give_p1|same": 15600,
+      "swap_p0|cross": 8709,
+      "swap_p0|named": 0,
+      "swap_p0|same": 8703,
+      "swap_p1|cross": 8709,
+      "swap_p1|named": 0,
+      "swap_p1|same": 8703
+     },
+     "forced": true
+    },
+    "free_run": {
      "give_p0": 0.3652488972904852,
      "give_p1": 0.22895400126023946,
      "swap_p0": 0.35331954973581436,
-     "swap_p1": 0.4061566735584654
+     "swap_p1": 0.4061566735584654,
+     "parts": {
+      "give_p0|cross": 0.4108426270136307,
+      "give_p0|named": null,
+      "give_p0|same": 0.3180769230769231,
+      "give_p1|cross": 0.22905824039653036,
+      "give_p1|named": null,
+      "give_p1|same": 0.22884615384615384,
+      "swap_p0|cross": 0.3061201056378459,
+      "swap_p0|named": null,
+      "swap_p0|same": 0.40055153395380905,
+      "swap_p1|cross": 0.40727982546790675,
+      "swap_p1|named": null,
+      "swap_p1|same": 0.4050327473285074
+     },
+     "n_parts": {
+      "give_p0|cross": 16140,
+      "give_p0|named": 0,
+      "give_p0|same": 15600,
+      "give_p1|cross": 16140,
+      "give_p1|named": 0,
+      "give_p1|same": 15600,
+      "swap_p0|cross": 8709,
+      "swap_p0|named": 0,
+      "swap_p0|same": 8703,
+      "swap_p1|cross": 8709,
+      "swap_p1|named": 0,
+      "swap_p1|same": 8703
+     },
+     "forced": false
     }
    },
    "saturation": {
@@ -33560,24 +33880,24 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[disjoint]"
       },
       "parts": {
-       "swap_p0|cross": 0.3427480032411159,
-       "give_p1|same": 0.47364383211328837,
-       "give_p0|same": 0.4929194770322539,
-       "swap_p1|cross": 0.4125477485820118,
        "give_p0|cross": 0.4154883619752012,
+       "swap_p0|same": 0.40497608745160557,
+       "swap_p0|cross": 0.3427480032411159,
+       "give_p0|same": 0.4929194770322539,
        "give_p1|cross": 0.4777339258522639,
        "swap_p1|same": 0.41898200865406515,
-       "swap_p0|same": 0.40497608745160557
+       "swap_p1|cross": 0.4125477485820118,
+       "give_p1|same": 0.47364383211328837
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[disjoint]",
-       "give_p1|same": "pad_carry_P2B6_first:target_val[disjoint]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[disjoint]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|cross": "pad_carry_P5B3_first:own_gold[disjoint]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[disjoint]",
        "give_p1|cross": "pad_carry_P2B6_first:target_val[disjoint]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[disjoint]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
+       "give_p1|same": "pad_carry_P2B6_first:target_val[disjoint]"
       },
       "bar_additive": 0.5397501627604167,
       "buyable_additive": true,
@@ -33599,24 +33919,24 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[disjoint]"
       },
       "parts": {
-       "swap_p0|cross": 0.17397846973029285,
-       "give_p1|same": 0.47364383211328837,
-       "give_p0|same": 0.4929194770322539,
-       "swap_p1|cross": 0.4125477485820118,
        "give_p0|cross": 0.4154883619752012,
+       "swap_p0|same": 0.3167273969483034,
+       "swap_p0|cross": 0.17397846973029285,
+       "give_p0|same": 0.4929194770322539,
        "give_p1|cross": 0.4777339258522639,
        "swap_p1|same": 0.41898200865406515,
-       "swap_p0|same": 0.3167273969483034
+       "swap_p1|cross": 0.4125477485820118,
+       "give_p1|same": 0.47364383211328837
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[disjoint]",
-       "give_p1|same": "pad_carry_P2B6_first:target_val[disjoint]",
-       "give_p0|same": "pad_carry_P2B6_first:own_gold[disjoint]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]",
+       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[disjoint]",
+       "give_p0|same": "pad_carry_P2B6_first:own_gold[disjoint]",
        "give_p1|cross": "pad_carry_P2B6_first:target_val[disjoint]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[disjoint]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[disjoint]",
+       "give_p1|same": "pad_carry_P2B6_first:target_val[disjoint]"
       },
       "bar_additive": 0.5279958089192708,
       "buyable_additive": true,
@@ -33686,18 +34006,18 @@
        "forced": true
       },
       "one_hop": {
-       "per_slot": 0.6636759440104166,
+       "per_slot": 0.66876220703125,
        "per_slot_row": "pad_carry_P2B6_recent",
        "cells": {
         "give_p0": 0.7005986137366099,
         "give_p1": 1.0,
-        "swap_p0": 0.23989202848610153,
+        "swap_p0": 0.2686078566505858,
         "swap_p1": 0.744543992648748
        },
        "cell_rows": {
         "give_p0": "pad_carry_P2B6_recent:same:own_gold/cross:own_gold",
         "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val",
-        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev",
+        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other",
         "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val"
        },
        "parts": {
@@ -33705,7 +34025,7 @@
         "give_p0|same": 1.0,
         "give_p1|cross": 1.0,
         "give_p1|same": 1.0,
-        "swap_p0|cross": 0.17120220461591457,
+        "swap_p0|cross": 0.2286140773912045,
         "swap_p0|same": 0.30862920831897045,
         "swap_p1|cross": 0.749110115971983,
         "swap_p1|same": 0.7399747213604504
@@ -33715,7 +34035,7 @@
         "give_p0|same": "pad_carry_P0B6_first:own_gold",
         "give_p1|cross": "pad_carry_P0B6_first:target_val",
         "give_p1|same": "pad_carry_P0B6_first:target_val",
-        "swap_p0|cross": "pad_carry_P0B0_first:copy_prev",
+        "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other",
         "swap_p0|same": "pad_carry_P0B0_first:ref_sym",
         "swap_p1|cross": "pad_carry_P6B2_first:target_val",
         "swap_p1|same": "pad_carry_P6B2_first:target_val"
@@ -33729,15 +34049,15 @@
       },
       "rows": {
        "pad_carry_P0B0_first": {
-        "per_slot": 0.238250732421875,
+        "per_slot": 0.2638346354166667,
         "cells": {
          "give_p0": [
           0.26257088846880905,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.21106133700895935,
@@ -33751,15 +34071,15 @@
         "W": 1
        },
        "pad_carry_P0B0_recent": {
-        "per_slot": 0.238250732421875,
+        "per_slot": 0.2638346354166667,
         "cells": {
          "give_p0": [
           0.26257088846880905,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.21106133700895935,
@@ -34037,15 +34357,15 @@
         "W": 7
        },
        "pad_carry_P1B0_first": {
-        "per_slot": 0.2651570638020833,
+        "per_slot": 0.290740966796875,
         "cells": {
          "give_p0": [
           0.29492753623188406,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2361015391683896,
@@ -34059,15 +34379,15 @@
         "W": 2
        },
        "pad_carry_P1B0_recent": {
-        "per_slot": 0.252197265625,
+        "per_slot": 0.2777811686197917,
         "cells": {
          "give_p0": [
           0.2752678008821676,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2324833448196646,
@@ -34345,15 +34665,15 @@
         "W": 8
        },
        "pad_carry_P2B0_first": {
-        "per_slot": 0.2921651204427083,
+        "per_slot": 0.3177490234375,
         "cells": {
          "give_p0": [
           0.3240705734089477,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2668274753043878,
@@ -34367,15 +34687,15 @@
         "W": 3
        },
        "pad_carry_P2B0_recent": {
-        "per_slot": 0.300384521484375,
+        "per_slot": 0.3259684244791667,
         "cells": {
          "give_p0": [
           0.3324511657214871,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.27308752584424534,
@@ -34653,15 +34973,15 @@
         "W": 9
        },
        "pad_carry_P3B0_first": {
-        "per_slot": 0.3198649088541667,
+        "per_slot": 0.3454488118489583,
         "cells": {
          "give_p0": [
           0.3575299306868305,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2929014472777395,
@@ -34675,15 +34995,15 @@
         "W": 4
        },
        "pad_carry_P3B0_recent": {
-        "per_slot": 0.3259073893229167,
+        "per_slot": 0.3514912923177083,
         "cells": {
          "give_p0": [
           0.3593257718966604,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3069722030783368,
@@ -34917,15 +35237,15 @@
         "W": 9
        },
        "pad_carry_P4B0_first": {
-        "per_slot": 0.3502705891927083,
+        "per_slot": 0.3758544921875,
         "cells": {
          "give_p0": [
           0.39278512917454317,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.328394210889042,
@@ -34939,15 +35259,15 @@
         "W": 5
        },
        "pad_carry_P4B0_recent": {
-        "per_slot": 0.3605550130208333,
+        "per_slot": 0.386138916015625,
         "cells": {
          "give_p0": [
           0.4010396975425331,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3438433264415346,
@@ -35137,15 +35457,15 @@
         "W": 9
        },
        "pad_carry_P5B0_first": {
-        "per_slot": 0.3819986979166667,
+        "per_slot": 0.4075826009114583,
         "cells": {
          "give_p0": [
           0.43052930056710775,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3644038594073053,
@@ -35159,15 +35479,15 @@
         "W": 6
        },
        "pad_carry_P5B0_recent": {
-        "per_slot": 0.390533447265625,
+        "per_slot": 0.4161173502604167,
         "cells": {
          "give_p0": [
           0.4378071833648393,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3818630829313117,
@@ -35313,15 +35633,15 @@
         "W": 9
        },
        "pad_carry_P6B0_first": {
-        "per_slot": 0.41497802734375,
+        "per_slot": 0.4405619303385417,
         "cells": {
          "give_p0": [
           0.4657214870825457,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4117275442223754,
@@ -35335,15 +35655,15 @@
         "W": 7
        },
        "pad_carry_P6B0_recent": {
-        "per_slot": 0.41497802734375,
+        "per_slot": 0.4405619303385417,
         "cells": {
          "give_p0": [
           0.4657214870825457,
           "own_gold"
          ],
          "give_p1": [
-          0.22895400126023946,
-          "target_val"
+          0.30819155639571516,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.4117275442223754,
@@ -35490,18 +35810,18 @@
        "forced": true
       },
       "one_hop": {
-       "per_slot": 0.663299560546875,
+       "per_slot": 0.6680755615234375,
        "per_slot_row": "pad_carry_P2B6_first",
        "cells": {
         "give_p0": 0.7005136932337461,
         "give_p1": 1.0,
-        "swap_p0": 0.2459388094828081,
+        "swap_p0": 0.27288904196085184,
         "swap_p1": 0.749842144538201
        },
        "cell_rows": {
         "give_p0": "pad_carry_P2B6_first:same:own_gold/cross:own_gold",
         "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val",
-        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev",
+        "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other",
         "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val"
        },
        "parts": {
@@ -35509,7 +35829,7 @@
         "give_p0|same": 1.0,
         "give_p1|cross": 1.0,
         "give_p1|same": 1.0,
-        "swap_p0|cross": 0.17397846973029285,
+        "swap_p0|cross": 0.22832503762009493,
         "swap_p0|same": 0.3167273969483034,
         "swap_p1|cross": 0.745919666628082,
         "swap_p1|same": 0.7537007515372353
@@ -35519,7 +35839,7 @@
         "give_p0|same": "pad_carry_P0B6_first:own_gold",
         "give_p1|cross": "pad_carry_P0B6_first:target_val",
         "give_p1|same": "pad_carry_P0B6_first:target_val",
-        "swap_p0|cross": "pad_carry_P0B0_first:copy_prev",
+        "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other",
         "swap_p0|same": "pad_carry_P0B0_first:ref_sym",
         "swap_p1|cross": "pad_carry_P6B2_first:target_val",
         "swap_p1|same": "pad_carry_P6B2_first:target_val"
@@ -35533,15 +35853,15 @@
       },
       "rows": {
        "pad_carry_P0B0_first": {
-        "per_slot": 0.23897806803385416,
+        "per_slot": 0.2670542399088542,
         "cells": {
          "give_p0": [
           0.2661277614950679,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.21339188335916423,
@@ -35555,15 +35875,15 @@
         "W": 1
        },
        "pad_carry_P0B0_recent": {
-        "per_slot": 0.23897806803385416,
+        "per_slot": 0.2670542399088542,
         "cells": {
          "give_p0": [
           0.2661277614950679,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.21339188335916423,
@@ -35841,15 +36161,15 @@
         "W": 7
        },
        "pad_carry_P1B0_first": {
-        "per_slot": 0.2638905843098958,
+        "per_slot": 0.2919667561848958,
         "cells": {
          "give_p0": [
           0.295799060855315,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.23112909706675852,
@@ -35863,15 +36183,15 @@
         "W": 2
        },
        "pad_carry_P1B0_recent": {
-        "per_slot": 0.2519480387369792,
+        "per_slot": 0.2800242106119792,
         "cells": {
          "give_p0": [
           0.2782452491254609,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.23279375466391136,
@@ -36149,15 +36469,15 @@
         "W": 8
        },
        "pad_carry_P2B0_first": {
-        "per_slot": 0.2916971842447917,
+        "per_slot": 0.3197733561197917,
         "cells": {
          "give_p0": [
           0.3280860987677665,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.25994489409333565,
@@ -36171,15 +36491,15 @@
         "W": 3
        },
        "pad_carry_P2B0_recent": {
-        "per_slot": 0.2995859781901042,
+        "per_slot": 0.3276621500651042,
         "cells": {
          "give_p0": [
           0.33377454224575337,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2724011250789277,
@@ -36457,15 +36777,15 @@
         "W": 9
        },
        "pad_carry_P3B0_first": {
-        "per_slot": 0.3205413818359375,
+        "per_slot": 0.3486175537109375,
         "cells": {
          "give_p0": [
           0.36119252466042673,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.2888467940990758,
@@ -36479,15 +36799,15 @@
         "W": 4
        },
        "pad_carry_P3B0_recent": {
-        "per_slot": 0.3263498942057292,
+        "per_slot": 0.3544260660807292,
         "cells": {
          "give_p0": [
           0.3647537108821027,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.30382871247345156,
@@ -36721,15 +37041,15 @@
         "W": 9
        },
        "pad_carry_P4B0_first": {
-        "per_slot": 0.3520456949869792,
+        "per_slot": 0.3801218668619792,
         "cells": {
          "give_p0": [
           0.39584318174655697,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3283106595488204,
@@ -36743,15 +37063,15 @@
         "W": 5
        },
        "pad_carry_P4B0_recent": {
-        "per_slot": 0.3628438313802083,
+        "per_slot": 0.3909200032552083,
         "cells": {
          "give_p0": [
           0.4085909678232643,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3455312553814362,
@@ -36941,15 +37261,15 @@
         "W": 9
        },
        "pad_carry_P5B0_first": {
-        "per_slot": 0.3852335611979167,
+        "per_slot": 0.4133097330729167,
         "cells": {
          "give_p0": [
           0.4348428981122561,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.3678893289707824,
@@ -36963,15 +37283,15 @@
         "W": 6
        },
        "pad_carry_P5B0_recent": {
-        "per_slot": 0.3936665852864583,
+        "per_slot": 0.4217427571614583,
         "cells": {
          "give_p0": [
           0.4449907030979169,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.38252683542850585,
@@ -37117,15 +37437,15 @@
         "W": 9
        },
        "pad_carry_P6B0_first": {
-        "per_slot": 0.416595458984375,
+        "per_slot": 0.444671630859375,
         "cells": {
          "give_p0": [
           0.4699505215719643,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.41022329372596295,
@@ -37139,15 +37459,15 @@
         "W": 7
        },
        "pad_carry_P6B0_recent": {
-        "per_slot": 0.416595458984375,
+        "per_slot": 0.444671630859375,
         "cells": {
          "give_p0": [
           0.4699505215719643,
           "own_gold"
          ],
          "give_p1": [
-          0.22782137342031453,
-          "target_val"
+          0.314802559011692,
+          "prev_gold_other"
          ],
          "swap_p0": [
           0.41022329372596295,
@@ -37268,76 +37588,76 @@
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[disjoint]"
       },
       "parts": {
-       "swap_p0|cross": 0.5138362613388449,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.749110115971983,
        "give_p0|cross": 0.7427514838870071,
+       "swap_p0|same": 0.6354130759508215,
+       "swap_p0|cross": 0.5138362613388449,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.7537007515372353,
-       "swap_p0|same": 0.6354130759508215
+       "swap_p1|cross": 0.749110115971983,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P4B4_recent:own_gold[scored]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]",
+       "swap_p0|cross": "pad_carry_P4B4_recent:own_gold[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[disjoint]",
-       "swap_p0|same": "pad_carry_P6B2_first:own_gold[scored]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 0.8352518717447917,
       "buyable_additive": true,
       "bar": 0.7442671457926432
      },
      "one_hop": {
-      "per_slot": 0.6636759440104166,
+      "per_slot": 0.66876220703125,
       "per_slot_row": "pad_carry_P2B6_recent[scored]",
       "cells": {
        "give_p0": 0.7005986137366099,
        "give_p1": 1.0,
-       "swap_p0": 0.2459388094828081,
+       "swap_p0": 0.27288904196085184,
        "swap_p1": 0.749842144538201
       },
       "cell_rows": {
        "give_p0": "pad_carry_P2B6_recent:same:own_gold/cross:own_gold[scored]",
        "give_p1": "pad_carry_P0B6_first:same:target_val/cross:target_val[scored]",
-       "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:copy_prev[disjoint]",
+       "swap_p0": "pad_carry_P0B0_first:same:ref_sym/cross:prev_gold_other[disjoint]",
        "swap_p1": "pad_carry_P6B2_first:same:target_val/cross:target_val[disjoint]"
       },
       "parts": {
-       "swap_p0|cross": 0.17397846973029285,
-       "give_p1|same": 1.0,
-       "give_p0|same": 1.0,
-       "swap_p1|cross": 0.749110115971983,
        "give_p0|cross": 0.7427514838870071,
+       "swap_p0|same": 0.3167273969483034,
+       "swap_p0|cross": 0.2286140773912045,
+       "give_p0|same": 1.0,
        "give_p1|cross": 1.0,
        "swap_p1|same": 0.7537007515372353,
-       "swap_p0|same": 0.3167273969483034
+       "swap_p1|cross": 0.749110115971983,
+       "give_p1|same": 1.0
       },
       "part_rows": {
-       "swap_p0|cross": "pad_carry_P0B0_first:copy_prev[disjoint]",
-       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
-       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
        "give_p0|cross": "pad_carry_P6B2_first:own_gold[disjoint]",
+       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]",
+       "swap_p0|cross": "pad_carry_P0B0_first:prev_gold_other[scored]",
+       "give_p0|same": "pad_carry_P0B6_first:own_gold[scored]",
        "give_p1|cross": "pad_carry_P0B6_first:target_val[scored]",
        "swap_p1|same": "pad_carry_P6B2_first:target_val[disjoint]",
-       "swap_p0|same": "pad_carry_P0B0_first:ref_sym[disjoint]"
+       "swap_p1|cross": "pad_carry_P6B2_first:target_val[scored]",
+       "give_p1|same": "pad_carry_P0B6_first:target_val[scored]"
       },
-      "bar_additive": 0.8136759440104167,
+      "bar_additive": 0.81876220703125,
       "buyable_additive": true,
-      "bar": 0.7267367045084635
+      "bar": 0.7308692932128906
      }
     },
     "two_hop": {
      "swap_p0|cross": {
-      "floor": 0.17397846973029285,
-      "row": "pad_carry_P0B0_first:copy_prev[disjoint]",
+      "floor": 0.2286140773912045,
+      "row": "pad_carry_P0B0_first:prev_gold_other[scored]",
       "unrestricted": 0.5138362613388449,
       "unrestricted_row": "pad_carry_P4B4_recent:own_gold[scored]",
-      "bar": 0.3288575066558629
+      "bar": 0.3732489378803536
      },
      "swap_p0|same": {
       "floor": 0.3167273969483034,
@@ -37380,7 +37700,71 @@
      "give_p0": null,
      "give_p1": null,
      "swap_p0": 1.0,
-     "swap_p1": 1.0
+     "swap_p1": 1.0,
+     "parts": {
+      "give_p0|cross": null,
+      "give_p0|named": null,
+      "give_p0|same": null,
+      "give_p1|cross": null,
+      "give_p1|named": null,
+      "give_p1|same": null,
+      "swap_p0|cross": null,
+      "swap_p0|named": 1.0,
+      "swap_p0|same": null,
+      "swap_p1|cross": null,
+      "swap_p1|named": 1.0,
+      "swap_p1|same": null
+     },
+     "n_parts": {
+      "give_p0|cross": 0,
+      "give_p0|named": 0,
+      "give_p0|same": 0,
+      "give_p1|cross": 0,
+      "give_p1|named": 0,
+      "give_p1|same": 0,
+      "swap_p0|cross": 0,
+      "swap_p0|named": 17408,
+      "swap_p0|same": 0,
+      "swap_p1|cross": 0,
+      "swap_p1|named": 17408,
+      "swap_p1|same": 0
+     },
+     "forced": true
+    },
+    "free_run": {
+     "give_p0": null,
+     "give_p1": null,
+     "swap_p0": 1.0,
+     "swap_p1": 1.0,
+     "parts": {
+      "give_p0|cross": null,
+      "give_p0|named": null,
+      "give_p0|same": null,
+      "give_p1|cross": null,
+      "give_p1|named": null,
+      "give_p1|same": null,
+      "swap_p0|cross": null,
+      "swap_p0|named": 1.0,
+      "swap_p0|same": null,
+      "swap_p1|cross": null,
+      "swap_p1|named": 1.0,
+      "swap_p1|same": null
+     },
+     "n_parts": {
+      "give_p0|cross": 0,
+      "give_p0|named": 0,
+      "give_p0|same": 0,
+      "give_p1|cross": 0,
+      "give_p1|named": 0,
+      "give_p1|same": 0,
+      "swap_p0|cross": 0,
+      "swap_p0|named": 17408,
+      "swap_p0|same": 0,
+      "swap_p1|cross": 0,
+      "swap_p1|named": 17408,
+      "swap_p1|same": 0
+     },
+     "forced": false
     }
    },
    "saturation": {
@@ -39729,12 +40113,12 @@
        "swap_p1": "pad_carry_P6B0_first:named:target_val[scored]"
       },
       "parts": {
-       "swap_p1|named": 1.0,
-       "swap_p0|named": 1.0
+       "swap_p0|named": 1.0,
+       "swap_p1|named": 1.0
       },
       "part_rows": {
-       "swap_p1|named": "pad_carry_P6B0_first:target_val[scored]",
-       "swap_p0|named": "pad_carry_P6B0_first:own_gold[scored]"
+       "swap_p0|named": "pad_carry_P6B0_first:own_gold[scored]",
+       "swap_p1|named": "pad_carry_P6B0_first:target_val[scored]"
       },
       "bar_additive": 1.15,
       "buyable_additive": false,
@@ -39756,12 +40140,12 @@
        "swap_p1": "pad_carry_P6B0_first:named:target_val[scored]"
       },
       "parts": {
-       "swap_p1|named": 1.0,
-       "swap_p0|named": 1.0
+       "swap_p0|named": 1.0,
+       "swap_p1|named": 1.0
       },
       "part_rows": {
-       "swap_p1|named": "pad_carry_P6B0_first:target_val[scored]",
-       "swap_p0|named": "pad_carry_P6B0_first:own_gold[scored]"
+       "swap_p0|named": "pad_carry_P6B0_first:own_gold[scored]",
+       "swap_p1|named": "pad_carry_P6B0_first:target_val[scored]"
       },
       "bar_additive": 1.15,
       "buyable_additive": false,
@@ -42117,12 +42501,12 @@
        "swap_p1": "pad_carry_P6B0_first:named:target_val[scored]"
       },
       "parts": {
-       "swap_p1|named": 1.0,
-       "swap_p0|named": 1.0
+       "swap_p0|named": 1.0,
+       "swap_p1|named": 1.0
       },
       "part_rows": {
-       "swap_p1|named": "pad_carry_P6B0_first:target_val[scored]",
-       "swap_p0|named": "pad_carry_P6B0_first:own_gold[scored]"
+       "swap_p0|named": "pad_carry_P6B0_first:own_gold[scored]",
+       "swap_p1|named": "pad_carry_P6B0_first:target_val[scored]"
       },
       "bar_additive": 1.15,
       "buyable_additive": false,
@@ -42144,12 +42528,12 @@
        "swap_p1": "pad_carry_P6B0_first:named:target_val[scored]"
       },
       "parts": {
-       "swap_p1|named": 1.0,
-       "swap_p0|named": 1.0
+       "swap_p0|named": 1.0,
+       "swap_p1|named": 1.0
       },
       "part_rows": {
-       "swap_p1|named": "pad_carry_P6B0_first:target_val[scored]",
-       "swap_p0|named": "pad_carry_P6B0_first:own_gold[scored]"
+       "swap_p0|named": "pad_carry_P6B0_first:own_gold[scored]",
+       "swap_p1|named": "pad_carry_P6B0_first:target_val[scored]"
       },
       "bar_additive": 1.15,
       "buyable_additive": false,
@@ -42205,7 +42589,71 @@
      "give_p0": 1.0,
      "give_p1": 0.2353515625,
      "swap_p0": null,
-     "swap_p1": null
+     "swap_p1": null,
+     "parts": {
+      "give_p0|cross": null,
+      "give_p0|named": 1.0,
+      "give_p0|same": null,
+      "give_p1|cross": null,
+      "give_p1|named": 0.2353515625,
+      "give_p1|same": null,
+      "swap_p0|cross": null,
+      "swap_p0|named": null,
+      "swap_p0|same": null,
+      "swap_p1|cross": null,
+      "swap_p1|named": null,
+      "swap_p1|same": null
+     },
+     "n_parts": {
+      "give_p0|cross": 0,
+      "give_p0|named": 31744,
+      "give_p0|same": 0,
+      "give_p1|cross": 0,
+      "give_p1|named": 31744,
+      "give_p1|same": 0,
+      "swap_p0|cross": 0,
+      "swap_p0|named": 0,
+      "swap_p0|same": 0,
+      "swap_p1|cross": 0,
+      "swap_p1|named": 0,
+      "swap_p1|same": 0
+     },
+     "forced": true
+    },
+    "free_run": {
+     "give_p0": 1.0,
+     "give_p1": 0.2353515625,
+     "swap_p0": null,
+     "swap_p1": null,
+     "parts": {
+      "give_p0|cross": null,
+      "give_p0|named": 1.0,
+      "give_p0|same": null,
+      "give_p1|cross": null,
+      "give_p1|named": 0.2353515625,
+      "give_p1|same": null,
+      "swap_p0|cross": null,
+      "swap_p0|named": null,
+      "swap_p0|same": null,
+      "swap_p1|cross": null,
+      "swap_p1|named": null,
+      "swap_p1|same": null
+     },
+     "n_parts": {
+      "give_p0|cross": 0,
+      "give_p0|named": 31744,
+      "give_p0|same": 0,
+      "give_p1|cross": 0,
+      "give_p1|named": 31744,
+      "give_p1|same": 0,
+      "swap_p0|cross": 0,
+      "swap_p0|named": 0,
+      "swap_p0|same": 0,
+      "swap_p1|cross": 0,
+      "swap_p1|named": 0,
+      "swap_p1|same": 0
+     },
+     "forced": false
     }
    },
    "saturation": {
@@ -44554,12 +45002,12 @@
        "swap_p1": null
       },
       "parts": {
-       "give_p1|named": 1.0,
-       "give_p0|named": 1.0
+       "give_p0|named": 1.0,
+       "give_p1|named": 1.0
       },
       "part_rows": {
-       "give_p1|named": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|named": "pad_carry_P0B0_first:stated_ref_val[scored]"
+       "give_p0|named": "pad_carry_P0B0_first:stated_ref_val[scored]",
+       "give_p1|named": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 1.15,
       "buyable_additive": false,
@@ -44581,12 +45029,12 @@
        "swap_p1": null
       },
       "parts": {
-       "give_p1|named": 1.0,
-       "give_p0|named": 1.0
+       "give_p0|named": 1.0,
+       "give_p1|named": 1.0
       },
       "part_rows": {
-       "give_p1|named": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|named": "pad_carry_P0B0_first:stated_ref_val[scored]"
+       "give_p0|named": "pad_carry_P0B0_first:stated_ref_val[scored]",
+       "give_p1|named": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 1.15,
       "buyable_additive": false,
@@ -44675,29 +45123,29 @@
       },
       "rows": {
        "pad_carry_P0B0_first": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 1
        },
        "pad_carry_P0B0_recent": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 1
@@ -44871,29 +45319,29 @@
         "W": 7
        },
        "pad_carry_P1B0_first": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 2
        },
        "pad_carry_P1B0_recent": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 2
@@ -45067,29 +45515,29 @@
         "W": 8
        },
        "pad_carry_P2B0_first": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 3
        },
        "pad_carry_P2B0_recent": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 3
@@ -45263,29 +45711,29 @@
         "W": 9
        },
        "pad_carry_P3B0_first": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 4
        },
        "pad_carry_P3B0_recent": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 4
@@ -45431,29 +45879,29 @@
         "W": 9
        },
        "pad_carry_P4B0_first": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 5
        },
        "pad_carry_P4B0_recent": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 5
@@ -45571,29 +46019,29 @@
         "W": 9
        },
        "pad_carry_P5B0_first": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 6
        },
        "pad_carry_P5B0_recent": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 6
@@ -45683,29 +46131,29 @@
         "W": 9
        },
        "pad_carry_P6B0_first": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 7
        },
        "pad_carry_P6B0_recent": {
-        "per_slot": 0.61767578125,
+        "per_slot": 0.65234375,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.2353515625,
-          "target_val"
+          0.3046875,
+          "prev_gold_other"
          ]
         },
         "W": 7
@@ -45831,29 +46279,29 @@
       },
       "rows": {
        "pad_carry_P0B0_first": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 1
        },
        "pad_carry_P0B0_recent": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 1
@@ -46027,29 +46475,29 @@
         "W": 7
        },
        "pad_carry_P1B0_first": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 2
        },
        "pad_carry_P1B0_recent": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 2
@@ -46223,29 +46671,29 @@
         "W": 8
        },
        "pad_carry_P2B0_first": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 3
        },
        "pad_carry_P2B0_recent": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 3
@@ -46419,29 +46867,29 @@
         "W": 9
        },
        "pad_carry_P3B0_first": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 4
        },
        "pad_carry_P3B0_recent": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 4
@@ -46587,29 +47035,29 @@
         "W": 9
        },
        "pad_carry_P4B0_first": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 5
        },
        "pad_carry_P4B0_recent": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 5
@@ -46727,29 +47175,29 @@
         "W": 9
        },
        "pad_carry_P5B0_first": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 6
        },
        "pad_carry_P5B0_recent": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 6
@@ -46839,29 +47287,29 @@
         "W": 9
        },
        "pad_carry_P6B0_first": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 7
        },
        "pad_carry_P6B0_recent": {
-        "per_slot": 0.6168882308467742,
+        "per_slot": 0.6545961441532258,
         "cells": {
          "give_p0": [
           1.0,
           "stated_ref_val"
          ],
          "give_p1": [
-          0.23377646169354838,
-          "target_val"
+          0.3091922883064516,
+          "prev_gold_other"
          ]
         },
         "W": 7
@@ -46942,12 +47390,12 @@
        "swap_p1": null
       },
       "parts": {
-       "give_p1|named": 1.0,
-       "give_p0|named": 1.0
+       "give_p0|named": 1.0,
+       "give_p1|named": 1.0
       },
       "part_rows": {
-       "give_p1|named": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|named": "pad_carry_P0B0_first:stated_ref_val[scored]"
+       "give_p0|named": "pad_carry_P0B0_first:stated_ref_val[scored]",
+       "give_p1|named": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 1.15,
       "buyable_additive": false,
@@ -46969,12 +47417,12 @@
        "swap_p1": null
       },
       "parts": {
-       "give_p1|named": 1.0,
-       "give_p0|named": 1.0
+       "give_p0|named": 1.0,
+       "give_p1|named": 1.0
       },
       "part_rows": {
-       "give_p1|named": "pad_carry_P0B6_first:target_val[scored]",
-       "give_p0|named": "pad_carry_P0B0_first:stated_ref_val[scored]"
+       "give_p0|named": "pad_carry_P0B0_first:stated_ref_val[scored]",
+       "give_p1|named": "pad_carry_P0B6_first:target_val[scored]"
       },
       "bar_additive": 1.15,
       "buyable_additive": false,
@@ -47421,7 +47869,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.5656685947601225,
    "swap_p0|cross": 0.5311217510259918,
-   "swap_p0|cross_floor": 0.186061910279755,
+   "swap_p0|cross_floor": 0.22503419972640218,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 2924,
    "swap_p0|same": 0.5998645903859174,
@@ -47438,7 +47886,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.5622702205882353,
    "swap_p0|cross": 0.5256290773532153,
-   "swap_p0|cross_floor": 0.1863932898415657,
+   "swap_p0|cross_floor": 0.2248716486023959,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 4292,
    "swap_p0|same": 0.5979147778785131,
@@ -47455,7 +47903,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.5605177438710783,
    "swap_p0|cross": 0.5232657235384354,
-   "swap_p0|cross_floor": 0.1817629179331307,
+   "swap_p0|cross_floor": 0.22328276802454405,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 5867,
    "swap_p0|same": 0.5982065873426453,
@@ -47472,7 +47920,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.5457730300941879,
    "swap_p0|cross": 0.5131473188655414,
-   "swap_p0|cross_floor": 0.17397846973029285,
+   "swap_p0|cross_floor": 0.2286140773912045,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 8709,
    "swap_p0|same": 0.5784212340572217,
@@ -47540,7 +47988,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.48809118747873426,
    "swap_p0|cross": 0.4719562243502052,
-   "swap_p0|cross_floor": 0.186061910279755,
+   "swap_p0|cross_floor": 0.22503419972640218,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 2924,
    "swap_p0|same": 0.504062288422478,
@@ -47557,7 +48005,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.5016084558823529,
    "swap_p0|cross": 0.48555452003727867,
-   "swap_p0|cross_floor": 0.1863932898415657,
+   "swap_p0|cross_floor": 0.2248716486023959,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 4292,
    "swap_p0|same": 0.5172257479601088,
@@ -47574,7 +48022,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.5059146236927824,
    "swap_p0|cross": 0.4959945457644452,
-   "swap_p0|cross_floor": 0.1817629179331307,
+   "swap_p0|cross_floor": 0.22328276802454405,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 5867,
    "swap_p0|same": 0.5159510260389722,
@@ -47591,7 +48039,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.5124052377670572,
    "swap_p0|cross": 0.5134917901021931,
-   "swap_p0|cross_floor": 0.17397846973029285,
+   "swap_p0|cross_floor": 0.2286140773912045,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 8709,
    "swap_p0|same": 0.5113179363437895,
@@ -47659,7 +48107,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.924804355222865,
    "swap_p0|cross": 0.8864569083447332,
-   "swap_p0|cross_floor": 0.186061910279755,
+   "swap_p0|cross_floor": 0.22503419972640218,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 2924,
    "swap_p0|same": 0.962762356127285,
@@ -47676,7 +48124,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.8959099264705882,
    "swap_p0|cross": 0.853448275862069,
-   "swap_p0|cross_floor": 0.1863932898415657,
+   "swap_p0|cross_floor": 0.2248716486023959,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 4292,
    "swap_p0|same": 0.9372166817769719,
@@ -47693,7 +48141,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.8818789645122579,
    "swap_p0|cross": 0.8419976137719448,
-   "swap_p0|cross_floor": 0.1817629179331307,
+   "swap_p0|cross_floor": 0.22328276802454405,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 5867,
    "swap_p0|same": 0.9222279703397137,
@@ -47710,7 +48158,7 @@
    "per_slot_clears": true,
    "swap_p0": 0.8733631977946243,
    "swap_p0|cross": 0.8282236766563326,
-   "swap_p0|cross_floor": 0.17397846973029285,
+   "swap_p0|cross_floor": 0.2286140773912045,
    "swap_p0|cross_clears": true,
    "swap_p0|cross_n": 8709,
    "swap_p0|same": 0.9185338389061243,
