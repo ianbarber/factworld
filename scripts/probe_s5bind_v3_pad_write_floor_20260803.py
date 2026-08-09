@@ -480,18 +480,24 @@ def main():
         d = json.load(open(a.decompose))
         rec["confront_free_run"] = confront(
             d["rows"], rec["cells"], d["cfg"]["n"], "free_run",
-            "THE TRACKING DIAGNOSTIC: the model's own free-running pad, against a free-running "
-            "class. It compounds a per-event residual over the stream and is not the score.")
+            "THE SCORED READ (protocol.PAD_WRITE_SCORED_READ): the model's own free-running pad, "
+            "against a free-running class whose held-out floor is INFORMED CHANCE — the gold pad "
+            "is not an address space here, so no admitted policy is above 1/k and a clear cannot "
+            "be anything but the two-hop write. A FLOOR here is read with the teacher-forced "
+            "number beside it, because it compounds a per-event residual over the stream.")
     if a.forced:
         d = json.load(open(a.forced))
         rec["confront_teacher_forced"] = confront(
             d["rows"], rec["cells"], d["cfg"]["n"], "teacher_forced",
-            "THE SCORED READ: teacher-forced per event, against a class handed the same gold "
-            "history. It scores each event once and claims nothing about the model's own writes.")
-    if a.grid and a.forced:
+            "THE FLOOR-INTERPRETING READ: teacher-forced per event, against a class handed the "
+            "same gold history and reading 2.1x chance off it. It answers the narrower 'given "
+            "the true state, is the write performed' and claims nothing about the model's own "
+            "writes.")
+    if a.grid and (a.forced or a.decompose):
         lengths = P.registered_lengths("composed")
         comp, detail = component_gate(a.grid, a.n)
-        two = two_hop_gate(rec["confront_teacher_forced"], lengths)
+        scored = rec.get(f"confront_{P.PAD_WRITE_SCORED_READ}") or []
+        two = two_hop_gate(scored, lengths)
         gates = {"components_form_and_read_out": comp, "two_hop_clears": two}
         ok, per, n_ok, by_gate = P.seeds_carrying(gates)
         rec["claim"] = {"gates": gates, "per_seed": per, "n_seeds": n_ok, "by_gate": by_gate,

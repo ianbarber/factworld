@@ -3355,15 +3355,21 @@ S5_BIND_V3_PAD_EVICT = ("first", "recent")
 #                cells and their pre-values are the same two agents ``moved2`` prints, so the swap
 #                block is unchanged; a give writes ONE holder cell, so its block is one token.
 #
-# WHY THE GIVE'S SECOND TOKEN IS DROPPED, and it is not a preference. The value a give INSTALLS is
-# the event's resolved operand, and that operand is a ONE-HOP read of the event line the row is
-# already reading — measured exactly 1.0000 at ``give_p0`` under both source classes, by the
-# closure below. So it adds no supervision the surface does not already carry, and it puts the
-# agent that a later CROSS swap resolves to at a FIXED PAD ADDRESS: printing it is what makes
-# ``P[give:same[-1]p0]`` — one pad read plus one live pointer read, depth 1, admitted — score
-# 0.51 on the two-hop token where the registered floor was 0.31. Under ``before2`` every pad
-# token is a value that was IN the state before the event, and the whole depth-<=1 family falls
-# from ~3.1x chance to ~2.1x at both k = 6 and k = 12.
+# WHY THE GIVE'S SECOND TOKEN IS DROPPED, and it is not a preference. The value a give INSTALLS
+# is the event's resolved operand, and the closure below scores it at exactly 1.0000 on every
+# stream it appears in:
+#   on a COMPONENT (bind) cell it is ``line:any[-1]p1`` — an IDENTITY read of the event line's
+#   second slot, DEPTH 0. The operand is named there, so half of that cell's pad was a verbatim
+#   copy of a token already on the surface and carried no state at all.
+#   on the COMPOSED cell it is ``P[line:any[-1]p1]`` / ``B[line:any[-1]p1]`` — one map read of
+#   the slot the line names, DEPTH 1, which is the depth the floor class already grants.
+# So nothing the surface does not carry goes with it. What goes with it is an ADDRESS: printing
+# the operand puts the agent a later CROSS swap resolves to at a fixed position in the pad, and
+# that is what makes ``P[pad:give:same[-1]p0]`` — one pad read plus one live pointer read, depth
+# 1, admitted — score 0.51 on the two-hop token where the registered floor was 0.31. Under
+# ``before2`` every pad token is a value that was IN the state before the event (the bind cell's
+# is ``B[line:any[-1]p0]``, a live holder read), and the depth-<=1 family on the two-hop token
+# falls from ~3.1x chance to ~2.1x, at k = 6 and k = 12 alike.
 S5_BIND_V3_PAD_FORMATS = ("moved2", "before2")
 
 

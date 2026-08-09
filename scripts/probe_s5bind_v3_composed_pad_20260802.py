@@ -300,13 +300,19 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
             ids = [[] for _ in chunk]
             cursor = [0] * len(chunk)
             gen = [[] for _ in chunk]
-            for ordinal in range(n_slots):
+            # a variable-width format gives each item its own slot count, so the lockstep decode
+            # runs to the batch's longest and generates only where an item still has a slot
+            for ordinal in range(max(len(c[1]) for c in chunk)):
                 for i, (toks, slots, slotset, _g, _lay, _k, _s, _src) in enumerate(chunk):
+                    if ordinal >= len(slots):
+                        continue
                     while cursor[i] < slots[ordinal]:
                         if cursor[i] not in slotset:
                             ids[i] += tok.encode(toks[cursor[i]])
                         cursor[i] += 1
-                for i, tid in enumerate(E._batched_argmax(model, ids, tok, device)):
+                live = [i for i in range(len(chunk)) if ordinal < len(chunk[i][1])]
+                for i, tid in zip(live, E._batched_argmax(model, [ids[i] for i in live],
+                                                          tok, device)):
                     ids[i].append(tid)
                     gen[i].append(tok.id_to_token.get(tid, "<unk>"))
                     cursor[i] += 1

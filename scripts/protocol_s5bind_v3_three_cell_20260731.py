@@ -1685,8 +1685,30 @@ def trace_read_block(matched, with_floors=True):
 # CROSS partition of ``swap_p0``, measured on the exact scored items and on a disjoint pool with
 # the larger operative, under the SAME read (a teacher-forced score against a teacher-forced
 # class, a free-running score against a free-running one).
-PAD_WRITE_SCORED_READ = "teacher_forced"
-PAD_WRITE_DIAGNOSTIC_READ = "free_run"
+# WHICH READ CARRIES A CLEAR, AND WHICH INTERPRETS A FLOOR — registered 2026-08-09, before any
+# per-partition solver number under the ``before2`` format was read.
+#
+# The two reads have different floors and the difference is structural, not a preference.
+# FREE-RUNNING the model holds only what it emitted, so the gold pad is not an address space and
+# the depth-<=1 closure has only the event lines and the header to read: measured held-out at
+# k = 6 under ``before2`` it is 0.164 / 0.156 / 0.162 at L = 16 / 32 / 48 against 1/k = 0.1667.
+# THE FREE-RUNNING FLOOR IS INFORMED CHANCE. No admitted policy is above it, so a cleared
+# free-running reading of the two-hop token cannot be anything but the two-hop write, and that is
+# the read a CLEAR is registered on.
+# TEACHER-FORCED the gold pad IS the context, the closure reads 2.1x chance off it, and the
+# question the read answers is the narrower "given the true state, is the write performed". It is
+# what a FLOOR is interpreted with: a cell that clears teacher-forced and floors free-running is a
+# model that computes the composed update and cannot survive its own errors, and the two readings
+# are not interchangeable.
+#
+# THE CONJUNCTION IS NOT REQUIRED, and the reason is arithmetic rather than generosity: the two
+# floors differ by 2x, so a model at a fixed accuracy can clear the fractional margin against
+# chance and miss it against 0.35 — an outcome produced by the floors and not by the model.
+# Both are reported, each against its OWN held-out floor, and the weaker one is never written up
+# as the stronger.
+PAD_WRITE_SCORED_READ = "free_run"
+PAD_WRITE_FLOOR_READ = "teacher_forced"          # the read a FLOORED cell is interpreted with
+PAD_WRITE_DIAGNOSTIC_READ = "teacher_forced"
 PAD_WRITE_TOKEN = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
 
 
@@ -1701,8 +1723,13 @@ def pad_write_read_block():
                  "emitted token) on the cross partition of swap_p0",
         "chance": "1/k, a per-slot pad read's own — every pad token is an agent name",
         "clears_rule": f"clears_headroom: z > {Z_CLEAR} and (a - f)/(1 - f) >= {MARGIN_FRAC:g}",
-        "cannot_claim": "anything about the model on its own writes: the free-running read is "
-                        "kept as the tracking diagnostic and is not this score",
+        "floor_read": PAD_WRITE_FLOOR_READ,
+        "floor_selection": "held out: the closure's member is chosen on a disjoint pool and "
+                           "scored on the read's own items, because a max over the family is "
+                           "selection-inflated at a few hundred items",
+        "cannot_claim": "a teacher-forced clear says nothing about the model on its own writes; "
+                        "it is the narrower 'given the true state, is the write performed' and "
+                        "is reported as that",
     }
 
 

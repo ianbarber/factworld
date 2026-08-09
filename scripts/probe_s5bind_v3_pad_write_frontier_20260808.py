@@ -171,10 +171,20 @@ def main():
             empty_blocks += eb
         # the FREE-RUNNING floor: the model writes and reads its own pad, so the gold-pad address
         # space does not exist for it; the event lines and the header do
-        pool_items = TK.generate(spec, "test", n=a.floor_n, length=L)
+        # ... and it is HELD OUT: the max over a five-figure family is selection-inflated at a
+        # few hundred items (free-running it is attained by a HEADER address at chance), so the
+        # member is chosen on one half of a disjoint pool and scored on the other.
+        pool_items = TK.generate(spec, "test", n=2 * a.floor_n, length=L)
+        spaces = tuple(z for z in V.S5_BIND_V3_PAD_SPACES if z != "pad")
+        fit = V.s5_bind_v3_pad_write_scores(pool_items[:a.floor_n], k, m, pad=2, rows=(),
+                                            fmt=a.fmt)["fixed_reads"]["keys"]
+        held = V.s5_bind_v3_pad_write_scores(pool_items[a.floor_n:], k, m, pad=2, rows=(),
+                                             fmt=a.fmt, fixed_members=fit)["fixed_reads"]
         fr = V.s5_bind_v3_pad_fixed_reads(
-            pool_items, parts=V.S5_BIND_V3_PAD_CLOSED_PARTS, top=4, fmt=a.fmt,
-            spaces=tuple(z for z in V.S5_BIND_V3_PAD_SPACES if z != "pad"))
+            pool_items[a.floor_n:], parts=V.S5_BIND_V3_PAD_CLOSED_PARTS, top=4, fmt=a.fmt,
+            spaces=spaces)
+        fr["in_sample"] = fr["best"]
+        fr["best"] = held["best"]
         cell = {"n_items": len(items), "seconds": round(time.time() - t0, 1),
                 "finish": dict(fins), "empty_replies": n_empty,
                 "missing_blocks": empty_blocks / max(1, sum(tot.values())),
