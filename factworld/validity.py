@@ -3276,9 +3276,11 @@ S5_BIND_V3_PAD_SOURCES = ("named", "same", "cross")
 # nobody listed, and the class is closed by the rule instead.
 S5_BIND_V3_PAD_GOLD_READ = "gold_pad_fixed"
 
+S5_BIND_V3_PAD_FIXED_READ = "fixed_read_1hop"     # the depth-<=1 closure, defined further down
 S5_BIND_V3_PAD_CODES = ("own_gold", "operand", "target_val", "target_sym", "ref_sym",
                         "stated_ref_val", "stated_target_val", "stated_operand_val",
-                        "copy_prev", S5_BIND_V3_PAD_GOLD_READ, "const", "uniform")
+                        "copy_prev", S5_BIND_V3_PAD_GOLD_READ, S5_BIND_V3_PAD_FIXED_READ,
+                        "const", "uniform")
 # The emissions that read the GOLD PAD, which exists only under the teacher-forced read. Kept as
 # data so ``_pad_write_item`` and any consumer agree on which codes are unavailable free-running
 # rather than each deciding for itself.
@@ -3305,6 +3307,9 @@ S5_BIND_V3_PAD_HOP_PARTS = {
     # out of it is neither a map read nor an operand resolve, so EVERY member of the family is
     # depth 0 at every cell — which is why the family can be maximised over rather than listed
     S5_BIND_V3_PAD_GOLD_READ: {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
+    # the depth-<=1 closure: one map read on top of a fixed positional address, at every cell and
+    # on every source class, which is the same (0, 1) the registered ``target_val`` carries
+    S5_BIND_V3_PAD_FIXED_READ: {c: (0, 1) for c in S5_BIND_V3_PAD_CELLS},
     "const": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
     "uniform": {c: (0, 0) for c in S5_BIND_V3_PAD_CELLS},
 }
@@ -3342,19 +3347,41 @@ S5_BIND_V3_PAD_HOPS = {code: {cell: s5_bind_v3_pad_hops(code, cell, "cross")
 S5_BIND_V3_PAD_EVICT = ("first", "recent")
 
 
-def s5_bind_v3_pad_gold(rec) -> list[tuple[str, str]] | None:
-    """The gold ``moved2`` pad for one item: the post-event values of the slots each event MOVED.
+# THE PAD FORMATS THE FLOOR MACHINERY REPLAYS, and the difference between them is one token.
+#   ``moved2``   the post-event values of the slots each event MOVED. A swap's pair is (the value
+#                now at the target, the value now at the resolved operand); a give's is (the value
+#                INSTALLED, the value it displaced).
+#   ``before2``  the PRE-EVENT values of the cells each event WRITES. A swap writes two pointer
+#                cells and their pre-values are the same two agents ``moved2`` prints, so the swap
+#                block is unchanged; a give writes ONE holder cell, so its block is one token.
+#
+# WHY THE GIVE'S SECOND TOKEN IS DROPPED, and it is not a preference. The value a give INSTALLS is
+# the event's resolved operand, and that operand is a ONE-HOP read of the event line the row is
+# already reading — measured exactly 1.0000 at ``give_p0`` under both source classes, by the
+# closure below. So it adds no supervision the surface does not already carry, and it puts the
+# agent that a later CROSS swap resolves to at a FIXED PAD ADDRESS: printing it is what makes
+# ``P[give:same[-1]p0]`` — one pad read plus one live pointer read, depth 1, admitted — score
+# 0.51 on the two-hop token where the registered floor was 0.31. Under ``before2`` every pad
+# token is a value that was IN the state before the event, and the whole depth-<=1 family falls
+# from ~3.1x chance to ~2.1x at both k = 6 and k = 12.
+S5_BIND_V3_PAD_FORMATS = ("moved2", "before2")
 
-    A swap of ``(tgt, x)`` writes ``[P[tgt], P[x]]`` after the swap — token 0 is the operand read
-    through the pointer map (two hops on a composed stream) and token 1 is the displaced pointer
-    cell (one). A give of ``(o, x)`` writes ``[x, old B[o]]`` — the resolved operand and the
-    displaced holder, one hop each.
+
+def s5_bind_v3_pad_gold(rec, fmt: str = "moved2") -> list[tuple[str, ...]] | None:
+    """The gold pad for one item, one block per event (see ``S5_BIND_V3_PAD_FORMATS``).
+
+    Under ``moved2`` a swap of ``(tgt, x)`` writes ``[P[tgt], P[x]]`` after the swap — token 0 is
+    the operand read through the pointer map (two hops on a composed stream) and token 1 is the
+    displaced pointer cell (one) — and a give of ``(o, x)`` writes ``[x, old B[o]]``. Under
+    ``before2`` the swap block is the same two agents and the give block is ``[old B[o]]`` alone.
 
     Replayed off the PROMPT and sharing no code with the format the training documents are built
     from, so the two are a check on each other rather than one function read twice.
     """
     from .composition import SWAP
 
+    if fmt not in S5_BIND_V3_PAD_FORMATS:
+        raise KeyError(f"{fmt!r} is not one of {S5_BIND_V3_PAD_FORMATS}")
     Pm, Bm = dict(rec["P0"]), dict(rec["B0"])
     out = []
     for kind, tgt, ref, src in rec["events"]:
@@ -3371,8 +3398,17 @@ def s5_bind_v3_pad_gold(rec) -> list[tuple[str, str]] | None:
             if disp is None:
                 return None
             Bm[tgt] = x
-            out.append((x, disp))
+            out.append((x, disp) if fmt == "moved2" else (disp,))
     return out
+
+
+def s5_bind_v3_pad_cells(kind: str, fmt: str = "moved2") -> tuple[str, ...]:
+    """The pad cells one event kind emits under a format, in block order."""
+    from .composition import SWAP
+
+    if kind == SWAP:
+        return ("swap_p0", "swap_p1")
+    return ("give_p0", "give_p1") if fmt == "moved2" else ("give_p1",)
 
 
 # ===========================================================================================
@@ -3458,12 +3494,11 @@ def _pad_gold_read_sweep(prepped) -> dict:
         cls: dict[str, list] = {}
         for i, (kind, _t, _r, src) in enumerate(rec["events"]):
             source = s5_bind_v3_pad_event_source(kind, src)
-            names = ("swap_p0", "swap_p1") if kind == SWAP else ("give_p0", "give_p1")
-            for p in (0, 1):
+            names = s5_bind_v3_pad_cells(kind, "moved2" if len(g[i]) == 2 else "before2")
+            for p, t in enumerate(g[i]):
                 part = f"{names[p]}|{source}"
                 counts[part] += 1
                 h = hits.setdefault(part, Counter())
-                t = g[i][p]
                 for lab, ent in cls.items():
                     n_blk, per_q = ent
                     for q in (0, 1):
@@ -3475,7 +3510,8 @@ def _pad_gold_read_sweep(prepped) -> dict:
             for lab in s5_bind_v3_pad_block_classes(kind, source):
                 ent = cls.setdefault(lab, [0, ({}, {})])
                 for q in (0, 1):
-                    ent[1][q].setdefault(g[i][q], []).append(ent[0])
+                    if q < len(g[i]):
+                        ent[1][q].setdefault(g[i][q], []).append(ent[0])
                 ent[0] += 1
     return {"counts": dict(counts), "hits": hits}
 
@@ -3500,7 +3536,7 @@ def _pad_gold_best(sweep: dict, parts) -> tuple[float | None, str | None]:
     return (-best[0] / tot, best[1])
 
 
-def s5_bind_v3_pad_gold_reads(examples, top: int = 0) -> dict:
+def s5_bind_v3_pad_gold_reads(examples, top: int = 0, fmt: str = "moved2") -> dict:
     """EVERY fixed positional read of the gold pad, scored per (cell, source) partition.
 
     Returns ``{"n", "counts", "best", "cells", "n_addresses", "surface"}``: ``best`` is the family
@@ -3516,7 +3552,7 @@ def s5_bind_v3_pad_gold_reads(examples, top: int = 0) -> dict:
         rec = read(e.prompt)
         if rec is None:
             continue
-        g = s5_bind_v3_pad_gold(rec)
+        g = s5_bind_v3_pad_gold(rec, fmt)
         if g is not None:
             prepped.append((rec, g))
     sweep = _pad_gold_read_sweep(prepped)
@@ -3540,6 +3576,249 @@ def _pad_gold_report(sweep: dict, n: int, top: int = 0) -> dict:
     return {"n": n, "counts": dict(sweep["counts"]), "n_addresses": len(seen),
             "best": {p: {"acc": v[0], "address": v[1]} for p, v in best.items()},
             "cells": {c: {"acc": v[0], "address": v[1]} for c, v in cells.items()},
+            "surface": surface}
+
+
+# ===========================================================================================
+# THE DEPTH-<=1 EMISSION FAMILY — the whole space closed by COST, not the pad closed by address
+# ===========================================================================================
+# WHY THIS SUPERSEDES THE FAMILY ABOVE. ``_pad_gold_read_sweep`` closes the fixed positional reads
+# OF THE GOLD PAD at depth 0, exhaustively — and that was still a closure over one ADDRESS SPACE at
+# one DEPTH, with the depth-1 emissions left as a hand-list of eight codes keyed to the CURRENT
+# event. A member outside that list beat the floor a result was read against: ``P[give:same[-1]p0]``
+# is one pad read followed by one LIVE pointer-map read, which is depth 1 by
+# ``S5_BIND_V3_PAD_HOP_PARTS`` — the identical pricing ``target_val`` is admitted under — and it
+# scored 0.51 where the registered floor was 0.31. Nothing in the file could express it, because
+# the file listed policies instead of bounding cost.
+#
+# THE RULE, and it is the whole of it: AN ADMITTED EMISSION IS ANY FIXED POSITIONAL ADDRESS IN THE
+# CONTEXT FOLLOWED BY AT MOST ``max_hops`` MAP READS. That is a PRODUCT SPACE and it is swept:
+#
+#   THE ADDRESS SPACE   ``pad``  a block of the gold pad (teacher-forced only — free-running the
+#                                row holds what it emitted, which ``copy_prev`` prices)
+#                       ``line`` an EVENT line, whose two operand slots are on the surface. The
+#                                row's OWN line is in it at index -1: a row reads the event it is
+#                                emitting for, so ``P[line:any[-1]p0]`` — the pre-value of the
+#                                swap's named target — is admitted, and it is exactly the
+#                                registered ``target_val``, which is how the sweep is checked.
+#                       ``head`` a line of the STATED maps. Shuffled per item, so mostly
+#                                uninformative; swept because a family closed by a rule does not
+#                                get to leave out the members someone expects to lose.
+#   THE CLASS           the block classes of ``s5_bind_v3_pad_block_classes`` — the labels the
+#                       row's emission is already partitioned by. This is the same boundary as
+#                       above: a finer predicate is a per-event comparison, and that is a SCAN.
+#   THE INDEX           a constant in either canonical indexing, the d-th most recent or the a-th
+#                       from the start. Both swept in full, nothing capped.
+#   THE MAP             ``id`` and then, BY TYPE, one read: an AGENT token may be read through the
+#                       live pointer map or the stated one; an OBJECT token through the live or
+#                       stated holder map. A map applied to a token of the wrong type is not an
+#                       emission and is not swept. ``id`` is depth 0; every other map is depth 1,
+#                       so ``max_hops`` selects the sub-family rather than a different sweep.
+#
+# WHAT IS STILL OUT, unchanged and for the same reason: a per-event BACKWARD SCAN
+# (``s5_bind_v3_pad_scan_last_write``). Its address is FOUND by matching the current event's
+# operand against earlier events, so it is not a positional read at all and the step conjunct
+# excludes it. It is measured anyway, so the exclusion is a judgement about cost.
+S5_BIND_V3_PAD_SPACES = ("pad", "line", "head")
+# The partitions the closure is SWEPT over. It is the two halves of the only pad cell whose gold
+# is more than one read; the other three are 1.0000 under one map read off the event line, which
+# ``tests`` pins rather than assumes.
+S5_BIND_V3_PAD_CLOSED_PARTS = ("swap_p0|cross", "swap_p0|same")
+S5_BIND_V3_PAD_READ_MAPS = ("id", "P", "P0", "B", "B0")
+S5_BIND_V3_PAD_AGENT_MAPS = ("id", "P", "P0")     # a token naming an AGENT
+S5_BIND_V3_PAD_OBJECT_MAPS = ("B", "B0")          # a token naming an OBJECT
+
+
+def s5_bind_v3_pad_fixed_address(mp: str, space: str, cls: str, idx: int, q: int) -> str:
+    """One member of the family as it is printed: ``map[space:class[-d]pq]``, ``id`` elided."""
+    core = f"{space}:{cls}[{'+' if idx >= 0 else '-'}{abs(idx)}]p{q}"
+    return core if mp == "id" else f"{mp}[{core}]"
+
+
+class _AddrIndex:
+    """value -> the ordinals, per (class, slot), of the blocks of one address space holding it."""
+
+    __slots__ = ("n", "at")
+
+    def __init__(self):
+        self.n: Counter = Counter()
+        self.at: dict = {}
+
+    def add(self, classes, slots):
+        for c in classes:
+            j = self.n[c]
+            for s, v in enumerate(slots):
+                if v is not None:
+                    self.at.setdefault((c, s), {}).setdefault(v, []).append(j)
+            self.n[c] += 1
+
+    def hits(self, val, out, space, mp):
+        for (c, s), per in self.at.items():
+            js = per.get(val)
+            if not js:
+                continue
+            nb = self.n[c]
+            for j in js:
+                out[(mp, space, c, j, s)] += 1          # the a-th from the start
+                out[(mp, space, c, j - nb, s)] += 1     # the d-th most recent
+
+
+def _pad_fixed_read_sweep(prepped, parts=None, spaces=S5_BIND_V3_PAD_SPACES) -> dict:
+    """Hits per (partition, member) over the whole depth-<=1 family, and partition counts.
+
+    ``spaces`` is which address spaces exist under the read being priced. Teacher-forced all
+    three do; FREE-RUNNING the ``pad`` space holds what the row emitted itself — which
+    ``copy_prev`` already prices — so it is dropped and the event lines and the header remain.
+
+    ``parts`` restricts which ``"cell|source"`` partitions are scored. It is a COST control and
+    not a claim: the other three pad cells are each solved exactly by one map read off the event
+    line (1.0000, and ``tests`` pins it), so the partition that decides a composition reading is
+    ``swap_p0|cross`` and sweeping only it is 5x cheaper per item.
+
+    One pass per item. At a scored token the target is fixed, so for each map only that map's
+    PREIMAGE of the target is looked up in a value -> ordinals index — the sweep is linear in the
+    hits it finds rather than in the addresses it covers, which is what makes an exhaustive sweep
+    of a five-figure address space affordable.
+    """
+    from .composition import SWAP
+
+    counts: Counter = Counter()
+    hits: dict[str, Counter] = {}
+    want = None if parts is None else set(parts)
+    for rec, g in prepped:
+        P0, B0 = dict(rec["P0"]), dict(rec["B0"])
+        objs = set(B0)
+        invP0: dict = {}
+        for a, v in P0.items():
+            invP0.setdefault(v, []).append(a)
+        invB0: dict = {}
+        for o, v in B0.items():
+            invB0.setdefault(v, []).append(o)
+        P, B = dict(P0), dict(B0)
+        pad, line, head = _AddrIndex(), _AddrIndex(), _AddrIndex()
+        for a, v in rec["P0"].items():
+            head.add(("any", "P0line"), (a, v))
+        for o, v in rec["B0"].items():
+            head.add(("any", "B0line"), (o, v))
+        avail = tuple((nm, ix) for nm, ix in (("pad", pad), ("line", line), ("head", head))
+                      if nm in spaces)
+        for i, (kind, tgt, ref, src) in enumerate(rec["events"]):
+            source = s5_bind_v3_pad_event_source(kind, src)
+            cls = s5_bind_v3_pad_block_classes(kind, source)
+            line.add(cls, (tgt, ref))          # the row reads its OWN event line: index -1
+            names = s5_bind_v3_pad_cells(kind, "moved2" if len(g[i]) == 2 else "before2")
+            scored = [(p, t, f"{names[p]}|{source}") for p, t in enumerate(g[i])
+                      if want is None or f"{names[p]}|{source}" in want]
+            if scored:
+                invP: dict = {}
+                for a, v in P.items():
+                    invP.setdefault(v, []).append(a)
+                invB: dict = {}
+                for o, v in B.items():
+                    invB.setdefault(v, []).append(o)
+                for p, t, part in scored:
+                    counts[part] += 1
+                    h = hits.setdefault(part, Counter())
+                    pre = {"id": () if t in objs else (t,),
+                           "P": invP.get(t, ()), "P0": invP0.get(t, ()),
+                           "B": invB.get(t, ()), "B0": invB0.get(t, ())}
+                    for mp, vals in pre.items():
+                        for u in vals:
+                            for space, ix in avail:
+                                ix.hits(u, h, space, mp)
+                    if p and "pad" in spaces:   # the row's own block, position 0, already emitted
+                        if g[i][0] == t:
+                            h[S5_BIND_V3_PAD_SELF_READ] += 1
+                        for mp in ("P", "P0"):
+                            if g[i][0] in (invP if mp == "P" else invP0).get(t, ()):
+                                h[f"{mp}[{S5_BIND_V3_PAD_SELF_READ}]"] += 1
+            pad.add(cls, g[i] if len(g[i]) == 2 else (g[i][0], None))
+            x = ref if src == "N" else (P.get(ref) if src == "P" else B.get(ref))
+            if kind == SWAP:
+                if tgt not in P or x not in P:
+                    break
+                P[tgt], P[x] = P[x], P[tgt]
+            else:
+                B[tgt] = x
+    return {"counts": dict(counts), "hits": hits}
+
+
+def _pad_fixed_depth(member) -> int:
+    """0 for an identity read, 1 for a read followed by one map read."""
+    if isinstance(member, str):
+        return 0 if member == S5_BIND_V3_PAD_SELF_READ else 1
+    return 0 if member[0] == "id" else 1
+
+
+def _pad_fixed_label(member) -> str:
+    return member if isinstance(member, str) else s5_bind_v3_pad_fixed_address(*member)
+
+
+def _pad_fixed_best(sweep: dict, parts, max_hops: int = 1, member=None):
+    """The family's best member over one or more partitions at a depth bound, and its accuracy.
+
+    Over several partitions it is ONE member applied to all of them, for the same reason
+    ``_pad_gold_best`` is: a row emits one thing per partition it may switch on.
+
+    ``member`` scores THAT member instead of maximising, which is what the HELD-OUT reading needs:
+    a max over a five-figure family carries an upward selection bias that a few-hundred-item read
+    does not average out — free-running it is attained by a HEADER address at chance — so the
+    registered number selects the member on one item set and scores it on the other. Returns
+    ``(accuracy, printed label, raw key)``.
+    """
+    tot = sum(sweep["counts"].get(p, 0) for p in parts)
+    if not tot:
+        return (None, None, None)
+    if member is not None:
+        got = sum(sweep["hits"].get(p, {}).get(member, 0) for p in parts)
+        return (got / tot, _pad_fixed_label(member), member)
+    agg: Counter = Counter()
+    for p in parts:
+        for a, v in sweep["hits"].get(p, {}).items():
+            if _pad_fixed_depth(a) <= max_hops:
+                agg[a] += v
+    if not agg:
+        return (0.0, None, None)
+    best = min(((-v, _pad_fixed_label(a), a) for a, v in agg.items()))
+    return (-best[0] / tot, best[1], best[2])
+
+
+def s5_bind_v3_pad_fixed_reads(examples, parts=None, top: int = 0, max_hops: int = 1,
+                               fmt: str = "moved2", spaces=S5_BIND_V3_PAD_SPACES) -> dict:
+    """THE DEPTH-<=1 FAMILY, swept, per ``"cell|source"`` partition.
+
+    Returns ``{"n", "counts", "best", "n_members", "surface", "max_hops"}``. ``best`` is the family
+    max per partition with the member that attains it; ``surface`` is the whole per-member table,
+    trimmed to ``top`` members per partition (0 keeps all), so a reader can see WHERE the max sits.
+    """
+    from .composition import read
+
+    prepped = []
+    for e in examples:
+        rec = read(e.prompt)
+        if rec is None:
+            continue
+        g = s5_bind_v3_pad_gold(rec, fmt)
+        if g is not None:
+            prepped.append((rec, g))
+    sweep = _pad_fixed_read_sweep(prepped, parts, spaces)
+    out_parts = tuple(sweep["counts"])
+    surface, seen = {}, set()
+    for p in out_parts:
+        tot = sweep["counts"][p]
+        rows = sorted(((v / tot, (a if isinstance(a, str)
+                                  else s5_bind_v3_pad_fixed_address(*a)))
+                       for a, v in sweep["hits"].get(p, {}).items()
+                       if _pad_fixed_depth(a) <= max_hops),
+                      key=lambda z: (-z[0], z[1]))
+        seen.update(a for _v, a in rows)
+        surface[p] = {a: v for v, a in (rows[:top] if top else rows)}
+    return {"n": len(prepped), "counts": dict(sweep["counts"]), "n_members": len(seen),
+            "max_hops": max_hops, "fmt": fmt, "spaces": tuple(spaces),
+            "best": {p: {"acc": v[0], "member": v[1]}
+                     for p in out_parts
+                     for v in (_pad_fixed_best(sweep, (p,), max_hops),)},
+            "keys": {p: _pad_fixed_best(sweep, (p,), max_hops)[2] for p in out_parts},
             "surface": surface}
 
 
@@ -3687,7 +3966,7 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
                   "stated_target_val": (P0.get(tgt), P0.get(tgt)),
                   "stated_operand_val": (P0.get(x_stated), P0.get(x_stated))}
         else:
-            names = ("give_p0", "give_p1")
+            names = ("give_p0", "give_p1") if len(gold[i]) == 2 else ("give_p1",)
             em = {"own_gold": (x, bel_b(tgt)),
                   "operand": (x, x),
                   "target_val": (bel_b(tgt), bel_b(tgt)),
@@ -3700,10 +3979,14 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
         prev = em["copy_prev"]
         g = gold[i]
         source = s5_bind_v3_pad_event_source(kind, src)
-        for p in (0, 1):
-            slot = acc[(names[p], source)]
+        # ``names`` is the block's own layout; the emission tuples are written in the WIDE
+        # (``moved2``) layout, so a cell is read at the position its NAME carries and a format
+        # that drops a token drops the scored column with it.
+        for p, cell in enumerate(names):
+            q = 0 if cell.endswith("p0") else 1
+            slot = acc[(cell, source)]
             for code, vals in em.items():
-                if vals[p] is not None and vals[p] == g[p]:
+                if vals[q] is not None and vals[q] == g[p]:
                     slot[code][0] += 1
                 slot[code][1] += 1
             for a in agents:
@@ -3713,7 +3996,10 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
         # slot the surface NAMES is refreshed: a swap's gold block is (value now at tgt, value now
         # at the resolved operand), and which slot the second token belongs to is exactly the
         # two-hop fact the row does not have. A give names the object it writes, so both of its
-        # tokens are attributable and the first is the new holder.
+        # tokens are attributable and the first is the new holder. Under a format whose give block
+        # does NOT print the installed value (``before2``) there is nothing to refresh a holder
+        # belief from: the block holds the value the write is about to destroy, so the row reads
+        # it, overwrites it with its own resolve, and is where it was.
         if kind == SWAP:
             vt, vx = bel_p(tgt), bel_p(x)
             hold(Pp, ageP, jp, tgt, vx)
@@ -3722,12 +4008,13 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
                 Pp[tgt] = g[0]
         else:
             hold(Bp, ageB, jb, tgt, x)
-            if forced and tgt in Bp:
+            if forced and tgt in Bp and len(g) == 2:
                 Bp[tgt] = g[0]
 
 
 def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=None,
-                                forced: bool = False) -> dict:
+                                forced: bool = False, fmt: str = "moved2",
+                                fixed_members=None) -> dict:
     """Every admitted pad-write row's accuracy on one cell's exact items, per pad cell and source.
 
     Returns ``{"n", "counts": {cell: slots}, "rows": {row: {cell: {code: acc}}}}`` — pooled over
@@ -3767,7 +4054,7 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
         rec = read(e.prompt)
         if rec is None:
             continue
-        g = s5_bind_v3_pad_gold(rec)
+        g = s5_bind_v3_pad_gold(rec, fmt)
         if g is None:
             continue
         prepped.append((rec, g))
@@ -3780,14 +4067,12 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
     counts, counts_src = Counter(), Counter()
     for rec, _g in prepped:
         for kind, _t, _r, src in rec["events"]:
-            pos = ("swap_p0", "swap_p1") if kind == SWAP else ("give_p0", "give_p1")
-            counts["swap" if kind == SWAP else "give"] += 1
-            for c in pos:
+            for c in s5_bind_v3_pad_cells(kind, fmt):
+                counts[c] += 1
                 counts_src[f"{c}|{s5_bind_v3_pad_event_source(kind, src)}"] += 1
     parts = tuple((c, s) for c in S5_BIND_V3_PAD_CELLS for s in S5_BIND_V3_PAD_SOURCES)
-    out = {"n": len(prepped), "forced": bool(forced),
-           "counts": {"give_p0": counts["give"], "give_p1": counts["give"],
-                      "swap_p0": counts["swap"], "swap_p1": counts["swap"]},
+    out = {"n": len(prepped), "forced": bool(forced), "fmt": fmt,
+           "counts": {c: counts[c] for c in S5_BIND_V3_PAD_CELLS},
            "counts_src": {f"{c}|{s}": counts_src[f"{c}|{s}"] for c, s in parts},
            "rows": {}, "rows_src": {}}
     # THE GOLD-PAD FAMILY, once for the whole item set: it reads the context and not the carry, so
@@ -3801,6 +4086,34 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
                      if forced else 0.0)
         for s in S5_BIND_V3_PAD_SOURCES:
             fam[(c, s)] = _pad_gold_best(gold_reads, (f"{c}|{s}",))[0] if forced else 0.0
+    # AND THE DEPTH-<=1 CLOSURE, over the partitions that can move: the other three pad cells are
+    # each solved exactly by one map read off the event line the row already has, so a closure
+    # over them can only reproduce a floor of 1.0 that ``target_val``/``operand`` already set.
+    # Free-running the pad space is the row's OWN emissions and is dropped; the event lines and
+    # the header remain, so the family is not empty there the way the gold-pad one is.
+    fixed = _pad_fixed_read_sweep(
+        prepped, S5_BIND_V3_PAD_CLOSED_PARTS,
+        S5_BIND_V3_PAD_SPACES if forced else tuple(z for z in S5_BIND_V3_PAD_SPACES if z != "pad"))
+    sel = fixed_members or {}
+    out["fixed_reads"] = {
+        "counts": dict(fixed["counts"]),
+        "best": {p: {"acc": v[0], "member": v[1], "held_out": p in sel}
+                 for p in fixed["counts"]
+                 for v in (_pad_fixed_best(fixed, (p,), S5_BIND_V3_MAX_DEPTH, sel.get(p)),)},
+        "keys": {p: _pad_fixed_best(fixed, (p,), S5_BIND_V3_MAX_DEPTH)[2]
+                 for p in fixed["counts"]},
+        "in_sample_max": {p: _pad_fixed_best(fixed, (p,), S5_BIND_V3_MAX_DEPTH)[0]
+                          for p in fixed["counts"]},
+        "spaces": ("pad",) if forced else (), "parts": S5_BIND_V3_PAD_CLOSED_PARTS,
+        "selected_on": "disjoint pool" if sel else "these items"}
+    fam1 = {}
+    for c in S5_BIND_V3_PAD_CELLS:
+        keys = [f"{c}|{s}" for s in S5_BIND_V3_PAD_SOURCES]
+        fam1[(c,)] = _pad_fixed_best(fixed, keys, S5_BIND_V3_MAX_DEPTH)[0]
+        for s in S5_BIND_V3_PAD_SOURCES:
+            part = f"{c}|{s}"
+            fam1[(c, s)] = _pad_fixed_best(fixed, (part,), S5_BIND_V3_MAX_DEPTH,
+                                           sel.get(part))[0]
     for row in rows:
         jp, jb, ev = s5_bind_v3_pad_carry_parse(row)
         acc = {p: {code: [0, 0] for code in S5_BIND_V3_PAD_CODES
@@ -3817,10 +4130,11 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
             for code in S5_BIND_V3_PAD_CODES:
                 if code == "uniform":
                     d["uniform"] = 1.0 / k
-                elif code == S5_BIND_V3_PAD_GOLD_READ:
+                elif code in (S5_BIND_V3_PAD_GOLD_READ, S5_BIND_V3_PAD_FIXED_READ):
                     # the family max over exactly these partitions, computed once for the item set
                     key = pairs[0] if len(pairs) == 1 else (pairs[0][0],)
-                    d[code] = (fam.get(key)
+                    src = fam if code == S5_BIND_V3_PAD_GOLD_READ else fam1
+                    d[code] = (src.get(key)
                                if sum(acc[p]["copy_prev"][1] for p in pairs) else None)
                 elif code == "const":
                     per = {a: [0, 0] for a in agents}
@@ -3862,11 +4176,16 @@ def s5_bind_v3_pad_write_floor(scores: dict, k: int, m: int, n_swap: int, n_give
     maximisation and not for a policy.
     """
     def label(code, key):
-        if code != S5_BIND_V3_PAD_GOLD_READ:
-            return code
-        gr = scores.get("gold_reads") or {}
-        got = (gr.get("best") if "|" in key else gr.get("cells")) or {}
-        return f"{code}@{(got.get(key) or {}).get('address')}"
+        """A family code stands for a MAXIMISATION, so it is named with the member that attains
+        it — the address for the gold-pad family, the address-and-map for the depth-<=1 one."""
+        if code == S5_BIND_V3_PAD_GOLD_READ:
+            gr = scores.get("gold_reads") or {}
+            got = (gr.get("best") if "|" in key else gr.get("cells")) or {}
+            return f"{code}@{(got.get(key) or {}).get('address')}"
+        if code == S5_BIND_V3_PAD_FIXED_READ:
+            fr = (scores.get("fixed_reads") or {}).get("best") or {}
+            return f"{code}@{(fr.get(key) or {}).get('member')}"
+        return code
 
     per_cell: dict = {c: (None, None) for c in S5_BIND_V3_PAD_CELLS}
     per_part: dict = {}
@@ -3983,7 +4302,7 @@ def s5_bind_v3_pad_two_hop_floor(scores: dict, k: int, m: int, n_swap: int, n_gi
             "one_hop": one, "unrestricted": full}
 
 
-def s5_bind_v3_pad_write_chance(examples, k: int) -> dict:
+def s5_bind_v3_pad_write_chance(examples, k: int, fmt: str = "moved2") -> dict:
     """The chance baseline for a PER-SLOT read, derived rather than borrowed from the answer.
 
     Every pad token is an AGENT name — the pad carries values of P (agents) and of B (agents) and
@@ -4002,7 +4321,7 @@ def s5_bind_v3_pad_write_chance(examples, k: int) -> dict:
         rec = read(e.prompt)
         if rec is None:
             continue
-        g = s5_bind_v3_pad_gold(rec)
+        g = s5_bind_v3_pad_gold(rec, fmt)
         if g is None:
             continue
         for blk in g:
@@ -4015,7 +4334,8 @@ def s5_bind_v3_pad_write_chance(examples, k: int) -> dict:
             "marginal": {a: c / tot for a, c in sorted(hits.items())}}
 
 
-def s5_bind_v3_pad_scan_last_write(examples, k: int, m: int, forced: bool = False) -> dict:
+def s5_bind_v3_pad_scan_last_write(examples, k: int, m: int, forced: bool = False,
+                                   fmt: str = "moved2") -> dict:
     """THE EXCLUDED ROW, measured: carry P in full and recover a cross swap's operand by scanning
     back to the last give that wrote the referenced object.
 
@@ -4047,7 +4367,7 @@ def s5_bind_v3_pad_scan_last_write(examples, k: int, m: int, forced: bool = Fals
         rec = read(e.prompt)
         if rec is None:
             continue
-        g = s5_bind_v3_pad_gold(rec)
+        g = s5_bind_v3_pad_gold(rec, fmt)
         if g is None:
             continue
         P0, B0 = rec["P0"], rec["B0"]
@@ -4066,16 +4386,16 @@ def s5_bind_v3_pad_scan_last_write(examples, k: int, m: int, forced: bool = Fals
                 x = ref if src == "N" else Pm.get(ref)
             if kind == SWAP:
                 pred = (Pm.get(x), Pm.get(tgt))
-                cells = ("swap_p0", "swap_p1")
             else:
                 pred = (x, B0.get(tgt))
-                cells = ("give_p0", "give_p1")
+            cells = s5_bind_v3_pad_cells(kind, fmt)
             source = s5_bind_v3_pad_event_source(kind, src)
-            for p in (0, 1):
-                ok = int(pred[p] is not None and pred[p] == g[i][p])
-                hit[cells[p]][0] += ok
-                hit[cells[p]][1] += 1
-                key = f"{cells[p]}|{source}"
+            for p, cell in enumerate(cells):
+                q = 0 if cell.endswith("p0") else 1
+                ok = int(pred[q] is not None and pred[q] == g[i][p])
+                hit[cell][0] += ok
+                hit[cell][1] += 1
+                key = f"{cell}|{source}"
                 part[key][0] += ok
                 part[key][1] += 1
             if kind == SWAP and x in Pm and tgt in Pm:

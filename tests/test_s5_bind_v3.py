@@ -2065,8 +2065,147 @@ def test_no_fixed_positional_read_of_the_gold_pad_can_beat_the_registered_floor(
     best = forced["gold_reads"]["best"][part]
     assert best["address"] in forced["gold_reads"]["surface"][part], best
     assert abs(forced["gold_reads"]["surface"][part][best["address"]] - best["acc"]) < 1e-12
-    assert best["address"] in two["row"], (best, two["row"])
     assert floor >= best["acc"] - 1e-12, (floor, best)
+    # THE FLOOR IS NAMED BY WHICHEVER FAMILY ATTAINS IT, and on this cell that is no longer this
+    # one: the depth-<=1 closure strictly CONTAINS the depth-0 gold-pad family (an identity read
+    # is the ``id`` map), and a member of it that this family cannot express sets the floor here.
+    named = forced["fixed_reads"]["best"][part]
+    assert named["acc"] >= best["acc"] - 1e-12, (named, best)
+    assert (best["address"] in two["row"]) or (named["member"] in two["row"]), (best, named,
+                                                                               two["row"])
+
+
+def _invented_depth1_read(examples, cell, source, space, cls, idx, q, mp, fmt="moved2"):
+    """One member of the DEPTH-<=1 family, scored HERE and not by the sweep under test.
+
+    ``space`` is ``"pad"`` (a gold block) or ``"line"`` (an event line, whose slots are the named
+    target and the referenced slot, and whose CURRENT event is at index -1 because the row reads
+    the line it is emitting for); ``cls`` is a predicate on ``(kind, source)``; ``idx`` is a
+    constant in that class's prefix; ``q`` is the slot read; ``mp`` is the one map applied to it.
+    Written from the definition, so a member invented after the closure is scored by code the
+    floor never runs.
+    """
+    hits = tot = 0
+    for e in examples:
+        rec = C.read(e.prompt)
+        gold = s5_bind_v3_pad_gold(rec, fmt)
+        if gold is None:
+            continue
+        P, B = dict(rec["P0"]), dict(rec["B0"])
+        prefix, lines = [], []
+        for i, (kind, tgt, ref, src) in enumerate(rec["events"]):
+            sc = V.s5_bind_v3_pad_event_source(kind, src)
+            names = V.s5_bind_v3_pad_cells(kind, fmt)
+            if cls(kind, sc):
+                lines.append((tgt, ref))
+            if source == sc and cell in names:
+                pool = prefix if space == "pad" else lines
+                j = idx if idx >= 0 else len(pool) + idx
+                if 0 <= j < len(pool):
+                    u = (gold[pool[j]][q] if space == "pad" else pool[j][q])
+                    got = {"id": u, "P": P.get(u), "P0": rec["P0"].get(u),
+                           "B": B.get(u), "B0": rec["B0"].get(u)}[mp]
+                    hits += int(got is not None and got == gold[i][names.index(cell)])
+                tot += 1
+            if cls(kind, sc) and space == "pad":
+                prefix.append(i)
+            x = ref if src == "N" else (P.get(ref) if src == "P" else B.get(ref))
+            if kind == C.SWAP:
+                P[tgt], P[x] = P[x], P[tgt]
+            else:
+                B[tgt] = x
+    return hits / tot if tot else None
+
+
+def test_the_depth1_emission_family_is_closed_by_cost_and_contains_what_beat_the_list():
+    """THE WHOLE EMISSION SPACE, CLOSED BY COST. A fixed positional address in the context
+    followed by AT MOST ``S5_BIND_V3_MAX_DEPTH`` map reads, swept over the product of address
+    spaces, block classes, indices, token positions and maps.
+
+    WHY IT REPLACED A LIST. The previous closure swept ADDRESSES at depth 0 and left depth 1 as
+    eight hand-written codes keyed to the current event. ``P[give:same[-1]p0]`` — one pad read
+    then one LIVE pointer read, priced (0, 1) exactly as the registered ``target_val`` is — is not
+    one of them, and it beat the floor a composition result was read against. It is a member of
+    the family below and the floor now maximises over the family.
+    """
+    assert V.s5_bind_v3_pad_hops(V.S5_BIND_V3_PAD_FIXED_READ, "swap_p0", "cross") == 1
+    assert V.S5_BIND_V3_PAD_FIXED_READ in S5_BIND_V3_PAD_CODES
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=96, length=32)
+    ns, ng = s5_bind_v3_shape(ex)
+    cell, src = V.S5_BIND_V3_TWO_HOP_CELL, V.S5_BIND_V3_TWO_HOP_SOURCE
+    part = f"{cell}|{src}"
+    forced = s5_bind_v3_pad_write_scores(ex, k, m, pad=2, forced=True)
+    floor = s5_bind_v3_pad_two_hop_floor(forced, k, m, ns, ng, pad=2)["floor"]
+
+    # THE MEMBER THAT BEAT THE LIST is in the family, is named by the floor, and sets it
+    beat = _invented_depth1_read(ex, cell, src, "pad",
+                                 lambda kd, s: kd == C.GIVE and s == "same", -1, 0, "P")
+    assert beat > 1.5 / k, beat
+    best = forced["fixed_reads"]["best"][part]
+    assert abs(best["acc"] - beat) < 1e-12, (best, beat)
+    assert best["member"] == "P[pad:give:same[-1]p0]", best
+    assert floor >= beat - 1e-12, (floor, beat)
+
+    # AND MEMBERS INVENTED HERE, over both address spaces and every map, do not beat it
+    invented = {
+        "P[prev pad p0]": ("pad", lambda kd, s: True, -1, 0, "P"),
+        "P0[prev pad p1]": ("pad", lambda kd, s: True, -1, 1, "P0"),
+        "P[last cross swap pad p1]": ("pad", lambda kd, s: kd == C.SWAP and s == "cross",
+                                      -1, 1, "P"),
+        "P[first pad block p0]": ("pad", lambda kd, s: True, 0, 0, "P"),
+        "P[own line target]": ("line", lambda kd, s: True, -1, 0, "P"),
+        "B[own line ref]": ("line", lambda kd, s: True, -1, 1, "B"),
+        "P[prev line target]": ("line", lambda kd, s: True, -2, 0, "P"),
+        "B0[last give line object]": ("line", lambda kd, s: kd == C.GIVE, -1, 0, "B0"),
+        "id[last swap line target]": ("line", lambda kd, s: kd == C.SWAP, -1, 0, "id"),
+    }
+    for name, (space, cls, idx, q, mp) in invented.items():
+        got = _invented_depth1_read(ex, cell, src, space, cls, idx, q, mp)
+        assert got is not None, name
+        assert got <= floor + 1e-12, (name, got, floor)
+
+
+def test_the_closure_is_swept_only_where_it_can_move_a_floor():
+    """The sweep is restricted to ``swap_p0`` and that is a COST control, not a claim: the other
+    three pad cells are each solved EXACTLY by one map read off the event line the row already
+    reads, so a closure over them can only reproduce a floor of 1.0 that the registered
+    ``target_val`` / ``operand`` codes already set. Pinned rather than asserted in prose."""
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    ex = TK.generate(spec, "test", n=24, length=24)
+    full = V.s5_bind_v3_pad_fixed_reads(ex, parts=None, top=1)
+    for part, got in full["best"].items():
+        if part.startswith("swap_p0"):
+            continue
+        assert got["acc"] == 1.0, (part, got)
+        assert got["member"].startswith(("P[line:", "B[line:")), (part, got)
+    assert V.S5_BIND_V3_PAD_CLOSED_PARTS == ("swap_p0|cross", "swap_p0|same")
+
+
+def test_before2_drops_the_give_token_that_is_a_surface_read_and_lowers_the_closure():
+    """THE FORMAT FIX. ``before2`` prints the PRE-EVENT value of every cell an event writes: the
+    same swap block as ``moved2`` and a ONE-token give block. What it drops is the value the give
+    INSTALLS, and that value is a one-hop read of the event line (the assertion above), so no
+    supervision goes with it — what goes is the fixed pad address the two-hop token is copied
+    from, and the depth-<=1 family on the composed token falls with it."""
+    spec = TK.CANONICAL["s5_bind_local_v3"]
+    k, m = spec.k, spec.n_objects_active
+    ex = TK.generate(spec, "test", n=96, length=32)
+    ns, ng = s5_bind_v3_shape(ex)
+    rec = C.read(ex[0].prompt)
+    wide, narrow = s5_bind_v3_pad_gold(rec, "moved2"), s5_bind_v3_pad_gold(rec, "before2")
+    assert len(wide) == len(narrow) == len(rec["events"])
+    for (kind, *_r), w, n in zip(rec["events"], wide, narrow):
+        assert n == (w if kind == C.SWAP else (w[1],)), (kind, w, n)
+    part = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
+    floors = {}
+    for fmt in V.S5_BIND_V3_PAD_FORMATS:
+        sc = s5_bind_v3_pad_write_scores(ex, k, m, pad=2, forced=True, fmt=fmt)
+        floors[fmt] = s5_bind_v3_pad_two_hop_floor(sc, k, m, ns, ng, pad=2)["floor"]
+        assert sc["counts"]["give_p0"] == (0 if fmt == "before2" else sc["counts"]["give_p1"])
+    assert floors["before2"] < floors["moved2"] - 0.1, floors
+    assert floors["moved2"] > 2.5 / k and floors["before2"] < 2.5 / k, floors
 
 
 def test_the_gold_pad_family_is_swept_whole_and_the_scan_is_not_in_it():
@@ -2197,7 +2336,20 @@ def test_the_composed_pad_write_has_a_floor_at_three_times_chance():
     assert two["floor"] < 1.5 * ch, two["floor"]
     assert two["unrestricted_cross"] > two["floor"] + 0.3, two
     assert two["n_cross"] and two["n_same"], two
-    assert "copy_prev" in two["row"] or "ref_sym" in two["row"], two["row"]
+    # FREE-RUNNING the row that sets it is a cheap emission or the depth-<=1 closure's own max —
+    # the gold pad is not in the context there, but the EVENT LINES and the header are, so the
+    # closure is not empty the way the gold-pad family is. It sits at chance, and the reason to
+    # believe that rather than assume it is the HELD-OUT reading: select the member on a disjoint
+    # pool and score it here, and the in-sample max (a header address, at chance) does not repeat.
+    assert any(z in two["row"] for z in ("copy_prev", "ref_sym", V.S5_BIND_V3_PAD_FIXED_READ)), \
+        two["row"]
+    pool = TK.generate(TK.CANONICAL["s5_bind_local_v3"], "test", n=400, length=48)
+    keys = s5_bind_v3_pad_write_scores(pool, k, m, pad=2, rows=())["fixed_reads"]["keys"]
+    held = s5_bind_v3_pad_write_scores(ex, k, m, pad=2, fixed_members=keys)["fixed_reads"]
+    part = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
+    assert held["best"][part]["held_out"]
+    assert held["best"][part]["acc"] <= held["in_sample_max"][part] + 1e-12, held
+    assert held["best"][part]["acc"] < 1.2 * ch, held["best"][part]
     # and the depth conjunct is the COMPONENT cells' own, read on the emission instead of the row
     assert s5_bind_v3_pad_hops("own_gold", "swap_p0", "cross") == 2
     assert s5_bind_v3_pad_hops("own_gold", "swap_p0", "same") == 2

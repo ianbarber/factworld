@@ -129,7 +129,7 @@ def gold_profile(surface, part):
     return prof
 
 
-def saturation_control(items, k, m, ns, ng, pad):
+def saturation_control(items, k, m, ns, ng, pad, fmt="moved2"):
     """THE SATURATION CONTROL THAT CAN BE BUILT, and it is a POLICY and not a model.
 
     A saturation control asks whether the measurement can register a clear at all. The cell that
@@ -146,7 +146,7 @@ def saturation_control(items, k, m, ns, ng, pad):
     stated rather than papered over.
     """
     row = f"pad_carry_P{k}B{m}_first"
-    sc = V.s5_bind_v3_pad_write_scores(items, k, m, pad=pad, rows=(row,))
+    sc = V.s5_bind_v3_pad_write_scores(items, k, m, pad=pad, rows=(row,), fmt=fmt)
     part = P.PAD_WRITE_TOKEN
     return {"row": row, "W": V.s5_bind_v3_pad_write_cost(row, k, m, ns, ng)[0],
             "bound": V.one_structure_bound(k, m) + pad,
@@ -157,7 +157,7 @@ def saturation_control(items, k, m, ns, ng, pad):
             "n_cross": sc["counts_src"].get(part)}
 
 
-def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
+def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True, fmt="moved2"):
     """Every pad-write row at one cell, on the scored items and on a disjoint pool."""
     k, m = spec.k, spec.n_objects_active
     pool = TK.generate(spec, "test", n=n + n_big, length=L)
@@ -165,7 +165,8 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
     ns, ng = V.s5_bind_v3_shape(scored)
     out = {"cell": spec.name, "L": L, "k": k, "m": m, "pad": pad, "n_scored": len(scored),
            "n_disjoint": len(big), "n_swap": ns, "n_give": ng,
-           "chance": V.s5_bind_v3_pad_write_chance(scored, k),
+           "fmt": fmt,
+           "chance": V.s5_bind_v3_pad_write_chance(scored, k, fmt),
            "task_pad_cost": V.s5_bind_v3_pad_write_task_cost(k, m, ns, ng),
            "n_rows": len(V.s5_bind_v3_pad_carry_rows(k, m, pad)),
            # THE EXCLUDED ROW, priced on the read the model is scored on. The registered score is
@@ -175,18 +176,32 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
            "scan_row": {"cost": V.s5_bind_v3_pad_write_cost("pad_scan_last_write", k, m, ns, ng),
                         "admitted": V.s5_bind_v3_pad_write_admits(
                             "pad_scan_last_write", "own_gold", "swap_p0", k, m, ns, ng, pad),
-                        "scores": V.s5_bind_v3_pad_scan_last_write(scored, k, m, forced=True),
-                        "free_run": V.s5_bind_v3_pad_scan_last_write(scored, k, m)},
-           "saturation": saturation_control(scored, k, m, ns, ng, pad)}
+                        "scores": V.s5_bind_v3_pad_scan_last_write(scored, k, m, forced=True,
+                                                                  fmt=fmt),
+                        "free_run": V.s5_bind_v3_pad_scan_last_write(scored, k, m, fmt=fmt)},
+           "saturation": saturation_control(scored, k, m, ns, ng, pad, fmt)}
     out["chance"].pop("marginal", None)
     for tag, forced_flag in (("free_run", False), ("teacher_forced", True)):
         if forced_flag and not forced:
             continue
         legs = {}
+        # THE DEPTH-<=1 CLOSURE IS SELECTED ON THE OTHER LEG. A max over a five-figure family
+        # carries an upward selection bias a few-hundred-item read does not average out — measured
+        # free-running, the in-sample max is attained by a HEADER address sitting at chance — so
+        # each leg scores the member the OTHER leg's items chose. Real members survive it (the
+        # same address wins on both) and artifacts do not. The in-sample max is kept beside it.
+        picked = {}
+        for name, items in (("scored", scored), ("disjoint", big)):
+            if items:
+                sc0 = V.s5_bind_v3_pad_write_scores(items, k, m, pad=pad, forced=forced_flag,
+                                                    fmt=fmt, rows=())
+                picked[name] = (sc0.get("fixed_reads") or {}).get("keys") or {}
         for name, items in (("scored", scored), ("disjoint", big)):
             if not items:
                 continue
-            sc = V.s5_bind_v3_pad_write_scores(items, k, m, pad=pad, forced=forced_flag)
+            other = picked.get("disjoint" if name == "scored" else "scored") or {}
+            sc = V.s5_bind_v3_pad_write_scores(items, k, m, pad=pad, forced=forced_flag,
+                                               fmt=fmt, fixed_members=other)
             nsi, ngi = V.s5_bind_v3_shape(items)
             legs[name] = {
                 "all": V.s5_bind_v3_pad_write_floor(sc, k, m, nsi, ngi, pad=pad),
@@ -196,7 +211,10 @@ def cell_pad_write_floor(spec, L, n, n_big, pad, forced=True):
                 "rows": row_table(sc, k, m, nsi, ngi, pad),
                 # AND THE WHOLE GOLD-PAD SURFACE, for the same reason one rung up: the family is
                 # closed by a rule, so what the rule admits has to be printable.
-                "gold_family": gold_family(sc, P.PAD_WRITE_TOKEN)}
+                "gold_family": gold_family(sc, P.PAD_WRITE_TOKEN),
+                # AND THE DEPTH-<=1 CLOSURE'S OWN MAX, with the member that attains it, so the
+                # family that now sets this floor is readable and not only its number
+                "fixed_family": (sc.get("fixed_reads") or {}).get("best", {})}
         op = {}
         for cls in ("all", "one_hop"):
             best = {"per_slot": None, "per_slot_row": None, "cells": {}, "cell_rows": {},
@@ -421,6 +439,8 @@ def main():
     ap.add_argument("--n", type=int, default=512)
     ap.add_argument("--n_big", type=int, default=1024)
     ap.add_argument("--pad", type=int, default=2)
+    ap.add_argument("--format", default="moved2",
+                    help="the pad format the run being scored was trained on")
     ap.add_argument("--no_forced", action="store_true")
     ap.add_argument("--decompose", default=None)
     ap.add_argument("--forced", default=None)
@@ -447,7 +467,8 @@ def main():
            "diagnostic_read": P.PAD_WRITE_DIAGNOSTIC_READ, "cells": {}}
     for cell, L in grid:
         t0 = time.time()
-        r = cell_pad_write_floor(specs[cell], L, a.n, a.n_big, a.pad, forced=not a.no_forced)
+        r = cell_pad_write_floor(specs[cell], L, a.n, a.n_big, a.pad, forced=not a.no_forced,
+                                 fmt=a.format)
         r["key"] = f"{cell}@{L}"
         rec["cells"][f"{cell}@{L}"] = r
         print_cell(r)

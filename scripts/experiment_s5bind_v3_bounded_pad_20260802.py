@@ -35,6 +35,13 @@ THE REGISTERED FORMATS, all of them a bounded summary at a derived width:
     moved2   the post-event values of the slots the event MOVED. A swap of (a, x) writes
              ``P[a] P[x]``; a give to o writes ``B[o]`` and, so the width is constant, the value it
              displaced. Both tokens are live reads of the structure being written.
+    before2  the PRE-EVENT values of the cells the event WRITES: the same swap block, and a give
+             block of ONE token — the value the write displaces. It is ``moved2`` with the give's
+             INSTALLED value dropped, and that value is a one-hop read of the event line (1.0000 at
+             ``give_p0`` under both source classes), so what it removes is not supervision but the
+             fixed pad ADDRESS a later cross swap's two-hop token is copied from. Under ``moved2``
+             the whole depth-<=1 emission family reads 3.1x chance on that token and under
+             ``before2`` 2.1x, at both k = 6 and k = 12.
     delta2   the RESOLVED OPERAND and the displaced value. Token one is a live read of the SOURCE
              structure — the composed cell's own defining work — and token two of the target. On a
              COMPONENT cell every operand is named, so that token is a copy of one the event
@@ -135,7 +142,7 @@ import experiment_s5bind_v3_three_cell_local_20260731 as E                 # noq
 
 # The registered width, and the width of every format name below. ``dense`` is the shipped
 # format and is k + m; it is here as the CONTROL and is unfloorable by construction.
-PAD_WIDTH = {"dense": None, "moved2": 2, "delta2": 2, "hybrid4": 4}
+PAD_WIDTH = {"dense": None, "moved2": 2, "before2": 2, "delta2": 2, "hybrid4": 4}
 FORMATS = tuple(PAD_WIDTH)
 MAX_DOC_TOKENS = E.MAX_DOC_TOKENS
 
@@ -196,6 +203,14 @@ def pad_values(ex, fmt, agents=None, objs=None):
     ``moved2``  the post-event values of the slots the event MOVED (a swap moves two pointer
                 cells; a give moves one holder cell, and the value it displaced fills the block so
                 the width is constant and query-blind).
+    ``before2`` the PRE-EVENT values of the cells the event WRITES. A swap writes two pointer
+                cells, whose pre-values are the two agents ``moved2`` already prints, so the swap
+                block is unchanged; a give writes ONE holder cell, so its block is ONE token and
+                the value the give INSTALLS is no longer printed. That value is a one-hop read of
+                the event line (measured 1.0000 at ``give_p0`` under both source classes), so
+                dropping it removes no supervision the surface does not carry — and it removes the
+                fixed pad address a later cross swap's two-hop token is copied from
+                (``validity.S5_BIND_V3_PAD_FORMATS``).
     ``delta2``  the RESOLVED OPERAND and the displaced value: token one is a live read of the
                 SOURCE structure, which is the composed cell's own defining work.
     ``hybrid4`` ``moved2`` plus two STATE slots by rotation, so a bounded amount of the state is
@@ -231,6 +246,9 @@ def pad_values(ex, fmt, agents=None, objs=None):
             moved = [Bm[tgt], disp]
         if fmt == "delta2":
             out.append([x, disp])
+            continue
+        if fmt == "before2":
+            out.append(list(moved) if kind == SWAP else [disp])
             continue
         block = list(moved)
         if fmt == "hybrid4":
@@ -373,9 +391,10 @@ def bounded_free_run_batched(model, tok, spec, length, n, device, fmt, batch=128
             return None, None, None
         toks, slots, gold = got
         prepped.append((toks, slots, set(slots), gold, ex.answer))
-    n_slots = len(prepped[0][1])
-    if any(len(p[1]) != n_slots for p in prepped):
-        return None, None, None
+    # A format whose block width depends on the EVENT KIND (``before2``) gives each item its own
+    # slot count, so the lockstep decode below runs to the batch's longest and generates only for
+    # the items that still have a slot at that ordinal. Under a constant-width format every item
+    # is active at every ordinal and this is the loop it always was.
     hits = ck_hits = ck_total = 0
     model.eval()
     with torch.no_grad():
@@ -384,16 +403,18 @@ def bounded_free_run_batched(model, tok, spec, length, n, device, fmt, batch=128
             ids = [[] for _ in chunk]
             cursor = [0] * len(chunk)
             gen = [[] for _ in chunk]
+            n_slots = max(len(p[1]) for p in chunk)
             for ordinal in range(n_slots + 1):
                 for i, (toks, slots, slotset, _g, _a) in enumerate(chunk):
-                    limit = slots[ordinal] if ordinal < n_slots else len(toks)
+                    limit = slots[ordinal] if ordinal < len(slots) else len(toks)
                     while cursor[i] < limit:
                         if cursor[i] not in slotset:
                             ids[i] += tok.encode(toks[cursor[i]])
                         cursor[i] += 1
-                if ordinal < n_slots:
-                    nxt = E._batched_argmax(model, ids, tok, device)
-                    for i, tid in enumerate(nxt):
+                live_slots = [i for i in range(len(chunk)) if ordinal < len(chunk[i][1])]
+                if live_slots:
+                    nxt = E._batched_argmax(model, [ids[i] for i in live_slots], tok, device)
+                    for i, tid in zip(live_slots, nxt):
                         ids[i].append(tid)
                         gen[i].append(tok.id_to_token.get(tid, "<unk>"))
                         cursor[i] += 1
@@ -472,7 +493,6 @@ def attribute_answers(ckpt_path, spec, length, n, device, fmt, batch=64):
                 if qkind == "bind" and qtgt == tgt:
                     last_for_q = Bm[tgt]
         rows.append((toks, slots, set(slots), gold, ex.answer, rec, w, last_for_q))
-    n_slots = len(rows[0][1])
     hits = {"gold": 0, "stated": 0, "last_pad": 0, "in_last_pad": 0, "pad_for_q": 0, "n": 0}
     model.eval()
     with torch.no_grad():
@@ -480,15 +500,18 @@ def attribute_answers(ckpt_path, spec, length, n, device, fmt, batch=64):
             chunk = rows[b0:b0 + batch]
             ids = [[] for _ in chunk]
             cursor = [0] * len(chunk)
+            n_slots = max(len(r[1]) for r in chunk)
             for ordinal in range(n_slots + 1):
                 for i, (toks, slots, slotset, *_r) in enumerate(chunk):
-                    limit = slots[ordinal] if ordinal < n_slots else len(toks)
+                    limit = slots[ordinal] if ordinal < len(slots) else len(toks)
                     while cursor[i] < limit:
                         if cursor[i] not in slotset:
                             ids[i] += tok.encode(toks[cursor[i]])
                         cursor[i] += 1
-                if ordinal < n_slots:
-                    for i, tid in enumerate(E._batched_argmax(model, ids, tok, device)):
+                live_slots = [i for i in range(len(chunk)) if ordinal < len(chunk[i][1])]
+                if live_slots:
+                    for i, tid in zip(live_slots, E._batched_argmax(
+                            model, [ids[i] for i in live_slots], tok, device)):
                         ids[i].append(tid)
                         cursor[i] += 1
             outs = [[] for _ in chunk]

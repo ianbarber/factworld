@@ -173,7 +173,7 @@ def teacher_forced(model, tok, spec, L, n, device, fmt, batch=16):
             if j in set(slots):
                 at.append(len(ids))
             ids += tok.encode(t)
-        prepped.append((ids, at, gold, *operand_kinds(e)))
+        prepped.append((ids, at, gold, slot_layout(e, fmt), *operand_kinds(e)))
     hit = tot = 0
     by_pos = [[0, 0], [0, 0]]
     by_named = [[0, 0], [0, 0]]                      # [named, resolved] x [hit, tot]
@@ -190,24 +190,25 @@ def teacher_forced(model, tok, spec, L, n, device, fmt, batch=16):
                 inp[ri, :len(ids)] = torch.tensor(ids, device=device)
             with torch.autocast(device, dtype=torch.bfloat16):
                 pred = model(inp).argmax(-1)
-            for ri, (ids, at, gold, kinds, swaps, srcs) in enumerate(chunk):
-                w = B.PAD_WIDTH[fmt]
+            for ri, (ids, at, gold, layout, kinds, swaps, srcs) in enumerate(chunk):
                 for si, (pos, g) in enumerate(zip(at, gold)):
+                    ev, cell = layout[si]
+                    q = 0 if cell.endswith("p0") else 1
                     ok = int(tok.id_to_token.get(int(pred[ri, pos - 1]), "") == g)
                     hit += ok
                     tot += 1
-                    by_pos[si % w][0] += ok
-                    by_pos[si % w][1] += 1
+                    by_pos[q][0] += ok
+                    by_pos[q][1] += 1
                     if kinds is not None:
-                        k = 1 if kinds[si // w] else 0
+                        k = 1 if kinds[ev] else 0
                         by_named[k][0] += ok
                         by_named[k][1] += 1
-                        s = 1 if swaps[si // w] else 0
+                        s = 1 if swaps[ev] else 0
                         by_kind[s][0] += ok
                         by_kind[s][1] += 1
-                        by_kp[2 * s + (si % w)][0] += ok
-                        by_kp[2 * s + (si % w)][1] += 1
-                        key = f"{KIND_POS[2 * s + (si % w)]}|{srcs[si // w]}"
+                        by_kp[KIND_POS.index(cell)][0] += ok
+                        by_kp[KIND_POS.index(cell)][1] += 1
+                        key = f"{cell}|{srcs[ev]}"
                         by_kps[key][0] += ok
                         by_kps[key][1] += 1
     return {"per_slot": hit / max(1, tot), "n_slots": tot, "n": len(prepped),
@@ -239,6 +240,20 @@ def _split(counts_, names):
 # composed cell's 1.000), so the state component's ``swap_p0`` is a ONE-hop read of P and carries
 # no second hop to fail at. The hop labels below therefore apply to the composed rows; a component
 # row's ``swap_p0`` at 1.000 is not the same quantity and must not be read as one.
+def slot_layout(ex, fmt):
+    """``(event index, pad cell)`` per emitted slot.
+
+    A format whose block width depends on the EVENT KIND (``before2``) has no constant stride from
+    slot ordinal to event, so the mapping is read off the format rather than divided out of the
+    ordinal. Under a constant-width format this is exactly ``(si // w, KIND_POS[2 * swap + si % w])``.
+    """
+    rec = _read(ex.prompt)
+    if rec is None:
+        return None
+    return [(i, cell) for i, (kind, *_r) in enumerate(rec["events"])
+            for cell in V.s5_bind_v3_pad_cells(kind, fmt)]
+
+
 KIND_POS = ("give_p0", "give_p1", "swap_p0", "swap_p1")
 HOPS = {"give_p0": 1, "give_p1": 1, "swap_p0": 2, "swap_p1": 1}
 HOPS_NAMED = {"give_p0": 1, "give_p1": 1, "swap_p0": 1, "swap_p1": 1}
@@ -267,13 +282,12 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
         if got is None:
             return None
         toks, slots, gold = got
-        prepped.append((toks, slots, set(slots), gold, *operand_kinds(e)))
+        prepped.append((toks, slots, set(slots), gold, slot_layout(e, fmt), *operand_kinds(e)))
     n_slots = len(prepped[0][1])
-    w = B.PAD_WIDTH[fmt]
-    n_ev = n_slots // w
+    n_ev = 1 + max(ev for _t, _s, _ss, _g, lay, *_r in prepped for ev, _c in lay)
     hit = tot = 0
     by_ord = [[0, 0] for _ in range(n_ev)]
-    by_pos = [[0, 0] for _ in range(w)]
+    by_pos = [[0, 0], [0, 0]]
     by_named = [[0, 0], [0, 0]]
     by_kind = [[0, 0], [0, 0]]
     by_kp = [[0, 0] for _ in KIND_POS]
@@ -287,7 +301,7 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
             cursor = [0] * len(chunk)
             gen = [[] for _ in chunk]
             for ordinal in range(n_slots):
-                for i, (toks, slots, slotset, _g, _k, _s, _src) in enumerate(chunk):
+                for i, (toks, slots, slotset, _g, _lay, _k, _s, _src) in enumerate(chunk):
                     while cursor[i] < slots[ordinal]:
                         if cursor[i] not in slotset:
                             ids[i] += tok.encode(toks[cursor[i]])
@@ -296,30 +310,32 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
                     ids[i].append(tid)
                     gen[i].append(tok.id_to_token.get(tid, "<unk>"))
                     cursor[i] += 1
-            for i, (_t, _s, _ss, gold, kinds, swaps, srcs) in enumerate(chunk):
+            for i, (_t, _s, _ss, gold, layout, kinds, swaps, srcs) in enumerate(chunk):
                 fe = None
                 for si, (g, p) in enumerate(zip(gold, gen[i])):
+                    ev, cell = layout[si]
+                    q = 0 if cell.endswith("p0") else 1
                     ok = int(g == p)
                     hit += ok
                     tot += 1
-                    by_ord[si // w][0] += ok
-                    by_ord[si // w][1] += 1
-                    by_pos[si % w][0] += ok
-                    by_pos[si % w][1] += 1
+                    by_ord[ev][0] += ok
+                    by_ord[ev][1] += 1
+                    by_pos[q][0] += ok
+                    by_pos[q][1] += 1
                     if kinds is not None:
-                        kk = 1 if kinds[si // w] else 0
+                        kk = 1 if kinds[ev] else 0
                         by_named[kk][0] += ok
                         by_named[kk][1] += 1
-                        sw = 1 if swaps[si // w] else 0
+                        sw = 1 if swaps[ev] else 0
                         by_kind[sw][0] += ok
                         by_kind[sw][1] += 1
-                        by_kp[2 * sw + (si % w)][0] += ok
-                        by_kp[2 * sw + (si % w)][1] += 1
-                        key = f"{KIND_POS[2 * sw + (si % w)]}|{srcs[si // w]}"
+                        by_kp[KIND_POS.index(cell)][0] += ok
+                        by_kp[KIND_POS.index(cell)][1] += 1
+                        key = f"{cell}|{srcs[ev]}"
                         by_kps[key][0] += ok
                         by_kps[key][1] += 1
                     if not ok and fe is None:
-                        fe = si // w
+                        fe = ev
                 perfect += int(fe is None)
                 first_err.append(-1 if fe is None else fe)
     model.train()
