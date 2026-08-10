@@ -46,6 +46,7 @@ from factworld import validity as V                                        # noq
 from factworld.composition import SWAP, read as _read                      # noqa: E402
 
 BASE_URL = "https://steed.tailc4bb6.ts.net/v1"
+TOK_PER_S = 14.0                 # steed's measured LONG-output decode rate, the slow one
 MODEL = "deepseek-v4-flash"
 RE_LINE = re.compile(r"^\s*s(\d+)\s*[:.\)]\s*(.+?)\s*$", re.M)
 RE_TOK = re.compile(r"\bg\d+\b")
@@ -108,6 +109,9 @@ def score_one(rec, gold, blocks, fmt):
 
 
 def ask(client, prompt, effort, max_tokens):
+    """One call. The client timeout is sized from max_tokens by the caller: a request that dies
+    on a timeout drops the SLOW items, and the slow items are the hard ones, so a timed-out cell
+    is biased in the direction that flatters the model."""
     for attempt in range(3):
         try:
             r = client.chat.completions.create(
@@ -135,11 +139,17 @@ def main():
     ap.add_argument("--effort", default="medium")
     ap.add_argument("--max_tokens", type=int, default=32000)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--timeout", type=float, default=0.0,
+                    help="per-request seconds; 0 sizes it from max_tokens at TOK_PER_S")
+    ap.add_argument("--max_missing", type=float, default=0.02,
+                    help="a cell whose blocks are missing above this rate is VOID, not scored")
     ap.add_argument("--floor_n", type=int, default=200)
     ap.add_argument("--out", default="")
     a = ap.parse_args()
 
-    client = OpenAI(base_url=BASE_URL, api_key=os.environ.get("STEED_API_KEY", "none"))
+    timeout = a.timeout or (a.max_tokens / TOK_PER_S + 120.0)
+    client = OpenAI(base_url=BASE_URL, api_key=os.environ.get("STEED_API_KEY", "none"),
+                    timeout=timeout, max_retries=0)
     spec = TK.spec_for(a.spec)
     k, m = spec.k, spec.n_objects_active
     res = {"model": MODEL, "spec": a.spec, "fmt": a.fmt, "effort": a.effort,
@@ -185,7 +195,16 @@ def main():
             spaces=spaces)
         fr["in_sample"] = fr["best"]
         fr["best"] = held["best"]
+        missing = empty_blocks / max(1, sum(tot.values()))
         cell = {"n_items": len(items), "seconds": round(time.time() - t0, 1),
+                "timeout_s": timeout,
+                # A CELL IS VOID ON COMPLETENESS, not scored down. Absent blocks count as misses
+                # in ``acc``, so a cell that lost items to timeouts reports a number that is a
+                # completeness artifact; it is marked rather than quietly compared to a floor.
+                "void": bool(missing > a.max_missing or n_empty),
+                "void_reason": ("missing_blocks %.3f > %.3f" % (missing, a.max_missing)
+                                if missing > a.max_missing else
+                                (f"{n_empty} empty replies" if n_empty else None)),
                 "finish": dict(fins), "empty_replies": n_empty,
                 "missing_blocks": empty_blocks / max(1, sum(tot.values())),
                 "acc": {key: hit[key] / tot[key] for key in sorted(tot) if tot[key]},
@@ -193,7 +212,8 @@ def main():
                 "free_run_floor": fr["best"], "chance": 1.0 / k}
         res["cells"][f"{a.spec}@{L}"] = cell
         print(f"\n{a.spec}@{L}  k={k} n={len(items)}  {cell['seconds']}s  "
-              f"finish={dict(fins)} empty={n_empty} missing_blocks={cell['missing_blocks']:.3f}")
+              f"finish={dict(fins)} empty={n_empty} missing_blocks={cell['missing_blocks']:.3f}"
+              + ("   *** VOID: " + cell["void_reason"] + " ***" if cell["void"] else ""))
         for key, v in cell["acc"].items():
             fl = (fr["best"].get(key) or {}).get("acc")
             bar = "" if fl is None else f"   floor {fl:.4f} [{fr['best'][key]['member']}]"
