@@ -108,23 +108,43 @@ def score_one(rec, gold, blocks, fmt):
     return hit, tot, empty
 
 
-def ask(client, prompt, effort, max_tokens):
-    """One call. The client timeout is sized from max_tokens by the caller: a request that dies
-    on a timeout drops the SLOW items, and the slow items are the hard ones, so a timed-out cell
-    is biased in the direction that flatters the model."""
+def ask(client, prompt, effort, max_tokens, stream=True):
+    """One call, STREAMED.
+
+    Two transport walls sit in front of a long generation on this endpoint and both drop the SLOW
+    items, which are the hard ones, so a cell that loses them is biased toward the model:
+      the CLIENT timeout, sized from max_tokens at the measured long-output rate by the caller;
+      the tailscale-serve PROXY, which returns 502 or drops the connection when a request produces
+      nothing for long enough. At ~15 tok/s a 13,000-token reply is 15 minutes of silence on a
+      non-streaming call, and the L = 48 cell lost half its items to exactly that. Streaming keeps
+      bytes moving, so the proxy sees a live response throughout.
+    """
     for attempt in range(3):
         try:
-            r = client.chat.completions.create(
-                model=MODEL, messages=[{"role": "user", "content": prompt}],
-                temperature=0.0, seed=0, max_tokens=max_tokens,
-                extra_body={"reasoning_effort": effort})
-            ch = (r.choices or [None])[0]
-            return ("" if ch is None else (ch.message.content or ""),
-                    None if ch is None else ch.finish_reason)
+            if not stream:
+                r = client.chat.completions.create(
+                    model=MODEL, messages=[{"role": "user", "content": prompt}],
+                    temperature=0.0, seed=0, max_tokens=max_tokens,
+                    extra_body={"reasoning_effort": effort})
+                ch = (r.choices or [None])[0]
+                return ("" if ch is None else (ch.message.content or ""),
+                        None if ch is None else ch.finish_reason)
+            parts, fin = [], None
+            with client.chat.completions.create(
+                    model=MODEL, messages=[{"role": "user", "content": prompt}],
+                    temperature=0.0, seed=0, max_tokens=max_tokens, stream=True,
+                    extra_body={"reasoning_effort": effort}) as chunks:
+                for ch in chunks:
+                    for c in (ch.choices or []):
+                        if c.delta is not None and c.delta.content:
+                            parts.append(c.delta.content)
+                        if c.finish_reason:
+                            fin = c.finish_reason
+            return "".join(parts), fin
         except Exception as exc:                                   # noqa: BLE001
             if attempt == 2:
                 return "", f"error:{type(exc).__name__}:{exc}"
-            time.sleep(4 * (attempt + 1))
+            time.sleep(8 * (attempt + 1))
     return "", "error"
 
 
@@ -141,6 +161,8 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--timeout", type=float, default=0.0,
                     help="per-request seconds; 0 sizes it from max_tokens at TOK_PER_S")
+    ap.add_argument("--no_stream", action="store_true",
+                    help="non-streaming call; the tailscale proxy drops these on long generations")
     ap.add_argument("--max_missing", type=float, default=0.02,
                     help="a cell whose blocks are missing above this rate is VOID, not scored")
     ap.add_argument("--floor_n", type=int, default=200)
@@ -166,7 +188,8 @@ def main():
         prompts = [build_prompt(e, a.fmt) for e, _r, _g in items]
         t0 = time.time()
         with ThreadPoolExecutor(max_workers=a.workers) as pool:
-            replies = list(pool.map(lambda p: ask(client, p, a.effort, a.max_tokens), prompts))
+            replies = list(pool.map(
+                lambda p: ask(client, p, a.effort, a.max_tokens, not a.no_stream), prompts))
         hit, tot = Counter(), Counter()
         empty_blocks = n_empty = 0
         fins: Counter = Counter()
