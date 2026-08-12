@@ -1,0 +1,54 @@
+{
+ "model": "deepseek-v4-flash",
+ "spec": "s5_bind_local_v3",
+ "fmt": "before2",
+ "effort": "medium",
+ "k": 6,
+ "m": 6,
+ "n": 6,
+ "cells": {
+  "s5_bind_local_v3@96": {
+   "n_items": 6,
+   "seconds": 7743.9,
+   "timeout_s": 3548.5714285714284,
+   "void": true,
+   "void_reason": "missing_blocks 0.122 > 0.020",
+   "finish": {
+    "stop": 5,
+    "error:RemoteProtocolError:peer closed connection without sending complete message body (incomplete chunked read)": 1
+   },
+   "empty_replies": 1,
+   "missing_blocks": 0.12213740458015267,
+   "acc": {
+    "give_p1|cross": 0.7751479289940828,
+    "give_p1|same": 0.751269035532995,
+    "swap_p0|cross": 0.7333333333333333,
+    "swap_p0|same": 0.8111111111111111,
+    "swap_p1|cross": 0.75,
+    "swap_p1|same": 0.8111111111111111
+   },
+   "n_tokens": {
+    "give_p1|cross": 169,
+    "give_p1|same": 197,
+    "swap_p0|cross": 120,
+    "swap_p0|same": 90,
+    "swap_p1|cross": 120,
+    "swap_p1|same": 90
+   },
+   "free_run_floor": {
+    "swap_p0|cross": {
+     "acc": 0.1670103092783505,
+     "member": "P[head:B0line[+4]p1]",
+     "held_out": true
+    },
+    "swap_p0|same": {
+     "acc": 0.3155157468939613,
+     "member": "line:any[-1]p1",
+     "held_out": true
+    }
+   },
+   "chance": 0.16666666666666666
+  }
+ },
+ "generated": "2026-08-11T06:56:25.738573+00:00"
+}

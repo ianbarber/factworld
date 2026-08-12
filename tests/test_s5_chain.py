@@ -167,7 +167,7 @@ def test_v3_is_answered_by_one_symbol_pushed_backward():
         for L in spec.eval_lengths:
             exs = generate(spec, "test", n=50, length=L)
             assert all(backward_walk(e.prompt) == e.answer for e in exs), (name, L)
-    local = CANONICAL["s5_chain_local_v2"]
+    local = spec_for("s5_chain_local_v2")
     assert all(backward_walk(e.prompt) == e.answer
                for e in generate(local, "test", n=50, length=8))
 
@@ -385,7 +385,8 @@ def test_local_arms_run_the_scored_construct():
     lengths, supervision, and the rate the floors demand at those lengths."""
     from factworld import tasks as TK
 
-    scored = TK.CANONICAL[SCORED]
+    scored = TK.spec_for(SCORED)   # retired 2026-08-12: the headline that did not
+    #                                separate; the local arms still run its construct
     for name in ("s5_chain_local_v4", "s5_chain_local_v4_path"):
         arm = TK.CANONICAL[name]
         assert arm.kind == "experimental" and name not in TK.REPORTED
@@ -400,7 +401,7 @@ def test_local_arms_run_the_scored_construct():
             if getattr(dense, f) != getattr(path, f)} == {"name", "event_trace"}
     # against the v2 family: same k, depth and supervision; the construct and the lengths it
     # needs are what move (a reference is mis-resolvable only once the map has drifted)
-    v2 = TK.CANONICAL["s5_chain_local_v2"]
+    v2 = TK.spec_for("s5_chain_local_v2")
     assert {f for f in dense.__dataclass_fields__ if getattr(dense, f) != getattr(v2, f)} == \
         {"name", "version", "conditional_rate", "train_lengths", "eval_lengths"}
 
@@ -425,7 +426,7 @@ def test_local_arm_floors_are_set_by_the_pre_existing_adversaries():
 
 
 def test_typed_values_rejects_state_references():
-    spec = CANONICAL["s5_chain_typed_v1"].scaled(conditional_rate=0.25)
+    spec = spec_for("s5_chain_typed_v1").scaled(conditional_rate=0.25)
     with pytest.raises(ValueError, match="conditional_rate"):
         generate(spec, "test", n=1, length=4)
 
@@ -471,7 +472,7 @@ def test_trace_mode_scoring_cuts_at_eos():
     the junk tail (the pre-fix behavior read every trace-mode sweep as chance)."""
     from factworld.runner import evaluate_task
 
-    spec = CANONICAL["s5_chain_local_v2"]
+    spec = spec_for("s5_chain_local_v2")
     exs = generate(spec, "test", n=3, length=4)
 
     class OracleWithJunk:
@@ -488,7 +489,7 @@ def test_typed_values_answer_a_different_token_type():
     between the two positions — the one structural property s5 has and s5_chain does not."""
     from factworld.render import classify
 
-    spec = CANONICAL["s5_chain_typed_v1"]
+    spec = spec_for("s5_chain_typed_v1")
     for L in spec.eval_lengths:
         for ex in generate(spec, "test", n=25, length=L):
             assert classify(ex.answer.rstrip(".")) == "r"
@@ -505,7 +506,7 @@ def test_typed_values_echo_floor_is_structurally_zero():
     gate is neither applied nor needed here."""
     from factworld.validity import s5_chain_floors, s5_chain_offset_accuracies
 
-    spec = CANONICAL["s5_chain_typed_v1"]
+    spec = spec_for("s5_chain_typed_v1")
     assert spec.distinct_path is False
     for L in spec.eval_lengths:
         items = generate(spec, "test", n=200, length=L)
@@ -523,7 +524,7 @@ def test_typed_values_echo_floor_is_structurally_zero():
 
 
 def test_typed_values_is_depth_one_only():
-    spec = CANONICAL["s5_chain_typed_v1"].scaled(chain_depth=2)
+    spec = spec_for("s5_chain_typed_v1").scaled(chain_depth=2)
     with pytest.raises(ValueError, match="depth-1 construct"):
         generate(spec, "test", n=1, length=4)
 
@@ -535,7 +536,7 @@ def test_typed_and_untyped_initial_maps_have_different_structure():
     import re
 
     fact = re.compile(r"\b(g\d+)'s a0 is ([a-z]+\d+)\.")
-    untyped = CANONICAL["s5_chain_local_v2"].scaled(chain_depth=1)
+    untyped = spec_for("s5_chain_local_v2").scaled(chain_depth=1)
     for ex in generate(untyped, "test", n=10, length=4):
         nxt = dict(fact.findall(ex.prompt))
         assert set(nxt) == set(nxt.values())                # endo-map on the agent set
@@ -546,7 +547,7 @@ def test_typed_and_untyped_initial_maps_have_different_structure():
                 break
         assert seen == len(nxt) == untyped.k
 
-    typed = CANONICAL["s5_chain_typed_v1"]
+    typed = spec_for("s5_chain_typed_v1")
     for ex in generate(typed, "test", n=10, length=4):
         m = dict(fact.findall(ex.prompt))
         assert len(m) == typed.k and len(set(m.values())) == typed.k
@@ -565,8 +566,8 @@ def test_typed_and_untyped_arms_differ_in_exactly_the_documented_fields():
     """
     import dataclasses
 
-    typed = dataclasses.asdict(CANONICAL["s5_chain_typed_v1"])
-    untyped = dataclasses.asdict(CANONICAL["s5_chain_local_v2"].scaled(chain_depth=1))
+    typed = dataclasses.asdict(spec_for("s5_chain_typed_v1"))
+    untyped = dataclasses.asdict(spec_for("s5_chain_local_v2").scaled(chain_depth=1))
     assert set(typed) == set(untyped)
     differing = {f for f in typed if typed[f] != untyped[f]}
     assert differing == {"name", "typed_values", "distinct_path"}
@@ -577,7 +578,7 @@ def test_typed_and_untyped_arms_differ_in_exactly_the_documented_fields():
 def test_typed_values_supervision_shapes():
     """event_trace dumps the whole agent->role map per event; start_trace emits the queried
     slot's current value per event and builds the interleaved training prompt."""
-    spec = CANONICAL["s5_chain_typed_v1"]
+    spec = spec_for("s5_chain_typed_v1")
     L = 4
     ex = generate(spec, "test", n=1, length=L)[0]
     toks = ex.meta["trace"].split()
@@ -594,9 +595,9 @@ def test_typed_values_supervision_shapes():
 def test_typed_values_does_not_perturb_the_untyped_stream():
     """Frozen-spec immutability: the typed builder is a separate function reached only via
     spec.typed_values, so the registered s5_chain streams are untouched."""
-    spec = CANONICAL["s5_chain_local_v2"]
+    spec = spec_for("s5_chain_local_v2")
     a = generate(spec, "test", n=5, length=4)
-    generate(CANONICAL["s5_chain_typed_v1"], "test", n=5, length=4)
+    generate(spec_for("s5_chain_typed_v1"), "test", n=5, length=4)
     b = generate(spec, "test", n=5, length=4)
     assert [x.prompt for x in a] == [x.prompt for x in b]
     assert [x.answer for x in a] == [x.answer for x in b]
@@ -605,7 +606,7 @@ def test_typed_values_does_not_perturb_the_untyped_stream():
 def test_event_trace_checkpoints():
     """local_v2 dense supervision: the trace carries one full a0-map checkpoint
     (k agents) per event, then the query path prefix."""
-    spec = CANONICAL["s5_chain_local_v2"]
+    spec = spec_for("s5_chain_local_v2")
     L = 4
     ex = generate(spec, "test", n=1, length=L)[0]
     toks = ex.meta["trace"].split()

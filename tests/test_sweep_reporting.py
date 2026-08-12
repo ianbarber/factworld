@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
 
 import sweep  # noqa: E402
-from factworld.tasks import CANONICAL, generate  # noqa: E402
+from factworld.tasks import CANONICAL, generate, spec_for  # noqa: E402
 from factworld.tokenizer import Tokenizer  # noqa: E402
 from factworld.tasks import build_world  # noqa: E402
 from factworld.validity import (  # noqa: E402
@@ -31,7 +31,7 @@ from factworld.validity import (  # noqa: E402
     s5_chain_shallow_preds,
 )
 
-_LOCAL = CANONICAL["s5_chain_local_v2"]
+_LOCAL = spec_for("s5_chain_local_v2")
 
 
 # --------------------------------------------------------------------------- floors

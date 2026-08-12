@@ -1882,14 +1882,9 @@ CANONICAL = {
     # commutative fold. Shallow-adversary floors (initial-only / last-turn-only /
     # entity-blind-sum / count-mod-k) are gated in factworld.validity + scripts/validate_suite.py.
     # kind=experimental until calibrated (local 3-arch + frontier probes), like s5_v1.
-    "commutative_v1":   TaskSpec("commutative_v1", "commutative", version="1.1", kind="experimental",
-                                 k=5, n_objects_active=4, k_positions=5,
-                                 train_lengths=(4, 8, 16), eval_lengths=(16, 32, 64)),
     # experimental: correct non-abelian S5 construct, but not reliably trainable in this harness (answer-only
     # floors in-distribution; worked-trace learns train length but compounds at generation). Needs the
     # dense-per-step regime before it is a scored task. Excluded from REPORTED.
-    "s5_v1":            TaskSpec("s5_v1", "s5", k=5, worked_trace=True, kind="experimental",
-                                 train_lengths=(8, 16, 32), eval_lengths=(32, 64, 128)),
     # in-weights ↔ in-context CONFLICT: the model memorizes a fixed agent→value map (reinforced in train),
     # then must OVERRIDE it from a contradicting in-context fact. Operationalizes the parametric-vs-in-context
     # axis as a measured construct: answer=in-context value; a weight-defaulting model answers the memorized
@@ -1960,9 +1955,6 @@ CANONICAL = {
     # the L=32 max exceeds the longer lengths' by 0.0020, not by the 0.0068 the registered rows
     # suggest. What keeps L=32 is the gate margin: its 0.0398 is 1.23x chance against a 2x bound,
     # so the shortest scored length is as far from being shallow-solvable as the rest of the grid.
-    "s5_chain_v4":      TaskSpec("s5_chain_v4", "s5_chain", version="2.1", k=32, chain_depth=16,
-                                  distinct_path=True, conditional_rate=0.25,
-                                  train_lengths=(8, 16), eval_lengths=(32, 64, 96)),
     # Local calibration variants (experimental, never scored as the frontier task).
     # local_v4: the scored construct at a from-scratch operating point — the same forward
     # evaluation, at k=8 with a 2-hop dereference and per-EVENT map checkpoints. The rate and
@@ -1989,12 +1981,6 @@ CANONICAL = {
     # supervision that formed s5 locally, which the retired local_v1 lacked (its path-only
     # trace supervised the dereference but not the map tracking through events).
     # local_v2_path: same gated items, path-only trace — the supervision-density contrast arm.
-    "s5_chain_local_v2": TaskSpec("s5_chain_local_v2", "s5_chain", version="2.0", k=8, chain_depth=2,
-                                   distinct_path=True, event_trace=True, worked_trace=True,
-                                   train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
-    "s5_chain_local_v2_path": TaskSpec("s5_chain_local_v2_path", "s5_chain", version="2.0", k=8,
-                                        chain_depth=2, distinct_path=True, worked_trace=True,
-                                        train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
     # experimental: the TYPED-VALUE ablation against s5_chain_local_v2 at chain_depth=1. The a0
     # map sends agents to ROLES, so a token in value position can never appear in slot position;
     # this probes key/value type ambiguity — the structural difference between s5 (which forms
@@ -2003,10 +1989,6 @@ CANONICAL = {
     # differ in initial-map structure; _ex_s5_chain_typed documents all of it and
     # tests/test_s5_chain.py pins the field-level diff. Read each arm against its own operative
     # floor (validity.operative_floor), never against 1/k or against the other arm's floor.
-    "s5_chain_typed_v1": TaskSpec("s5_chain_typed_v1", "s5_chain", version="2.0", k=8,
-                                   chain_depth=1, typed_values=True,
-                                   event_trace=True, worked_trace=True,
-                                   train_lengths=(2, 4), eval_lengths=(4, 8), kind="experimental"),
     # ---- s5_bind_v3: the source-structure composition (see _ex_s5_bind_v3) ---------------
     # The COMPOSED task the instrument's goal asks for, plus its two components, on one basis.
     # Two maps into agents run over one event stream — P: agents -> agents, rewritten by swaps,
@@ -2226,6 +2208,46 @@ REPORTED = tuple(name for name, spec in CANONICAL.items() if spec.kind == "bench
 # tests/test_composite_v2.py) — ONLY for historical reproduction of published results and for the
 # defect-documentation tests that pin the v1-vs-v2 shortcut contrast.
 RETIRED = {
+    # ---- RETIRED 2026-08-12: the headline that did not discriminate ------------------------
+    # Owner decision. s5_chain_v4 was FactWorldBench's scored headline. Its own validation is the
+    # reason it is here: at n = 25 the top-11 ranking has ZERO pairwise separations, so the cell
+    # orders models by noise, and the v4 shortcut fix (which blocks the backward walk, 1.000 -> 0)
+    # did not make it harder for the frontier -- the missing separation was never about shortcuts.
+    # A benchmark whose scored cell cannot separate its roster is not instrumenting, and the
+    # registry now carries the route that does (s5_bind_v3).
+    # The five COMPONENT tasks stay in REPORTED; what is withdrawn is the headline, not the suite.
+    # Its local arms (s5_chain_local_v4, _path) are experimental and remain generable in CANONICAL.
+    "s5_chain_v4":      TaskSpec("s5_chain_v4", "s5_chain", version="2.1", k=32, chain_depth=16,
+                                  distinct_path=True, conditional_rate=0.25,
+                                  train_lengths=(8, 16), eval_lengths=(32, 64, 96), kind="retired"),
+    # ---- RETIRED 2026-08-12: off the composition-instrument route -------------------------
+    # Owner decision: focus the scored registry on the route that instruments. None of these five
+    # was ever in REPORTED (four experimental, and s5_v1's own note already said "excluded from
+    # REPORTED"), and none is read by the s5_bind_v3 three-cell instrument or by FactWorldBench.
+    # They stay generable here so historical runs reproduce; spec_for falls back to RETIRED.
+    #   s5_v1                    superseded as a state-tracking cell by s5_bind_v3_state, which
+    #                            is floor-proved and forms from scratch; s5_v1 never did.
+    #   commutative_v1           the abelian rung. Built and floored (~0.20) but its calibration
+    #                            runners were never run, so it has no measured cell.
+    #   s5_chain_typed_v1        the typed-value ablation of a chain arm that is itself not on
+    #                            the instrument route.
+    #   s5_chain_local_v2        superseded by s5_chain_local_v4 (the backward-walk fix).
+    #   s5_chain_local_v2_path
+    "s5_v1":            TaskSpec("s5_v1", "s5", k=5, worked_trace=True, kind="retired",
+                                 train_lengths=(8, 16, 32), eval_lengths=(32, 64, 128)),
+    "commutative_v1":   TaskSpec("commutative_v1", "commutative", version="1.1", kind="retired",
+                                 k=5, n_objects_active=4, k_positions=5,
+                                 train_lengths=(4, 8, 16), eval_lengths=(16, 32, 64)),
+    "s5_chain_typed_v1": TaskSpec("s5_chain_typed_v1", "s5_chain", version="2.0", k=8,
+                                   chain_depth=1, typed_values=True,
+                                   event_trace=True, worked_trace=True,
+                                   train_lengths=(2, 4), eval_lengths=(4, 8), kind="retired"),
+    "s5_chain_local_v2": TaskSpec("s5_chain_local_v2", "s5_chain", version="2.0", k=8, chain_depth=2,
+                                   distinct_path=True, event_trace=True, worked_trace=True,
+                                   train_lengths=(2, 4), eval_lengths=(4, 8), kind="retired"),
+    "s5_chain_local_v2_path": TaskSpec("s5_chain_local_v2_path", "s5_chain", version="2.0", k=8,
+                                        chain_depth=2, distinct_path=True, worked_trace=True,
+                                        train_lengths=(2, 4), eval_lengths=(4, 8), kind="retired"),
     # last-write-wins binding under the defective v1 sampler (published binding numbers reference it).
     "binding_v1":       TaskSpec("binding_v1", "binding", n_objects_active=4, kind="retired"),
     # binding under a LARGER working set (m=8 active objects; interference-cliff probe). Was

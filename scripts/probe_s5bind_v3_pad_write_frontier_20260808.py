@@ -45,11 +45,11 @@ from factworld import tasks as TK                                          # noq
 from factworld import validity as V                                        # noqa: E402
 from factworld.composition import SWAP, read as _read                      # noqa: E402
 
-BASE_URL = "https://steed.tailc4bb6.ts.net/v1"
+DEFAULT_SLUG = "steed/deepseek-v4-flash"
 TOK_PER_S = 14.0                 # steed's measured LONG-output decode rate, the slow one
-MODEL = "deepseek-v4-flash"
 RE_LINE = re.compile(r"^\s*s(\d+)\s*[:.\)]\s*(.+?)\s*$", re.M)
 RE_TOK = re.compile(r"\bg\d+\b")
+P_TOKEN = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"   # the scored partition
 
 INSTRUCTION = {
     "before2": (
@@ -108,7 +108,47 @@ def score_one(rec, gold, blocks, fmt):
     return hit, tot, empty
 
 
-def ask(client, prompt, effort, max_tokens, stream=True):
+def resolve(slug):
+    """``(base_url, api_key, model_name, prices)`` from the REGISTRY, so a paid model enters
+    through the same entry the runner uses rather than through a second hard-coded endpoint."""
+    from factworld import benchmark as B
+
+    reg = B.MODELS[slug]
+    base, key_env = B.endpoint_for(slug)
+    key = os.environ.get(key_env or "", "") or "none"
+    if not key or key == "none":
+        for line in open(os.path.join(REPO, ".env"), errors="ignore"):
+            if key_env and line.startswith(key_env + "="):
+                key = line.split("=", 1)[1].strip().strip('"').strip("'")
+    return base, key, reg.get("model_name", slug.split("/")[-1]), reg
+
+
+def build_backend(slug, effort, workers, timeout):
+    """The REPO's own backend for this slug, so a paid model enters through the frontier path.
+
+    ``responses_endpoint`` models (gpt-5.6-sol) speak /v1/responses and reject ``max_tokens`` and
+    ``temperature`` outright; ``ResponsesBackend`` already carries that param discipline plus the
+    retry, usage and finish-reason plumbing every other frontier cell is read with. Chat-completions
+    models keep the streamed path below, which is what steed's proxy needs to survive a long
+    generation and which no backend provides.
+    """
+    from factworld import backends as BK
+
+    base, key, model, reg = resolve(slug)
+    cls = BK.ResponsesBackend if reg.get("responses_endpoint") else BK.APIBackend
+    return cls(model=slug, api_key=key, base_url=base, model_name=model,
+               max_workers=workers, answer_mode="raw", timeout=timeout,
+               reasoning_model=bool(reg.get("reasoning_model")),
+               max_completion_tokens=True,
+               reasoning_effort=(reg.get("reasoning_effort_values") or {}).get(effort, effort)), reg
+
+
+def price(reg, prompt_tok, completion_tok):
+    return (prompt_tok / 1e6 * reg["prompt_price_per_M"]
+            + completion_tok / 1e6 * reg["completion_price_per_M"])
+
+
+def ask(client, model, prompt, effort, max_tokens, stream=True):
     """One call, STREAMED.
 
     Two transport walls sit in front of a long generation on this endpoint and both drop the SLOW
@@ -123,35 +163,43 @@ def ask(client, prompt, effort, max_tokens, stream=True):
         try:
             if not stream:
                 r = client.chat.completions.create(
-                    model=MODEL, messages=[{"role": "user", "content": prompt}],
+                    model=model, messages=[{"role": "user", "content": prompt}],
                     temperature=0.0, seed=0, max_tokens=max_tokens,
                     extra_body={"reasoning_effort": effort})
                 ch = (r.choices or [None])[0]
                 return ("" if ch is None else (ch.message.content or ""),
-                        None if ch is None else ch.finish_reason)
-            parts, fin = [], None
+                        None if ch is None else ch.finish_reason, r.usage)
+            parts, fin, use = [], None, None
             with client.chat.completions.create(
-                    model=MODEL, messages=[{"role": "user", "content": prompt}],
+                    model=model, messages=[{"role": "user", "content": prompt}],
                     temperature=0.0, seed=0, max_tokens=max_tokens, stream=True,
+                    stream_options={"include_usage": True},
                     extra_body={"reasoning_effort": effort}) as chunks:
                 for ch in chunks:
+                    if getattr(ch, "usage", None) is not None:
+                        use = ch.usage
                     for c in (ch.choices or []):
                         if c.delta is not None and c.delta.content:
                             parts.append(c.delta.content)
                         if c.finish_reason:
                             fin = c.finish_reason
-            return "".join(parts), fin
+            return "".join(parts), fin, use
         except Exception as exc:                                   # noqa: BLE001
             if attempt == 2:
-                return "", f"error:{type(exc).__name__}:{exc}"
+                return "", f"error:{type(exc).__name__}:{exc}", None
             time.sleep(8 * (attempt + 1))
-    return "", "error"
+    return "", "error", None
 
 
 def main():
     from openai import OpenAI
 
     ap = argparse.ArgumentParser()
+    ap.add_argument("--model", default=DEFAULT_SLUG, help="registry slug (factworld.benchmark)")
+    ap.add_argument("--dry_run", action="store_true",
+                    help="price the plan from a measured tokens-per-event rate and exit")
+    ap.add_argument("--budget_usd", type=float, default=0.0,
+                    help="abort the cell when spend passes this; 0 = no cap")
     ap.add_argument("--spec", default="s5_bind_local_v3")
     ap.add_argument("--lengths", default="16,32")
     ap.add_argument("--n", type=int, default=20)
@@ -170,11 +218,15 @@ def main():
     a = ap.parse_args()
 
     timeout = a.timeout or (a.max_tokens / TOK_PER_S + 120.0)
-    client = OpenAI(base_url=BASE_URL, api_key=os.environ.get("STEED_API_KEY", "none"),
-                    timeout=timeout, max_retries=0)
+    base, key, model, reg = resolve(a.model)
+    backend = client = None
+    if reg.get("responses_endpoint"):
+        backend, reg = build_backend(a.model, a.effort, a.workers, timeout)
+    else:
+        client = OpenAI(base_url=base, api_key=key, timeout=timeout, max_retries=0)
     spec = TK.spec_for(a.spec)
     k, m = spec.k, spec.n_objects_active
-    res = {"model": MODEL, "spec": a.spec, "fmt": a.fmt, "effort": a.effort,
+    res = {"model": a.model, "model_name": model, "spec": a.spec, "fmt": a.fmt, "effort": a.effort,
            "k": k, "m": m, "n": a.n, "cells": {},
            "generated": datetime.now(timezone.utc).isoformat()}
     for L in [int(z) for z in a.lengths.split(",")]:
@@ -187,14 +239,44 @@ def main():
                 items.append((e, rec, g))
         prompts = [build_prompt(e, a.fmt) for e, _r, _g in items]
         t0 = time.time()
-        with ThreadPoolExecutor(max_workers=a.workers) as pool:
-            replies = list(pool.map(
-                lambda p: ask(client, p, a.effort, a.max_tokens, not a.no_stream), prompts))
+        if backend is not None:
+            # THE FRONTIER PATH, with a running DOLLAR guard: spend is checked after every chunk
+            # against --budget_usd and the cell stops rather than overrunning, which is the same
+            # discipline scripts/probe_sol_system_prompt applies.
+            replies, spent, i = [], 0.0, 0
+            while i < len(prompts):
+                chunk = prompts[i:i + max(1, a.workers)]
+                texts = backend.generate(chunk, max_new_tokens=a.max_tokens)
+                metas = backend.pop_example_meta()
+                for tx, mt in zip(texts, metas):
+                    replies.append((tx, mt.get("finish_reason"), mt))
+                spent += price(reg, sum((m.get("prompt_tokens") or 0) for m in metas),
+                               sum((m.get("completion_tokens") or 0) for m in metas))
+                i += len(chunk)
+                if a.budget_usd and spent > a.budget_usd:
+                    print(f"  [guard] stopped after {i}/{len(prompts)} calls "
+                          f"(${spent:.2f} of ${a.budget_usd:.2f})", flush=True)
+                    break
+            while len(replies) < len(prompts):
+                replies.append(("", "budget_guard", None))
+        else:
+            with ThreadPoolExecutor(max_workers=a.workers) as pool:
+                replies = list(pool.map(
+                    lambda p: ask(client, model, p, a.effort, a.max_tokens, not a.no_stream),
+                    prompts))
         hit, tot = Counter(), Counter()
         empty_blocks = n_empty = 0
         fins: Counter = Counter()
-        for (e, rec, g), (txt, fin) in zip(items, replies):
+        ptok = ctok = 0
+        per_item = []
+        for (e, rec, g), (txt, fin, use) in zip(items, replies):
             fins[str(fin)] += 1
+            if isinstance(use, dict):
+                ptok += use.get("prompt_tokens") or 0
+                ctok += use.get("completion_tokens") or 0
+            elif use is not None:
+                ptok += getattr(use, "prompt_tokens", 0) or 0
+                ctok += getattr(use, "completion_tokens", 0) or 0
             blocks = parse_blocks(txt, len(rec["events"]))
             if not blocks:
                 n_empty += 1
@@ -202,6 +284,13 @@ def main():
             hit.update(h)
             tot.update(t)
             empty_blocks += eb
+            # PER ITEM, because the failure unit is the ITEM and not the token: one derailed
+            # stream corrupts every later block, so token-level errors are clustered and a
+            # binomial interval over tokens understates the spread by the cluster factor. The
+            # scored token's per-item accuracy is kept so an interval can be taken over ITEMS.
+            key = P_TOKEN
+            per_item.append({"n": t[key], "hit": h[key],
+                             "acc": (h[key] / t[key]) if t[key] else None})
         # the FREE-RUNNING floor: the model writes and reads its own pad, so the gold-pad address
         # space does not exist for it; the event lines and the header do
         # ... and it is HELD OUT: the max over a five-figure family is selection-inflated at a
@@ -229,14 +318,24 @@ def main():
                                 if missing > a.max_missing else
                                 (f"{n_empty} empty replies" if n_empty else None)),
                 "finish": dict(fins), "empty_replies": n_empty,
+                "prompt_tokens": ptok, "completion_tokens": ctok,
+                "cost_usd": round(price(reg, ptok, ctok), 4),
+                "tokens_per_event": round(ctok / max(1, len(items) * L), 1),
                 "missing_blocks": empty_blocks / max(1, sum(tot.values())),
                 "acc": {key: hit[key] / tot[key] for key in sorted(tot) if tot[key]},
                 "n_tokens": {key: tot[key] for key in sorted(tot)},
-                "free_run_floor": fr["best"], "chance": 1.0 / k}
+                "free_run_floor": fr["best"], "chance": 1.0 / k,
+                "per_item": per_item,
+                "item_mean": (sum(z["acc"] for z in per_item if z["acc"] is not None)
+                              / max(1, sum(1 for z in per_item if z["acc"] is not None))),
+                "items_perfect": sum(1 for z in per_item if z["acc"] == 1.0),
+                "items_zero": sum(1 for z in per_item if z["acc"] == 0.0)}
         res["cells"][f"{a.spec}@{L}"] = cell
         print(f"\n{a.spec}@{L}  k={k} n={len(items)}  {cell['seconds']}s  "
               f"finish={dict(fins)} empty={n_empty} missing_blocks={cell['missing_blocks']:.3f}"
               + ("   *** VOID: " + cell["void_reason"] + " ***" if cell["void"] else ""))
+        print(f"   per-item mean {cell['item_mean']:.4f}  perfect {cell['items_perfect']}"
+              f"/{len(per_item)}  zero {cell['items_zero']}")
         for key, v in cell["acc"].items():
             fl = (fr["best"].get(key) or {}).get("acc")
             bar = "" if fl is None else f"   floor {fl:.4f} [{fr['best'][key]['member']}]"

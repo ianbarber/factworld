@@ -58,7 +58,7 @@ def _hash(examples) -> str:
 
 
 def _gen(length, n, split="test", spec=None):
-    spec = spec or TK.CANONICAL["commutative_v1"]
+    spec = spec or TK.spec_for("commutative_v1")
     return TK.generate(spec, split, n=n, length=length)
 
 
@@ -66,7 +66,7 @@ def _gen(length, n, split="test", spec=None):
 
 def test_registry_contract():
     assert "commutative_v1" in TK.CANONICAL
-    spec = TK.CANONICAL["commutative_v1"]
+    spec = TK.spec_for("commutative_v1")
     assert spec.kind == "experimental"                 # not scored until calibrated (like s5_v1)
     assert "commutative_v1" not in TK.REPORTED
     assert spec.family == "commutative"
@@ -80,7 +80,7 @@ def test_registry_contract():
 # --- (b) determinism ---------------------------------------------------------------------
 
 def test_determinism():
-    spec = TK.CANONICAL["commutative_v1"]
+    spec = TK.spec_for("commutative_v1")
     for split, L in (("test", 64), ("train", None)):
         a = TK.generate(spec, split, n=30, length=L)
         b = TK.generate(spec, split, n=30, length=L)
@@ -163,7 +163,7 @@ def test_render_roundtrip():
 
 def test_worked_trace():
     from factworld.oracle import Oracle
-    spec = TK.CANONICAL["commutative_v1"].scaled(worked_trace=True)
+    spec = TK.spec_for("commutative_v1").scaled(worked_trace=True)
     w, r = TK.build_world(spec)
     oracle = Oracle(w)
     for e in _gen(16, n=25, spec=spec):
@@ -180,7 +180,7 @@ def test_worked_trace():
 # --- (h) train-split smoke ---------------------------------------------------------------
 
 def test_train_split_smoke():
-    exs = TK.generate(TK.CANONICAL["commutative_v1"], "train", n=60)
+    exs = TK.generate(TK.spec_for("commutative_v1"), "train", n=60)
     assert len(exs) == 60 and all(e.answer for e in exs)
     for e in exs:
         assert e.length in (4, 8, 16)
