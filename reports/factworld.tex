@@ -80,7 +80,7 @@ Component: state tracking & \code{binding\_v2} & last-write-wins over a give-str
 \quad non-abelian variant & \code{s5\_v1} & order-sensitive role permutations \\
 Composition: state $\times$ recall & \code{composite\_copy\_v2} & two-hop composition; \S4.2 derives the gap statistic from it \\
 Composition: recall $\circ$ recall & \code{chain\_v2} & pointer chase at fixed breadth, explicit hop count \\
-Composition: state $\times$ dereference & \code{s5\_chain\_v3} & the ranking task for the frontier benchmark (\S4.1) \\
+Composition: state $\times$ dereference & \code{s5\_chain\_v3} & retired: it does not separate the roster (\S4.1) \\
 \bottomrule
 \end{tabular}
 \caption{The task taxonomy: components first, then their compositions.}
@@ -109,7 +109,7 @@ throughout the report.
 a set of agents, and the query asks for one agent's final role. Swaps and cycles do not
 commute, so the running permutation must be carried step by step.
 
-\paragraph{s5\_chain (\code{s5\_chain\_v3}).} The ranking task composes the two stress components in one task. $k=16$ agents hold an \code{a0} pointer map, initially one 16-cycle. $L$
+\paragraph{s5\_chain (\code{s5\_chain\_v3}).} This task composes the two stress components in one task. It is retired --- \S4.1 gives the measurement --- and generable for reproduction. $k=16$ agents hold an \code{a0} pointer map, initially one 16-cycle. $L$
 order-sensitive swap/cycle events permute the pointer values: the \Sfive-style state-tracking
 load. The query then dereferences the final map 8 hops deep (\code{what is a0 of a0 of ... of
 gX? (8 hops)}): the pointer-chase load. Neither component alone suffices. Every item is gated so that the query start sits on a final-map cycle longer than the query depth. The nine path nodes are therefore distinct, echoing the queried agent or any fixed hop scores exactly 0, difficulty is uniform across items, and chance is $1/16$. Cycle events state all their assignments simultaneously, so no sequential misreading is available. Unit tests pin both the gate and the rendering.
@@ -189,10 +189,16 @@ instant numbers.
 
 \subsection{FactWorldBench}
 
-\code{s5\_chain\_v3} is the ranking task: one number per model for how well it holds a
-mutating pointer map and then acts through it. The L96 and L128 cells separate the tail from
-the rest of the roster, and the matched L64 cell prices completion tokens per call --- nine of
-the thirteen models score 0.92 or better there, so their spend compares like for like.
+\code{s5\_chain\_v3} was built as the ranking task: one number per model for how well it holds
+a mutating pointer map and then acts through it. It does not do that job and is retired. The L96
+and L128 cells separate the tail from the rest of the roster, and the matched L64 cell prices
+completion tokens per call --- nine of the thirteen models score 0.92 or better there, so their
+spend compares like for like --- but no pair inside the top eleven separates at L96 (\S7), so
+the cell orders the top of the roster by noise. \code{s5\_chain\_v4} blocks the backward walk
+v3 admits (the shallow adversary goes 1.000 to 0) and does not reach that defect: on the one
+model with clean cells at both versions it reads the same on each. What FactWorldBench publishes
+is the component and composition tasks; the composed cell that does separate is the composition
+instrument's, scored on the pad write rather than the answer (\S4.6).
 
 \begin{table}[h]
 \centering
@@ -428,6 +434,33 @@ both regimes on identical items. In the thinking regime, the seven models measur
 score 1.00. In the instant regime, every model that answers cleanly is at floor (best 0.08). A 16-hop pointer chase is
 serial work no roster model holds in weights, and every model that has been given room to work
 solves it.
+
+\subsection{The composition instrument}
+
+The composed cell whose floor is closed by a cost rule rather than by a list of shortcuts is
+\code{s5\_bind\_v3}: one event stream read through two structures --- a pointer map rewritten by
+swaps and a holder map rewritten by last-write-wins gives --- where every event resolves its
+second operand live through the map it does not write. Its two components are the same stream
+with the second operand named. Composing them is priced rather than asserted: the composed
+cell's cheapest correct algorithm costs 3.8--4.2$\times$ either component's at equal work, where
+every other task in the suite costs 1$\times$.
+
+The scored quantity is not the answer. Under a bounded per-event checkpoint the answer is
+generated from the model's own checkpoint, so a per-item perfect checkpoint makes that context
+byte-identical to the gold one and the answer registers the checkpoint and nothing else. What is
+scored is the single checkpoint token whose write is two dependent reads. Its floor is a maximum
+over the rows a class rule admits --- a row may hold at most one structure, may chain at most one
+hop per emitted token, and may not cost more than the cell's own algorithm --- and inside that
+rule the fixed-address family is swept exhaustively, over address spaces, block classes, both
+canonical indexings, token positions and typed map reads, with the winning member selected on a
+disjoint pool and scored held out.
+
+Measured on \code{gpt-5.6-sol} at $k=12$, $n=24$ items: 1.000 at $L=128$ and 0.758 $\pm$ 0.114
+at $L=256$ (12 of 24 items perfect) against floors of 0.247 and 0.255. Errors cluster within
+items --- one derailed stream corrupts every later block --- so the interval is taken over items,
+and a token-level interval understates it by about 4.4$\times$. A cell costs \$3--5 per model,
+because on this read the model's reasoning is the scored output rather than an unscored overhead
+bought at an 8k--98k token budget and discarded.
 
 \subsection{Long context}
 

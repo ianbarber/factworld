@@ -43,7 +43,12 @@ REPO_LABEL = "github.com/ianbarber/factworld"
 REPORT_URL = f"{REPO_URL}/blob/main/docs/benchmark/results.md"
 TASKS_URL = f"{REPO_URL}/blob/main/docs/tasks.md"
 
-HEADLINE_HEADING = "## Headline (current roster)"
+# results.md splits the headline in two — the INSTANT composition table and the THINKING
+# state-stress one — so the page reads both and joins them per model. The s5 column comes from
+# the thinking table and is dropped when its task is retired: the page publishes SCORED cells,
+# for the same reason the README block does.
+HEADLINE_HEADINGS = ("## Instant headline (current roster)",
+                     "## Thinking headline (current roster)")
 FLOOR_PREFIXES = ("recency heuristic (floor", "object-filter floor")
 # Headline columns the blog table publishes, found by substring in the source
 # header (robust to the task-version tag and the exact d/L settings).
@@ -54,7 +59,20 @@ COLUMN_NEEDLES = {
     "chain": "thinking: chain d",
     "s5": "thinking: s5 @L",
 }
-KEY_ORDER = ("binding", "composed", "gap", "chain", "s5")
+# The S5 column is the retired s5_v1 family: its cells stay in results.md and stay
+# reproducible, and the page publishes SCORED cells, so the key drops out when the task behind
+# it is retired. Same rule as the README frontier block.
+def _live_keys():
+    try:
+        from factworld.benchmark import FACETS, facet_retired
+        return tuple(k for k in ("binding", "composed", "gap", "chain", "s5")
+                     if not (k == "s5" and "s5_concrete" in FACETS
+                             and facet_retired("s5_concrete")))
+    except ImportError:                                            # pragma: no cover
+        return ("binding", "composed", "gap", "chain", "s5")
+
+
+KEY_ORDER = _live_keys()
 
 MARK_CHARS = "*†‡⊘"
 NUM_TOKEN = re.compile(r"[+±]?\d+(?:\.\d+)?")
@@ -85,8 +103,8 @@ FRAMING = [
     "- **What it measures.** Two abilities every long task leans on — recalling "
     "a stated fact, and tracking state through a stream of updates — measured "
     "independently and then composed into a single two-hop question. Recall is "
-    "cheap for every model; state tracking is established for six of the nine — "
-    "and for those six, composition is where they diverge.",
+    "cheap for every model; state tracking is established for most of the roster "
+    "— and for those, composition is where they diverge.",
     "- **One metric.** Every cell is **match**: strip a trailing period from "
     "both sides and compare the model's first len(gold) whitespace tokens to "
     "the gold answer — binary per item, no partial credit "
@@ -105,13 +123,20 @@ FRAMING = [
     f"its gold answer, and real model mistakes: [docs/tasks.md]({TASKS_URL}).",
 ]
 
-COLUMN_DECODE_LINE = (
-    "How to read the columns: the first three are *instant* cells (reasoning "
-    "off) — hold state through a 16-event stream, answer the composed two-hop "
-    "question on the same stream, and the gap between them; the last two are "
-    "*thinking* cells (reasoning on) — a 128-hop pointer chase and a 256-event "
-    "permutation stream. `@Ln` = stream length in events or hops; `@Ntok` = a "
-    "completion-token budget (raised budgets are stated with the number).")
+def _column_decode_line() -> str:
+    """The reading key, matched to the columns the page actually publishes."""
+    tail = ("a 128-hop pointer chase and a 256-event permutation stream"
+            if "s5" in KEY_ORDER else "a 128-hop pointer chase")
+    n = "last two are" if "s5" in KEY_ORDER else "last is a"
+    return ("How to read the columns: the first three are *instant* cells (reasoning "
+            "off) — hold state through a 16-event stream, answer the composed two-hop "
+            f"question on the same stream, and the gap between them; the {n} "
+            f"*thinking* cell{'s' if 's5' in KEY_ORDER else ''} (reasoning on) — {tail}. "
+            "`@Ln` = stream length in events or hops; `@Ntok` = a "
+            "completion-token budget (raised budgets are stated with the number).")
+
+
+COLUMN_DECODE_LINE = _column_decode_line()
 
 MARKS_LINE = (
     "Marks: `*` the model cannot fully disable reasoning; `†` visible working "
@@ -211,6 +236,30 @@ def _split_row(line: str) -> list[str]:
     return [c.strip() for c in s[1:-1].split(" | ")]
 
 
+def _joined_headline(text):
+    """The instant and thinking headline tables, joined on the model column.
+
+    Each is ``| Model | ... |``; the page wants one row per model carrying columns from both, so
+    they are merged by model name. A model present in only one keeps that one's cells and blanks
+    the rest, which is what an endpoint that cannot disable reasoning produces.
+    """
+    heads, rows, order = [], {}, []
+    for heading in HEADLINE_HEADINGS:
+        cols, body = _table_after(text, heading)
+        heads.append(cols)
+        for cells in body:
+            if not cells or not cells[0]:
+                continue
+            if cells[0] not in rows:
+                rows[cells[0]] = {}
+                order.append(cells[0])
+            for c, v in zip(cols[1:], cells[1:]):
+                rows[cells[0]][c] = v
+    merged = heads[0][1:] + [c for c in heads[1][1:] if c not in heads[0][1:]]
+    return (["Model"] + merged,
+            [[m] + [rows[m].get(c, "") for c in merged] for m in order])
+
+
 def _table_after(text: str, heading: str) -> tuple[list[str], list[list[str]]]:
     """(header cells, body rows) of the first markdown table under ``heading``."""
     start = text.find(heading)
@@ -238,7 +287,7 @@ def _table_after(text: str, heading: str) -> tuple[list[str], list[list[str]]]:
 def parse_headline(text: str):
     """(header, column indices, roster rows, floor rows) of the headline table.
     Rows are (label, {key: source cell}) with keys from COLUMN_NEEDLES."""
-    header, body = _table_after(text, HEADLINE_HEADING)
+    header, body = _joined_headline(text)
     idx = {}
     for key, needle in COLUMN_NEEDLES.items():
         hits = [i for i, h in enumerate(header) if needle in h]
@@ -308,12 +357,14 @@ def page_columns(header: list[str], idx: dict) -> list[str]:
     l_bind = grab(r"@L(\d+)", "binding", "16")
     depth = grab(r"chain d(\d+)", "chain", "128")
     l_s5 = grab(r"s5 @L(\d+)", "s5", "256")
-    return ["Model",
+    cols = ["Model",
             f"State tracking (binding @L{l_bind})",
             f"Composed @L{l_bind}",
             "Composition gap",
-            f"Chain d{depth} (thinking)",
-            f"S5 @L{l_s5} (thinking)"]
+            f"Chain d{depth} (thinking)"]
+    if "s5" in KEY_ORDER:
+        cols.append(f"S5 @L{l_s5} (thinking)")
+    return cols
 
 
 def table_lines(header, idx, roster, floors, results_text) -> list[str]:
