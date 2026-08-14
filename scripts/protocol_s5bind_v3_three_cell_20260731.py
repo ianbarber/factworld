@@ -1689,12 +1689,14 @@ def trace_read_block(matched, with_floors=True):
 # per-partition solver number under the ``before2`` format was read.
 #
 # The two reads have different floors and the difference is structural, not a preference.
-# FREE-RUNNING the model holds only what it emitted, so the gold pad is not an address space and
-# the depth-<=1 closure has only the event lines and the header to read: measured held-out at
-# k = 6 under ``before2`` it is 0.164 / 0.156 / 0.162 at L = 16 / 32 / 48 against 1/k = 0.1667.
-# THE FREE-RUNNING FLOOR IS INFORMED CHANCE. No admitted policy is above it, so a cleared
-# free-running reading of the two-hop token cannot be anything but the two-hop write, and that is
-# the read a CLEAR is registered on.
+# FREE-RUNNING the model holds only what it emitted -- but the row's own pad is NOT empty and is
+# NOT its own guess everywhere. Three of the four pad cells are solved EXACTLY by one map read off
+# the event line, so a row playing those emits GOLD at every slot but ``swap_p0``, and its own pad
+# is readable at full value there. Held out under ``before2``: 0.334 / 0.348 / 0.358 at
+# L = 48 / 64 / 96 (k=6) and 0.247 / 0.255 at L = 128 / 256 (k=12) -- about 3x informed chance,
+# set by ``pad:swap:cross[-1]p1``. This read is registered for the CLAIM because it is the one
+# under which the model holds its own state; it is not registered because its floor is chance,
+# and an earlier version of this note said that on a sweep that had dropped the pad space.
 # TEACHER-FORCED the gold pad IS the context, the closure reads 2.1x chance off it, and the
 # question the read answers is the narrower "given the true state, is the write performed". It is
 # what a FLOOR is interpreted with: a cell that clears teacher-forced and floors free-running is a

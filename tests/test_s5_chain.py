@@ -75,7 +75,7 @@ def backward_walk(prompt):
 
 
 def test_generation_deterministic():
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     a = generate(spec, "test", n=3, length=32)
     b = generate(spec, "test", n=3, length=32)
     assert [x.prompt for x in a] == [x.prompt for x in b]
@@ -84,13 +84,13 @@ def test_generation_deterministic():
 
 
 def test_no_wrap_gate():
-    spec = CANONICAL[SCORED].scaled(chain_depth=CANONICAL[SCORED].k)
+    spec = spec_for(SCORED).scaled(chain_depth=spec_for(SCORED).k)
     with pytest.raises(ValueError, match="wraps"):
         generate(spec, "test", n=1, length=8)
 
 
 def test_explicit_value_update_rendering():
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     ex = generate(spec, "test", n=1, length=32)[0]
     assert "swaps the values of" in ex.prompt and "cycles a0 simultaneously" in ex.prompt
     assert "old a0" in ex.prompt
@@ -100,7 +100,7 @@ def test_explicit_value_update_rendering():
 
 def test_path_consistency():
     """The gold answer is the last element of the stored path."""
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     for ex in generate(spec, "test", n=10, length=32):
         assert ex.answer == f"{ex.meta['path'][-1]}."
         assert len(ex.meta["path"]) == ex.meta["depth"] + 1
@@ -110,7 +110,7 @@ def test_distinct_path_gate():
     """Every query path visits depth+1 DISTINCT agents, so the degenerate echo strategy
     (answer the queried agent) and every fixed-hop heuristic score exactly 0 and item
     difficulty is uniform. The retired v2 stream fails this (echo floor 0.16-0.32)."""
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     for L in spec.eval_lengths:
         for ex in generate(spec, "test", n=25, length=L):
             path = ex.meta["path"]
@@ -125,7 +125,7 @@ def test_gate_leaves_the_item_distribution_alone():
     — 0.68 of first draws at depth/k = 1/2 — and on nothing a prompt shows: gold and start
     are uniform over all k agents to within the finite-sample KL bias, the same as the
     ungated sampler."""
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     n, L = 1000, 64
     for gated in (spec, spec.scaled(name="ungated_probe", distinct_path=False)):
         exs = generate(gated, "test", n=n, length=L)
@@ -175,7 +175,7 @@ def test_v3_is_answered_by_one_symbol_pushed_backward():
 def test_v4_admits_no_backward_walk():
     """A referenced operand has no identity until the map has been evaluated forward to it,
     so the backward walk cannot start on ANY scored item."""
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     for L in spec.eval_lengths:
         assert all(backward_walk(e.prompt) is None
                    for e in generate(spec, "test", n=50, length=L))
@@ -187,7 +187,7 @@ def test_forced_forward_prefix_reaches_the_end_of_the_stream():
     per cell), and every item carries at least one reference. Doubling the rate buys 0.059 of
     that at the shortest length and 0.021 at the longest, which is what makes 0.25 the
     setting rather than 0.5."""
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     n = 2000
     for L, want in ((32, 0.90), (64, 0.95), (96, 0.96)):
         exs = generate(spec, "test", n=n, length=L)
@@ -216,7 +216,7 @@ def test_initial_ref_adversary_sits_at_chance_on_the_scored_stream():
     """
     from factworld.validity import S5_CHAIN_ROWS, operative_floor, s5_chain_floors
 
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     for L in spec.eval_lengths:
         f = s5_chain_floors(generate(spec, "test", n=2000, length=L), spec.k)
         assert set(f) == set(S5_CHAIN_ROWS), (L, f)
@@ -250,7 +250,7 @@ def test_backward_hop_is_a_fixed_offset_and_never_sets_a_floor():
         s5_chain_offset_accuracies,
     )
 
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     n, null = 5000, 1.0 / (spec.k - 1)
     for L in (32, 64, 96, 128):
         ex = generate(spec, "test", n=n, length=L)
@@ -291,7 +291,7 @@ def test_the_shortest_scored_length_stays_scored_on_the_gate_margin():
         s5_chain_offset_accuracies,
     )
 
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     n, lengths = 5000, (32, 64, 96, 128)
     items = {L: generate(spec, "test", n=n, length=L) for L in lengths}
     fl = {L: operative_floor(s5_chain_floors(items[L], spec.k)) for L in lengths}
@@ -326,7 +326,7 @@ def test_reference_rendering_round_trips_to_what_the_sentence_encodes():
     stated initial map gives the wrong agent on items where the map has moved."""
     from factworld.render import Renderer
 
-    spec = CANONICAL[SCORED]
+    spec = spec_for(SCORED)
     r = Renderer()
     moved = 0
     for ex in generate(spec, "test", n=50, length=64):
@@ -358,16 +358,23 @@ def test_frozen_streams_are_byte_identical():
 
 
 def test_registry_contract():
-    """One scored version per task: v4 is it, v3 is retired outright and stays generable."""
+    """The WHOLE s5_chain family is retired and every version stays generable.
+
+    The family is retired on a defect the shortcut fixes do not reach: on the published v3
+    battery the top eleven models have zero pairwise separations at n=25, so the ranked cell
+    orders by noise. So no version is scored, no version is in REPORTED, and the family
+    contributes no ``kind="benchmark"`` spec — while every one of them still resolves, because
+    the published cells must stay reproducible.
+    """
     from factworld import tasks as TK
 
-    spec = TK.CANONICAL[SCORED]
-    assert SCORED in TK.REPORTED and spec.kind == "benchmark"
+    spec = TK.spec_for(SCORED)
+    assert SCORED not in TK.REPORTED and spec.kind == "retired"
     assert spec.distinct_path and spec.conditional_rate == 0.25
     assert spec.k == 32 and spec.chain_depth == 16 and spec.chain_depth < spec.k
     assert sum(1 for s in TK.CANONICAL.values()
-               if s.family == "s5_chain" and s.kind == "benchmark") == 1
-    for name in ("s5_chain_v1", "s5_chain_v2", "s5_chain_v3", "s5_chain_local_v1"):
+               if s.family == "s5_chain" and s.kind == "benchmark") == 0
+    for name in ("s5_chain_v1", "s5_chain_v2", "s5_chain_v3", "s5_chain_local_v1", SCORED):
         assert name not in TK.CANONICAL and name not in TK.REPORTED
         assert TK.RETIRED[name].kind == "retired"
         assert TK.spec_for(name) is TK.RETIRED[name]
@@ -376,7 +383,7 @@ def test_registry_contract():
     v3, v4 = TK.RETIRED["s5_chain_v3"], spec
     differing = {f for f in v3.__dataclass_fields__
                  if getattr(v3, f) != getattr(v4, f)}
-    assert differing == {"name", "version", "kind", "k", "chain_depth", "conditional_rate"}
+    assert differing == {"name", "version", "k", "chain_depth", "conditional_rate"}
 
 
 def test_local_arms_run_the_scored_construct():
@@ -390,6 +397,8 @@ def test_local_arms_run_the_scored_construct():
     for name in ("s5_chain_local_v4", "s5_chain_local_v4_path"):
         arm = TK.CANONICAL[name]
         assert arm.kind == "experimental" and name not in TK.REPORTED
+        # the arms are experimental and the construct they run is retired, so the field diff
+        # against it carries ``kind``; that is the retirement and not a construct difference
         assert arm.conditional_rate == 0.5 and arm.distinct_path
         differing = {f for f in scored.__dataclass_fields__
                      if getattr(scored, f) != getattr(arm, f)}
@@ -403,7 +412,7 @@ def test_local_arms_run_the_scored_construct():
     # needs are what move (a reference is mis-resolvable only once the map has drifted)
     v2 = TK.spec_for("s5_chain_local_v2")
     assert {f for f in dense.__dataclass_fields__ if getattr(dense, f) != getattr(v2, f)} == \
-        {"name", "version", "conditional_rate", "train_lengths", "eval_lengths"}
+        {"name", "version", "kind", "conditional_rate", "train_lengths", "eval_lengths"}
 
 
 def test_local_arm_floors_are_set_by_the_pre_existing_adversaries():

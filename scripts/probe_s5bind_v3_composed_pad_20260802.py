@@ -283,7 +283,6 @@ def decompose_free_run(model, tok, spec, L, n, device, fmt, batch=128):
             return None
         toks, slots, gold = got
         prepped.append((toks, slots, set(slots), gold, slot_layout(e, fmt), *operand_kinds(e)))
-    n_slots = len(prepped[0][1])
     n_ev = 1 + max(ev for _t, _s, _ss, _g, lay, *_r in prepped for ev, _c in lay)
     hit = tot = 0
     by_ord = [[0, 0] for _ in range(n_ev)]

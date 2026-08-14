@@ -1159,7 +1159,13 @@ def test_readme_frontier_block():
         assert text.endswith("<!-- FRONTIER_TABLE_END -->\n\nafter\n")
         # two tables: instant and thinking
         assert "| " + " | ".join(RB.README_INSTANT_COLUMNS) + " |" in text
-        assert "| " + " | ".join(RB.README_THINKING_COLUMNS) + " |" in text
+        # the thinking table drops the s5 columns when s5_concrete's task is retired: the README
+        # block carries SCORED tasks only, and history keeps the cells (results.md still shows
+        # them). The column list is the format; what is published is that list minus retired.
+        published = [c for c in RB.README_THINKING_COLUMNS
+                     if not (RB.facet_retired_here("s5_concrete") and c.startswith("s5"))]
+        assert "| " + " | ".join(published) + " |" in text
+        assert RB.facet_retired_here("s5_chain") == ("**s5_chain**" not in text)
         assert "**Component: instant composition (reasoning off, answer contract)**" in text
         assert "**Components: thinking state stress (reasoning on)**" in text
         # fixture history values survive the reduction (model-b carries every mark)

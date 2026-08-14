@@ -547,8 +547,12 @@ def build_plan(models: list[str], facets: list[str] | None, n_scale: float,
     and the record copies ``cell["settings"]`` verbatim, so plan and record agree.
     """
     plan = {}
+    # A facet NAMED on the command line is honoured even if its task is retired: that is a
+    # reproduction request, and the operator asking for it by name is the authorisation. The
+    # DEFAULT plan (facets is None) carries live facets only, so a battery never buys one.
     for model in models:
-        cells = [c for c in arms_for(model) if facets is None or c["facet"] in facets]
+        cells = [c for c in arms_for(model, include_retired=facets is not None)
+                 if facets is None or c["facet"] in facets]
         if lengths is not None:
             cells = [c for c in cells if c["length"] in lengths]
         for c in cells:

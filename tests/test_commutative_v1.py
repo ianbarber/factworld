@@ -65,9 +65,12 @@ def _gen(length, n, split="test", spec=None):
 # --- (a) registry contract ---------------------------------------------------------------
 
 def test_registry_contract():
-    assert "commutative_v1" in TK.CANONICAL
+    """RETIRED and still generable: the rung was built and floored, its calibration runners were
+    never run, so it has no measured cell and is off the instrument route. Every property below
+    is pinned so the spec a historical run resolves is byte-identical to the one it ran."""
+    assert "commutative_v1" not in TK.CANONICAL
     spec = TK.spec_for("commutative_v1")
-    assert spec.kind == "experimental"                 # not scored until calibrated (like s5_v1)
+    assert spec.kind == "retired" and spec is TK.RETIRED["commutative_v1"]
     assert "commutative_v1" not in TK.REPORTED
     assert spec.family == "commutative"
     assert spec.version == "1.1"                       # stream version pinned at introduction

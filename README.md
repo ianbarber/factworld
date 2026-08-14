@@ -34,7 +34,7 @@ floor is closed by cost rather than by a list of shortcuts:
 The composed cell's floor is a max over the policies its class rule ADMITS — a row may hold at
 most one structure, may chain at most one hop per emitted token, and may not cost more than the
 cell's own algorithm — and within that rule the fixed-address family is swept exhaustively rather
-than listed. It comes out at informed chance. The two components are the controls: the protocol
+than listed. The two components are the controls: the protocol
 conjoins the composed reading with both components forming and reading out on the same seed.
 
 Each axis tests a different thing: solve rate; pool/breadth (working-set load); depth/length
@@ -150,9 +150,9 @@ with clean cells at both versions it reads the same on each. Both are generable 
 
 The composed cell of the instrument is scored on the **pad write** rather than the answer: the
 model emits a bounded per-event checkpoint and is scored on the one token whose write needs both
-structures, against a floor of informed chance. Measured on `gpt-5.6-sol` at k=12, n=24 items:
-1.000 at L=128, 0.758 (±0.114 over items, 12 of 24 items perfect) at L=256, against floors of
-0.090. A cell costs $3–5 per model, because the reasoning is the scored output rather than an
+structures. Measured on `gpt-5.6-sol` at k=12, n=24 items: 1.000 at L=128 and 0.758 (±0.114 over
+items, 12 of 24 items perfect) at L=256, against floors of 0.247 and 0.255 — about 3x informed
+chance, set by a row that reads its own previous cross-swap block. A cell costs $3–5 per model, because the reasoning is the scored output rather than an
 unscored overhead bought at an 8k–98k token budget and discarded.
 
 Models run at the recommended top reasoning level, `xhigh` (mapped down where the endpoint's

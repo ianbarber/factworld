@@ -3409,9 +3409,17 @@ def s5_bind_v3_pad_gold(rec, fmt: str = "moved2") -> list[tuple[str, ...]] | Non
 
 
 def s5_bind_v3_pad_cells(kind: str, fmt: str = "moved2") -> tuple[str, ...]:
-    """The pad cells one event kind emits under a format, in block order."""
+    """The pad cells one event kind emits under a format, in block order.
+
+    RAISES on a format this module does not define, like ``s5_bind_v3_pad_gold``: returning the
+    narrow layout for anything that is not ``moved2`` silently mislabels the wider experimental
+    formats (``delta2``, ``hybrid4``, ``dense``), and a caller that builds a slot layout from it
+    then indexes past the end of its own list.
+    """
     from .composition import SWAP
 
+    if fmt not in S5_BIND_V3_PAD_FORMATS:
+        raise KeyError(f"{fmt!r} is not one of {S5_BIND_V3_PAD_FORMATS}")
     if kind == SWAP:
         return ("swap_p0", "swap_p1")
     return ("give_p0", "give_p1") if fmt == "moved2" else ("give_p1",)
@@ -3626,13 +3634,16 @@ def _pad_gold_report(sweep: dict, n: int, top: int = 0) -> dict:
 # operand against earlier events, so it is not a positional read at all and the step conjunct
 # excludes it. It is measured anyway, so the exclusion is a judgement about cost.
 S5_BIND_V3_PAD_SPACES = ("pad", "line", "head")
+# The maps applicable to an addressed token, BY TYPE. Kept as the statement of the rule; the
+# sweep builds its preimage lookup from the same typing (an agent token has no holder-map entry
+# and an object token no pointer-map entry, so the type falls out of the lookup itself).
+S5_BIND_V3_PAD_AGENT_MAPS = ("id", "P", "P0")
+S5_BIND_V3_PAD_OBJECT_MAPS = ("B", "B0")
+S5_BIND_V3_PAD_READ_MAPS = S5_BIND_V3_PAD_AGENT_MAPS + S5_BIND_V3_PAD_OBJECT_MAPS
 # The partitions the closure is SWEPT over. It is the two halves of the only pad cell whose gold
 # is more than one read; the other three are 1.0000 under one map read off the event line, which
 # ``tests`` pins rather than assumes.
 S5_BIND_V3_PAD_CLOSED_PARTS = ("swap_p0|cross", "swap_p0|same")
-S5_BIND_V3_PAD_READ_MAPS = ("id", "P", "P0", "B", "B0")
-S5_BIND_V3_PAD_AGENT_MAPS = ("id", "P", "P0")     # a token naming an AGENT
-S5_BIND_V3_PAD_OBJECT_MAPS = ("B", "B0")          # a token naming an OBJECT
 
 
 def s5_bind_v3_pad_fixed_address(mp: str, space: str, cls: str, idx: int, q: int) -> str:
@@ -3669,12 +3680,19 @@ class _AddrIndex:
                 out[(mp, space, c, j - nb, s)] += 1     # the d-th most recent
 
 
-def _pad_fixed_read_sweep(prepped, parts=None, spaces=S5_BIND_V3_PAD_SPACES) -> dict:
+def _pad_fixed_read_sweep(prepped, parts=None, spaces=S5_BIND_V3_PAD_SPACES,
+                          self_pad_exact=True) -> dict:
     """Hits per (partition, member) over the whole depth-<=1 family, and partition counts.
 
-    ``spaces`` is which address spaces exist under the read being priced. Teacher-forced all
-    three do; FREE-RUNNING the ``pad`` space holds what the row emitted itself — which
-    ``copy_prev`` already prices — so it is dropped and the event lines and the header remain.
+    ``spaces`` is which address spaces exist under the read being priced, and FREE-RUNNING the
+    ``pad`` space is the row's OWN emissions rather than the gold pad. It is NOT empty there, and
+    treating it as empty understated the free-running floor by 1.7-3.1x. The reason is this
+    module's own claim (B): three of the four pad cells are solved EXACTLY by one map read off
+    the event line, at 1.0000 — so a row playing those policies emits GOLD at every slot except
+    ``swap_p0``, and every pad address landing on one of those slots is readable at its full
+    teacher-forced value with nothing forced. Only ``swap_p0`` is genuinely the row's own guess,
+    because performing it is the thing the class may not do. ``self_pad_exact`` indexes the pad
+    under exactly that rule: gold at the exactly-solved cells, absent at ``swap_p0``.
 
     ``parts`` restricts which ``"cell|source"`` partitions are scored. It is a COST control and
     not a claim: the other three pad cells are each solved exactly by one map read off the event
@@ -3738,7 +3756,15 @@ def _pad_fixed_read_sweep(prepped, parts=None, spaces=S5_BIND_V3_PAD_SPACES) -> 
                         for mp in ("P", "P0"):
                             if g[i][0] in (invP if mp == "P" else invP0).get(t, ()):
                                 h[f"{mp}[{S5_BIND_V3_PAD_SELF_READ}]"] += 1
-            pad.add(cls, g[i] if len(g[i]) == 2 else (g[i][0], None))
+            if self_pad_exact:
+                pad.add(cls, g[i] if len(g[i]) == 2 else (g[i][0], None))
+            else:
+                # the row's own pad: gold where its emission is exact, absent at swap_p0
+                blk = list(g[i]) + [None] * (2 - len(g[i]))
+                for q, cell in enumerate(names):
+                    if cell == S5_BIND_V3_TWO_HOP_CELL:
+                        blk[q] = None
+                pad.add(cls, tuple(blk))
             x = ref if src == "N" else (P.get(ref) if src == "P" else B.get(ref))
             if kind == SWAP:
                 if tgt not in P or x not in P:
@@ -3754,6 +3780,9 @@ def _pad_fixed_depth(member) -> int:
     if isinstance(member, str):
         return 0 if member == S5_BIND_V3_PAD_SELF_READ else 1
     return 0 if member[0] == "id" else 1
+
+
+_HELD_OUT_MISSING = object()      # sentinel: selected on the fit leg, and the selection was None
 
 
 def _pad_fixed_label(member) -> str:
@@ -3778,6 +3807,10 @@ def _pad_fixed_best(sweep: dict, parts, max_hops: int = 1, member=None):
     if member is not None:
         got = sum(sweep["hits"].get(p, {}).get(member, 0) for p in parts)
         return (got / tot, _pad_fixed_label(member), member)
+    if member is _HELD_OUT_MISSING:
+        # a partition the fit leg never selected a member for scores 0, not the in-sample max:
+        # failing open here is the one direction the held-out machinery exists to prevent
+        return (0.0, None, None)
     agg: Counter = Counter()
     for p in parts:
         for a, v in sweep["hits"].get(p, {}).items():
@@ -3981,8 +4014,11 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
                   "stated_ref_val": (x_stated, x_stated),
                   "stated_target_val": (B0.get(tgt), B0.get(tgt)),
                   "stated_operand_val": (None, None)}
+        # THIS event's block is what the NEXT event copies. Carrying ``copy_prev`` forward
+        # instead froze the row at event 0's block for the whole stream, which is a per-item
+        # constant and not the policy the code is named for.
         em["copy_prev"] = prev if prev is not None else em["own_gold"]
-        prev = em["copy_prev"]
+        prev = em["own_gold"]
         g = gold[i]
         source = s5_bind_v3_pad_event_source(kind, src)
         # ``names`` is the block's own layout; the emission tuples are written in the WIDE
@@ -4016,6 +4052,17 @@ def _pad_write_item(rec, gold, jp, jb, evict, acc, agents, forced=False):
             hold(Bp, ageB, jb, tgt, x)
             if forced and tgt in Bp and len(g) == 2:
                 Bp[tgt] = g[0]
+
+
+def _held_out_pick(sel, part):
+    """The member the FIT leg chose for this partition, or the sentinel when it chose none.
+
+    ``sel.get(part)`` cannot distinguish "not held out" from "held out on nothing", and the
+    second must not silently become a maximisation over these items.
+    """
+    if not sel:
+        return None
+    return sel[part] if sel.get(part) is not None else _HELD_OUT_MISSING
 
 
 def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=None,
@@ -4097,20 +4144,23 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
     # over them can only reproduce a floor of 1.0 that ``target_val``/``operand`` already set.
     # Free-running the pad space is the row's OWN emissions and is dropped; the event lines and
     # the header remain, so the family is not empty there the way the gold-pad one is.
-    fixed = _pad_fixed_read_sweep(
-        prepped, S5_BIND_V3_PAD_CLOSED_PARTS,
-        S5_BIND_V3_PAD_SPACES if forced else tuple(z for z in S5_BIND_V3_PAD_SPACES if z != "pad"))
+    # FREE-RUNNING the pad space is the row's OWN emissions and stays in the family: a row whose
+    # policy is exact at the three one-hop cells has a gold pad everywhere but ``swap_p0``.
+    fixed = _pad_fixed_read_sweep(prepped, S5_BIND_V3_PAD_CLOSED_PARTS,
+                                  S5_BIND_V3_PAD_SPACES, self_pad_exact=bool(forced))
     sel = fixed_members or {}
     out["fixed_reads"] = {
         "counts": dict(fixed["counts"]),
         "best": {p: {"acc": v[0], "member": v[1], "held_out": p in sel}
                  for p in fixed["counts"]
-                 for v in (_pad_fixed_best(fixed, (p,), S5_BIND_V3_MAX_DEPTH, sel.get(p)),)},
+                 for v in (_pad_fixed_best(fixed, (p,), S5_BIND_V3_MAX_DEPTH,
+                                           _held_out_pick(sel, p)),)},
         "keys": {p: _pad_fixed_best(fixed, (p,), S5_BIND_V3_MAX_DEPTH)[2]
                  for p in fixed["counts"]},
         "in_sample_max": {p: _pad_fixed_best(fixed, (p,), S5_BIND_V3_MAX_DEPTH)[0]
                           for p in fixed["counts"]},
-        "spaces": ("pad",) if forced else (), "parts": S5_BIND_V3_PAD_CLOSED_PARTS,
+        "spaces": S5_BIND_V3_PAD_SPACES, "self_pad_exact": bool(forced),
+        "parts": S5_BIND_V3_PAD_CLOSED_PARTS,
         "selected_on": "disjoint pool" if sel else "these items"}
     fam1 = {}
     for c in S5_BIND_V3_PAD_CELLS:
@@ -4119,7 +4169,7 @@ def s5_bind_v3_pad_write_scores(examples, k: int, m: int, pad: int = 2, rows=Non
         for s in S5_BIND_V3_PAD_SOURCES:
             part = f"{c}|{s}"
             fam1[(c, s)] = _pad_fixed_best(fixed, (part,), S5_BIND_V3_MAX_DEPTH,
-                                           sel.get(part))[0]
+                                           _held_out_pick(sel, part))[0]
     for row in rows:
         jp, jb, ev = s5_bind_v3_pad_carry_parse(row)
         acc = {p: {code: [0, 0] for code in S5_BIND_V3_PAD_CODES

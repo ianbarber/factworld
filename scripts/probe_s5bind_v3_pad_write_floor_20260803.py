@@ -497,6 +497,10 @@ def main():
         lengths = P.registered_lengths("composed")
         comp, detail = component_gate(a.grid, a.n)
         scored = rec.get(f"confront_{P.PAD_WRITE_SCORED_READ}") or []
+        if not scored:
+            print(f"\n  [gate] no {P.PAD_WRITE_SCORED_READ} confrontation: pass the decode that "
+                  f"read is scored on (--decompose for free_run, --forced for teacher_forced). "
+                  f"No seed can carry the claim without it.", flush=True)
         two = two_hop_gate(scored, lengths)
         gates = {"components_form_and_read_out": comp, "two_hop_clears": two}
         ok, per, n_ok, by_gate = P.seeds_carrying(gates)

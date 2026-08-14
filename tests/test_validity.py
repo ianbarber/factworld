@@ -57,11 +57,11 @@ def test_a0_event_reader_covers_both_grammars_in_stream_order():
     """The pointer-map adversaries read the rendered events, so the reader has to return
     every event, in the order it was rendered, in the canonical AND the compact grammar."""
     from factworld.render import Renderer
-    from factworld.tasks import CANONICAL, generate
+    from factworld.tasks import CANONICAL, generate, spec_for
     from factworld.validity import a0_events
     from factworld.world import Event
 
-    spec = CANONICAL["s5_chain_v4"]
+    spec = spec_for("s5_chain_v4")
     for ex in generate(spec, "test", n=5, length=32):
         events = a0_events(ex.prompt)
         assert len(events) == 32
@@ -82,10 +82,10 @@ def test_initial_ref_adversary_is_exact_where_the_map_has_not_moved():
     """It is a real policy, not a random guess: resolving references against the initial map
     is CORRECT while the map still agrees with the facts, which is why it has to be measured
     on the scored stream rather than assumed to sit at chance."""
-    from factworld.tasks import CANONICAL, generate
+    from factworld.tasks import CANONICAL, generate, spec_for
     from factworld.validity import s5_chain_ref_pred
 
-    spec = CANONICAL["s5_chain_v4"].scaled(name="ref_probe_L1", eval_lengths=(1,),
+    spec = spec_for("s5_chain_v4").scaled(name="ref_probe_L1", eval_lengths=(1,),
                                            conditional_rate=1.0, chain_depth=1)
     exs = generate(spec, "test", n=200, length=1)
     assert all(s5_chain_ref_pred(e.prompt) == e.answer for e in exs)
@@ -95,10 +95,10 @@ def test_backward_hop_reads_the_stated_map_and_nothing_else():
     """f_0^{-1}(start) is recovered from the fact block alone, so it is defined on a prompt
     with no events at all and is unchanged by the event grammar the stream is rendered in.
     (Reported as a diagnostic; it is not a registered adversary — see the test below.)"""
-    from factworld.tasks import CANONICAL, generate
+    from factworld.tasks import CANONICAL, generate, spec_for
     from factworld.validity import _A0_FACT_RE, s5_chain_shallow_preds
 
-    spec = CANONICAL["s5_chain_v4"]
+    spec = spec_for("s5_chain_v4")
     plain = generate(spec, "test", n=20, length=32)
     compact = generate(spec.scaled(compact_events=True), "test", n=20, length=32)
     for exs in (plain, compact):
@@ -115,7 +115,7 @@ def test_no_backhop_row_where_there_is_no_event_stream():
     exactly when the depth is k-1 — chain_v2's longer eval length. That is the cheap-direction
     property the chain staircase prices at k=2d+1, not a floor, so the row is dropped for the
     same reason the chase row is."""
-    from factworld.tasks import CANONICAL, generate
+    from factworld.tasks import CANONICAL, generate, spec_for
     from factworld.validity import s5_chain_floors, s5_chain_shallow_preds
 
     chain = CANONICAL["chain_v2"]
@@ -281,14 +281,14 @@ def test_every_registered_shortcut_reaches_the_suite_gate_column():
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
     import validate_suite  # noqa: E402
 
-    from factworld.tasks import CANONICAL, generate
+    from factworld.tasks import CANONICAL, generate, spec_for
     from factworld.validity import (
         S5_CHAIN_ADVERSARIES,
         S5_CHAIN_CHANCE_ROWS,
         s5_chain_floors,
     )
 
-    spec = CANONICAL["s5_chain_v4"]
+    spec = spec_for("s5_chain_v4")
     rows = s5_chain_floors(generate(spec, "test", n=50, length=32), spec.k)
     registered = {n for n in rows
                   if n in S5_CHAIN_ADVERSARIES and n not in S5_CHAIN_CHANCE_ROWS}

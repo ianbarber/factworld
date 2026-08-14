@@ -477,7 +477,9 @@ def attribute_answers(ckpt_path, spec, length, n, device, fmt, batch=64):
         if got is None or rec is None:
             return None
         toks, slots, gold = got
-        w = PAD_WIDTH[fmt]
+        # the LAST block's own width, not the format's max: a give block is one token under
+        # before2, so a constant slice reaches back into the previous block
+        w = len(pad_values(ex, fmt, ags, obs)[-1])
         qkind, qtgt = rec["query"]
         # the value the pad last wrote for the queried slot, replaying which slots each block holds
         Pm, Bm = dict(rec["P0"]), dict(rec["B0"])

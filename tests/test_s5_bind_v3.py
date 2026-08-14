@@ -2333,14 +2333,33 @@ def test_the_composed_pad_write_has_a_floor_at_three_times_chance():
     # exactly, so the unrestricted floor there is far above the cross one.
     two = s5_bind_v3_pad_two_hop_floor(sc, k, m, ns, ng, pad=2)
     assert two["max_hops"] == S5_BIND_V3_MAX_DEPTH == 1
-    assert two["floor"] < 1.5 * ch, two["floor"]
-    assert two["unrestricted_cross"] > two["floor"] + 0.3, two
+    # THE TWO-HOP TOKEN'S FLOOR IS NOT CHANCE, FREE-RUNNING OR NOT, and believing it was is what
+    # a corrected sweep removed. The row's OWN pad is gold wherever its policy is exact -- three
+    # of the four cells are one map read off the event line -- so free-running it reads its own
+    # earlier blocks at full value. Dropping the pad space there understated this by 1.7-3.1x,
+    # which is the direction that invalidates a cleared reading.
+    assert two["floor"] > 3 * ch, two["floor"]          # moved2, free-running
+    # AND THE FORMAT IS WHAT MOVES IT. Under ``moved2`` the row emits the give's INSTALLED value,
+    # which is a one-hop read of the event line, so it can write the very address the two-hop
+    # token is copied from; ``before2`` drops that token and the family falls with it. The same
+    # gap the teacher-forced read shows, on the read the claim is registered on.
+    before = s5_bind_v3_pad_two_hop_floor(
+        s5_bind_v3_pad_write_scores(ex, k, m, pad=2, fmt="before2"), k, m, ns, ng, pad=2)
+    assert before["floor"] < two["floor"] - 0.1, (before["floor"], two["floor"])
+    assert 1.7 * ch < before["floor"] < 2.6 * ch, before["floor"]
     assert two["n_cross"] and two["n_same"], two
-    # FREE-RUNNING the row that sets it is a cheap emission or the depth-<=1 closure's own max —
-    # the gold pad is not in the context there, but the EVENT LINES and the header are, so the
-    # closure is not empty the way the gold-pad family is. It sits at chance, and the reason to
-    # believe that rather than assume it is the HELD-OUT reading: select the member on a disjoint
-    # pool and score it here, and the in-sample max (a header address, at chance) does not repeat.
+    # AND THE FORMAT IS WHAT MAKES THE DEPTH CONJUNCT BITE AT ALL. The conjunct exists to exclude
+    # the composition, so it is worth exactly the accuracy it costs a row to be held to one hop.
+    # Under ``moved2`` that is NOTHING free-running — a one-hop row reaches the unrestricted
+    # class's own number, because the give's installed value lets it write the address the
+    # two-hop token is copied from. Measured at k=6, L=48, n=96:
+    #     moved2   free 0.5263 vs 0.5263 (+0.000)   forced 0.5263 vs 0.6015 (+0.075)
+    #     before2  free 0.3083 vs 0.5113 (+0.203)   forced 0.3083 vs 0.5539 (+0.246)
+    assert two["unrestricted_cross"] - two["floor"] < 0.02, two          # moved2: vacuous
+    assert before["unrestricted_cross"] - before["floor"] > 0.15, before  # before2: it bites
+    # THE HELD-OUT READING is why the closure's number is believable rather than assumed: select
+    # the member on a disjoint pool and score it here, and a member that was an in-sample
+    # artifact does not repeat.
     assert any(z in two["row"] for z in ("copy_prev", "ref_sym", V.S5_BIND_V3_PAD_FIXED_READ)), \
         two["row"]
     pool = TK.generate(TK.CANONICAL["s5_bind_local_v3"], "test", n=400, length=48)
@@ -2349,7 +2368,7 @@ def test_the_composed_pad_write_has_a_floor_at_three_times_chance():
     part = f"{V.S5_BIND_V3_TWO_HOP_CELL}|{V.S5_BIND_V3_TWO_HOP_SOURCE}"
     assert held["best"][part]["held_out"]
     assert held["best"][part]["acc"] <= held["in_sample_max"][part] + 1e-12, held
-    assert held["best"][part]["acc"] < 1.2 * ch, held["best"][part]
+    assert held["best"][part]["acc"] < two["floor"] + 1e-9, held["best"][part]
     # and the depth conjunct is the COMPONENT cells' own, read on the emission instead of the row
     assert s5_bind_v3_pad_hops("own_gold", "swap_p0", "cross") == 2
     assert s5_bind_v3_pad_hops("own_gold", "swap_p0", "same") == 2

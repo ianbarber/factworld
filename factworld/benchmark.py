@@ -133,9 +133,19 @@ CANONICAL_BREADTH = 16
 # SENTINEL_DROP to exactly these three strings, so nothing can be added. A new or
 # edited prompt goes into CANONICAL alone — staying out of the drop set is what
 # gives the cells measured under it fresh resume keys.
-CANONICAL_SYSTEM_PROMPT_FINGERPRINTS = frozenset({
-    "60766724c1", "8b02734258", "27d71cb774", "04153d7439",
+# A prompt reachable only from a RETIRED facet is HISTORICAL: its cells are in history and are
+# still rendered and reproducible, so the fingerprint must stay resolvable, but the live tripwire
+# must not require a planned cell to resolve to it. The two sets are kept apart for that reason
+# and CANONICAL is their union, so every consumer that asks "is this prompt one of ours" is
+# unchanged; only the "is this prompt still PLANNED" test narrows.
+HISTORICAL_SYSTEM_PROMPT_FINGERPRINTS = frozenset({
+    "27d71cb774",        # the s5_concrete framing prompt; its facet's task is retired
 })
+LIVE_SYSTEM_PROMPT_FINGERPRINTS = frozenset({
+    "60766724c1", "8b02734258", "04153d7439",
+})
+CANONICAL_SYSTEM_PROMPT_FINGERPRINTS = (
+    LIVE_SYSTEM_PROMPT_FINGERPRINTS | HISTORICAL_SYSTEM_PROMPT_FINGERPRINTS)
 SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS = frozenset({
     "60766724c1", "8b02734258", "27d71cb774",
 })
@@ -779,8 +789,13 @@ def _settings(effort, *, rendering=None, format_prompt=None, leg=None,
     return settings
 
 
-def arms_for(model_slug: str) -> list[dict]:
+def arms_for(model_slug: str, include_retired: bool = False) -> list[dict]:
     """The full cell plan for one model: list of {facet, task, length, n, settings}.
+
+    ``include_retired`` adds the facets whose task is RETIRED. They are OFF by default because a
+    plan is what a battery buys and nothing should buy a retired cell; they are reachable at all
+    because their measured cells are in history and must stay re-runnable and re-renderable. A
+    caller that passes True is asking for reproduction, not for a plan.
 
     Tier policy: "dose"-policy facets would give cheap_reasoner the full effort
     sweep and frontier_pair none+high only (no current facet uses "dose");
@@ -796,7 +811,9 @@ def arms_for(model_slug: str) -> list[dict]:
     cells: list[dict] = []
     skip = set(reg.get("skip_facets", ()))
     for facet_name, fc in FACETS.items():
-        if facet_name in skip or facet_retired(facet_name):
+        if facet_name in skip:
+            continue
+        if facet_retired(facet_name) and not include_retired:
             continue
         if "cells" in fc:
             # explicit (length, leg) pairs (zero_budget mixes plain + leg cells)
@@ -987,14 +1004,24 @@ def _prompt_tokens_est(task: str, length: int, rendering: str | None,
     return SYSTEM_PROMPT_EST_TOKENS + max(1, len(ex.prompt) // CHARS_PER_TOKEN)
 
 
+# The one facet whose task key is not a registry name: "s5" is a SENTINEL the renderer and the
+# prompt estimator branch on (``_prompt_tokens_est``), and the spec it stands for is s5_v1. It is
+# resolved here rather than left to fall through, because "unknown name" and "retired spec" must
+# not be the same answer -- treating unknown as retired makes a typo in FACETS silently delete a
+# facet from every plan instead of raising.
+FACET_TASK_ALIASES = {"s5": "s5_v1"}
+
+
 def facet_retired(facet_name: str) -> bool:
-    """Is every task this facet would run RETIRED (or unregistered)?
+    """Is every task this facet would run RETIRED?
 
     A facet naming a retired spec is history, not a plan: its cells are in
     ``results/benchmark/history.jsonl`` and are still rendered and reproducible,
     but a NEW battery must not buy them. The check is on the registry rather than
     on a hand-kept list of dead facet names, so retiring a spec is the only edit
     retiring its facet takes.
+
+    RAISES on a task name in neither registry, which is a typo and not a retirement.
     """
     from . import tasks as TK
 
@@ -1003,8 +1030,14 @@ def facet_retired(facet_name: str) -> bool:
              else {fc["task"]} if fc.get("task") else set())
     if not names:
         return False
-    live = {n for n in names
-            if n in TK.CANONICAL and TK.CANONICAL[n].kind != "retired"}
+    live = set()
+    for n in names:
+        n = FACET_TASK_ALIASES.get(n, n)
+        if n in TK.CANONICAL:
+            if TK.CANONICAL[n].kind != "retired":
+                live.add(n)
+        elif n not in TK.RETIRED:
+            raise KeyError(f"facet {facet_name!r} names task {n!r}, which is in no registry")
     return not live
 
 

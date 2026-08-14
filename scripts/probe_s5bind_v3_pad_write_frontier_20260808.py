@@ -46,6 +46,7 @@ from factworld import validity as V                                        # noq
 from factworld.composition import SWAP, read as _read                      # noqa: E402
 
 DEFAULT_SLUG = "steed/deepseek-v4-flash"
+DRY_RUN_TOK_PER_EVENT = 35.0     # measured on gpt-5.6-sol at k=12: 26-35 completion tok/event
 TOK_PER_S = 14.0                 # steed's measured LONG-output decode rate, the slow one
 RE_LINE = re.compile(r"^\s*s(\d+)\s*[:.\)]\s*(.+?)\s*$", re.M)
 RE_TOK = re.compile(r"\bg\d+\b")
@@ -218,7 +219,15 @@ def main():
     a = ap.parse_args()
 
     timeout = a.timeout or (a.max_tokens / TOK_PER_S + 120.0)
+    spent = [0.0]          # one running total for the WHOLE run, not per length cell
     base, key, model, reg = resolve(a.model)
+    if a.dry_run:
+        # price the plan from the MEASURED per-event completion rate and exit, before any spend
+        for L in [int(z) for z in a.lengths.split(",")]:
+            ctok = a.n * L * DRY_RUN_TOK_PER_EVENT
+            print(f"  {a.spec}@{L}  n={a.n}  ~{ctok:,.0f} completion tokens  "
+                  f"~${price(reg, 0, ctok):.2f}")
+        return
     backend = client = None
     if reg.get("responses_endpoint"):
         backend, reg = build_backend(a.model, a.effort, a.workers, timeout)
@@ -243,27 +252,43 @@ def main():
             # THE FRONTIER PATH, with a running DOLLAR guard: spend is checked after every chunk
             # against --budget_usd and the cell stops rather than overrunning, which is the same
             # discipline scripts/probe_sol_system_prompt applies.
-            replies, spent, i = [], 0.0, 0
+            replies, i = [], 0
             while i < len(prompts):
                 chunk = prompts[i:i + max(1, a.workers)]
                 texts = backend.generate(chunk, max_new_tokens=a.max_tokens)
                 metas = backend.pop_example_meta()
                 for tx, mt in zip(texts, metas):
                     replies.append((tx, mt.get("finish_reason"), mt))
-                spent += price(reg, sum((m.get("prompt_tokens") or 0) for m in metas),
-                               sum((m.get("completion_tokens") or 0) for m in metas))
+                spent[0] += price(reg, sum((m.get("prompt_tokens") or 0) for m in metas),
+                                  sum((m.get("completion_tokens") or 0) for m in metas))
                 i += len(chunk)
-                if a.budget_usd and spent > a.budget_usd:
+                if a.budget_usd and spent[0] > a.budget_usd:
                     print(f"  [guard] stopped after {i}/{len(prompts)} calls "
-                          f"(${spent:.2f} of ${a.budget_usd:.2f})", flush=True)
+                          f"(${spent[0]:.2f} of ${a.budget_usd:.2f})", flush=True)
                     break
             while len(replies) < len(prompts):
                 replies.append(("", "budget_guard", None))
         else:
+            # the streamed chat path takes the SAME dollar guard: a per-endpoint guard is not a
+            # guard. Prices on completion tokens, which is what the runner's own guard prices.
+            replies, i = [], 0
             with ThreadPoolExecutor(max_workers=a.workers) as pool:
-                replies = list(pool.map(
-                    lambda p: ask(client, model, p, a.effort, a.max_tokens, not a.no_stream),
-                    prompts))
+                while i < len(prompts):
+                    chunk = prompts[i:i + max(1, a.workers)]
+                    got = list(pool.map(
+                        lambda p: ask(client, model, p, a.effort, a.max_tokens, not a.no_stream),
+                        chunk))
+                    replies.extend(got)
+                    spent[0] += price(reg, 0, sum(
+                        (getattr(u, "completion_tokens", 0) or 0) for _t, _f, u in got
+                        if u is not None))
+                    i += len(chunk)
+                    if a.budget_usd and spent[0] > a.budget_usd:
+                        print(f"  [guard] stopped after {i}/{len(prompts)} calls "
+                              f"(${spent[0]:.2f} of ${a.budget_usd:.2f})", flush=True)
+                        break
+            while len(replies) < len(prompts):
+                replies.append(("", "budget_guard", None))
         hit, tot = Counter(), Counter()
         empty_blocks = n_empty = 0
         fins: Counter = Counter()
@@ -307,7 +332,10 @@ def main():
             spaces=spaces)
         fr["in_sample"] = fr["best"]
         fr["best"] = held["best"]
-        missing = empty_blocks / max(1, sum(tot.values()))
+        # EVENTS with no parsed block over EVENTS scored -- the numerator counted events and the
+        # denominator tokens, so a 2%% gate was really 4%% under moved2 and 2.7%% under before2.
+        n_events = sum(len(r["events"]) for _e, r, _g in items)
+        missing = empty_blocks / max(1, n_events)
         cell = {"n_items": len(items), "seconds": round(time.time() - t0, 1),
                 "timeout_s": timeout,
                 # A CELL IS VOID ON COMPLETENESS, not scored down. Absent blocks count as misses
