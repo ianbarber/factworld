@@ -19,11 +19,20 @@ text, and a validity gate certifies that no shallow baseline clears floor.
 | **Component: recall** | `recall_copy_v1` | single-query, deferred-readout MQAR variant; pool breadth = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models); `conflict_v1` scores the in-context override |
 | **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates, not group ops) |
-| — commutative variant | `commutative_v1` | each event turns a named entity's dial a few clicks; the query asks where one dial ends up (every event matters, order does not); experimental: reads in the thinking regime only, so it stays off the headline |
-| — non-abelian variant | `s5_v1` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite_copy_v2` | the two-hop; the **gap** (binding − composed) is its derived statistic |
 | **Composition: recall ∘ recall** | `chain_v2` | follow a chain of "ask X" pointers hop by hop to the fact at the end; recall applied to its own output; depth = number of hops at fixed breadth |
-| **Composition: non-abelian state × serial dereference** | `s5_chain_v3` | the **FactWorldBench headline task**: track a k=16 pointer map through L order-sensitive swap/cycle events, then dereference it 8 hops deep; items gated so echo/fixed-hop heuristics score exactly 0 (chance 1/16) |
+
+The composition **instrument** is a separate family, and it is the one cell in the repo whose
+floor is closed by cost rather than by a list of shortcuts:
+
+| | task | notes |
+|---|---|---|
+| **Component: state tracking** | `s5_bind_v3_state` | non-abelian pointer permutation, second operand named: the S5 word problem |
+| **Component: binding** | `s5_bind_v3_bind` | last-write-wins retrieval, recipient named |
+| **Composition: state × binding** | `s5_bind_v3` | ONE event stream read through BOTH structures — every event resolves its second operand live through the map it does not write. The scored quantity is the single checkpoint token whose write is two dependent reads; its floor is informed chance, swept over every fixed-address-plus-one-map-read policy |
+
+The two components are the controls: the composed number means nothing unless both read ≈1.000
+at their work-matched lengths.
 
 Each axis tests a different thing: solve rate; pool/breadth (working-set load); depth/length
 (iteration count); regime (**instant** = reasoning off + answer contract = in-weights, vs
@@ -129,17 +138,26 @@ mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
 
 ## 2. Benchmarking the frontier
 
-To give an easier view of performance we track one composed task, **s5_chain**: non-abelian
-pointer-map tracking composed with an 8-hop serial dereference in a single task. The table
-reports the match score at two lengths (96 and 128 permutation events), plus completion tokens
-per call on the matched L64 cell. Nearly every model solves that length, so token spend
-compares like for like.
+The published frontier surface is the five component and composition tasks above. **No composed
+headline is published.** The task that held that slot, `s5_chain`, does not separate its roster:
+at n=25 the top eleven models have zero pairwise separations, and blocking its backward-walk
+shortcut did not make it harder for the frontier, so the missing separation was never about
+shortcuts. It is retired and generable for reproduction.
+
+The composed cell that does separate is the instrument's, and it is scored on the **pad write**
+rather than the answer: the model emits a bounded per-event checkpoint and is scored on the one
+token whose write needs both structures, against a floor of informed chance. On `gpt-5.6-sol` at
+k=12 it saturates through L=192 and reads 0.758 (±0.114 over items, 12 of 24 items perfect) at
+L=256 against a floor of 0.090. That is one model; there is no roster on it, so there is no
+table. The read costs $3–5 per model-cell, because the reasoning is the scored output rather than
+an unscored overhead.
 
 Models run at the recommended top reasoning level, `xhigh` (mapped down where the endpoint's
 ceiling is `high`).
 
-More details in [§4 of the report](reports/factworld.pdf); per-cell Wilson
-intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.md).
+Per-cell Wilson intervals, marks, and figures for the component tasks are in the
+[rendered feed](docs/benchmark/results.md), which also carries the historical `s5_chain` cells.
+The tables below the marker are that feed's headline block as last rendered.
 
 <!-- FRONTIER_TABLE_START -->
 **s5_chain**
