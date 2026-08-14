@@ -676,7 +676,8 @@ FACETS = {
     "commutative": {
         "task": "commutative_v1", "lengths": (64,), "n": 25,
         "efforts": "on"},
-    # s5_chain — THE headline composite stressor: non-abelian pointer-map state
+    # s5_chain — a RETIRED facet: its cells stay in history and in results.md and are
+    # reproducible, and facet_retired keeps it out of every plan. Non-abelian pointer-map state
     # tracking composed with a 16-hop serial dereference (k=32 agents; length =
     # number of swap/cycle events). Runs the distinct_path-gated v4 stream, where
     # a quarter of the events name an operand by reference to the RUNNING map, so
@@ -795,7 +796,7 @@ def arms_for(model_slug: str) -> list[dict]:
     cells: list[dict] = []
     skip = set(reg.get("skip_facets", ()))
     for facet_name, fc in FACETS.items():
-        if facet_name in skip:
+        if facet_name in skip or facet_retired(facet_name):
             continue
         if "cells" in fc:
             # explicit (length, leg) pairs (zero_budget mixes plain + leg cells)
@@ -938,7 +939,10 @@ def spec_for_cell(task: str, length: int, breadth: int | None = None,
         < k=8) resolve to the canonical spec unchanged.
     """
     from . import tasks as TK
-    spec = TK.CANONICAL[task]
+    # spec_for, not CANONICAL: a RETIRED spec must stay RESOLVABLE so a historical cell can be
+    # re-rendered and reproduced. It must not be PLANNED, and that is a separate rule --
+    # ``facet_retired`` drops those facets out of the plan, so nothing buys a retired cell.
+    spec = TK.spec_for(task)
     if k_sweep and spec.family == "s5_bind":
         spec = spec.scaled(k=k_sweep, n_objects=k_sweep, n_objects_active=k_sweep)
     if breadth:
@@ -981,6 +985,27 @@ def _prompt_tokens_est(task: str, length: int, rendering: str | None,
     spec = spec_for_cell(task, length, breadth=breadth, k_fixed=k_fixed, k_sweep=k_sweep)
     ex = TK.generate(spec, "test", n=1, length=length)[0]
     return SYSTEM_PROMPT_EST_TOKENS + max(1, len(ex.prompt) // CHARS_PER_TOKEN)
+
+
+def facet_retired(facet_name: str) -> bool:
+    """Is every task this facet would run RETIRED (or unregistered)?
+
+    A facet naming a retired spec is history, not a plan: its cells are in
+    ``results/benchmark/history.jsonl`` and are still rendered and reproducible,
+    but a NEW battery must not buy them. The check is on the registry rather than
+    on a hand-kept list of dead facet names, so retiring a spec is the only edit
+    retiring its facet takes.
+    """
+    from . import tasks as TK
+
+    fc = FACETS[facet_name]
+    names = ({t for t, _L in fc["tasks"]} if fc.get("tasks")
+             else {fc["task"]} if fc.get("task") else set())
+    if not names:
+        return False
+    live = {n for n in names
+            if n in TK.CANONICAL and TK.CANONICAL[n].kind != "retired"}
+    return not live
 
 
 def cost_estimate(model_slug: str, cells: list[dict], assumed_output_tokens: int = 2000) -> dict:

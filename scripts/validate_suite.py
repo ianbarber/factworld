@@ -1,4 +1,4 @@
-"""Validity gate over the CANONICAL task suite — guarantees cover the headline tasks.
+"""Validity gate over the CANONICAL task suite.
 
 For every canonical task, certify that no shallow baseline clears floor on the held-out test split:
   - oracle-consistency: gold answers resolve through the symbolic oracle (true by construction; we assert

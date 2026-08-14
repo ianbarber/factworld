@@ -2405,6 +2405,16 @@ def _readme_mark_legend(table_lines, raised) -> list:
     return lines
 
 
+def facet_retired_here(facet_name: str) -> bool:
+    """Is this facet's task retired? Wraps benchmark.facet_retired so an unknown facet name is
+    False rather than a KeyError — this module renders histories that predate the registry."""
+    try:
+        from factworld.benchmark import FACETS, facet_retired
+    except ImportError:                                            # pragma: no cover
+        return False
+    return facet_name in FACETS and facet_retired(facet_name)
+
+
 def update_readme_frontier(records, readme_path=None) -> bool:
     """Rewrite the README's marked frontier block (README_FRONTIER_START/_END)
     from the rendered records: the s5_chain headline ranking first, then the
@@ -2428,7 +2438,12 @@ def update_readme_frontier(records, readme_path=None) -> bool:
         return False
     rows = list(headline_rows(records))
     s5c_lines = []
-    s5c = s5_chain_rows(records)
+    # THE README BLOCK CARRIES SCORED TASKS ONLY. A facet whose task is RETIRED keeps its cells
+    # in history and in results.md — they are reproducible and still rendered there — but it is
+    # not a published column, so it is not written into the README. Without this the renderer
+    # re-injects a retired headline under a section that says none is published, and the
+    # README's own reproduction command is what would do it.
+    s5c = [] if facet_retired_here("s5_chain") else s5_chain_rows(records)
     if s5c:
         s5c_lines = ["**s5_chain**", ""]
         pending = pending_task_note(records, "s5_chain")
@@ -2449,8 +2464,13 @@ def update_readme_frontier(records, readme_path=None) -> bool:
     instant_rows = [r for r in sort_instant_rows(rows) if not instant_excluded(r[0])]
     instant_lines += _readme_table_lines(README_INSTANT_COLUMNS, README_INSTANT_KEEP,
                                           instant_rows)
+    thinking_cols, thinking_keep = README_THINKING_COLUMNS, README_THINKING_KEEP
+    if facet_retired_here("s5_concrete"):        # the s5 columns are the retired s5_v1 family
+        drop = {i for i, c in enumerate(thinking_cols) if c.startswith("s5")}
+        thinking_cols = [c for i, c in enumerate(thinking_cols) if i not in drop]
+        thinking_keep = tuple(k for i, k in enumerate(thinking_keep) if i not in drop)
     thinking_lines = ["", "**Components: thinking state stress (reasoning on)**", ""]
-    thinking_lines += _readme_table_lines(README_THINKING_COLUMNS, README_THINKING_KEEP,
+    thinking_lines += _readme_table_lines(thinking_cols, thinking_keep,
                                            sort_thinking_rows(rows))
     lines = s5c_lines + instant_lines + thinking_lines
     legend = _readme_mark_legend(lines, _raised_budgets(s5c, rows))

@@ -40,11 +40,18 @@ log).
 | **Component: recall** | `recall_copy` | single-query, deferred-readout MQAR variant; pool = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models) |
 | **Component: state tracking** | `binding` | last-write-wins (absorbing updates — NOT abelian group ops) |
-| — commutative variant | `commutative_v1` | order-free per-entity accumulation mod k (every event matters, order does not); experimental — reads in the thinking regime only, and the roster run failed the pre-registered promotion bar (only gpt-5.5 CI-separates); instant and d256-local answer-only at chance (per-step traces form it in-distribution for the recurrent archs) |
-| — non-abelian variant | `s5` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite` | the two-hop; the **gap** (binding − composed) is its derived statistic |
 | **Composition: recall ∘ recall** | `chain` | pointer chase; depth axis at fixed breadth |
-| **Composition: non-abelian state × serial dereference** | `s5_chain` | the FactWorldBench headline task — track a pointer map through order-sensitive events, then dereference it 8 hops deep; items gated so echo/fixed-hop heuristics score exactly 0 |
+
+THE COMPOSITION INSTRUMENT is a separate family and is the one cell whose floor is closed by a
+COST RULE rather than by a list of shortcuts. Its two components are the controls, and the
+protocol conjoins the composed reading with both of them forming and reading out on the SAME seed.
+
+| | Task | Notes |
+|---|---|---|
+| **Component: state tracking** | `s5_bind_v3_state` | non-abelian pointer permutation, second operand NAMED: the S5 word problem |
+| **Component: binding** | `s5_bind_v3_bind` | last-write-wins retrieval, recipient NAMED |
+| **Composition: state × binding** | `s5_bind_v3` | ONE event stream read through BOTH structures — every event resolves its second operand LIVE through the map it does not write, and the ablation is WHICH structure the reference reads. The scored quantity is the single per-event checkpoint token whose write is two dependent reads; its floor is a max over the rows the class rule admits (at most one structure, at most one hop per emitted token, cost under the cell's own algorithm) and comes out at informed chance |
 
 **Axes** (each tests a different thing): solve rate; pool/breadth (working-set load); depth/length
 (iteration count); regime (**instant** = reasoning off + answer contract = in-weights, vs

@@ -839,9 +839,12 @@ the map's DOMAIN, so pushing one symbol backward through the event list and appl
 initial map answers the query exactly, at 4 bits of carried state per hop — available to an
 attention model over the full context and not to a streaming recurrent one, which is why v3 is
 retired in favour of `s5_chain_v4` (`factworld/tasks.py` carries the derivation). v4 blocks that
-walk and is retired in turn, on a different defect: it does not separate its roster — zero
-pairwise separations among the top eleven at n=25 — and it is no harder for the frontier than v3,
-so the missing separation was never about the shortcut.
+walk — the shallow adversary goes 1.000 to 0 — and the FAMILY is retired anyway, on a defect the
+shortcut fix does not reach: on the published v3 battery the top eleven models have zero pairwise
+separations at n=25, so the ranked cell orders by noise. v4's own evidence is thin by comparison
+— three models at two lengths, three of six cells censored on call failure — and on the one model
+with clean cells at both versions it reads the same on each, so nothing shows the fix made the
+cell harder for the frontier.
 Spend: v1 $38.02, v2 $174.16, v3 $259.30. Data: `results/benchmark/history.jsonl` (runs
 `bench_20260717_071141`, `bench_20260717_113626`, `bench_20260717_131813`,
 `bench_20260718_012918`, `bench_s5v3_scout`, `bench_roster_20260724`); retired specs and their
