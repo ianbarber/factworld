@@ -28,3 +28,4 @@ feedback.txt
 
 # transient runtime state (local server pidfile)
 *.pid
+abc_out.txt
