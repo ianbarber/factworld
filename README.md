@@ -252,10 +252,15 @@ configuration to converge.
   ([report §5.2](reports/factworld.pdf)).
 - **Chain.** No architecture extrapolates depth (3 archs × 3 seeds): gdp_hybrid fits training
   best yet scores below the guess at held-out depths.
-- **s5.** Dense per-step supervision forms the non-abelian circuit in every architecture; only
-  the recurrent hybrid extrapolates length
+- **Composition instrument.** On the `s5_bind_v3` family at k=6 under a bounded per-event
+  checkpoint, both components form and read out at 1.000 on 5 of 6 seeds. The composed cell does
+  not clear: its scored token is floored at 2x informed chance by a row that reads its own
+  earlier checkpoint blocks, and no seed clears all three registered lengths. `gdp_hybrid`, 6
+  seeds, 28k steps.
+- **s5** (retired spec, [docs/tasks.md](docs/tasks.md))**.** Dense per-step supervision forms the
+  non-abelian circuit in every architecture; only the recurrent hybrid extrapolates length
   ([report §5.5](reports/factworld.pdf)).
-- **Commutative.** Answer-only training reads chance for every architecture at d256; dense
+- **Commutative** (retired spec)**.** Answer-only training reads chance for every architecture at d256; dense
   per-step traces form the fold in-distribution for the recurrent architectures (gdp_hybrid
   0.82, fprm 0.65 @L16; transformer at chance); no run carries it past the training
   lengths.
