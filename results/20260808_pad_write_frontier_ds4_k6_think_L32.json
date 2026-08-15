@@ -1,0 +1,52 @@
+{
+ "model": "deepseek-v4-flash",
+ "spec": "s5_bind_local_v3",
+ "fmt": "before2",
+ "effort": "medium",
+ "k": 6,
+ "m": 6,
+ "n": 8,
+ "cells": {
+  "s5_bind_local_v3@32": {
+   "n_items": 8,
+   "seconds": 23743.2,
+   "finish": {
+    "stop": 4,
+    "error:InternalServerError:Error code: 502": 1,
+    "error:APITimeoutError:Request timed out.": 3
+   },
+   "empty_replies": 4,
+   "missing_blocks": 0.3626062322946176,
+   "acc": {
+    "give_p1|cross": 0.4470588235294118,
+    "give_p1|same": 0.4864864864864865,
+    "swap_p0|cross": 0.54,
+    "swap_p0|same": 0.574468085106383,
+    "swap_p1|cross": 0.54,
+    "swap_p1|same": 0.574468085106383
+   },
+   "n_tokens": {
+    "give_p1|cross": 85,
+    "give_p1|same": 74,
+    "swap_p0|cross": 50,
+    "swap_p0|same": 47,
+    "swap_p1|cross": 50,
+    "swap_p1|same": 47
+   },
+   "free_run_floor": {
+    "swap_p0|cross": {
+     "acc": 0.15627822944896116,
+     "member": "head:P0line[+3]p0",
+     "held_out": true
+    },
+    "swap_p0|same": {
+     "acc": 0.2889637742207245,
+     "member": "line:any[-1]p1",
+     "held_out": true
+    }
+   },
+   "chance": 0.16666666666666666
+  }
+ },
+ "generated": "2026-08-09T08:01:09.521054+00:00"
+}

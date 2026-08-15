@@ -22,6 +22,14 @@ def _wr():
     return World(WorldConfig(seed=0)), Renderer()
 
 
+def _content(text: str) -> list[str]:
+    """Whitespace tokens of a rendered document in canonical form. Documents render with
+    attached punctuation ("v18.", "g9's"), which `classify` — matching atomic IDs only —
+    reads as non-content, so a leak check over the raw split silently skips every
+    sentence-final token."""
+    return Renderer.normalize(text).split()
+
+
 def test_recall_docs_follow_zipf_frequency():
     w, r = _wr()
     docs = recall_documents(w, r, 5000, seed="z", repetition=1, inconsistency_rate=0.0)
@@ -41,7 +49,7 @@ def test_intra_doc_repetition_count():
     w, r = _wr()
     docs = recall_documents(w, r, 50, seed="r", repetition=3, inconsistency_rate=0.0)
     # a consistent doc states each of the n_attributes facts `repetition` times
-    n_values = sum(1 for tok in docs[0].text.split() if classify(tok) == "v")
+    n_values = sum(1 for tok in _content(docs[0].text) if classify(tok) == "v")
     assert n_values == 3 * w.config.n_attributes
 
 
@@ -53,7 +61,7 @@ def test_history_only_is_events_only_no_answer_leak():
         lines = r.render_history(ep.events, with_steps=True)
         assert all(r.parse(line)["type"] == "event" for line in lines)  # no answer statement
         if fam == "state_hard":  # the answer would be a role token; none may appear
-            assert all(classify(tok) != "r" for tok in " ".join(lines).split())
+            assert all(classify(tok) != "r" for tok in _content(" ".join(lines)))
 
 
 def test_corpus_is_deterministic():

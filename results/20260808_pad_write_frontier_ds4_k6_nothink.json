@@ -1,0 +1,120 @@
+{
+ "model": "deepseek-v4-flash",
+ "spec": "s5_bind_local_v3",
+ "fmt": "before2",
+ "effort": "none",
+ "k": 6,
+ "m": 6,
+ "n": 16,
+ "cells": {
+  "s5_bind_local_v3@16": {
+   "n_items": 16,
+   "seconds": 726.8,
+   "finish": {
+    "stop": 16
+   },
+   "empty_replies": 0,
+   "missing_blocks": 0.0,
+   "acc": {
+    "give_p1|cross": 0.647887323943662,
+    "give_p1|same": 0.5066666666666667,
+    "swap_p0|cross": 0.16363636363636364,
+    "swap_p0|same": 0.3090909090909091,
+    "swap_p1|cross": 0.2,
+    "swap_p1|same": 0.2909090909090909
+   },
+   "n_tokens": {
+    "give_p1|cross": 71,
+    "give_p1|same": 75,
+    "swap_p0|cross": 55,
+    "swap_p0|same": 55,
+    "swap_p1|cross": 55,
+    "swap_p1|same": 55
+   },
+   "free_run_floor": {
+    "swap_p0|same": {
+     "acc": 0.2461799660441426,
+     "member": "line:any[-1]p1"
+    },
+    "swap_p0|cross": {
+     "acc": 0.1978021978021978,
+     "member": "P0[head:B0line[+3]p1]"
+    }
+   },
+   "chance": 0.16666666666666666
+  },
+  "s5_bind_local_v3@32": {
+   "n_items": 16,
+   "seconds": 819.2,
+   "finish": {
+    "stop": 16
+   },
+   "empty_replies": 0,
+   "missing_blocks": 0.0,
+   "acc": {
+    "give_p1|cross": 0.29714285714285715,
+    "give_p1|same": 0.375886524822695,
+    "swap_p0|cross": 0.1595744680851064,
+    "swap_p0|same": 0.1568627450980392,
+    "swap_p1|cross": 0.18085106382978725,
+    "swap_p1|same": 0.13725490196078433
+   },
+   "n_tokens": {
+    "give_p1|cross": 175,
+    "give_p1|same": 141,
+    "swap_p0|cross": 94,
+    "swap_p0|same": 102,
+    "swap_p1|cross": 94,
+    "swap_p1|same": 102
+   },
+   "free_run_floor": {
+    "swap_p0|same": {
+     "acc": 0.26730937773882557,
+     "member": "line:any[-1]p1"
+    },
+    "swap_p0|cross": {
+     "acc": 0.1956521739130435,
+     "member": "head:P0line[+3]p0"
+    }
+   },
+   "chance": 0.16666666666666666
+  },
+  "s5_bind_local_v3@48": {
+   "n_items": 16,
+   "seconds": 1046.3,
+   "finish": {
+    "stop": 16
+   },
+   "empty_replies": 0,
+   "missing_blocks": 0.0,
+   "acc": {
+    "give_p1|cross": 0.3522727272727273,
+    "give_p1|same": 0.38333333333333336,
+    "swap_p0|cross": 0.15702479338842976,
+    "swap_p0|same": 0.13986013986013987,
+    "swap_p1|cross": 0.10743801652892562,
+    "swap_p1|same": 0.17482517482517482
+   },
+   "n_tokens": {
+    "give_p1|cross": 264,
+    "give_p1|same": 240,
+    "swap_p0|cross": 121,
+    "swap_p0|same": 143,
+    "swap_p1|cross": 121,
+    "swap_p1|same": 143
+   },
+   "free_run_floor": {
+    "swap_p0|same": {
+     "acc": 0.2881944444444444,
+     "member": "line:any[-1]p1"
+    },
+    "swap_p0|cross": {
+     "acc": 0.19233038348082596,
+     "member": "P[head:P0line[+1]p1]"
+    }
+   },
+   "chance": 0.16666666666666666
+  }
+ },
+ "generated": "2026-08-09T06:30:20.077488+00:00"
+}

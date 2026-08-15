@@ -6,6 +6,11 @@ s5_concrete mid-band, chain_nowrap staircase, sanity), stable settings_hash
 Runner: FunctionBackend-driven mini-runs of ``execute_cell`` writing C3-conformant
 records (per-example ctok/rtok/finish, contract diagnostics, finish=length
 escalation) to a tmp history file (no API), plus the resume-key round trip.
+Provenance: the resolved system prompt is scoped to the cell's regime (thinking
+cells neutral, instant cells the base test prompt) and fingerprinted into the
+resume key (sentinel-dropped at a frozen, closed set of three texts, so no
+already-run cell is invalidated), and the resolved vendor request — effort string, endpoint,
+base URL, model name — is recorded per cell without being keyed.
 
 Run directly:  .venv-api/bin/python tests/test_benchmark_registry.py
 Run with pytest: .venv-api/bin/python -m pytest tests/test_benchmark_registry.py
@@ -21,6 +26,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
 
 import factworld.benchmark as B
+
+# the facets a PLAN contains: FACETS minus those whose task is retired (history,
+# reachable through arms_for(..., include_retired=True) and never bought)
+LIVE_FACETS = {f for f in B.FACETS if not B.facet_retired(f)}
 import factworld.tasks as TK
 from factworld.backends import FunctionBackend
 
@@ -53,7 +62,7 @@ def _efforts(cells, facet):
 # --- registry -------------------------------------------------------------------
 
 def test_registry_shape():
-    assert len(B.MODELS) == 13
+    assert len(B.MODELS) == 15
     # roster decisions 2026-07-07/08/09: maverick, gpt-5.4, gemini-3.1-pro
     # dropped; the UNMEASURABLE x-ai endpoints stay off the roster (mainline
     # grok bio-filtered on composite prompts; grok-build dropped for provider
@@ -89,8 +98,14 @@ def test_registry_shape():
                                          "chain_instant", "sanity", "gap_stability"}
     for slug, reg in B.MODELS.items():
         assert reg["tier"] in B.TIERS, slug
-        assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
         assert isinstance(reg["open_weights"], bool)
+        # Prices are always present, because a missing price and a zero price
+        # mean different things: a metered endpoint must carry a real rate, and
+        # the self-hosted arm's rate is zero as a measured fact.
+        if reg.get("local_served"):
+            assert (reg["prompt_price_per_M"], reg["completion_price_per_M"]) == (0.0, 0.0)
+        else:
+            assert reg["prompt_price_per_M"] > 0 and reg["completion_price_per_M"] > 0
     # commutative / gap_stability / s5_chain: EXPERIMENTAL facets (owner-approved
     # 2026-07-11/#18/#16a and 2026-07-16) — no renderer section reads them yet.
     assert set(B.FACETS) == {"zero_budget", "recall_load", "s5_concrete",
@@ -122,7 +137,9 @@ def test_arms_for_facets():
 
     # s5_concrete: mid-band only (ceiling lengths dropped), reasoning on; L128 at the
     # 16384 default, L256 raised to 32768 (the truncation-as-rounding-error rule).
-    s5 = [c for c in opus if c["facet"] == "s5_concrete"]
+    # s5_concrete's task is RETIRED, so it is off the plan and reached through the hatch
+    opus_all = B.arms_for("anthropic/claude-opus-4.8", include_retired=True)
+    s5 = [c for c in opus_all if c["facet"] == "s5_concrete"]
     assert [c["length"] for c in s5] == [128, 256]
     for c in s5:
         assert c["n"] == 25 and c["settings"]["effort"] == "high"
@@ -217,7 +234,7 @@ def test_settings_hash_contract_flag_compat():
     """History written BEFORE the contract flag existed must keep its resume keys:
     contract=False hashes identically to a settings dict without the key; only
     contract=True changes the hash."""
-    s5_cell = next(c for c in B.arms_for("z-ai/glm-5.2") if c["facet"] == "s5_concrete")
+    s5_cell = next(c for c in B.arms_for("z-ai/glm-5.2", include_retired=True) if c["facet"] == "s5_concrete")
     assert s5_cell["settings"]["contract"] is False
     legacy = {k: v for k, v in s5_cell["settings"].items() if k != "contract"}
     assert B.settings_hash({"settings": legacy}) == B.settings_hash(s5_cell)
@@ -252,6 +269,187 @@ def test_settings_hash_breadth_and_k_fixed_sentinels():
     hc = B.settings_hash(chain)
     assert B.settings_hash({"settings": {**chain["settings"], "k_fixed": None}}) == hc
     assert B.settings_hash({"settings": {**chain["settings"], "k_fixed": 257}}) != hc
+
+
+def test_canonical_system_prompt_fingerprints_pin_the_live_prompts():
+    """The CANONICAL set must be exactly the prompts the planned cells resolve to.
+
+    This is the tripwire for the system-prompt axis. The prompt is a measured
+    protocol parameter — on identical s5_chain_v3 L64 items, dropping the "short
+    test"/"no explanation" clauses moved gpt-5.6-sol from 0.68 to 0.96 match — so
+    an edit to any scored prompt is a re-measurement. If this test fails because a
+    prompt text changed, add the new fingerprint to CANONICAL and nowhere else:
+    keeping it out of the sentinel drop set is exactly what gives the affected
+    cells fresh resume keys instead of resuming against measurements taken under
+    the old text."""
+    live = {}
+    for slug in B.MODELS:
+        for cell in B.arms_for(slug):
+            sp = RFB.system_prompt_for(cell)
+            live.setdefault(B.system_prompt_fingerprint(sp), sp)
+    assert set(live) == set(B.LIVE_SYSTEM_PROMPT_FINGERPRINTS), (
+        "the planned cells' system prompts no longer match the live set; "
+        "an edited prompt is a different measurement regime — see the docstring")
+    # a HISTORICAL prompt is one no planned cell resolves to any more because its facet's task is
+    # retired. It stays in CANONICAL so the cells measured under it still resolve, and it is
+    # asserted UNREACHABLE so the two sets cannot drift back together unnoticed.
+    assert B.HISTORICAL_SYSTEM_PROMPT_FINGERPRINTS.isdisjoint(live)
+    assert B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS == (
+        B.LIVE_SYSTEM_PROMPT_FINGERPRINTS | B.HISTORICAL_SYSTEM_PROMPT_FINGERPRINTS)
+    # the four texts, pinned by content so a silent rewording cannot pass
+    assert live["60766724c1"] == RFB.BASE_SYSTEM_PROMPT
+    assert live["8b02734258"].startswith(RFB.BASE_SYSTEM_PROMPT)
+    assert "g3 v9" in live["8b02734258"]          # composite two-token format leg
+    hist = {}
+    for slug in B.MODELS:
+        for cell in B.arms_for(slug, include_retired=True):
+            sp = RFB.system_prompt_for(cell)
+            hist.setdefault(B.system_prompt_fingerprint(sp), sp)
+    assert "Driver" in hist["27d71cb774"]         # s5_concrete "concrete" framing
+    assert live["04153d7439"] == RFB.NEUTRAL_SYSTEM_PROMPT
+    # the neutral text is the base text minus exactly the two suppressing clauses
+    for clause in ("short test", "no explanation"):
+        assert clause in RFB.BASE_SYSTEM_PROMPT
+        assert clause not in RFB.NEUTRAL_SYSTEM_PROMPT
+    assert "the same spelling as in the question" in RFB.NEUTRAL_SYSTEM_PROMPT
+
+    # regime scoping: thinking cells neutral, instant cells the base test prompt
+    for slug in B.MODELS:
+        for cell in B.arms_for(slug):
+            if cell["facet"] in RFB.S5_FACETS:
+                continue
+            sp = RFB.system_prompt_for(cell)
+            if cell["settings"]["effort"] in B.REASONING_EFFORTS:
+                assert sp.startswith(RFB.NEUTRAL_SYSTEM_PROMPT), (slug, cell["facet"])
+            else:
+                assert sp.startswith(RFB.BASE_SYSTEM_PROMPT), (slug, cell["facet"])
+    s5_chain = next(c for c in B.arms_for("openai/gpt-5.6-sol", include_retired=True)
+                    if c["facet"] == "s5_chain")
+    assert RFB.system_prompt_for(s5_chain) == RFB.NEUTRAL_SYSTEM_PROMPT
+
+
+def test_sentinel_drop_set_is_frozen_and_closed():
+    """The sentinel drop set is pinned to its three literals and never grows.
+
+    It is defined by what it does — omit these fingerprints from the resume key, so
+    the cells measured before it was frozen keep the keys they were written with —
+    and NOT as "the prompts history.jsonl contains". Those two definitions agree
+    today and diverge the moment a neutral-prompt battery is bought: history then
+    holds that text too, and a set maintained against history would take the
+    neutral fingerprint in, strike it from those cells' keys, and resume them
+    against the base-prompt records the split exists to keep apart. The second half
+    of this test states that consequence executably."""
+    assert B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS == frozenset({
+        "60766724c1", "8b02734258", "27d71cb774"}), (
+        "the drop set is frozen at the pre-2026-07-27 texts and closed to "
+        "additions; a new or edited prompt goes into CANONICAL alone")
+    neutral_fp = B.system_prompt_fingerprint(RFB.NEUTRAL_SYSTEM_PROMPT)
+    assert neutral_fp not in B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS
+
+    cell = next(c for c in B.arms_for("z-ai/glm-5.2", include_retired=True) if c["facet"] == "s5_chain")
+    base = {"settings": B.with_system_prompt(cell["settings"], RFB.BASE_SYSTEM_PROMPT)}
+    neutral = {"settings": {**cell["settings"], "system_prompt_fp": neutral_fp}}
+    assert B.settings_hash(neutral) != B.settings_hash(base)
+    frozen = B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS
+    try:  # with the neutral fingerprint added, the two regimes share one key
+        B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS = frozen | {neutral_fp}
+        assert B.settings_hash(neutral) == B.settings_hash(base)
+    finally:
+        B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS = frozen
+
+
+def test_settings_hash_system_prompt_sentinel():
+    """The resolved system prompt is SENTINEL-DROPPED at the frozen drop set:
+    cells under those three texts hash exactly like the pre-stamp history (both
+    with the key absent and with such a fingerprint explicitly recorded), while any
+    other prompt hashes distinctly — including after a JSON round trip through
+    history.jsonl."""
+    cell = next(c for c in B.arms_for("z-ai/glm-5.2", include_retired=True) if c["facet"] == "s5_chain")
+    h = B.settings_hash(cell)
+    assert "system_prompt_fp" not in cell["settings"]
+
+    # direction 1: a drop-set prompt -> key omitted, hash unchanged
+    canonical = B.with_system_prompt(cell["settings"], RFB.BASE_SYSTEM_PROMPT)
+    assert canonical == cell["settings"]
+    assert B.settings_hash({"settings": canonical}) == h
+    # a record that explicitly carries such a fingerprint still hashes the same
+    for fp in B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS:
+        assert B.settings_hash(
+            {"settings": {**cell["settings"], "system_prompt_fp": fp}}) == h
+    assert B.settings_hash(
+        {"settings": {**cell["settings"], "system_prompt_fp": None}}) == h
+
+    # direction 2: the neutral thinking prompt (same answer contract, the two
+    # effort-suppressing clauses removed) is a different regime -> distinct hash
+    neutral = RFB.NEUTRAL_SYSTEM_PROMPT
+    fp = B.system_prompt_fingerprint(neutral)
+    assert fp in B.CANONICAL_SYSTEM_PROMPT_FINGERPRINTS
+    assert fp not in B.SENTINEL_DROP_SYSTEM_PROMPT_FINGERPRINTS
+    edited = B.with_system_prompt(cell["settings"], neutral)
+    assert edited["system_prompt_fp"] == fp
+    h2 = B.settings_hash({"settings": edited})
+    assert h2 != h
+    # ...and the empty prompt is a third regime again
+    assert B.settings_hash({"settings": B.with_system_prompt(cell["settings"], "")}) \
+        not in (h, h2)
+    # JSON round trip (how history_keys recomputes the hash) preserves both
+    assert B.settings_hash({"settings": json.loads(json.dumps(edited))}) == h2
+    assert B.settings_hash({"settings": json.loads(json.dumps(canonical))}) == h
+    # stamping is idempotent: re-resolving to a canonical prompt clears a stale key
+    assert "system_prompt_fp" not in B.with_system_prompt(edited, RFB.BASE_SYSTEM_PROMPT)
+
+
+def test_build_plan_stamps_the_resolved_system_prompt():
+    """The runner stamps every cell with the fingerprint of the prompt it resolves
+    to, and the regime split lands in the resume keys: instant cells (and
+    s5_concrete, which keeps its framing prompt) are byte-identical to arms_for, so
+    no paid cell is invalidated; thinking cells carry the neutral fingerprint and
+    key distinctly from the same cell measured under the base prompt."""
+    model = "z-ai/glm-5.2"
+    planned = RFB.build_plan([model], None, 1.0)[model]
+    raw = B.arms_for(model)
+    neutral_fp = B.system_prompt_fingerprint(RFB.NEUTRAL_SYSTEM_PROMPT)
+    assert len(planned) == len(raw)
+    n_thinking = 0
+    for p, r in zip(planned, raw):
+        thinking = (p["settings"]["effort"] in B.REASONING_EFFORTS
+                    and p["facet"] not in RFB.S5_FACETS)
+        if thinking:
+            n_thinking += 1
+            assert p["settings"]["system_prompt_fp"] == neutral_fp
+            assert RFB.cell_key(model, p) != RFB.cell_key(model, r)
+        else:
+            assert set(p["settings"]) == SETTINGS_KEYS  # no key at measured prompts
+            assert p["settings"] == r["settings"]
+            assert RFB.cell_key(model, p) == RFB.cell_key(model, r)
+    # chain_nowrap (4) is the only LIVE thinking facet carrying the neutral prompt; the other
+    # three (commutative, s5_chain, s5_concrete) are off the plan with their retired tasks
+    assert n_thinking == 4
+    assert {p["facet"] for p, r in zip(planned, raw)
+            if p["settings"].get("system_prompt_fp")} == {"chain_nowrap"}
+
+    # the resume consequence, both directions, against records written the way
+    # history holds them (settings verbatim, no fingerprint under the base prompt)
+    with tempfile.TemporaryDirectory() as tmp:
+        history = os.path.join(tmp, "history.jsonl")
+        archived = [c for c in raw if c["facet"] in ("s5_chain", "zero_budget")]
+        for cell in archived:
+            rec = RFB.execute_cell(
+                FunctionBackend(lambda ps, m, s: ["g3 ."] * len(ps), name="f"),
+                model, {**cell, "n": 5}, n=5, run_id="t", git_commit="d")
+            assert "system_prompt_fp" not in rec["settings"]
+            RFB.append_record(history, rec)
+        done = RFB.history_keys(history)
+        for cell in archived:
+            assert RFB.should_skip(model, {**cell, "n": 5}, done,
+                                   force=False, canary=False)
+        for cell in planned:
+            if cell["facet"] not in ("s5_chain", "zero_budget"):
+                continue
+            skip = RFB.should_skip(model, {**cell, "n": 5}, done,
+                                   force=False, canary=False)
+            # instant zero_budget cells resume; thinking s5_chain cells re-plan
+            assert skip == (cell["facet"] == "zero_budget"), cell["facet"]
 
 
 def test_plan_has_no_rung_keys_and_facet_breadths_expand():
@@ -400,6 +598,427 @@ def test_build_backend_direct_endpoint():
     assert be2.extra_body["provider"]["quantizations"] == ["fp8", "bf16", "fp16"]
 
 
+LOCAL_SLUG = "local/qwen3.6-35b-a3b-nvfp4"
+
+
+def test_local_arm_is_a_roster_entry_not_a_side_path():
+    """The locally served model enters through the SAME machinery as a paid one.
+
+    What that buys, and what this pins: it resolves through ``endpoint_for`` to
+    this machine's URL and its own key env; it plans the same facets as any
+    cheap_reasoner (nothing is skipped structurally); its cost is zero rather
+    than absent, so a record carries cost_usd_est 0.0; and — the one thing that
+    could silently change the measurement — its effort=none arm resolves to a
+    vendor value. vLLM maps reasoning_effort to the chat template's
+    enable_thinking, so an UNMAPPED "none" would send no parameter, leave
+    thinking on, and turn every instant cell into a thinking cell while still
+    recording effort "none"."""
+    reg = B.MODELS[LOCAL_SLUG]
+    assert reg["local_served"] is True
+    assert B.endpoint_for(LOCAL_SLUG, default_base_url="https://openrouter.ai/api/v1") == \
+        (reg["base_url"], "LOCAL_VLLM_API_KEY")
+    assert reg["base_url"].startswith("http://127.0.0.1"), "the endpoint must be this machine"
+    assert not reg.get("skip_facets")
+    assert {c["facet"] for c in B.arms_for(LOCAL_SLUG)} == LIVE_FACETS
+    # zero cost, priced through the same path a paid model uses
+    est = B.cost_estimate(LOCAL_SLUG, B.arms_for(LOCAL_SLUG))
+    assert est["calls"] > 0 and est["cost_usd"] == 0.0
+    assert B.cell_dollar_cap(LOCAL_SLUG, 25, 32768) is None  # below the $10/M threshold
+    # every planned effort arm maps to a vendor reasoning_effort string
+    for cell in B.arms_for(LOCAL_SLUG):
+        req = RFB.resolved_request_params(LOCAL_SLUG, cell)
+        assert req["reasoning_effort"] == cell["settings"]["effort"], cell["facet"]
+        assert req["reasoning_extra_body"] is None  # not an OpenRouter endpoint
+        assert req["endpoint"] == "chat_completions"
+        assert req["model_name"] == reg["model_name"]
+    off = [c for c in B.arms_for(LOCAL_SLUG) if c["settings"]["effort"] == "none"]
+    assert off and all(
+        RFB.resolved_request_params(LOCAL_SLUG, c)["reasoning_effort"] == "none"
+        for c in off)
+
+
+def test_context_guard_refuses_a_budget_the_server_cannot_hold():
+    """A completion budget past the served window is a cell that cannot run.
+
+    vLLM rejects it 4xx per call and the backend (correctly) does not retry a
+    non-429 4xx, so the cell lands as empty predictions — which scores as a
+    floor. The guard is therefore pre-call, at the plan level AND at the single
+    choke point every backend is built through, and it is inert for vendor
+    endpoints, whose window is not ours to declare."""
+    from unittest import mock
+    assert B.context_limit("z-ai/glm-5.2") is None
+    cell = next(c for c in B.arms_for(LOCAL_SLUG, include_retired=True)
+                if c["facet"] == "s5_chain" and c["length"] == 128)
+    assert cell["settings"]["max_new_tokens"] == 98304
+    # the registry's declared window holds the largest budget the registry plans
+    assert B.context_overrun(LOCAL_SLUG, cell) is None
+    for c in B.arms_for(LOCAL_SLUG):
+        assert B.context_overrun(LOCAL_SLUG, c) is None, c["facet"]
+    # a server started at a smaller window is caught, and the message carries
+    # both numbers
+    over = B.context_overrun(LOCAL_SLUG, cell, limit=32768)
+    assert over is not None and over[0] > 98304 and over[1] == 32768
+    assert B.context_overrun("z-ai/glm-5.2", cell, limit=None) is None
+    # the choke point: build_backend refuses rather than calling
+    small = {**B.MODELS[LOCAL_SLUG], "max_model_len": 32768}
+    with mock.patch.dict(B.MODELS, {LOCAL_SLUG: small}), \
+         mock.patch.dict(os.environ, {"LOCAL_VLLM_API_KEY": "k"}):
+        try:
+            RFB.build_backend(LOCAL_SLUG, cell, api_key="k",
+                              base_url=B.DEFAULT_BASE_URL, max_workers=2)
+        except SystemExit as exc:
+            assert "32768" in str(exc) and "98304" in str(exc)
+        else:
+            raise AssertionError("expected SystemExit for an unservable budget")
+    # a contract cell is checked at the TOP of its escalation ladder, not at its
+    # planned 96-token budget (the runner may rerun it there)
+    zb = next(c for c in B.arms_for(LOCAL_SLUG) if c["facet"] == "zero_budget")
+    assert RFB.cell_completion_ceiling(zb) == max(RFB.ESCALATION_BUDGETS)
+    assert RFB.cell_completion_ceiling(cell) == 98304
+
+
+STEED_SLUG = "steed/deepseek-v4-flash"
+
+
+def test_steed_arm_is_a_roster_entry_not_a_side_path():
+    """The DeepSeek V4 endpoint on steed enters through the SAME machinery as a paid one.
+
+    It resolves through ``endpoint_for`` to steed's tailnet URL; it plans every
+    facet a cheap_reasoner plans (nothing skipped structurally); its cost is zero
+    rather than absent, so a record carries cost_usd_est 0.0; every effort arm
+    resolves to a vendor string on the TOP-LEVEL parameter (an unmapped "none"
+    would send nothing and leave ds4's default think mode ON, turning every
+    instant cell into a thinking cell while still recording effort "none"); and
+    ONE slug is registered, not one per advertised id — steed lists
+    deepseek-v4-pro as well, and it is an alias of the same weights
+    (results/probes/steed_ds4_identity_20260802.json)."""
+    reg = B.MODELS[STEED_SLUG]
+    assert reg["local_served"] is True
+    assert B.endpoint_for(STEED_SLUG, default_base_url="https://openrouter.ai/api/v1") == \
+        (reg["base_url"], "STEED_DS4_API_KEY")
+    assert reg["base_url"].startswith("https://steed."), "the endpoint must be steed"
+    assert reg["model_name"] == "deepseek-v4-flash"
+    assert not any(s.endswith("deepseek-v4-pro") and s.startswith("steed/") for s in B.MODELS)
+    assert not reg.get("skip_facets")
+    assert {c["facet"] for c in B.arms_for(STEED_SLUG)} == LIVE_FACETS
+    est = B.cost_estimate(STEED_SLUG, B.arms_for(STEED_SLUG))
+    assert est["calls"] > 0 and est["cost_usd"] == 0.0
+    assert B.cell_dollar_cap(STEED_SLUG, 25, 32768) is None
+    for cell in B.arms_for(STEED_SLUG):
+        req = RFB.resolved_request_params(STEED_SLUG, cell)
+        assert req["reasoning_effort"] == cell["settings"]["effort"], cell["facet"]
+        assert req["reasoning_extra_body"] is None   # not an OpenRouter endpoint
+        assert req["endpoint"] == "chat_completions"
+        assert req["model_name"] == "deepseek-v4-flash"
+    off = [c for c in B.arms_for(STEED_SLUG) if c["settings"]["effort"] == "none"]
+    assert off and all(
+        RFB.resolved_request_params(STEED_SLUG, c)["reasoning_effort"] == "none"
+        for c in off)
+
+
+def test_steed_arm_needs_no_key_clamps_workers_and_sizes_its_own_timeout():
+    """Three endpoint properties that are measurements, not defaults.
+
+    The endpoint is tailnet-only and checks no key, so a missing env var is not
+    the loud failure it is for muse-spark — but the var is still read and sent
+    when set. The server holds ONE KV session (no --batched-session) and
+    serializes, so the registry caps concurrency at the measured 1 no matter what
+    --max-workers asks for. And its measured completion rate means a cell's budget
+    IS its duration — one composed item was still generating after 45 minutes at a
+    32,768-token cap — so the shared 30-minute timeout sits below the generation
+    time of most thinking budgets, and an openai timeout is an APIConnectionError:
+    the backend retries it, regenerating from scratch up to five times. So the
+    timeout is sized from the cell's own budget against the SLOW rate."""
+    from unittest import mock
+    reg = B.MODELS[STEED_SLUG]
+    assert reg["api_key_optional"] is True and reg["max_workers"] == 1
+    small = next(c for c in B.arms_for(STEED_SLUG) if c["facet"] == "sanity")
+    big = next(c for c in B.arms_for(STEED_SLUG, include_retired=True)
+               if c["facet"] == "s5_chain" and c["length"] == 32)
+    with mock.patch.dict(os.environ, {}, clear=True):
+        be = RFB.build_backend(STEED_SLUG, small, api_key=None,
+                               base_url=B.DEFAULT_BASE_URL, max_workers=8)
+        assert be.client.api_key and be.max_workers == 1
+        assert be.client.timeout == RFB.DEFAULT_REQUEST_TIMEOUT_S
+        be_big = RFB.build_backend(STEED_SLUG, big, api_key=None,
+                                   base_url=B.DEFAULT_BASE_URL, max_workers=8)
+        # 32,768 tokens at this endpoint's rate is ~45 minutes of generation; the
+        # timeout must exceed it, not stop at the shared 30-minute floor.
+        assert be_big.client.timeout > 32768 / reg["generation_tok_per_s"]
+        assert be_big.client.timeout > RFB.DEFAULT_REQUEST_TIMEOUT_S
+        # the key env is honoured when it IS set (adding auth needs no code change)
+    with mock.patch.dict(os.environ, {"STEED_DS4_API_KEY": "k9"}, clear=True):
+        assert RFB.build_backend(STEED_SLUG, small, api_key=None,
+                                 base_url=B.DEFAULT_BASE_URL,
+                                 max_workers=8).client.api_key == "k9"
+    # a metered direct endpoint keeps the loud failure
+    muse = next(c for c in B.arms_for("muse-spark-1.1"))
+    with mock.patch.dict(os.environ, {}, clear=True):
+        try:
+            RFB.build_backend("muse-spark-1.1", muse, api_key=None,
+                              base_url=B.DEFAULT_BASE_URL, max_workers=2)
+        except SystemExit as exc:
+            assert "META_API_KEY" in str(exc)
+        else:
+            raise AssertionError("a metered endpoint must still demand its key")
+
+
+def test_declared_context_is_an_equality_locally_and_a_floor_on_steed():
+    """Who owns the --ctx flag decides which direction of drift is a fault.
+
+    This repo starts the local vLLM server, so its window is an EQUALITY the run
+    enforces: a server at any other length is not the one being described.
+    steed's --ctx lives in a unit file outside this repo and is tuned there (the
+    endpoint has answered at 65,536, 393,216 and 262,144), so the registry number
+    is a FLOOR: a larger live window is reported and then used for the per-cell
+    checks, and only a smaller one aborts the run."""
+    from unittest import mock
+    assert B.MODELS[STEED_SLUG]["context_is_minimum"] is True
+    assert not B.MODELS[LOCAL_SLUG].get("context_is_minimum")
+    floor = B.context_limit(STEED_SLUG)
+    cells = [c for c in B.arms_for(STEED_SLUG) if c["facet"] == "sanity"]
+
+    def probe(served):
+        return mock.patch.object(RFB, "served_context",
+                                 lambda *a, **k: {"served": "x", "max_model_len": served})
+
+    with probe(floor * 4):        # tuned up: fine, and the bigger number is used
+        RFB.preflight_context({STEED_SLUG: cells}, B.DEFAULT_BASE_URL)
+    with probe(floor):            # exactly the floor
+        RFB.preflight_context({STEED_SLUG: cells}, B.DEFAULT_BASE_URL)
+    with probe(floor // 2):       # below it: the budgets were planned on a lie
+        try:
+            RFB.preflight_context({STEED_SLUG: cells}, B.DEFAULT_BASE_URL)
+        except SystemExit as exc:
+            assert str(floor // 2) in str(exc) and "serve_steed_model" in str(exc)
+        else:
+            raise AssertionError("a window below the planned floor must abort")
+    # The DRY RUN has no live number and a floor is not a claim about the server,
+    # so a floor entry is not checked offline: checking the s5_chain budgets
+    # against 65,536 would refuse cells the endpoint serves and abort the whole
+    # roster's plan. On the live run those same cells are checked and pass.
+    big = [c for c in B.arms_for(STEED_SLUG, include_retired=True) if c["facet"] == "s5_chain"]
+    assert any(RFB.cell_completion_ceiling(c) > floor for c in big)
+    RFB.preflight_context({STEED_SLUG: big}, B.DEFAULT_BASE_URL, probe=False)
+
+    # The plan check and the per-backend check must agree. build_backend is the
+    # last line of defence and reads the registry when nothing has probed — which
+    # on a floor entry refuses cells the endpoint can serve — so preflight hands
+    # it the live number it observed. Without that the cell passes the plan and
+    # then dies at run time.
+    RFB._SERVED_CONTEXT.pop(STEED_SLUG, None)
+    biggest = max(big, key=RFB.cell_completion_ceiling)
+    with mock.patch.dict(os.environ, {}, clear=True):
+        try:
+            RFB.build_backend(STEED_SLUG, biggest, None, B.DEFAULT_BASE_URL, 1)
+        except SystemExit:
+            pass                      # conservative: nothing has probed yet
+        else:
+            raise AssertionError("unprobed, the floor must be what bounds it")
+        with probe(floor * 4):
+            RFB.preflight_context({STEED_SLUG: big}, B.DEFAULT_BASE_URL)
+        assert RFB._SERVED_CONTEXT[STEED_SLUG] == floor * 4
+        RFB.build_backend(STEED_SLUG, biggest, None, B.DEFAULT_BASE_URL, 1)
+    RFB._SERVED_CONTEXT.pop(STEED_SLUG, None)
+    # the local arm keeps the strict equality in BOTH directions
+    local_cells = [c for c in B.arms_for(LOCAL_SLUG) if c["facet"] == "sanity"]
+    with probe(B.context_limit(LOCAL_SLUG) * 2):
+        try:
+            RFB.preflight_context({LOCAL_SLUG: local_cells}, B.DEFAULT_BASE_URL)
+        except SystemExit as exc:
+            assert "serve_local_model" in str(exc)
+        else:
+            raise AssertionError("the local arm's window is an equality")
+
+
+def test_prompt_tokens_est_prices_the_s5_bind_k_rung_that_runs():
+    """k is the only knob that changes an s5_bind prompt's LENGTH at fixed L.
+
+    The k x L sweep runs rungs the registry does not carry, so a context guard
+    reading the canonical k=12 spec under-counts the k=32 prompt and would admit
+    a budget the server cannot hold. ``k_sweep`` rides in settings (it is already
+    part of the settings hash, hence of the resume key), and both the guard and
+    the cost estimate resolve the spec through it. It is sentinel-absent on every
+    registry facet, so no shipped cell's estimate moves."""
+    canonical = B._prompt_tokens_est("s5_bind_v3", 256, None, None, None, None)
+    wide = B._prompt_tokens_est("s5_bind_v3", 256, None, None, None, 32)
+    narrow = B._prompt_tokens_est("s5_bind_v3", 256, None, None, None, 6)
+    assert narrow < canonical < wide
+    assert B._prompt_tokens_est("s5_bind_v3", 256, None, None, None, 12) == canonical
+    # the guard flips on the rung's own prompt, not the canonical one
+    settings = B._settings("high", max_new_tokens=53346)
+    settings["k_sweep"] = 32
+    cell = {"facet": "s5_bind_v3_kl_sweep", "task": "s5_bind_v3", "length": 256,
+            "n": 40, "settings": settings}
+    assert B.context_overrun(STEED_SLUG, cell, limit=65536) is None
+    cell["settings"]["max_new_tokens"] = 53347
+    assert B.context_overrun(STEED_SLUG, cell, limit=65536) is not None
+    # non-s5_bind specs are untouched by the new argument
+    for task, length in (("composite_copy_v2", 16), ("chain_v2", 32), ("s5_chain_v4", 64)):
+        assert (B.spec_for_cell(task, length, k_sweep=32)
+                == B.spec_for_cell(task, length))
+
+
+def test_resolved_request_params_records_what_was_sent():
+    """settings.effort is the PROTOCOL arm; the registry maps it to a vendor value,
+    and that mapping has changed under a fixed arm name (gpt-5.6-sol's archived
+    s5_chain_v3 batches all record "xhigh" but ran chat completions at xhigh, the
+    Responses endpoint at max, and the Responses endpoint at xhigh). The resolution
+    is recorded per cell; it is NOT part of the resume key."""
+    from unittest import mock
+    sol_cell = next(c for c in B.arms_for("openai/gpt-5.6-sol", include_retired=True)
+                    if c["facet"] == "s5_chain")
+    req = RFB.resolved_request_params("openai/gpt-5.6-sol", sol_cell)
+    assert req == {
+        "endpoint": "responses",
+        "base_url": "https://api.openai.com/v1",
+        "model_name": "gpt-5.6-sol",          # the literal string sent, no prefix
+        "effort_arm": "xhigh",
+        "reasoning_effort": "xhigh",          # the vendor value
+        "reasoning_extra_body": None,         # this endpoint rejects the block
+    }
+
+    # the exact drift the archive cannot resolve: same protocol arm, "max" sent
+    sol_max = {**B.MODELS["openai/gpt-5.6-sol"],
+               "reasoning_effort_values": {"low": "low", "medium": "medium",
+                                           "high": "high", "xhigh": "max",
+                                           "max": "max"}}
+    key_before = RFB.cell_key("openai/gpt-5.6-sol", sol_cell)
+    with mock.patch.dict(B.MODELS, {"openai/gpt-5.6-sol": sol_max}):
+        drifted = RFB.resolved_request_params("openai/gpt-5.6-sol", sol_cell)
+        # captured UNDER the patched mapping: the key must not read the resolution
+        key_under_new_mapping = RFB.cell_key("openai/gpt-5.6-sol", sol_cell)
+    assert drifted["reasoning_effort"] == "max"
+    assert drifted != req
+    # the resolution is diagnostics, not settings — the resume key is the protocol
+    # cell, so the mapping change does not re-buy the roster.
+    assert key_under_new_mapping == key_before
+    assert "reasoning_effort" not in sol_cell["settings"]
+
+    # OpenRouter models carry the effort in the extra body, not the top-level param
+    glm_cell = next(c for c in B.arms_for("z-ai/glm-5.2", include_retired=True) if c["facet"] == "s5_chain")
+    glm = RFB.resolved_request_params("z-ai/glm-5.2", glm_cell)
+    assert glm["endpoint"] == "chat_completions"
+    assert glm["base_url"] == B.DEFAULT_BASE_URL
+    assert glm["model_name"] == "z-ai/glm-5.2"      # no model_name override
+    assert glm["reasoning_extra_body"] == {"effort": "xhigh"}
+    assert glm["reasoning_effort"] is None
+    # a --base-url mirror is recorded as the endpoint actually used
+    assert RFB.resolved_request_params(
+        "z-ai/glm-5.2", glm_cell, default_base_url="http://mirror:8080/v1"
+    )["base_url"] == "http://mirror:8080/v1"
+
+    # gemini's substituted off-arm is recorded as the value actually sent
+    gem = next(c for c in B.arms_for("google/gemini-3.6-flash")
+               if c["facet"] == "sanity")
+    assert RFB.resolved_request_params("google/gemini-3.6-flash", gem)[
+        "reasoning_extra_body"] == {"effort": "minimal"}
+    # muse-spark: direct Meta endpoint, Responses API
+    muse = next(c for c in B.arms_for("muse-spark-1.1", include_retired=True) if c["facet"] == "s5_chain")
+    mreq = RFB.resolved_request_params("muse-spark-1.1", muse)
+    assert (mreq["endpoint"], mreq["base_url"]) == ("responses",
+                                                    "https://api.meta.ai/v1")
+
+
+def test_build_backend_matches_resolved_request_params():
+    """build_backend builds FROM resolved_request_params and carries it on the
+    backend, so what is recorded is what was sent."""
+    from unittest import mock
+    glm_cell = next(c for c in B.arms_for("z-ai/glm-5.2", include_retired=True) if c["facet"] == "s5_chain")
+    be = RFB.build_backend("z-ai/glm-5.2", glm_cell, api_key="or-key",
+                           base_url=B.DEFAULT_BASE_URL, max_workers=2)
+    req = RFB.resolved_request_params("z-ai/glm-5.2", glm_cell)
+    assert be.request_params == req
+    assert be.extra_body["reasoning"] == req["reasoning_extra_body"]
+    assert be.reasoning_effort == req["reasoning_effort"]
+    assert be.model_name == req["model_name"]
+    assert str(be.client.base_url).rstrip("/") == req["base_url"]
+
+    sol_cell = next(c for c in B.arms_for("openai/gpt-5.6-sol", include_retired=True)
+                    if c["facet"] == "s5_chain")
+    with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        be2 = RFB.build_backend("openai/gpt-5.6-sol", sol_cell, api_key="or-key",
+                                base_url=B.DEFAULT_BASE_URL, max_workers=2)
+    req2 = RFB.resolved_request_params("openai/gpt-5.6-sol", sol_cell)
+    assert isinstance(be2, RFB.ResponsesBackend)
+    assert be2.request_params == req2
+    assert be2.reasoning_effort == "xhigh"
+    assert be2.model_name == "gpt-5.6-sol"
+    assert "reasoning" not in (be2.extra_body or {})
+
+
+def test_execute_cell_records_request_diagnostics():
+    """The record carries the resolution under diagnostics.request (a copy, once
+    per cell), and history_request_params/request_drift surface a resume hit whose
+    LATEST record was made under a different resolution than the run would send
+    now — superseded resolutions are history, not a live mismatch."""
+    model = "openai/gpt-5.6-sol"
+    cell = next(c for c in B.arms_for(model, include_retired=True)
+                if c["facet"] == "s5_chain")
+    cell["n"] = 5
+    backend = _MetaBackend([{"finish": "stop", "ctok": 20, "rtok": 8, "text": "g3 ."}])
+    # the archived regime: same protocol arm, the Responses endpoint at "max"
+    backend.request_params = {**RFB.resolved_request_params(model, cell),
+                              "reasoning_effort": "max"}
+    rec = RFB.execute_cell(backend, model, cell, n=5, run_id="t", git_commit="d")
+    assert rec["diagnostics"]["request"]["reasoning_effort"] == "max"
+    assert rec["diagnostics"]["request"]["endpoint"] == "responses"
+    assert rec["diagnostics"]["request"]["model_name"] == "gpt-5.6-sol"
+    assert rec["settings"]["effort"] == "xhigh"   # the PROTOCOL arm, as recorded
+    _validate_c3(rec, cell, model)
+    # a copy, not the backend's dict
+    backend.request_params["reasoning_effort"] = "mutated"
+    assert rec["diagnostics"]["request"]["reasoning_effort"] == "max"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        history = os.path.join(tmp, "history.jsonl")
+        RFB.append_record(history, rec)
+        done = RFB.history_keys(history)
+        recorded = RFB.history_request_params(history)
+        # the record still satisfies resume (the resume key is the protocol cell)...
+        assert RFB.should_skip(model, cell, done, force=False, canary=False)
+        # ...but the mixing is not silent: the live registry resolves xhigh -> xhigh
+        drift = RFB.request_drift(model, cell, recorded, B.DEFAULT_BASE_URL)
+        assert drift["reasoning_effort"] == "max"
+
+        # a LATER record made under the current resolution supersedes it: the
+        # renderer publishes the latest, so the warning clears instead of firing
+        # forever on a resolution the archive has already moved past.
+        backend2 = _MetaBackend([{"finish": "stop", "ctok": 20, "rtok": 8,
+                                  "text": "g3 ."}])
+        backend2.request_params = RFB.resolved_request_params(model, cell)
+        rec2 = RFB.execute_cell(backend2, model, cell, n=5, run_id="t2",
+                                git_commit="d")
+        assert rec2["ts"] > rec["ts"]
+        RFB.append_record(history, rec2)
+        recorded2 = RFB.history_request_params(history)
+        assert recorded2[RFB.cell_key(model, cell)] == backend2.request_params
+        assert RFB.request_drift(model, cell, recorded2, B.DEFAULT_BASE_URL) is None
+
+        # latest is by ts, not by file position: an OLDER drifted record appended
+        # last does not resurrect the warning
+        stale = {**rec, "run_id": "t0", "ts": "2000-01-01T00:00:00+00:00"}
+        RFB.append_record(history, stale)
+        assert RFB.request_drift(model, cell,
+                                 RFB.history_request_params(history),
+                                 B.DEFAULT_BASE_URL) is None
+        # ...while a NEWER drifted record does
+        fresh = {**rec, "run_id": "t3", "ts": "2099-01-01T00:00:00+00:00"}
+        RFB.append_record(history, fresh)
+        assert RFB.request_drift(model, cell,
+                                 RFB.history_request_params(history),
+                                 B.DEFAULT_BASE_URL)["reasoning_effort"] == "max"
+
+    # backends that resolve no vendor request (the FunctionBackend path) omit it
+    plain = RFB.execute_cell(
+        FunctionBackend(lambda ps, m, s: ["g3 ."] * len(ps), name="f"),
+        model, cell, n=5, run_id="t", git_commit="d")
+    assert "request" not in plain["diagnostics"]
+    _validate_c3(plain, cell, model)
+    assert RFB.history_request_params(os.path.join(tempfile.gettempdir(),
+                                                   "factworld-no-such-history")) == {}
+
+
 def test_cost_estimate_sane():
     glm_cells = [_runnable(c) for c in B.arms_for("z-ai/glm-5.2")]
     est = B.cost_estimate("z-ai/glm-5.2", glm_cells)
@@ -458,6 +1077,11 @@ def _validate_c3(rec, cell, model):
     assert rec["metrics"]["relaxed"] is not None  # relaxed is ALWAYS present
     diag_keys = {"empty_rate", "truncated_rate", "api_errors", "finish_errors",
                  "finish_reasons", "cost_aborted"}
+    if "request" in rec["diagnostics"]:
+        # what was actually sent (vendor effort, endpoint, base URL, model name):
+        # present whenever the backend came from build_backend, absent on the
+        # FunctionBackend test path, which resolves no vendor request at all.
+        diag_keys |= {"request"}
     if rec["diagnostics"]["cost_aborted"]:
         diag_keys |= {"calls_completed", "cost_abort_reason"}
     if rec["settings"]["contract"]:
@@ -475,7 +1099,8 @@ def test_execute_cell_end_to_end():
     C3 records in a tmp history file, and the resume key round-trips."""
     model = "z-ai/glm-5.2"
     cells = B.arms_for(model)
-    s5_cell = next(c for c in cells if c["facet"] == "s5_concrete" and c["length"] == 128)
+    s5_cell = next(c for c in B.arms_for("anthropic/claude-opus-4.8", include_retired=True)
+                   if c["facet"] == "s5_concrete" and c["length"] == 128)
     sanity_cell = next(c for c in cells if c["facet"] == "sanity" and c["task"] == "recall_copy_v1")
     zb_cell = _runnable(next(c for c in cells if c["settings"]["leg"] == "binding_only"))
     for c in (s5_cell, sanity_cell, zb_cell):
@@ -1040,7 +1665,7 @@ def test_skip_facets_machinery():
     motivating case; grok-4.5 is the LIVE case since 2026-07-12 — no clean
     off-arm, so every "off"-policy facet is unplanned and its cell plan is
     thinking facets only). The full-roster zero_budget plan covers the other
-    10 instant-measured models (all except grok-4.5, muse-spark-1.1, and
+    11 instant-measured models (all except grok-4.5, muse-spark-1.1, and
     claude-fable-5)."""
     from unittest import mock
     # grok-4.5, muse-spark-1.1, and claude-fable-5 are thinking-only by endpoint
@@ -1050,23 +1675,23 @@ def test_skip_facets_machinery():
         if slug not in INSTANT_EXCLUDED:
             assert not B.MODELS[slug].get("skip_facets")
     for slug in INSTANT_EXCLUDED:
+        # their whole plan is thinking facets, and two of the three are retired with their
+        # tasks, so what a battery buys for them now is chain_nowrap alone
         cells = B.arms_for(slug)
-        assert {c["facet"] for c in cells} == {"s5_concrete", "chain_nowrap",
-                                                  "commutative", "s5_chain"}
+        assert {c["facet"] for c in cells} == {"chain_nowrap"}
+        assert {c["facet"] for c in B.arms_for(slug, include_retired=True)} == {
+            "chain_nowrap", "commutative", "s5_chain", "s5_concrete"}
         # every planned cell is a reasoning-ON arm (there is no off arm at all)
-        assert {c["settings"]["effort"] for c in cells} == {"high", "xhigh"}
+        assert {c["settings"]["effort"] for c in cells} <= {"high", "xhigh"}
     # simulate a partial-skip model without mutating the real registry
     fake = {**B.MODELS["z-ai/glm-5.2"], "skip_facets": ("zero_budget",)}
     with mock.patch.dict(B.MODELS, {"z-ai/glm-5.2": fake}):
         cells = B.arms_for("z-ai/glm-5.2")
         assert not any(c["facet"] == "zero_budget" for c in cells)
-        assert {c["facet"] for c in cells} == {"recall_load", "s5_concrete",
-                                               "chain_nowrap", "chain_instant",
-                                               "sanity", "commutative",
-                                               "gap_stability", "s5_chain"}
+        assert {c["facet"] for c in cells} == LIVE_FACETS - {"zero_budget"}
     plan = RFB.build_plan(list(B.MODELS), ["zero_budget"], n_scale=1.0)
-    assert sum(len(cells) for cells in plan.values()) == 50  # 10 models x 5 zero_budget cells
-    assert sum(1 for cells in plan.values() if cells) == 10  # grok-4.5, muse-spark-1.1, fable-5 plan none
+    assert sum(len(cells) for cells in plan.values()) == 60  # 12 models x 5 zero_budget cells
+    assert sum(1 for cells in plan.values() if cells) == 12  # grok-4.5, muse-spark-1.1, fable-5 plan none
 
 
 def test_v2_task_cells_get_fresh_resume_keys():
@@ -1169,7 +1794,7 @@ def test_budget_override_and_lengths_filter():
     assert by_len[256]["settings"]["max_new_tokens"] == 49152
     assert by_len[128]["settings"]["max_new_tokens"] == 16384  # untouched
     # the override is part of the settings hash -> fresh resume key
-    planned = next(c for c in B.arms_for(model)
+    planned = next(c for c in B.arms_for(model, include_retired=True)
                    if c["facet"] == "s5_concrete" and c["length"] == 256)
     assert B.settings_hash(by_len[256]) != B.settings_hash(planned)
     assert RFB.cell_key(model, by_len[256]) != RFB.cell_key(model, planned)
@@ -1195,7 +1820,7 @@ def test_experimental_facets_shape():
     approved plans (calibration-matched n=25 thinking @L64; zero_budget-identical
     L32 contract cells at n=50)."""
     for slug in ("anthropic/claude-opus-4.8", "z-ai/glm-5.2"):
-        cells = B.arms_for(slug)
+        cells = B.arms_for(slug, include_retired=True)   # commutative_v1 is retired
         comm = [c for c in cells if c["facet"] == "commutative"]
         assert [(c["task"], c["length"], c["n"]) for c in comm] == \
                [("commutative_v1", 64, 25)]
@@ -1217,10 +1842,23 @@ if __name__ == "__main__":
                test_gemini_off_arm_is_minimal, test_settings_hash_stable,
                test_settings_hash_contract_flag_compat,
                test_settings_hash_breadth_and_k_fixed_sentinels,
+               test_canonical_system_prompt_fingerprints_pin_the_live_prompts,
+               test_settings_hash_system_prompt_sentinel,
+               test_build_plan_stamps_the_resolved_system_prompt,
                test_plan_has_no_rung_keys_and_facet_breadths_expand,
                test_prompt_tokens_est_breadth_and_k_fixed,
+               test_local_arm_is_a_roster_entry_not_a_side_path,
+               test_context_guard_refuses_a_budget_the_server_cannot_hold,
+               test_steed_arm_is_a_roster_entry_not_a_side_path,
+               test_steed_arm_needs_no_key_clamps_workers_and_sizes_its_own_timeout,
+               test_declared_context_is_an_equality_locally_and_a_floor_on_steed,
+               test_prompt_tokens_est_prices_the_s5_bind_k_rung_that_runs,
                test_cell_dollar_cap, test_endpoint_for_defaults_and_direct_entry,
-               test_build_backend_direct_endpoint, test_cost_estimate_sane,
+               test_build_backend_direct_endpoint,
+               test_resolved_request_params_records_what_was_sent,
+               test_build_backend_matches_resolved_request_params,
+               test_execute_cell_records_request_diagnostics,
+               test_cost_estimate_sane,
                test_extract_contract_answer, test_execute_cell_end_to_end,
                test_zero_budget_contract_scoring, test_binding_leg_rejects_holder_dump,
                test_escalation_on_length_cutoff, test_escalation_iterates_to_2048,

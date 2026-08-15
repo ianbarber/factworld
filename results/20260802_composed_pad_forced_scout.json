@@ -1,0 +1,608 @@
+{
+ "generated": "2026-08-03T02:56:24.678312+00:00",
+ "probe": "teacher_forced",
+ "cfg": {
+  "counts": false,
+  "forced": true,
+  "decompose": false,
+  "overwrite": false,
+  "ckpt_dir": "results/s5bind_v3_readout_grouped_20260802_ckpt",
+  "arch": "gdp_hybrid",
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "cells": "state@34,bind@62,composed@16,composed@24,composed@32,composed@48,composed@64,composed@96",
+  "format": "moved2",
+  "n": 512,
+  "n_count": 200,
+  "batch_read": 128,
+  "batch_forced": 16,
+  "steps": 600,
+  "warmup": 200,
+  "lr": 0.0003,
+  "batch": 16,
+  "train_n": 20000,
+  "device": "cuda",
+  "out": "results/20260802_composed_pad_forced_scout.json"
+ },
+ "rows": [
+  {
+   "per_slot": 1.0,
+   "n_slots": 34816,
+   "n": 512,
+   "by_position": [
+    1.0,
+    1.0
+   ],
+   "by_operand": {
+    "named": 1.0,
+    "n_named": 34816,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": null,
+    "n_give": 0,
+    "swap": 1.0,
+    "n_swap": 34816
+   },
+   "seed": 0,
+   "cell": "state",
+   "L": 34
+  },
+  {
+   "per_slot": 1.0,
+   "n_slots": 63488,
+   "n": 512,
+   "by_position": [
+    1.0,
+    1.0
+   ],
+   "by_operand": {
+    "named": 1.0,
+    "n_named": 63488,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": 1.0,
+    "n_give": 63488,
+    "swap": null,
+    "n_swap": 0
+   },
+   "seed": 0,
+   "cell": "bind",
+   "L": 62
+  },
+  {
+   "per_slot": 0.95709228515625,
+   "n_slots": 16384,
+   "n": 512,
+   "by_position": [
+    0.930419921875,
+    0.9837646484375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.95709228515625,
+    "n_resolved": 16384
+   },
+   "by_event": {
+    "give": 0.9861714737258,
+    "n_give": 10124,
+    "swap": 0.9100638977635783,
+    "n_swap": 6260
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 16
+  },
+  {
+   "per_slot": 0.951416015625,
+   "n_slots": 24576,
+   "n": 512,
+   "by_position": [
+    0.9263509114583334,
+    0.9764811197916666
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.951416015625,
+    "n_resolved": 24576
+   },
+   "by_event": {
+    "give": 0.9783329084884017,
+    "n_give": 15692,
+    "swap": 0.9038721296713192,
+    "n_swap": 8884
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 24
+  },
+  {
+   "per_slot": 0.94134521484375,
+   "n_slots": 32768,
+   "n": 512,
+   "by_position": [
+    0.91473388671875,
+    0.96795654296875
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.94134521484375,
+    "n_resolved": 32768
+   },
+   "by_event": {
+    "give": 0.9679230915667237,
+    "n_give": 21012,
+    "swap": 0.893841442667574,
+    "n_swap": 11756
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 32
+  },
+  {
+   "per_slot": 0.9249674479166666,
+   "n_slots": 49152,
+   "n": 512,
+   "by_position": [
+    0.8977864583333334,
+    0.9521484375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.9249674479166666,
+    "n_resolved": 49152
+   },
+   "by_event": {
+    "give": 0.9499747983870968,
+    "n_give": 31744,
+    "swap": 0.8793658088235294,
+    "n_swap": 17408
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 48
+  },
+  {
+   "per_slot": 0.916961669921875,
+   "n_slots": 65536,
+   "n": 512,
+   "by_position": [
+    0.88848876953125,
+    0.9454345703125
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.916961669921875,
+    "n_resolved": 65536
+   },
+   "by_event": {
+    "give": 0.9408823808169842,
+    "n_give": 42204,
+    "swap": 0.8736927824447112,
+    "n_swap": 23332
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 64
+  },
+  {
+   "per_slot": 0.91131591796875,
+   "n_slots": 98304,
+   "n": 512,
+   "by_position": [
+    0.8819986979166666,
+    0.9406331380208334
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.91131591796875,
+    "n_resolved": 98304
+   },
+   "by_event": {
+    "give": 0.936184625078765,
+    "n_give": 63480,
+    "swap": 0.8659832299563519,
+    "n_swap": 34824
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 96
+  },
+  {
+   "per_slot": 0.9998851102941176,
+   "n_slots": 34816,
+   "n": 512,
+   "by_position": [
+    0.9999425551470589,
+    0.9998276654411765
+   ],
+   "by_operand": {
+    "named": 0.9998851102941176,
+    "n_named": 34816,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": null,
+    "n_give": 0,
+    "swap": 0.9998851102941176,
+    "n_swap": 34816
+   },
+   "seed": 1,
+   "cell": "state",
+   "L": 34
+  },
+  {
+   "per_slot": 0.9996849798387096,
+   "n_slots": 63488,
+   "n": 512,
+   "by_position": [
+    1.0,
+    0.9993699596774194
+   ],
+   "by_operand": {
+    "named": 0.9996849798387096,
+    "n_named": 63488,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": 0.9996849798387096,
+    "n_give": 63488,
+    "swap": null,
+    "n_swap": 0
+   },
+   "seed": 1,
+   "cell": "bind",
+   "L": 62
+  },
+  {
+   "per_slot": 0.76690673828125,
+   "n_slots": 16384,
+   "n": 512,
+   "by_position": [
+    0.6483154296875,
+    0.885498046875
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.76690673828125,
+    "n_resolved": 16384
+   },
+   "by_event": {
+    "give": 0.942216515211379,
+    "n_give": 10124,
+    "swap": 0.4833865814696486,
+    "n_swap": 6260
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 16
+  },
+  {
+   "per_slot": 0.7370198567708334,
+   "n_slots": 24576,
+   "n": 512,
+   "by_position": [
+    0.6285807291666666,
+    0.845458984375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.7370198567708334,
+    "n_resolved": 24576
+   },
+   "by_event": {
+    "give": 0.9010960999235279,
+    "n_give": 15692,
+    "swap": 0.4472084646555606,
+    "n_swap": 8884
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 24
+  },
+  {
+   "per_slot": 0.711883544921875,
+   "n_slots": 32768,
+   "n": 512,
+   "by_position": [
+    0.60467529296875,
+    0.819091796875
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.711883544921875,
+    "n_resolved": 32768
+   },
+   "by_event": {
+    "give": 0.8677422425280792,
+    "n_give": 21012,
+    "swap": 0.4333106498809119,
+    "n_swap": 11756
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 32
+  },
+  {
+   "per_slot": 0.67742919921875,
+   "n_slots": 49152,
+   "n": 512,
+   "by_position": [
+    0.5712076822916666,
+    0.7836507161458334
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.67742919921875,
+    "n_resolved": 49152
+   },
+   "by_event": {
+    "give": 0.8296685987903226,
+    "n_give": 31744,
+    "swap": 0.39981617647058826,
+    "n_swap": 17408
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 48
+  },
+  {
+   "per_slot": 0.6633758544921875,
+   "n_slots": 65536,
+   "n": 512,
+   "by_position": [
+    0.559478759765625,
+    0.76727294921875
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.6633758544921875,
+    "n_resolved": 65536
+   },
+   "by_event": {
+    "give": 0.8133589233248033,
+    "n_give": 42204,
+    "swap": 0.39207954740270873,
+    "n_swap": 23332
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 64
+  },
+  {
+   "per_slot": 0.6562906901041666,
+   "n_slots": 98304,
+   "n": 512,
+   "by_position": [
+    0.5513712565104166,
+    0.7612101236979166
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.6562906901041666,
+    "n_resolved": 98304
+   },
+   "by_event": {
+    "give": 0.8059231253938248,
+    "n_give": 63480,
+    "swap": 0.3835286009648518,
+    "n_swap": 34824
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 96
+  },
+  {
+   "per_slot": 0.9997989430147058,
+   "n_slots": 34816,
+   "n": 512,
+   "by_position": [
+    0.9996553308823529,
+    0.9999425551470589
+   ],
+   "by_operand": {
+    "named": 0.9997989430147058,
+    "n_named": 34816,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": null,
+    "n_give": 0,
+    "swap": 0.9997989430147058,
+    "n_swap": 34816
+   },
+   "seed": 2,
+   "cell": "state",
+   "L": 34
+  },
+  {
+   "per_slot": 0.9999054939516129,
+   "n_slots": 63488,
+   "n": 512,
+   "by_position": [
+    1.0,
+    0.9998109879032258
+   ],
+   "by_operand": {
+    "named": 0.9999054939516129,
+    "n_named": 63488,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": 0.9999054939516129,
+    "n_give": 63488,
+    "swap": null,
+    "n_swap": 0
+   },
+   "seed": 2,
+   "cell": "bind",
+   "L": 62
+  },
+  {
+   "per_slot": 0.98388671875,
+   "n_slots": 16384,
+   "n": 512,
+   "by_position": [
+    0.9708251953125,
+    0.9969482421875
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.98388671875,
+    "n_resolved": 16384
+   },
+   "by_event": {
+    "give": 0.9964440932437771,
+    "n_give": 10124,
+    "swap": 0.9635782747603834,
+    "n_swap": 6260
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 16
+  },
+  {
+   "per_slot": 0.9772135416666666,
+   "n_slots": 24576,
+   "n": 512,
+   "by_position": [
+    0.9618326822916666,
+    0.9925944010416666
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.9772135416666666,
+    "n_resolved": 24576
+   },
+   "by_event": {
+    "give": 0.9923527912312006,
+    "n_give": 15692,
+    "swap": 0.95047276001801,
+    "n_swap": 8884
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 24
+  },
+  {
+   "per_slot": 0.97198486328125,
+   "n_slots": 32768,
+   "n": 512,
+   "by_position": [
+    0.9549560546875,
+    0.989013671875
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.97198486328125,
+    "n_resolved": 32768
+   },
+   "by_event": {
+    "give": 0.9889586902722254,
+    "n_give": 21012,
+    "swap": 0.9416468186457979,
+    "n_swap": 11756
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 32
+  },
+  {
+   "per_slot": 0.9625447591145834,
+   "n_slots": 49152,
+   "n": 512,
+   "by_position": [
+    0.9423014322916666,
+    0.9827880859375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.9625447591145834,
+    "n_resolved": 49152
+   },
+   "by_event": {
+    "give": 0.9822328629032258,
+    "n_give": 31744,
+    "swap": 0.9266429227941176,
+    "n_swap": 17408
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 48
+  },
+  {
+   "per_slot": 0.9579620361328125,
+   "n_slots": 65536,
+   "n": 512,
+   "by_position": [
+    0.9366455078125,
+    0.979278564453125
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.9579620361328125,
+    "n_resolved": 65536
+   },
+   "by_event": {
+    "give": 0.9784617571794143,
+    "n_give": 42204,
+    "swap": 0.9208811932110407,
+    "n_swap": 23332
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 64
+  },
+  {
+   "per_slot": 0.95355224609375,
+   "n_slots": 98304,
+   "n": 512,
+   "by_position": [
+    0.93096923828125,
+    0.97613525390625
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.95355224609375,
+    "n_resolved": 98304
+   },
+   "by_event": {
+    "give": 0.9748739760554506,
+    "n_give": 63480,
+    "swap": 0.9146852745233173,
+    "n_swap": 34824
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 96
+  }
+ ]
+}

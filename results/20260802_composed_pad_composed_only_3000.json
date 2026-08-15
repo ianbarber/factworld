@@ -1,0 +1,74 @@
+{
+ "generated": "2026-08-03T09:04:54.311092+00:00",
+ "cfg": {
+  "counts": false,
+  "forced": false,
+  "decompose": false,
+  "overwrite": true,
+  "ckpt_dir": "results/20260802_s5bind_v3_bounded_pad_restart_grid_ckpt",
+  "arch": "gdp_hybrid",
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "cells": "composed@48,composed@96",
+  "format": "moved2",
+  "n": 512,
+  "n_count": 200,
+  "batch_read": 128,
+  "batch_forced": 16,
+  "mixes": "composed_only",
+  "steps": 3000,
+  "warmup": 200,
+  "lr": 0.0003,
+  "batch": 16,
+  "train_n": 20000,
+  "device": "cuda",
+  "out": "results/20260802_composed_pad_composed_only_3000.json"
+ },
+ "runs": [
+  {
+   "seed": 0,
+   "mix": "composed_only",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.52532958984375,
+    "composed@96": 0.377227783203125
+   },
+   "after": {
+    "composed@48": 0.6897786458333334,
+    "composed@96": 0.483551025390625
+   },
+   "final_loss": 0.3209664821624756
+  },
+  {
+   "seed": 1,
+   "mix": "composed_only",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.4839680989583333,
+    "composed@96": 0.35430908203125
+   },
+   "after": {
+    "composed@48": 0.5085245768229166,
+    "composed@96": 0.359649658203125
+   },
+   "final_loss": 0.803466796875
+  },
+  {
+   "seed": 2,
+   "mix": "composed_only",
+   "n_docs": 60000,
+   "before": {
+    "composed@48": 0.7991536458333334,
+    "composed@96": 0.5578715006510416
+   },
+   "after": {
+    "composed@48": 0.8316650390625,
+    "composed@96": 0.6022745768229166
+   },
+   "final_loss": 0.32123151421546936
+  }
+ ]
+}

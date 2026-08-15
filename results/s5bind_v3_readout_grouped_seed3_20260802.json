@@ -1,0 +1,217 @@
+{
+ "generated": "2026-08-03T01:53:17.633634+00:00",
+ "pad_width": 2,
+ "cfg": {
+  "finetune": "results/s5bind_v3_bounded_pad_moved2_answerdocs_s345_20260802_ckpt",
+  "dump": null,
+  "save_ckpt": null,
+  "archs": "gdp_hybrid",
+  "seeds": [
+   3
+  ],
+  "cells": "state@17,state@80,bind@31,bind@132,composed@48,composed@64,composed@96",
+  "format": "moved2",
+  "answer_ratio": 4,
+  "no_pad_docs": false,
+  "no_plain_docs": false,
+  "answer_fresh": false,
+  "group_masked": true,
+  "mix": {
+   "state": 0.15,
+   "bind": 0.15,
+   "composed": 0.7
+  },
+  "steps": 3000,
+  "warmup": 200,
+  "batch": 16,
+  "lr": 0.0003,
+  "train_n": 20000,
+  "guided_n": 128,
+  "guided_batch": 128,
+  "loss_log_interval": 200,
+  "device": "cuda",
+  "out_prefix": "results/s5bind_v3_readout_grouped_seed3_20260802",
+  "n_docs": 120000,
+  "n_answer_docs": 100000
+ },
+ "floors": {
+  "state@17": 0.21875,
+  "state@80": 0.25,
+  "bind@31": 0.2,
+  "bind@132": 0.2,
+  "composed@48": 0.234375,
+  "composed@64": 0.2265625,
+  "composed@96": 0.2109375
+ },
+ "runs": [
+  {
+   "arch": "gdp_hybrid",
+   "seed": 3,
+   "before": {
+    "state@17": {
+     "match": 0.2421875,
+     "slot_acc": 1.0,
+     "floor": 0.21875,
+     "clears": false,
+     "z": 0.6414269805898185
+    },
+    "state@80": {
+     "match": 0.1875,
+     "slot_acc": 0.99873046875,
+     "floor": 0.25,
+     "clears": false,
+     "z": -1.6329931618554523
+    },
+    "bind@31": {
+     "match": 0.1796875,
+     "slot_acc": 1.0,
+     "floor": 0.2,
+     "clears": false,
+     "z": -0.5745242597140701
+    },
+    "bind@132": {
+     "match": 0.1796875,
+     "slot_acc": 1.0,
+     "floor": 0.2,
+     "clears": false,
+     "z": -0.5745242597140701
+    },
+    "composed@48": {
+     "match": 0.1796875,
+     "slot_acc": 0.23722330729166666,
+     "floor": 0.234375,
+     "clears": false,
+     "z": -1.460593486680443
+    },
+    "composed@64": {
+     "match": 0.1953125,
+     "slot_acc": 0.22430419921875,
+     "floor": 0.2265625,
+     "clears": false,
+     "z": -0.8445947546292223
+    },
+    "composed@96": {
+     "match": 0.1328125,
+     "slot_acc": 0.21097819010416666,
+     "floor": 0.2109375,
+     "clears": false,
+     "z": -2.1665185698730336
+    }
+   },
+   "after": {
+    "state@17": {
+     "match": 1.0,
+     "slot_acc": 0.9981617647058824,
+     "floor": 0.21875,
+     "clears": true,
+     "z": 21.38089935299395
+    },
+    "state@80": {
+     "match": 0.953125,
+     "slot_acc": 0.992236328125,
+     "floor": 0.25,
+     "clears": true,
+     "z": 18.371173070873837
+    },
+    "bind@31": {
+     "match": 1.0,
+     "slot_acc": 1.0,
+     "floor": 0.2,
+     "clears": true,
+     "z": 22.62741699796952
+    },
+    "bind@132": {
+     "match": 0.9921875,
+     "slot_acc": 0.9999704071969697,
+     "floor": 0.2,
+     "clears": true,
+     "z": 22.40644612884872
+    },
+    "composed@48": {
+     "match": 0.2265625,
+     "slot_acc": 0.22916666666666666,
+     "floor": 0.234375,
+     "clears": false,
+     "z": -0.20865621238292043
+    },
+    "composed@64": {
+     "match": 0.171875,
+     "slot_acc": 0.20880126953125,
+     "floor": 0.2265625,
+     "clears": false,
+     "z": -1.478040820601139
+    },
+    "composed@96": {
+     "match": 0.25,
+     "slot_acc": 0.20377604166666666,
+     "floor": 0.2109375,
+     "clears": false,
+     "z": 1.0832592849365168
+    }
+   },
+   "final_loss": 0.5507825613021851,
+   "loss_curve": [
+    [
+     200,
+     0.9716796875
+    ],
+    [
+     400,
+     0.9611856937408447
+    ],
+    [
+     600,
+     0.7086195945739746
+    ],
+    [
+     800,
+     0.8752455711364746
+    ],
+    [
+     1000,
+     0.7092312574386597
+    ],
+    [
+     1200,
+     0.36133188009262085
+    ],
+    [
+     1400,
+     0.0017955824732780457
+    ],
+    [
+     1600,
+     0.6704114675521851
+    ],
+    [
+     1800,
+     0.8586429953575134
+    ],
+    [
+     2000,
+     0.5334476232528687
+    ],
+    [
+     2200,
+     0.4549570083618164
+    ],
+    [
+     2400,
+     0.46469318866729736
+    ],
+    [
+     2600,
+     0.4731762707233429
+    ],
+    [
+     2800,
+     0.46413859724998474
+    ],
+    [
+     3000,
+     0.5507825613021851
+    ]
+   ]
+  }
+ ]
+}

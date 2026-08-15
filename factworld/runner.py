@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from .backends import ModelBackend
+from .composition import contrast as structure_switch_contrast
 from .render import Renderer
 from .tasks import (
     CANONICAL,
@@ -39,6 +40,7 @@ def evaluate_task(
     n_shot: int = 0,
     stop_at: str | None = ".",
     extract_commit: bool = False,
+    composition_draws: int = 2,
 ) -> dict:
     """Evaluate ``backend`` on a single FactWorld task.
 
@@ -53,6 +55,8 @@ def evaluate_task(
             ``max(len(e.answer.split()) + 2 for e in examples)``.
         n_shot: number of training demonstrations to prepend to each test prompt.
         stop_at: stop generation at this token; ``None`` disables early stopping.
+        composition_draws: perturbation draws per op behind the answer-sensitivity weights of
+            the source-structure STRUCTURE-SWITCH diagnostic (s5_bind_v3 cells only).
         extract_commit: score a multi-line emission's committed final line
             (``tasks.committed_answer``) instead of its first tokens. Reasoning-arm
             cells only: in the instant regime visible working is a protocol leak,
@@ -65,7 +69,10 @@ def evaluate_task(
         as ``(prompt, gold, pred, correct)`` tuples (``correct`` reflects the
         canonical relaxed match), and a ``metrics`` dict with the canonical
         (``relaxed``) score plus diagnostics (``exact``, ``contains``,
-        ``last_n``).
+        ``last_n``). A source-structure cell (TaskSpec.source_ablation) also carries
+        ``structure_switch``: the structure-switch contrast with its one-sided test, and the
+        class balance and the within-kind read-history matching that make it valid. It is a
+        diagnostic, not a composition measure.
     """
     if isinstance(task, str):
         spec = CANONICAL[task]
@@ -144,7 +151,7 @@ def evaluate_task(
         for name, vals in length_scores.items():
             metrics[name].setdefault("by_length", {})[length_key] = sum(vals) / len(vals)
 
-    return {
+    out = {
         "task": spec.name,
         "backend": backend.name,
         "n": n,
@@ -157,3 +164,17 @@ def evaluate_task(
         "example_metrics": example_metrics,
         "metrics": metrics,
     }
+    # A source-structure cell reports the STRUCTURE-SWITCH diagnostic alongside match: match says
+    # how often the answer was right, the contrast says whether the failures concentrate where the
+    # reference clause SWITCHES structure. It is not a composition measure and no caller may read
+    # it as one — within a kind the class label IS the printed clause, so a solver that holds one
+    # structure and not the other is invisible to it at any n (factworld.composition). The
+    # statistic ships with the class balance and the WITHIN-KIND read-history matching it rests on
+    # — pooled matching is not the property it reads — so a caller reporting it reports what makes
+    # it valid. Composition evidence comes from the three-cell comparison, not from this key.
+    if spec.source_ablation and spec.query_arm in ("state", "bind"):
+        correct = [m[CANONICAL_METRIC] for m in example_metrics]
+        stat = structure_switch_contrast(examples, correct, draws=composition_draws)
+        if stat:
+            out["structure_switch"] = stat
+    return out

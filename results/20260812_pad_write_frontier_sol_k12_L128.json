@@ -1,0 +1,58 @@
+{
+ "model": "openai/gpt-5.6-sol",
+ "model_name": "gpt-5.6-sol",
+ "spec": "s5_bind_v3",
+ "fmt": "before2",
+ "effort": "medium",
+ "k": 12,
+ "m": 12,
+ "n": 12,
+ "cells": {
+  "s5_bind_v3@128": {
+   "n_items": 12,
+   "seconds": 220.7,
+   "timeout_s": 2977.1428571428573,
+   "void": false,
+   "void_reason": null,
+   "finish": {
+    "stop": 12
+   },
+   "empty_replies": 0,
+   "prompt_tokens": 0,
+   "completion_tokens": 53014,
+   "cost_usd": 1.5904,
+   "tokens_per_event": 34.5,
+   "missing_blocks": 0.0,
+   "acc": {
+    "give_p1|cross": 0.9695740365111561,
+    "give_p1|same": 0.9767441860465116,
+    "swap_p0|cross": 0.9375,
+    "swap_p0|same": 0.940959409594096,
+    "swap_p1|cross": 0.9375,
+    "swap_p1|same": 0.9446494464944649
+   },
+   "n_tokens": {
+    "give_p1|cross": 493,
+    "give_p1|same": 516,
+    "swap_p0|cross": 256,
+    "swap_p0|same": 271,
+    "swap_p1|cross": 256,
+    "swap_p1|same": 271
+   },
+   "free_run_floor": {
+    "swap_p0|same": {
+     "acc": 0.1558562762482501,
+     "member": "line:any[-1]p1",
+     "held_out": true
+    },
+    "swap_p0|cross": {
+     "acc": 0.09048178613396005,
+     "member": "P[head:P0line[+6]p1]",
+     "held_out": true
+    }
+   },
+   "chance": 0.08333333333333333
+  }
+ },
+ "generated": "2026-08-12T23:07:35.723703+00:00"
+}

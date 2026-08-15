@@ -1,0 +1,172 @@
+{
+ "generated": "2026-08-03T02:07:31.243471+00:00",
+ "pad_width": 2,
+ "cfg": {
+  "finetune": "results/s5bind_v3_bounded_pad_moved2_answerdocs_s345_20260802_ckpt",
+  "dump": null,
+  "save_ckpt": null,
+  "archs": "gdp_hybrid",
+  "seeds": [
+   3
+  ],
+  "cells": "state@17,state@80,bind@31,bind@132",
+  "format": "moved2",
+  "answer_ratio": 1,
+  "no_pad_docs": false,
+  "no_plain_docs": false,
+  "answer_fresh": false,
+  "group_masked": false,
+  "mix": {
+   "state": 0.15,
+   "bind": 0.15,
+   "composed": 0.7
+  },
+  "steps": 3000,
+  "warmup": 200,
+  "batch": 16,
+  "lr": 0.0003,
+  "train_n": 20000,
+  "guided_n": 128,
+  "guided_batch": 128,
+  "loss_log_interval": 200,
+  "device": "cuda",
+  "out_prefix": "results/s5bind_v3_readout_ratio1_control_seed3_20260802",
+  "n_docs": 60000,
+  "n_answer_docs": 40000
+ },
+ "floors": {
+  "state@17": 0.21875,
+  "state@80": 0.25,
+  "bind@31": 0.2,
+  "bind@132": 0.2
+ },
+ "runs": [
+  {
+   "arch": "gdp_hybrid",
+   "seed": 3,
+   "before": {
+    "state@17": {
+     "match": 0.2421875,
+     "slot_acc": 1.0,
+     "floor": 0.21875,
+     "clears": false,
+     "z": 0.6414269805898185
+    },
+    "state@80": {
+     "match": 0.1875,
+     "slot_acc": 0.99873046875,
+     "floor": 0.25,
+     "clears": false,
+     "z": -1.6329931618554523
+    },
+    "bind@31": {
+     "match": 0.1796875,
+     "slot_acc": 1.0,
+     "floor": 0.2,
+     "clears": false,
+     "z": -0.5745242597140701
+    },
+    "bind@132": {
+     "match": 0.1796875,
+     "slot_acc": 1.0,
+     "floor": 0.2,
+     "clears": false,
+     "z": -0.5745242597140701
+    }
+   },
+   "after": {
+    "state@17": {
+     "match": 1.0,
+     "slot_acc": 1.0,
+     "floor": 0.21875,
+     "clears": true,
+     "z": 21.38089935299395
+    },
+    "state@80": {
+     "match": 0.984375,
+     "slot_acc": 1.0,
+     "floor": 0.25,
+     "clears": true,
+     "z": 19.187669651801563
+    },
+    "bind@31": {
+     "match": 1.0,
+     "slot_acc": 1.0,
+     "floor": 0.2,
+     "clears": true,
+     "z": 22.62741699796952
+    },
+    "bind@132": {
+     "match": 0.984375,
+     "slot_acc": 1.0,
+     "floor": 0.2,
+     "clears": true,
+     "z": 22.185475259727927
+    }
+   },
+   "final_loss": 0.4698445200920105,
+   "loss_curve": [
+    [
+     200,
+     0.7843017578125
+    ],
+    [
+     400,
+     0.45557647943496704
+    ],
+    [
+     600,
+     0.4443987011909485
+    ],
+    [
+     800,
+     0.4159243404865265
+    ],
+    [
+     1000,
+     0.46883469820022583
+    ],
+    [
+     1200,
+     0.8161622285842896
+    ],
+    [
+     1400,
+     0.8320313692092896
+    ],
+    [
+     1600,
+     0.850830078125
+    ],
+    [
+     1800,
+     0.45983192324638367
+    ],
+    [
+     2000,
+     0.4497818052768707
+    ],
+    [
+     2200,
+     0.851806640625
+    ],
+    [
+     2400,
+     0.44825470447540283
+    ],
+    [
+     2600,
+     0.3374996483325958
+    ],
+    [
+     2800,
+     0.0010355152189731598
+    ],
+    [
+     3000,
+     0.4698445200920105
+    ]
+   ]
+  }
+ ]
+}

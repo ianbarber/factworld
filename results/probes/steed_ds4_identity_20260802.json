@@ -1,0 +1,233 @@
+{
+ "ts": "2026-08-02T23:56:01-0700",
+ "base_url": "https://steed.tailc4bb6.ts.net/v1",
+ "ids": [
+  "deepseek-v4-flash",
+  "deepseek-v4-pro"
+ ],
+ "deterministic": true,
+ "flash_pro_identical_everywhere": true,
+ "verdict": "ALIAS: no observable difference",
+ "rows": [
+  {
+   "prompt": "factworld_composed_L64",
+   "effort": "none",
+   "max_tokens": 64,
+   "prompt_chars": 4635,
+   "flash_self_identical": true,
+   "flash_pro_identical": true,
+   "calls": {
+    "flash_a": {
+     "model_echo": "deepseek-v4-flash",
+     "content": "After executing all the operations step by step, the final pointer for **g5** is:\n\n**g11**",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 1350,
+      "completion_tokens": 23,
+      "total_tokens": 1373,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 1350
+      }
+     },
+     "elapsed_s": 4.86
+    },
+    "flash_b": {
+     "model_echo": "deepseek-v4-flash",
+     "content": "After executing all the operations step by step, the final pointer for **g5** is:\n\n**g11**",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 1350,
+      "completion_tokens": 23,
+      "total_tokens": 1373,
+      "prompt_tokens_details": {
+       "cached_tokens": 1350,
+       "cache_write_tokens": 0
+      }
+     },
+     "elapsed_s": 1.49
+    },
+    "pro": {
+     "model_echo": "deepseek-v4-pro",
+     "content": "After executing all the operations step by step, the final pointer for **g5** is:\n\n**g11**",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 1350,
+      "completion_tokens": 23,
+      "total_tokens": 1373,
+      "prompt_tokens_details": {
+       "cached_tokens": 1350,
+       "cache_write_tokens": 0
+      }
+     },
+     "elapsed_s": 1.41
+    }
+   }
+  },
+  {
+   "prompt": "arithmetic_chain",
+   "effort": "none",
+   "max_tokens": 128,
+   "prompt_chars": 87,
+   "flash_self_identical": true,
+   "flash_pro_identical": true,
+   "calls": {
+    "flash_a": {
+     "model_echo": "deepseek-v4-flash",
+     "content": "We'll compute step by step:\n\n1. \\( 7 \\times 13 = 91 \\)  \n2. \\( 91 / 7 = 13 \\)  \n3. \\( 5 \\times 5 = 25 \\)  \n4. So the expression becomes: \\( 91 + 13 - 25 = 79 \\)  \n5. Multiply by 3: \\( 79 \\times 3 = 237 \\)  \n\nIntermediate values: 91, 13, 25, 79  \nFinal result: 237",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 44,
+      "completion_tokens": 108,
+      "total_tokens": 152,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 44
+      }
+     },
+     "elapsed_s": 6.73
+    },
+    "flash_b": {
+     "model_echo": "deepseek-v4-flash",
+     "content": "We'll compute step by step:\n\n1. \\( 7 \\times 13 = 91 \\)  \n2. \\( 91 / 7 = 13 \\)  \n3. \\( 5 \\times 5 = 25 \\)  \n4. So the expression becomes: \\( 91 + 13 - 25 = 79 \\)  \n5. Multiply by 3: \\( 79 \\times 3 = 237 \\)  \n\nIntermediate values: 91, 13, 25, 79  \nFinal result: 237",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 44,
+      "completion_tokens": 108,
+      "total_tokens": 152,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 44
+      }
+     },
+     "elapsed_s": 6.72
+    },
+    "pro": {
+     "model_echo": "deepseek-v4-pro",
+     "content": "We'll compute step by step:\n\n1. \\( 7 \\times 13 = 91 \\)  \n2. \\( 91 / 7 = 13 \\)  \n3. \\( 5 \\times 5 = 25 \\)  \n4. So the expression becomes: \\( 91 + 13 - 25 = 79 \\)  \n5. Multiply by 3: \\( 79 \\times 3 = 237 \\)  \n\nIntermediate values: 91, 13, 25, 79  \nFinal result: 237",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 44,
+      "completion_tokens": 108,
+      "total_tokens": 152,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 44
+      }
+     },
+     "elapsed_s": 6.72
+    }
+   }
+  },
+  {
+   "prompt": "free_continuation",
+   "effort": "none",
+   "max_tokens": 128,
+   "prompt_chars": 62,
+   "flash_self_identical": true,
+   "flash_pro_identical": true,
+   "calls": {
+    "flash_a": {
+     "model_echo": "deepseek-v4-flash",
+     "content": "The quantizer folded the intricate pattern into a perfect cube.",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 27,
+      "completion_tokens": 12,
+      "total_tokens": 39,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 27
+      }
+     },
+     "elapsed_s": 1.06
+    },
+    "flash_b": {
+     "model_echo": "deepseek-v4-flash",
+     "content": "The quantizer folded the intricate pattern into a perfect cube.",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 27,
+      "completion_tokens": 12,
+      "total_tokens": 39,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 27
+      }
+     },
+     "elapsed_s": 1.03
+    },
+    "pro": {
+     "model_echo": "deepseek-v4-pro",
+     "content": "The quantizer folded the intricate pattern into a perfect cube.",
+     "finish_reason": "stop",
+     "usage": {
+      "prompt_tokens": 27,
+      "completion_tokens": 12,
+      "total_tokens": 39,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 27
+      }
+     },
+     "elapsed_s": 1.03
+    }
+   }
+  },
+  {
+   "prompt": "thinking_trace",
+   "effort": "high",
+   "max_tokens": 400,
+   "prompt_chars": 121,
+   "flash_self_identical": true,
+   "flash_pro_identical": true,
+   "calls": {
+    "flash_a": {
+     "model_echo": "deepseek-v4-flash",
+     "content": "We are asked: \"A frog starts at 0 on a number line and jumps +3, -1, +3, -1, ... How many jumps until it first passes 20?\" So the frog alternates between +3 and -1. Starting at 0. So after first jump: +3, position 3. Second jump: -1, position 2. Third: +3, position 5. Fourth: -1, position 4. So pattern: after each pair of jumps (a +3 and a -1), net gain of +2. But we need to find the first time the frog's position exceeds 20. Since it alternates, we need to consider the positions after each jump. Let's denote jumps: odd-numbered jumps are +3, even-numbered jumps are -1. So after n jumps, position? If n is even, say n=2k, then position = k*(3-1)=2k. If n is odd, n=2k+1, then position = k*(3-1)+3 = 2k+3. So positions: after odd jumps: 3,5,7,... after even jumps: 2,4,6,... So the frog is at even numbers after even jumps, and odd numbers after odd jumps (specifically 3 mod 2? Actually 2k+3 is odd? 2k+3 is odd if 2k is even, plus 3 gives odd. So yes, odd positions after odd jumps). We need first time position > 20. Since positions increase by 2 each pair, but also there are intermediate steps. Let's list positions: \nJump 1: 3\nJump 2: 2\nJump 3: 5\nJump 4: 4\nJump 5: 7\nJump 6: 6\nJump 7: 9\n",
+     "finish_reason": "length",
+     "usage": {
+      "prompt_tokens": 54,
+      "completion_tokens": 400,
+      "total_tokens": 454,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 54
+      }
+     },
+     "elapsed_s": 23.99
+    },
+    "flash_b": {
+     "model_echo": "deepseek-v4-flash",
+     "content": "We are asked: \"A frog starts at 0 on a number line and jumps +3, -1, +3, -1, ... How many jumps until it first passes 20?\" So the frog alternates between +3 and -1. Starting at 0. So after first jump: +3, position 3. Second jump: -1, position 2. Third: +3, position 5. Fourth: -1, position 4. So pattern: after each pair of jumps (a +3 and a -1), net gain of +2. But we need to find the first time the frog's position exceeds 20. Since it alternates, we need to consider the positions after each jump. Let's denote jumps: odd-numbered jumps are +3, even-numbered jumps are -1. So after n jumps, position? If n is even, say n=2k, then position = k*(3-1)=2k. If n is odd, n=2k+1, then position = k*(3-1)+3 = 2k+3. So positions: after odd jumps: 3,5,7,... after even jumps: 2,4,6,... So the frog is at even numbers after even jumps, and odd numbers after odd jumps (specifically 3 mod 2? Actually 2k+3 is odd? 2k+3 is odd if 2k is even, plus 3 gives odd. So yes, odd positions after odd jumps). We need first time position > 20. Since positions increase by 2 each pair, but also there are intermediate steps. Let's list positions: \nJump 1: 3\nJump 2: 2\nJump 3: 5\nJump 4: 4\nJump 5: 7\nJump 6: 6\nJump 7: 9\n",
+     "finish_reason": "length",
+     "usage": {
+      "prompt_tokens": 54,
+      "completion_tokens": 400,
+      "total_tokens": 454,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 54
+      }
+     },
+     "elapsed_s": 23.99
+    },
+    "pro": {
+     "model_echo": "deepseek-v4-pro",
+     "content": "We are asked: \"A frog starts at 0 on a number line and jumps +3, -1, +3, -1, ... How many jumps until it first passes 20?\" So the frog alternates between +3 and -1. Starting at 0. So after first jump: +3, position 3. Second jump: -1, position 2. Third: +3, position 5. Fourth: -1, position 4. So pattern: after each pair of jumps (a +3 and a -1), net gain of +2. But we need to find the first time the frog's position exceeds 20. Since it alternates, we need to consider the positions after each jump. Let's denote jumps: odd-numbered jumps are +3, even-numbered jumps are -1. So after n jumps, position? If n is even, say n=2k, then position = k*(3-1)=2k. If n is odd, n=2k+1, then position = k*(3-1)+3 = 2k+3. So positions: after odd jumps: 3,5,7,... after even jumps: 2,4,6,... So the frog is at even numbers after even jumps, and odd numbers after odd jumps (specifically 3 mod 2? Actually 2k+3 is odd? 2k+3 is odd if 2k is even, plus 3 gives odd. So yes, odd positions after odd jumps). We need first time position > 20. Since positions increase by 2 each pair, but also there are intermediate steps. Let's list positions: \nJump 1: 3\nJump 2: 2\nJump 3: 5\nJump 4: 4\nJump 5: 7\nJump 6: 6\nJump 7: 9\n",
+     "finish_reason": "length",
+     "usage": {
+      "prompt_tokens": 54,
+      "completion_tokens": 400,
+      "total_tokens": 454,
+      "prompt_tokens_details": {
+       "cached_tokens": 0,
+       "cache_write_tokens": 54
+      }
+     },
+     "elapsed_s": 23.96
+    }
+   }
+  }
+ ]
+}

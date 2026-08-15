@@ -1,0 +1,18 @@
+[
+ {
+  "path": "tunnel",
+  "base_url": "http://127.0.0.1:18000/v1",
+  "k": 6,
+  "L": 32,
+  "item": 0,
+  "budget": 12288,
+  "client_timeout_s": 7200.0,
+  "ts": "2026-08-03T10:24:27.445538+00:00",
+  "ok": false,
+  "wall_s": 223.1,
+  "error_type": "APIConnectionError",
+  "error": "Connection error.",
+  "status_code": null,
+  "note": "VOID as a path test: the server was stopped mid-queue by this session's own `serve_steed_model.py down`, so the connection error is this shutdown and not the transport"
+ }
+]

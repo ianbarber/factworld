@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from factworld.s5_concrete import gen_examples, render_prompt, score, FRAMINGS
-from factworld.tasks import CANONICAL, _world
+from factworld.tasks import CANONICAL, spec_for, _world
 from factworld.s5_concrete import gen_problems
 
 # --- expected L8/idx0 prompts, captured from the pre-refactor script ----------
@@ -72,7 +72,7 @@ def test_gen_examples_abstract_stated_l8_matches_captured_prompts():
 
 def test_render_prompt_v0_abstract_l8_matches_captured_prompts():
     # floor-control framing (not exposed via gen_examples aliases, used by the script)
-    spec = CANONICAL["s5_v1"]
+    spec = spec_for("s5_v1")
     w, _r, oracle = _world(spec)
     events, agent, gold = gen_problems(spec, w, oracle, 8, 1)[0]
     s, u, g = render_prompt("V0_abstract", events, agent, gold)

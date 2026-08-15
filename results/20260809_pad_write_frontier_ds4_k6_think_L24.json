@@ -1,0 +1,53 @@
+{
+ "model": "deepseek-v4-flash",
+ "spec": "s5_bind_local_v3",
+ "fmt": "before2",
+ "effort": "medium",
+ "k": 6,
+ "m": 6,
+ "n": 8,
+ "cells": {
+  "s5_bind_local_v3@24": {
+   "n_items": 8,
+   "seconds": 3433.8,
+   "timeout_s": 1120.0,
+   "void": false,
+   "void_reason": null,
+   "finish": {
+    "stop": 8
+   },
+   "empty_replies": 0,
+   "missing_blocks": 0.0,
+   "acc": {
+    "give_p1|cross": 1.0,
+    "give_p1|same": 1.0,
+    "swap_p0|cross": 1.0,
+    "swap_p0|same": 1.0,
+    "swap_p1|cross": 1.0,
+    "swap_p1|same": 1.0
+   },
+   "n_tokens": {
+    "give_p1|cross": 60,
+    "give_p1|same": 58,
+    "swap_p0|cross": 42,
+    "swap_p0|same": 32,
+    "swap_p1|cross": 42,
+    "swap_p1|same": 32
+   },
+   "free_run_floor": {
+    "swap_p0|cross": {
+     "acc": 0.16647919010123735,
+     "member": "P[head:B0line[+0]p1]",
+     "held_out": true
+    },
+    "swap_p0|same": {
+     "acc": 0.23433874709976799,
+     "member": "line:any[-1]p1",
+     "held_out": true
+    }
+   },
+   "chance": 0.16666666666666666
+  }
+ },
+ "generated": "2026-08-10T23:44:19.819966+00:00"
+}

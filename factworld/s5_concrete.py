@@ -27,7 +27,7 @@ Benchmark-facing API (contract C2):
 """
 from __future__ import annotations
 
-from factworld.tasks import CANONICAL, _world, _rng
+from factworld.tasks import CANONICAL, spec_for, _world, _rng
 from factworld.tasks import content_tokens
 
 NAMES = {"g0": "Alice", "g1": "Bob", "g2": "Cara", "g3": "Dan", "g4": "Eva"}
@@ -116,7 +116,7 @@ def gen_examples(length: int, n: int, framing: str = "concrete"):
     if internal not in FRAMINGS:
         raise ValueError(f"unknown framing {framing!r}; expected one of "
                          f"{sorted(FRAMING_ALIASES)} or {list(FRAMINGS)}")
-    spec = CANONICAL["s5_v1"]
+    spec = spec_for("s5_v1")   # retired 2026-08-12; still generable
     w, _r, oracle = _world(spec)
     return [render_prompt(internal, events, agent, gold)
             for events, agent, gold in gen_problems(spec, w, oracle, length, n)]

@@ -1,0 +1,53 @@
+{
+ "model": "deepseek-v4-flash",
+ "spec": "s5_bind_local_v3",
+ "fmt": "before2",
+ "effort": "medium",
+ "k": 6,
+ "m": 6,
+ "n": 8,
+ "cells": {
+  "s5_bind_local_v3@48": {
+   "n_items": 8,
+   "seconds": 5659.3,
+   "timeout_s": 2120.0,
+   "void": false,
+   "void_reason": null,
+   "finish": {
+    "stop": 8
+   },
+   "empty_replies": 0,
+   "missing_blocks": 0.0,
+   "acc": {
+    "give_p1|cross": 1.0,
+    "give_p1|same": 1.0,
+    "swap_p0|cross": 0.8939393939393939,
+    "swap_p0|same": 0.8225806451612904,
+    "swap_p1|cross": 0.9090909090909091,
+    "swap_p1|same": 0.8387096774193549
+   },
+   "n_tokens": {
+    "give_p1|cross": 133,
+    "give_p1|same": 123,
+    "swap_p0|cross": 66,
+    "swap_p0|same": 62,
+    "swap_p1|cross": 66,
+    "swap_p1|same": 62
+   },
+   "free_run_floor": {
+    "swap_p0|same": {
+     "acc": 0.30086455331412104,
+     "member": "line:any[-1]p1",
+     "held_out": true
+    },
+    "swap_p0|cross": {
+     "acc": 0.1619335347432024,
+     "member": "P[head:P0line[+1]p1]",
+     "held_out": true
+    }
+   },
+   "chance": 0.16666666666666666
+  }
+ },
+ "generated": "2026-08-11T03:23:50.277237+00:00"
+}

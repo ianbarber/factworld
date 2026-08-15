@@ -1,0 +1,989 @@
+{
+  "written_utc": "2026-07-31T22:59:46+00:00",
+  "protocol": "protocol_s5bind_v3_three_cell_20260731.py",
+  "local_cells": {
+    "state": "s5_bind_local_v3_state",
+    "bind": "s5_bind_local_v3_bind",
+    "composed": "s5_bind_local_v3"
+  },
+  "frontier_cells": {
+    "state": "s5_bind_v3_state",
+    "bind": "s5_bind_v3_bind",
+    "composed": "s5_bind_v3"
+  },
+  "local_lengths": [
+    48,
+    64,
+    96
+  ],
+  "control_length": 16,
+  "train_lengths": [
+    16,
+    32,
+    48,
+    64,
+    96
+  ],
+  "thresholds": {
+    "n_eval": 1000,
+    "n_guided": 128,
+    "z_clear": 3.0,
+    "margin": 0.15,
+    "seeds_clear": 2,
+    "n_fit": 2000,
+    "n_fit_blocks": 2,
+    "n_score": 4000
+  },
+  "costs": {
+    "state@16": {
+      "charged_steps": 39,
+      "prompt_tokens": 179
+    },
+    "state@48": {
+      "charged_steps": 114,
+      "prompt_tokens": 435
+    },
+    "state@64": {
+      "charged_steps": 151,
+      "prompt_tokens": 563
+    },
+    "state@96": {
+      "charged_steps": 226,
+      "prompt_tokens": 819
+    },
+    "bind@16": {
+      "charged_steps": 21,
+      "prompt_tokens": 131
+    },
+    "bind@48": {
+      "charged_steps": 37,
+      "prompt_tokens": 291
+    },
+    "bind@64": {
+      "charged_steps": 45,
+      "prompt_tokens": 371
+    },
+    "bind@96": {
+      "charged_steps": 61,
+      "prompt_tokens": 531
+    },
+    "composed@16": {
+      "charged_steps": 79,
+      "prompt_tokens": 305
+    },
+    "composed@48": {
+      "charged_steps": 208,
+      "prompt_tokens": 717
+    },
+    "composed@64": {
+      "charged_steps": 274,
+      "prompt_tokens": 930
+    },
+    "composed@96": {
+      "charged_steps": 403,
+      "prompt_tokens": 1348
+    }
+  },
+  "matched_lengths": {
+    "48": {
+      "composed_L": 48,
+      "composed_steps": 208,
+      "composed_tokens": 717,
+      "axis": "tokens",
+      "target_cost": 717,
+      "state": {
+        "L": 80,
+        "cost": 691,
+        "target": 717,
+        "reachable": true,
+        "cap": 768,
+        "solved_candidate": 80
+      },
+      "bind": {
+        "L": 132,
+        "cost": 711,
+        "target": 717,
+        "reachable": true,
+        "cap": 144,
+        "solved_candidate": 132
+      }
+    },
+    "64": {
+      "composed_L": 64,
+      "composed_steps": 274,
+      "composed_tokens": 930,
+      "axis": "tokens",
+      "target_cost": 930,
+      "state": {
+        "L": 108,
+        "cost": 915,
+        "target": 930,
+        "reachable": true,
+        "cap": 1024,
+        "solved_candidate": 108
+      },
+      "bind": {
+        "L": null,
+        "cost": null,
+        "target": 930,
+        "reachable": false,
+        "cap": 144,
+        "solved_candidate": 144
+      }
+    },
+    "96": {
+      "composed_L": 96,
+      "composed_steps": 403,
+      "composed_tokens": 1348,
+      "axis": "tokens",
+      "target_cost": 1348,
+      "state": {
+        "L": 160,
+        "cost": 1331,
+        "target": 1348,
+        "reachable": true,
+        "cap": 1536,
+        "solved_candidate": 160
+      },
+      "bind": {
+        "L": null,
+        "cost": null,
+        "target": 1348,
+        "reachable": false,
+        "cap": 144,
+        "solved_candidate": 144
+      }
+    }
+  },
+  "matched_axis": "tokens",
+  "controls": {
+    "positive": {
+      "cells": [
+        "state",
+        "bind"
+      ],
+      "rule": "some component clears somewhere on the grid the read covers",
+      "required": {
+        "plain": [
+          "state@16",
+          "bind@16"
+        ],
+        "guided": [
+          "state@48",
+          "bind@48"
+        ]
+      }
+    },
+    "matched_cost": {
+      "axis": "tokens",
+      "required": {
+        "state": [
+          80,
+          108,
+          160
+        ],
+        "bind": [
+          132
+        ]
+      },
+      "rule": "V1 is unavailable where a matched-cost control was never measured; the verdict is V1_UNCONTROLLED"
+    }
+  },
+  "eval_grid": {
+    "state": [
+      16,
+      48,
+      64,
+      96,
+      80,
+      108,
+      160
+    ],
+    "bind": [
+      16,
+      48,
+      64,
+      96,
+      132
+    ],
+    "composed": [
+      16,
+      48,
+      64,
+      96
+    ]
+  },
+  "floors": {
+    "bind@48": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 576,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 27,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d11": 0.0
+      },
+      "charged_steps": 37,
+      "n_swap": 0,
+      "n_give": 48
+    },
+    "bind@64": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 64,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 768,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 35,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d15": 0.0
+      },
+      "charged_steps": 45,
+      "n_swap": 0,
+      "n_give": 64
+    },
+    "bind@96": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 96,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1152,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 51,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d16": 0.0,
+        "give_scan_d23": 0.0
+      },
+      "charged_steps": 61,
+      "n_swap": 0,
+      "n_give": 96
+    },
+    "bind@132": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 132,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1584,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 69,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d16": 0.0,
+        "give_scan_d32": 0.0
+      },
+      "charged_steps": 79,
+      "n_swap": 0,
+      "n_give": 132
+    },
+    "composed@48": {
+      "cell": "s5_bind_local_v3",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.2045,
+      "floor_disjoint": 0.2045,
+      "floor_on_scored_items": 0.201,
+      "surface_held_out": 0.233,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.002250000000000002,
+      "surface_blocks": [
+        0.231,
+        0.23325
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 576,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 208,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.2045,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1975,
+        "last_write_1hop": 0.1718,
+        "stated_reference": 0.1685,
+        "uniform": 0.1667,
+        "initial_only": 0.0
+      },
+      "charged_steps": 208,
+      "n_swap": 17,
+      "n_give": 31
+    },
+    "composed@64": {
+      "cell": "s5_bind_local_v3",
+      "L": 64,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.20925,
+      "floor_disjoint": 0.20925,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.24075,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.0040000000000000036,
+      "surface_blocks": [
+        0.2465,
+        0.2425
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 768,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 274,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.2092,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1945,
+        "uniform": 0.1667,
+        "last_write_1hop": 0.1638,
+        "stated_reference": 0.158,
+        "initial_only": 0.0
+      },
+      "charged_steps": 274,
+      "n_swap": 23,
+      "n_give": 41
+    },
+    "composed@96": {
+      "cell": "s5_bind_local_v3",
+      "L": 96,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.209,
+      "floor_disjoint": 0.201,
+      "floor_on_scored_items": 0.209,
+      "surface_held_out": 0.23475,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.0024999999999999745,
+      "surface_blocks": [
+        0.2325,
+        0.235
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1152,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 403,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.201,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1918,
+        "last_write_1hop": 0.1698,
+        "uniform": 0.1667,
+        "stated_reference": 0.1635,
+        "initial_only": 0.0
+      },
+      "charged_steps": 403,
+      "n_swap": 34,
+      "n_give": 62
+    },
+    "state@16": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 16,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.197,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.009000000000000008,
+      "surface_blocks": [
+        0.20125,
+        0.19225
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 192,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 34,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1867,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.144,
+        "trunc_walk_T1": 0.116,
+        "initial_only": 0.0
+      },
+      "charged_steps": 39,
+      "n_swap": 16,
+      "n_give": 0
+    },
+    "state@48": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.208,
+      "floor_disjoint": 0.20125,
+      "floor_on_scored_items": 0.208,
+      "surface_held_out": 0.19175,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.008250000000000007,
+      "surface_blocks": [
+        0.19025,
+        0.1985
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 576,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 98,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2013,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.156,
+        "trunc_walk_T1": 0.074,
+        "initial_only": 0.0
+      },
+      "charged_steps": 114,
+      "n_swap": 48,
+      "n_give": 0
+    },
+    "state@64": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 64,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.19075,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.009500000000000008,
+      "surface_blocks": [
+        0.1935,
+        0.203
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 768,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 130,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1963,
+        "last_swap_ref": 0.1725,
+        "uniform": 0.1667,
+        "trunc_walk_T1": 0.0705,
+        "initial_only": 0.0
+      },
+      "charged_steps": 151,
+      "n_swap": 64,
+      "n_give": 0
+    },
+    "state@80": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 80,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.207,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.207,
+      "surface_held_out": 0.20275,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.00874999999999998,
+      "surface_blocks": [
+        0.2095,
+        0.20075
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 960,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 162,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1978,
+        "last_swap_ref": 0.1668,
+        "uniform": 0.1667,
+        "trunc_walk_T1": 0.065,
+        "initial_only": 0.0
+      },
+      "charged_steps": 189,
+      "n_swap": 80,
+      "n_give": 0
+    },
+    "state@96": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 96,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.21,
+      "floor_disjoint": 0.2085,
+      "floor_on_scored_items": 0.21,
+      "surface_held_out": 0.20975,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.013499999999999984,
+      "surface_blocks": [
+        0.194,
+        0.2075
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1152,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 194,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2085,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.159,
+        "trunc_walk_T1": 0.0698,
+        "initial_only": 0.0
+      },
+      "charged_steps": 226,
+      "n_swap": 96,
+      "n_give": 0
+    },
+    "state@108": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 108,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.2015,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.006249999999999978,
+      "surface_blocks": [
+        0.19825,
+        0.2045
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1296,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 218,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.152,
+        "trunc_walk_T1": 0.068,
+        "initial_only": 0.0
+      },
+      "charged_steps": 254,
+      "n_swap": 108,
+      "n_give": 0
+    },
+    "state@160": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 160,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2005,
+      "floor_disjoint": 0.2005,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.193,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.003500000000000003,
+      "surface_blocks": [
+        0.19825,
+        0.19475
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1920,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 322,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2005,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.159,
+        "trunc_walk_T1": 0.071,
+        "initial_only": 0.0
+      },
+      "charged_steps": 375,
+      "n_swap": 160,
+      "n_give": 0
+    }
+  },
+  "verdicts": [
+    "V5_HARNESS_NULL",
+    "V4_COMPONENT_UNREADABLE",
+    "V3_GAP_IS_THE_COST",
+    "V1_UNCONTROLLED",
+    "V1_COMPOSITION_GAP",
+    "V2_NO_GAP_HERE"
+  ],
+  "scout": {
+    "cells": [
+      {
+        "task": "s5_bind_v3",
+        "length": 128,
+        "n": 40,
+        "settings": {
+          "effort": "high",
+          "max_new_tokens": 8192
+        }
+      },
+      {
+        "task": "s5_bind_v3",
+        "length": 256,
+        "n": 40,
+        "settings": {
+          "effort": "high",
+          "max_new_tokens": 8192
+        }
+      },
+      {
+        "task": "s5_bind_v3_state",
+        "length": 256,
+        "n": 40,
+        "settings": {
+          "effort": "high",
+          "max_new_tokens": 8192
+        }
+      },
+      {
+        "task": "s5_bind_v3_bind",
+        "length": 256,
+        "n": 40,
+        "settings": {
+          "effort": "high",
+          "max_new_tokens": 8192
+        }
+      }
+    ],
+    "n_cells": 4,
+    "per_model": [
+      {
+        "model": "openai/gpt-5.5",
+        "calls": 160,
+        "prompt_tokens": 561640,
+        "completion_tokens": 640000,
+        "cost_usd": 22.0082
+      },
+      {
+        "model": "z-ai/glm-5.2",
+        "calls": 160,
+        "prompt_tokens": 561640,
+        "completion_tokens": 640000,
+        "cost_usd": 2.4423
+      },
+      {
+        "model": "nvidia/nemotron-3-ultra-550b-a55b",
+        "calls": 160,
+        "prompt_tokens": 561640,
+        "completion_tokens": 640000,
+        "cost_usd": 1.6888
+      }
+    ],
+    "total_usd": 26.14,
+    "roster_run_if_bought": {
+      "models": 13,
+      "cells_per_model": 9,
+      "n": 100,
+      "per_model": [
+        {
+          "model": "anthropic/claude-fable-5",
+          "cost_usd": 205.386
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "cost_usd": 120.693
+        },
+        {
+          "model": "openai/gpt-5.6-sol",
+          "cost_usd": 120.693
+        },
+        {
+          "model": "anthropic/claude-opus-4.8",
+          "cost_usd": 102.693
+        },
+        {
+          "model": "moonshotai/kimi-k3",
+          "cost_usd": 61.6158
+        },
+        {
+          "model": "anthropic/claude-sonnet-5",
+          "cost_usd": 41.0772
+        },
+        {
+          "model": "google/gemini-3.6-flash",
+          "cost_usd": 30.8079
+        },
+        {
+          "model": "x-ai/grok-4.5",
+          "cost_usd": 26.6772
+        },
+        {
+          "model": "muse-spark-1.1",
+          "cost_usd": 18.4733
+        },
+        {
+          "model": "qwen/qwen3.7-max",
+          "cost_usd": 16.6732
+        },
+        {
+          "model": "z-ai/glm-5.2",
+          "cost_usd": 13.1609
+        },
+        {
+          "model": "nvidia/nemotron-3-ultra-550b-a55b",
+          "cost_usd": 9.1893
+        },
+        {
+          "model": "deepseek/deepseek-v4-pro",
+          "cost_usd": 4.2363
+        }
+      ],
+      "total_usd": 771.38
+    },
+    "stop_rules": [
+      "STOP (ceiling) if the top scout model's COMPOSED match >= 0.9 at L=256. A ceiling cannot rank the roster, so the roster run buys nothing; redesign (raise k or L) before spending.",
+      "STOP (floor) if the composed cell is at its operative floor for ALL scout models. Zero separation across the roster's range means zero expected pairwise separations in the full run \u2014 the same reading that stopped the s5_chain ranking.",
+      "STOP (component) if either COMPONENT is below 0.8 for the top scout model. The composed cell is then unreadable on the frontier for the same reason it is unreadable locally when a component does not form."
+    ],
+    "buy_rule": "BUY the roster run iff the composed cell's spread across the three scout models is >= 0.2 match AND both components are >= 0.8 for every scout model \u2014 the composed cell discriminates inside the roster's range while the components do not.",
+    "budget_note": "Priced at 8192-token reasoning cells with 4000 assumed completion tokens per call. The 8192 budget is the protocol minimum for a reasoning-on cell; smaller budgets manufactured the published s5 L64 cliff and chain floor as truncation artifacts, so a cheaper scout is not available."
+  }
+}

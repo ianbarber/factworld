@@ -135,6 +135,124 @@ def test_rendering_has_no_unk():
         assert tok.decode(ids) == s
 
 
+def _task_strings(spec):
+    """Every string a local run feeds through the tokenizer for ``spec``.
+
+    That is the prompt and the answer of both splits at every registered length, plus the
+    meta strings the sweep builds training documents from (``trace``, ``interleaved_prompt``).
+    s5_chain specs are additionally sampled under the two rendering/supervision ablations the
+    local runs use (``compact_events``, ``start_trace``), since those change the surface
+    grammar rather than the item stream.
+    """
+    from factworld.tasks import generate
+
+    variants = [spec]
+    if spec.family == "s5_chain":
+        variants.append(spec.scaled(compact_events=True, start_trace=True))
+    for sp in variants:
+        for split, lengths in (("train", (None,)), ("test", sp.eval_lengths)):
+            for L in lengths:
+                for ex in generate(sp, split, n=6, length=L):
+                    yield ex.prompt
+                    yield ex.answer
+                    for value in ex.meta.values():
+                        if isinstance(value, str):
+                            yield value
+
+
+def test_every_canonical_task_round_trips_losslessly():
+    """THE tokenizer contract, over the tasks that are actually trained locally.
+
+    ``decode(encode(x)) == x`` and no ``<unk>`` for every string a local run sees. An
+    <unk> here is silent input corruption: the model never observes the token the task
+    turns on, so the cell measures the tokenizer rather than the architecture.
+    """
+    from factworld.tasks import CANONICAL, build_world
+
+    for name, spec in CANONICAL.items():
+        world, renderer = build_world(spec)
+        tok = Tokenizer.build([world], renderer)
+        for s in _task_strings(spec):
+            assert tok.unk_id not in tok.encode(s), f"{name}: <unk> in {s!r}"
+            assert tok.decode(tok.encode(s)) == s, f"{name}: round trip broken on {s!r}"
+
+
+def test_retired_tasks_round_trip_losslessly():
+    """Retired specs stay generable for historical reproduction, so they stay encodable."""
+    from factworld.tasks import RETIRED, build_world
+
+    for name, spec in RETIRED.items():
+        world, renderer = build_world(spec)
+        tok = Tokenizer.build([world], renderer)
+        for s in _task_strings(spec):
+            assert tok.unk_id not in tok.encode(s), f"{name}: <unk> in {s!r}"
+            assert tok.decode(tok.encode(s)) == s, f"{name}: round trip broken on {s!r}"
+
+
+def test_pointer_map_event_grammar_is_covered():
+    """The s5_chain event vocabulary — the load-bearing tokens of the composite stressor.
+
+    ``swaps the values of ...`` / ``cycles a0 simultaneously: ... takes ... old a0,`` and the
+    compact ``swaps a0:`` / ``cycles a0:`` forms, plus the ``(N hops)`` query annotation.
+    """
+    for tk in ("values", "simultaneously:", "takes", "old", "a0,", "a0.", "a0:", "hops)",
+               "(1", "(2", "(8", "(128"):
+        assert tk in _TOK.token_to_id, tk
+
+
+def test_state_reference_clause_is_covered_in_both_grammars():
+    """The v4 construct's own vocabulary: the second operand named by the value the RUNNING
+    map holds. An <unk> on any of these words deletes the reference from the model's input
+    and leaves an ordinary swap behind — the task would still train, on a different task.
+
+    Both surfaces are checked because only one of them goes through the renderer: the compact
+    form is emitted by ``tasks._compact_a0_event``, so the vocabulary probe cannot reach it.
+    """
+    from factworld.world import Event  # noqa: PLC0415
+
+    for tk in ("the", "a0", "of", "agent", "whose", "is", "currently"):
+        assert tk in _TOK.token_to_id, tk
+    a, b = _TARGET.agents[0], _TARGET.agents[1]
+    canonical = _R.render_event(Event("swap_a0_ref", (a, b)), step="s3")
+    compact = f"s3 swaps a0: {a} and whose a0 is {b}."
+    assert f"whose a0 is currently {b}." in canonical
+    for s in (canonical, compact):
+        assert _TOK.unk_id not in _TOK.encode(s), s
+        assert _TOK.decode(_TOK.encode(s)) == s, s
+
+
+def test_mutual_reference_grammar_is_covered():
+    """The s5_bind surfaces: the temporal phrase that decides WHICH map resolves an event's
+    reference, and the whole-map readout's comma-separated slot enumeration. An <unk> on
+    "point."/"start." would delete the coupling from the model's input and leave an ordinary
+    two-structure stream behind — the task would still train, on a different task."""
+    from factworld.world import Event  # noqa: PLC0415
+
+    for tk in ("this", "point", "start", "end", "each", "who", "point.", "start.", "end?"):
+        assert tk in _TOK.token_to_id, tk
+    a, o, rl = _TARGET.agents[0], _TARGET.objects[0], _TARGET.roles[0]
+    docs = [_R.render_event(Event("swap_roles_now", (a, o)), step="s0"),
+            _R.render_event(Event("swap_roles_start", (a, o)), step="s0"),
+            _R.render_event(Event("give_role_now", (o, rl)), step="s1"),
+            _R.render_event(Event("give_role_start", (o, rl)), step="s1"),
+            _R.render_role(a, rl, when=Renderer.AT_START),
+            _R.render_holder(o, a, when=Renderer.AT_START),
+            _R.render_query("s5bind_state", target=a),
+            _R.render_query("s5bind_bind", target=o),
+            _R.render_query("s5bind_state_all", targets=list(_TARGET.agents))]
+    for s in docs:
+        assert _TOK.unk_id not in _TOK.encode(s), s
+        assert _TOK.decode(_TOK.encode(s)) == s, s
+    assert f"{_TARGET.agents[0]}," in _TOK.token_to_id      # the slot enumeration's separator
+
+
+def test_holder_assertion_object_form_is_covered():
+    """``g3 holds o0.`` glues the period to the object (the aux-world trace documents)."""
+    s = _R.render_holder(_TARGET.objects[0], _TARGET.agents[0])
+    assert _TOK.unk_id not in _TOK.encode(s)
+    assert _TOK.decode(_TOK.encode(s)) == s
+
+
 def _run() -> int:
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

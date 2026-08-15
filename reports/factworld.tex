@@ -12,6 +12,8 @@
 \usepackage{parskip}
 
 \newcommand{\markr}{$^{r}$}
+\newcommand{\marku}{$^{u}$}
+\newcommand{\marktrunc}{$^{t}$}
 \newcommand{\markdag}{$^{\dagger}$}
 \newcommand{\markddag}{$^{\ddagger}$}
 \newcommand{\censored}{$\oslash$}
@@ -78,7 +80,7 @@ Component: state tracking & \code{binding\_v2} & last-write-wins over a give-str
 \quad non-abelian variant & \code{s5\_v1} & order-sensitive role permutations \\
 Composition: state $\times$ recall & \code{composite\_copy\_v2} & two-hop composition; \S4.2 derives the gap statistic from it \\
 Composition: recall $\circ$ recall & \code{chain\_v2} & pointer chase at fixed breadth, explicit hop count \\
-Composition: state $\times$ dereference & \code{s5\_chain\_v3} & the ranking task for the frontier benchmark (\S4.1) \\
+Composition: state $\times$ dereference & \code{s5\_chain\_v3} & retired: it does not separate the roster (\S4.1) \\
 \bottomrule
 \end{tabular}
 \caption{The task taxonomy: components first, then their compositions.}
@@ -107,7 +109,7 @@ throughout the report.
 a set of agents, and the query asks for one agent's final role. Swaps and cycles do not
 commute, so the running permutation must be carried step by step.
 
-\paragraph{s5\_chain (\code{s5\_chain\_v3}).} The ranking task composes the two stress components in one task. $k=16$ agents hold an \code{a0} pointer map, initially one 16-cycle. $L$
+\paragraph{s5\_chain (\code{s5\_chain\_v3}).} This task composes the two stress components in one task. It is retired --- \S4.1 gives the measurement --- and generable for reproduction. $k=16$ agents hold an \code{a0} pointer map, initially one 16-cycle. $L$
 order-sensitive swap/cycle events permute the pointer values: the \Sfive-style state-tracking
 load. The query then dereferences the final map 8 hops deep (\code{what is a0 of a0 of ... of
 gX? (8 hops)}): the pointer-chase load. Neither component alone suffices. Every item is gated so that the query start sits on a final-map cycle longer than the query depth. The nine path nodes are therefore distinct, echoing the queried agent or any fixed hop scores exactly 0, difficulty is uniform across items, and chance is $1/16$. Cycle events state all their assignments simultaneously, so no sequential misreading is available. Unit tests pin both the gate and the rendering.
@@ -172,20 +174,31 @@ transformer & 0.79 & 0.22 & 0.22 \\
 \section{Benchmarking the frontier}
 
 We run thirteen frontier models through the instrument. Instant cells
-run $n=100$ under the answer contract. Thinking cells run $n=25$ with per-length completion
-budgets sized so truncation, scored as wrong, stays a rounding error; Wilson 95\% intervals
-accompany every cell, and thinking differences under about 0.2 are not an ordering. Models run
+run $n=100$ under the answer contract. Thinking cells run $n=25$, with Wilson 95\% intervals on
+every cell. At $n=25$ one item is 0.04, and the ranking task resolves a broad band rather than a
+rank over most of the roster (\S4.1). Models run
 at the shared top effort arm, \code{xhigh}, mapped down where the endpoint's ceiling is
-\code{high}. Cells that carry a contamination mark are excluded from orderings: \censored{} means not measurable at this budget, \markdag{} means covert or visible reasoning on an instant attempt, and \markddag{} means the provider ignored the token cap. Three models (grok-4.5, muse-spark-1.1,
+\code{high}. Truncated calls score wrong, and \marktrunc{} marks a cell where at least one call
+hit its completion budget, so that cell reads as a lower bound. Cells that carry a contamination
+mark are excluded from orderings: \censored{} means not measurable at this budget (most calls
+truncate), \markdag{} means covert or visible reasoning on an instant attempt, \markddag{} means
+the provider ignored the token cap, and \marku{} means unworked answers on a large fraction of
+calls, so the cell measures engagement, not capability. Three models (grok-4.5, muse-spark-1.1,
 claude-fable-5) are thinking-only: their endpoints cannot disable reasoning, so they carry no
 instant numbers.
 
 \subsection{FactWorldBench}
 
-\code{s5\_chain\_v3} is the ranking task: one number per model for how well it holds a
-mutating pointer map and then acts through it. The L96 cell ranks the full roster, the L128
-cell separates the top cluster, and the matched L64 cell prices completion tokens per call
-(nearly every model solves L64, so token spend compares like for like).
+\code{s5\_chain\_v3} was built as the ranking task: one number per model for how well it holds
+a mutating pointer map and then acts through it. It does not do that job and is retired. The L96
+and L128 cells separate the tail from the rest of the roster, and the matched L64 cell prices
+completion tokens per call --- nine of the thirteen models score 0.92 or better there, so their
+spend compares like for like --- but no pair inside the top eleven separates at L96 (\S7), so
+the cell orders the top of the roster by noise. \code{s5\_chain\_v4} blocks the backward walk
+v3 admits (the shallow adversary goes 1.000 to 0) and does not reach that defect: on the one
+model with clean cells at both versions it reads the same on each. What FactWorldBench publishes
+is the component and composition tasks; the composed cell that does separate is the composition
+instrument's, scored on the pad write rather than the answer (\S4.6).
 
 \begin{table}[h]
 \centering
@@ -198,33 +211,107 @@ openai/gpt-5.5 & 1.00 & 1.00 & 9343 \\
 x-ai/grok-4.5 & 1.00 & 0.96 & 7711 \\
 anthropic/claude-opus-4.8 & 0.96 & 0.96 & 9702 \\
 moonshotai/kimi-k3 & 0.96 & 0.96 & 10941 \\
-nvidia/nemotron-3-ultra & 0.96\markr & 0.96 & 17071 \\
+nvidia/nemotron-3-ultra & 0.96\markr & 0.96 & 17071\marktrunc \\
 muse-spark-1.1 & 0.96 & 0.92 & 12484 \\
 google/gemini-3.6-flash & 0.92 & 0.96 & 8166 \\
 anthropic/claude-sonnet-5 & 0.92 & 0.96 & 12729 \\
 deepseek/deepseek-v4-pro & 0.92 & 0.96 & 17052 \\
-z-ai/glm-5.2 & 0.92 & 0.80 & 17982 \\
+z-ai/glm-5.2 & 0.92 & 0.80\marktrunc & 17982\marktrunc \\
 qwen/qwen3.7-max & 0.72 & 0.44 & 12588 \\
-openai/gpt-5.6-sol & 0.60 & 0.80 & 2444 \\
+openai/gpt-5.6-sol & 0.60\marku & 0.80\marku & 2444\marku \\
 \bottomrule
 \end{tabular}
-\caption{The frontier ranking: \code{s5\_chain\_v3} match at L96 and L128 ($n=25$ per cell), and completion tokens per call on the matched L64 cell, where nearly every model succeeds. \markr{} marks a single raised-budget rerun.}
+\caption{FactWorldBench: \code{s5\_chain\_v3} match at L96 and L128 ($n=25$ per cell), and completion tokens per call on the matched L64 cell. \markr{} marks a single raised-budget rerun, \marktrunc{} a cell with truncated calls (2 of 25 on each L64 cell, 1 of 25 at L128), and \marku{} a cell where the model returned unworked answers on a large fraction of calls.}
 \label{tab:bench}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.9\linewidth]{fig_bench_headline.png}
 \caption{FactWorldBench scores at L96 (filled) and L128 (open) with Wilson 95\% intervals,
-plotted on a log-spaced match axis. Overlapping intervals are not an ordering.}
+plotted on a log-spaced match axis. Overlapping intervals are not an ordering. Rows run in
+Table~\ref{tab:bench} order, by L96 then L128 then L64 spend; gpt-5.6-sol's cells carry
+\marku{}, take no part in that ordering, and are plotted greyed below the rule.}
 \label{fig:bench}
 \end{figure}
 
-L96 separates a 0.92 to 1.00 band from a tail. L128 spreads the roster from 0.44 to 1.00: fable and gpt-5.5 hold 1.00, qwen halves to 0.44, glm drops to
-0.80. The \markr{} on nemotron's L96 marks a single rerun at a raised 98{,}304-token budget. At the planned budget it scored 0.84 with 12\% truncation, a budget artifact rather than a capability limit; at L128 it holds 0.96 with no truncation. Token spend also separates the top cluster: the L64 spend spans 5.0k (fable) to 17.1k
-(nemotron) per call, a $3.4\times$ range for the same scores.
+What the score resolves is the tail. At L96 no pair among the eleven models above qwen and sol
+separates (Fisher exact, all 55 pairs at $p \ge 0.05$), and Cochran's Q over those eleven
+returns $p=0.777$: at $n=25$ they are one undifferentiated band. Every one of the 18 separating
+pairs out of 78 involves qwen or sol, and sol's separation is engagement rather than capability
+(below). The roster mean is flat in length as well --- 0.90, 0.89, 0.91, 0.90
+at L32, L64, L96, L128 --- so length moves individual models rather than the roster: L128 is
+where qwen halves to 0.44 while fable and gpt-5.5 hold 1.00.
 
-The serving stack constrains the measurement. gpt-5.6-sol's Chat Completions shim caps the effort ladder at \code{xhigh}, while its native Responses API exposes a further \code{max} level that lifts L96 from 0.60 to 0.88 at $2.3\times$ the reasoning tokens; the scored rows stay on the shared \code{xhigh} setting for cross-model fairness. Sol is also the only model whose scores rise with prompt length: it allocates reasoning in proportion to input size, gives short prompts too little, and its failures are genuine wrong answers (match equals containment).
+Token spend does separate models the score does not. Over the nine models scoring 0.92 or
+better at L64, spend runs 5.0k per call (fable) to 18.0k (glm), a $3.6\times$ range inside one
+score band. The \markr{} on nemotron's L96 marks a single rerun at a raised 98{,}304-token
+budget. At the planned budget it scored 0.84 with 12\% truncation, a budget artifact rather
+than a capability limit; at L128 it holds 0.96 with no truncation.
+
+The serving stack constrains the measurement. gpt-5.6-sol's Chat Completions shim caps the effort ladder at \code{xhigh}, while its native Responses API exposes a further \code{max} level that lifts L96 from 0.60 to 0.88 at $2.3\times$ the reasoning tokens; the scored rows stay on the shared \code{xhigh} setting for cross-model fairness.
+
+Sol's \code{s5\_chain} cells measure engagement rather than capability, which is why they
+carry \marku{}. Its per-call completion spend is bimodal with a literal gap: across the 300
+archived \code{s5\_chain\_v3} calls, none spends between 294 and 1{,}136 completion tokens.
+In the low mode it emits about 150 tokens whatever the prompt size (per-length means 131 to
+162), and all 109 low-mode calls answer with the 8-hop dereference of the \emph{initial}
+pointer map --- it answers the pointer chase and skips the event stream, an answer the rest
+of the roster gives on under 1\% of its calls. That covers every one of sol's 101 wrong
+answers; the 8 low-mode calls that score are the items where the initial-map answer is also
+the gold one. Conditional on entering the high mode it is 191 for 191 across the same
+records. In the scored cells the low mode takes 68\%, 40\%, 44\%, and 24\% of calls at L32,
+L64, L96, and L128, so its score rises with prompt length because it disengages less often,
+not because it works harder.
+
+\paragraph{The instrument's system prompt elicits the low mode.} Every thinking cell in this
+report runs under one system prompt: ``You are taking a short test. Answer each question with
+only the requested value or values, no explanation. Use the same spelling as in the
+question.'' Two of its clauses read as instructions to spend less effort. Three arms on the
+identical L64 items ($n=25$, effort \code{xhigh}, 49{,}152-token budget) differ only in that
+prompt (Table~\ref{tab:sysprompt}): the canonical arm, no system prompt at all, and a neutral
+arm that keeps the answer-format contract and drops ``a short test'' and ``no explanation''.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+system prompt & match & containment & worked & match $\mid$ worked & initial-map & ctok/call \\
+\midrule
+canonical & 0.68 & 0.68 & 0.68 & 1.00 & 0.33 & 3128 \\
+none & 0.84 & 0.88 & 0.96 & 0.88 & 0.04 & 5942 \\
+neutral & 0.96 & 0.96 & 0.96 & 1.00 & 0.04 & 4086 \\
+\bottomrule
+\end{tabular}
+\caption{gpt-5.6-sol on \code{s5\_chain\_v3} at L64, $n=25$ deterministic items shared across
+the three arms, which differ only in the system prompt. \emph{worked} is the fraction of
+calls above 500 completion tokens --- low-mode calls run 86 to 258 tokens and worked calls
+start at 2{,}078, so the line's position inside that gap does not matter.
+\emph{initial-map} is the fraction of answers that dereference the initial pointer map
+instead of the final one, counted under the eligibility rule every event-blind number in
+this report uses: an item counts only where the initial-map answer differs from the gold
+answer, which drops 1 of the 25 items from numerator and denominator alike.}
+\label{tab:sysprompt}
+\end{table}
+
+Eight of the 25 items fell into the low mode under the canonical prompt; seven of those eight
+were worked under the neutral prompt, and no low-mode call in any arm is correct. The
+no-prompt arm's lower match is output format rather than composition: it works on 24 of 25
+calls and all 24 reach the gold value, but three wrap it in math markup instead of committing
+it as text, which the committed-answer rule does not read; two of those three defeat the
+containment tokenizer as well, which is the 0.88 in the table. Keeping the answer contract and
+dropping the two clauses gives both, at 0.96 worked and 0.96 match on the same items.
+
+The canonical arm's 0.68 reproduces the two archived L64 batches measured at the same effort
+(0.60 and 0.64, at 2{,}444 and 2{,}322 completion tokens per call); the third archived batch
+reads 0.84 at 4{,}966, twice the spend, and was measured at the vendor's higher level, so it
+is not a replicate of the other two. The low mode is therefore not a property of the model
+alone: dropping two clauses while holding the answer contract fixed moves the same items
+from 0.68 to 0.96 and the initial-map rate from 0.33 to 0.04. This is one model at one length with $n=25$, and measures nothing about
+the twelve models the probe did not run. One consequence does reach the rest of the report:
+every scored thinking cell carries this system prompt, so the completion-token columns price
+spend under an instruction to answer without explanation.
 
 \subsection{The composed cell and the gap (instant regime)}
 
@@ -259,33 +346,42 @@ z-ai/glm-5.2 & 1.00 & 0.71 & 0.38\markdag & 0.13 & $+0.33$\markdag \\
 \label{tab:gap}
 \end{table}
 
-Where binding is solid the roster separates. Opus composes essentially for free: its gap of 0.06 is within instant test-retest variability. gpt-5.5 pays the largest clean deficit (binding
-0.80, composed 0.46, gap $+0.34$): the model that shares the top of the thinking ranking has among the least in-weights composition. kimi-k3 is the same shape (gap $+0.32$ against a top-cluster ranking). For deepseek, qwen, and nemotron
+Where binding is solid the roster separates. Opus composes essentially for free: its gap of 0.06 is within instant test-retest variability. gpt-5.5 and kimi-k3 pay the largest clean deficits (gpt-5.5 binding 0.80, composed 0.46, gap $+0.34$; kimi-k3 gap $+0.32$), and at $n=100$ the two are indistinguishable from each other. Both sit in the top band of the thinking ranking and hold among the least in-weights composition. For deepseek, qwen, and nemotron
 the binding leg's interval overlaps the 0.41 object-filter floor, so the gap renders
 \floorgap: floor minus floor is zero by construction, not a measurement.
 
 \subsection{Reasoning buys composition}
 
-On the composed cell at L16 ($n=50$ per cell), reasoning effort gives a clean dose-response
-(Table~\ref{tab:dose}). At effort none the holder leg reads against the 0.41 object-filter
-floor: object filtering, not established composition. Low effort already recovers most of the
-composed cell, and the curve is monotone through high. The lever is implicit reasoning: an
-explicit ``write the holder, then the value'' instruction hurts every model, including the
-reasoners that solve the composed cell under a plain prompt (format-fair ablation, $n=100$).
+On the composed cell at L16 ($n=50$ per cell), reasoning effort gives a dose-response on the two
+models the sweep ran, kimi-k2.6 and glm-5.2 (Table~\ref{tab:dose}; kimi-k2.6 is not on the
+benchmark roster). At effort none the holder leg reads against the 0.41 object-filter
+floor: object filtering, not established composition. The first step off none carries the
+effect, and each further step is within noise of the one before it.
 
 \begin{table}[h]
 \centering
-\begin{tabular}{lcccc}
+\begin{tabular}{llcccc}
 \toprule
-model & none & low & medium & high \\
+model & & none & low & medium & high \\
 \midrule
-kimi-k2.6 & 0.72 & 1.00 & 1.00 & 1.00 \\
-glm-5.2 & 0.38 & 0.92 & 0.96 & 0.98 \\
+kimi-k2.6 & match & 0.40 & 0.94 & 1.00 & 0.98 \\
+          & containment & 1.00 & 1.00 & 1.00 & 1.00 \\
+glm-5.2 & match & 0.22 & 0.74 & 0.74 & 0.80 \\
+        & containment & 0.40 & 0.96 & 1.00 & 1.00 \\
 \bottomrule
 \end{tabular}
-\caption{Reasoning-effort dose-response on the composed cell at L16.}
+\caption{Reasoning-effort dose-response on the composed cell at L16, $n=50$ per cell, with the
+containment diagnostic on the same cells.}
 \label{tab:dose}
 \end{table}
+
+Containment reads the two models apart. kimi-k2.6 has both answer tokens in its emission at
+every effort including none, so its entire dose-response is output format, not composition
+appearing. glm-5.2's containment climbs from 0.40 to 1.00, so its first step is composition
+appearing, and its residual match gap from low effort on is format. The lever is implicit
+reasoning: an explicit ``write the holder, then the value'' instruction hurts every model,
+including the reasoners that solve the composed cell under a plain prompt (format-fair
+ablation, $n=100$).
 
 \subsection{The components under stress}
 
@@ -307,33 +403,64 @@ google/gemini-3.6-flash & 0.96 & 1.00 & 8234 \\
 muse-spark-1.1 & 1.00 & 1.00 & 9704 \\
 deepseek/deepseek-v4-pro & 1.00 & 1.00 & 10043 \\
 anthropic/claude-sonnet-5 & 1.00 & 1.00 & 11866 \\
-anthropic/claude-opus-4.8 & 1.00 & 1.00 & 12683 \\
+anthropic/claude-opus-4.8 & 1.00 & 1.00 & 12683\marktrunc \\
 openai/gpt-5.6-sol & 0.88 & 0.92 & 2657 \\
 x-ai/grok-4.5 & 1.00 & 0.88 & 8069 \\
 qwen/qwen3.7-max & 0.96 & 0.80 & 7904 \\
-moonshotai/kimi-k3 & 1.00 & 0.80 & 11355 \\
-nvidia/nemotron-3-ultra & 0.60 & 0.80 & 12250 \\
-z-ai/glm-5.2 & 0.92 & 0.76 & 6282 \\
+moonshotai/kimi-k3 & 1.00 & 0.80\marktrunc & 11355\marktrunc \\
+nvidia/nemotron-3-ultra & 0.60\marktrunc & 0.80\marktrunc & 12250\marktrunc \\
+z-ai/glm-5.2 & 0.92\marktrunc & 0.76\marktrunc & 6282\marktrunc \\
 \bottomrule
 \end{tabular}
 \caption{Thinking-regime component stress cells, match, $n=25$: chain d128 (a 128-hop
 pointer chase, chance below 0.01), \Sfive{} at L256 (256 permutation events, chance 0.20),
-and completion tokens per call on the matched L128 cell.}
+and completion tokens per call on the matched L128 cell. \marktrunc{} marks a cell with
+truncated calls, which score wrong: the cell is a lower bound on its score and its spend.}
 \label{tab:components}
 \end{table}
 
 The top half of the roster holds both components at or near ceiling, which is why the
-composite, not the components, carries the ranking. Every cell runs at a budget sized so
-truncation stays a rounding error; the one exception is nemotron, which truncates on 20\% of
-its \Sfive{} L256 calls even at 32{,}768 tokens. The chain query includes an explicit hop
+composite, not the components, carries the ranking. The budgets do not fully clear the reasoning
+these cells require. Nemotron truncates on 32\% of its chain d128 calls at 16{,}384 tokens and on 20\% of
+its \Sfive{} calls at both L128 (16{,}384 tokens) and L256 (32{,}768), and kimi-k3 on 16\% of
+its \Sfive{} L256 calls; eight further cells here and in Table~\ref{tab:bench} truncate on one
+or two calls in 25. Every marked cell is a lower bound on its score and its spend. The chain query includes an explicit hop
 count because the bare nested phrase is a hop-counting confound at depth 128: models miscount
 the repetitions and stop a few hops short, a prompt-format artifact rather than a state
 failure.
 
 The components also dissociate the regimes within one item set. The chain d16 cell runs in
-both regimes on identical items. In the thinking regime, twelve of thirteen models score 0.96 to 1.00. In the instant regime, every model that answers cleanly is at floor (best 0.08). A 16-hop pointer chase is
-serial work no roster model holds in weights, and every strong model solves it given room to
-work.
+both regimes on identical items. In the thinking regime, the seven models measured on it all
+score 1.00. In the instant regime, every model that answers cleanly is at floor (best 0.08). A 16-hop pointer chase is
+serial work no roster model holds in weights, and every model that has been given room to work
+solves it.
+
+\subsection{The composition instrument}
+
+The composed cell whose floor is closed by a cost rule rather than by a list of shortcuts is
+\code{s5\_bind\_v3}: one event stream read through two structures --- a pointer map rewritten by
+swaps and a holder map rewritten by last-write-wins gives --- where every event resolves its
+second operand live through the map it does not write. Its two components are the same stream
+with the second operand named. Composing them is priced rather than asserted: the composed
+cell's cheapest correct algorithm costs 3.8--4.2$\times$ either component's at equal work, where
+every other task in the suite costs 1$\times$.
+
+The scored quantity is not the answer. Under a bounded per-event checkpoint the answer is
+generated from the model's own checkpoint, so a per-item perfect checkpoint makes that context
+byte-identical to the gold one and the answer registers the checkpoint and nothing else. What is
+scored is the single checkpoint token whose write is two dependent reads. Its floor is a maximum
+over the rows a class rule admits --- a row may hold at most one structure, may chain at most one
+hop per emitted token, and may not cost more than the cell's own algorithm --- and inside that
+rule the fixed-address family is swept exhaustively, over address spaces, block classes, both
+canonical indexings, token positions and typed map reads, with the winning member selected on a
+disjoint pool and scored held out.
+
+Measured on \code{gpt-5.6-sol} at $k=12$, $n=24$ items: 1.000 at $L=128$ and 0.758 $\pm$ 0.114
+at $L=256$ (12 of 24 items perfect) against floors of 0.247 and 0.255. Errors cluster within
+items --- one derailed stream corrupts every later block --- so the interval is taken over items,
+and a token-level interval understates it by about 4.4$\times$. A cell costs \$3--5 per model,
+because on this read the model's reasoning is the scored output rather than an unscored overhead
+bought at an 8k--98k token budget and discarded.
 
 \subsection{Long context}
 
@@ -366,8 +493,8 @@ appears only where it is the measured lever (the \Sfive{} and commutative format
 
 Comparisons are matched on compute, not parameters, at budgets sufficient for the capable
 configuration to converge. At the flagship scale ($d_{\mathrm{model}}=768$, 8 layers), fprm's
-per-token FLOPs equal the transformer's ($\sim$159 GFLOP) at 10M vs 76M params, and
-gdp\_hybrid's Householder-product recurrence costs $1.25\times$ the transformer's (204 GFLOP
+per-token FLOPs equal the transformer's ($\sim$159 MFLOP) at 10M vs 76M params, and
+gdp\_hybrid's Householder-product recurrence costs $1.28\times$ the transformer's (204 MFLOP
 at 101M params).
 
 \subsection{The composite flagship}
@@ -381,9 +508,9 @@ seeds, eval $n=500$):
 \toprule
 arch & params & per-tok FLOPs & composite @L16 & holder leg & value leg \\
 \midrule
-gdp\_hybrid & 101M & 204 GFLOP & $0.833 \pm 0.089$ & 0.999 & 0.833 \\
-fprm & 10M & 159 GFLOP & $0.109 \pm 0.089$ & 0.998 & 0.109 \\
-transformer & 76M & 159 GFLOP & $0.001 \pm 0.001$ & 0.065 & 0.041 \\
+gdp\_hybrid & 101M & 204 MFLOP & $0.833 \pm 0.089$ & 0.999 & 0.833 \\
+fprm & 10M & 159 MFLOP & $0.109 \pm 0.089$ & 0.998 & 0.109 \\
+transformer & 76M & 159 MFLOP & $0.001 \pm 0.001$ & 0.065 & 0.041 \\
 \bottomrule
 \end{tabular}
 \caption{The composed task trained from scratch under the staged curriculum, match at L16 with per-leg decomposition (3 seeds, eval $n=500$).}
@@ -395,11 +522,6 @@ models on this task despite training from scratch at 100M params. fprm solves bi
 perfectly and fails to recall the value of the holder it just resolved. The transformer fails
 both legs. The per-leg decomposition names the deficit: the failure is routing the resolved holder into the in-context
 recall lookup, the same deficit the frontier's instant gap measures.
-
-The scaffolded probe sharpens the contrast. Given the correct holder, frontier models recall
-the value at 0.98 to 1.00; the local flagship scores 0.096. API models can do each leg when the
-problem is split for them and struggle to compose the legs in one prompt; the local models
-that fail cannot do the second hop even when handed the first.
 
 \subsection{Scale does not fix the composite}
 
@@ -420,22 +542,31 @@ transformer & $0.01 \pm 0.00$ & $0.01 \pm 0.01$ & $0.00 \pm 0.00$ \\
 \label{tab:scale}
 \end{table}
 
-Convergence is architecture-specific and scale-dependent, peaking at medium: gdp\_hybrid at
-$768\times8$ is the only converging cell. The transformer floors at every scale including 202M
-params and 417 GFLOP/token, with containment near zero as well: a real floor, not a formatting
+Convergence is architecture-specific and scale-dependent: gdp\_hybrid at $768\times8$ is the
+only cell whose seeds both converge (0.72 and 0.745). It does not carry to $1024\times12$,
+where the same architecture reads 0.42 and 0.00 --- a cell whose mean is a seed lottery, not
+a score. The transformer floors at every scale including 202M
+params and 417 MFLOP/token, with containment near zero as well: a real floor, not a formatting
 miss. Wherever binding is solved and the composed cell fails, the value leg is what collapses;
 the routing deficit is scale-invariant.
 
 \subsection{Binding under breadth}
 
-fprm's product recurrence leads the binding leg through B16 (1.00 at B6, 0.97 to 0.98
-seed-consistent at B16) and stops fitting at B24, where only the gated hybrid holds (0.67);
-the transformer stays at 0.08 to 0.23 throughout (45 runs at $d=256$). Last-write state requires recurrence, and the form of the recurrence sets a breadth ceiling: fprm holds through breadth 16, only the gated hybrid holds at breadth 24, and the transformer never fits.
+Convergence on the binding leg is bimodal across seeds, so the rung reports p(converge), the
+fraction of seeds reaching 0.9 (3 seeds per cell, 45 runs at $d=256$). fprm converges 3/3 at
+B6, 2/3 at B8, 1/3 at B12, 3/3 at B16, and 0/3 at B24. gdp\_hybrid converges 0/3 at B6 and B8,
+1/3 at B12, 1/3 at B16, and 2/3 at B24. The transformer converges 0/3 at every rung, per-seed
+0.03 to 0.26. Within a cell the seeds sit at the extremes and not near their mean: gdp\_hybrid
+at B24 reads 0.98, 0.04, 1.00, and fprm at B12 reads 1.00, 0.17, 0.75. Last-write state
+requires recurrence --- the transformer fits at no breadth --- but neither recurrent form shows
+a breadth ceiling at this training budget: p(converge) is not monotone in breadth for either,
+and a cell mean over three seeds of that shape is not a ranking.
 
 \subsection{Chain depth does not extrapolate}
 
-Trained at chain depths 2 and 3, no architecture scores above the $1/6$ guess at depths 4 and 5
-(fprm 0.21/0.15, transformer 0.16/0.09, gdp\_hybrid 0.01/0.00; 3 seeds each). gdp\_hybrid fits
+Trained at chain depths 2 and 3, no architecture clears the $1/6$ guess at depths 4 and 5 by
+more than seed noise (fprm 0.21/0.15, transformer 0.16/0.09, gdp\_hybrid 0.01/0.00; 3 seeds
+each, and fprm's depth-4 seeds are 0.245, 0.22, 0.165). gdp\_hybrid fits
 the training distribution best and scores worst held-out: a depth-specific circuit,
 systematically wrong one hop out, not a guesser. Dense intermediate-hop supervision does not
 help (0.00 to 0.10 held-out). Over the API, frontier models solve the same composition at depth 16, but only in the thinking regime.
@@ -458,13 +589,18 @@ $K$ (stride) & value @L16 & value @L64 & converge @L16 \\
 8 & 0.21 & 0.20 & 0/10 \\
 \bottomrule
 \end{tabular}
-\caption{Supervision density: the circuit forms at a checkpoint every $\le 2$ events and is
-gone below.}
+\caption{Supervision density for gdp\_hybrid: the circuit forms at a checkpoint every $\le 2$
+events and is gone below.}
 \label{tab:density}
 \end{table}
 
-The threshold is sharp. Formation is architecture-independent; length extrapolation is not
-(\S3). The circuit also survives weaning to label-free deployment: train dense, fine-tune on
+The threshold is sharp, and it is the threshold for gdp\_hybrid. It is not
+architecture-independent. Every architecture forms the circuit under a checkpoint every event:
+at $K=1$, gdp\_hybrid scores 1.00 with 10/10 seeds converged, fprm 1.00 with 5/5, and the
+transformer $0.83 \pm 0.25$ with 8/10. At $K=2$ the transformer is already at chance
+($0.22 \pm 0.03$, 0/10) where gdp\_hybrid still converges 10/10; fprm has no $K=2$ arm. A
+checkpoint every event forms the circuit in every architecture measured, and how far the
+checkpoints can be thinned is architecture-specific. Length extrapolation is a separate requirement (\S3). The circuit also survives weaning to label-free deployment: train dense, fine-tune on
 mixed densities including answer-only, and 8/8 seeds converge free-running, extrapolating on
 par with dense-only. Stressed to $32\times$ the trained length on the dense-supervised
 non-abelian composite, the recurrent hybrid holds about 0.5 out to L512 while the looped block
@@ -492,8 +628,8 @@ element & requirement \\
 \midrule
 adjacent (1-hop) recall & attention: every architecture aces adjacent readout \\
 deferred recall & product recurrence: the transformer aces adjacent, fails deferred (0.19 vs 0.73) \\
-last-write state & recurrence, ordered by form: fprm through B16, only the gated hybrid at B24, transformer floors \\
-non-abelian state (formation) & dense per-step supervision, a checkpoint every $\le 2$ events, architecture-independent \\
+last-write state & recurrence: both recurrent forms converge at some breadth and neither monotonically, p(converge) swinging 0/3 to 3/3 between adjacent rungs; the transformer converges at no breadth \\
+non-abelian state (formation) & dense per-step supervision: every architecture forms it at a checkpoint every event; how far the checkpoints thin is architecture-specific (gdp\_hybrid holds at every 2, the transformer is at chance there) \\
 non-abelian state (extrapolation) & recurrent hybrid: gdp\_hybrid 0.75 @L64; fprm and transformer collapse past train length \\
 commutative state (formation) & dense per-step supervision plus recurrence; extrapolation does not follow \\
 depth extrapolation & \textbf{open}: unsolved by every measured choice, with or without intermediate-hop traces \\
@@ -518,18 +654,21 @@ The main findings:
 
 \begin{itemize}
 \item \textbf{Composition is where frontier models still separate.} The components are largely
-  solved in the thinking regime, but their composition is not: the ranking composite differentiates by score at both ends and by token spend within the top cluster. With
-  reasoning off, the composed cell shows that most of the roster holds little composition in weights, with an ordering the thinking ranking does not predict: gpt-5.5 shares the top of one and pays the largest gap on the other.
-\item \textbf{Composition responds to reasoning, monotonically.} Effort moves the composed
-  cell from near floor to 0.92 and above, and the thinking regime holds it out to L1024.
-  Explicit prompting does not substitute.
+  solved in the thinking regime, but their composition is not: the ranking composite separates
+  the tail by score and the rest of the roster by token spend. With
+  reasoning off, the composed cell shows that most of the roster holds little composition in weights, with an ordering the thinking ranking does not predict: gpt-5.5 sits in the top band of one and pays among the largest gaps on the other.
+\item \textbf{Composition responds to reasoning.} Effort lifts the composed
+  cell off the object-filter floor at the first step (0.22 to 0.74 for glm-5.2, 0.40 to 0.94
+  for kimi-k2.6) and the thinking regime holds it out to L1024. Explicit prompting does not
+  substitute.
 \item \textbf{Non-abelian state tracking responds to reasoning only under a concrete
   rendering.} Neither reasoning over abstract tokens nor a concrete rendering without
   reasoning suffices; the combination solves it, with a model-dependent length limit
   (Appendix~\ref{app:s5}).
-\item \textbf{For local models, \Sfive{} forms under dense supervision.} A state checkpoint at
-  least every two events develops a length-extrapolating circuit that weans to label-free
-  deployment.
+\item \textbf{For local models, \Sfive{} forms under dense supervision.} A state checkpoint
+  every event forms the circuit in every architecture measured; thinned to every two events
+  it still forms in the recurrent hybrid, where it extrapolates in length and weans to
+  label-free deployment, and is at chance in the transformer.
 \item \textbf{Architecture carries length generalization.} A learned state circuit generalizes
   in length only on a recurrent hybrid; transformers and looped blocks shortcut.
 \end{itemize}
@@ -539,8 +678,8 @@ These are results within the regime tested, not scaling laws.
 \section{Limitations and related work}
 
 \textbf{Limitations.} The scale regime is bounded: $k=5$ \Sfive, local models of 3M to 269M
-params matched on compute at 32 to 540 GFLOP/token, pretrained models from a few billion to
-about a trillion parameters. Composition is 2-hop throughout except the ranking task's 8-hop dereference. Instant cells run $n=100$; thinking cells run $n=25$ to 50 because API costs scale with reasoning tokens, and thinking differences under about 0.2 are within noise. The
+params matched on compute at 32 to 540 MFLOP/token, pretrained models from a few billion to
+about a trillion parameters. Composition is 2-hop throughout except the ranking task's 8-hop dereference. Instant cells run $n=100$; thinking cells run $n=25$ to 50 because API costs scale with reasoning tokens. At $n=25$ the ranking task separates the tail and prices tokens, and it does not resolve the top of the roster: no pair inside the top eleven models separates at L96, so the instrument as run supports a two-band read plus a spend ordering, not a rank. Local architecture cells run 2 to 10 seeds and several are bimodal, so their means carry a seed lottery that p(converge) reports and a mean hides. The
 component-to-agent mapping is a motivating analogy, not a proven one.
 
 \textbf{Related work.} Recall is grounded in multi-query associative recall

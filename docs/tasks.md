@@ -1,6 +1,7 @@
 # FactWorld task examples
 
-This page shows a concrete example from every canonical task: what the prompt looks like, what the
+This page shows a concrete example from each task family, including the retired samplers some
+examples were drawn on: what the prompt looks like, what the
 gold answer is, and — for tasks we ran on the OpenRouter grid — one or two real mistakes made by
 strong pretrained models. The goal is to make each element of the taxonomy tangible and to show
 the difference between a formatting error and a reasoning error.
@@ -8,8 +9,10 @@ the difference between a formatting error and a reasoning error.
 The taxonomy ([`AGENTS.md`](../AGENTS.md)) orders the page: **components** first — recall
 (`recall_copy_v1`; parametric variants `conflict_v1`/`recall_v1`) and state tracking
 (`binding` = last-write-wins, `s5_v1` = non-abelian) — then their **compositions** — state × recall
-(`composite`), recall ∘ recall (`chain_v1`), and the headline non-abelian state × serial
-dereference (`s5_chain_v3`). Examples shown on a retired v1 sampler are marked;
+(`composite`), recall ∘ recall (`chain_v1`), and non-abelian state × serial
+dereference (`s5_chain_v3`). The composition instrument's own family (`s5_bind_v3` and its two
+components) reads one event stream through both structures and is documented in
+[`AGENTS.md`](../AGENTS.md) and the README. Examples shown on a retired v1 sampler are marked;
 the scored give-stream tasks are the v2 family
 ([#11](https://github.com/ianbarber/factworld/issues/11)).
 
@@ -157,7 +160,7 @@ Even the best pretrained models peak at 0.300 on this task.
 
 ---
 
-## `s5_chain_v3` — composition: non-abelian state × serial dereference (the headline)
+## `s5_chain_v3` — composition: non-abelian state × serial dereference
 
 Sixteen agents hold an `a0` pointer map (initially one 16-cycle). A stream of order-sensitive
 `swap`/`cycle` events permutes the pointer *values*; the query then dereferences the final map
@@ -183,7 +186,7 @@ dereference serially, and one that follows a static chain but loses the map thro
 
 ---
 
-## `s5_v1` — component: state tracking, non-abelian variant (S₅ role permutations)
+## `s5_v1` — component: state tracking, non-abelian variant (S₅ role permutations) (retired)
 
 A sequence of `swap`/`cycle_roles` events permutes which agent holds each of five roles. The query
 asks for the role of a single agent at the end.

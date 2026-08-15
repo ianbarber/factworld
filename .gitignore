@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+.venv-*/
 venv/
 *.egg-info/
 build/
@@ -24,3 +25,7 @@ experiments/mopd/ckpts_hf/
 # local agent/runtime state
 .claude/
 feedback.txt
+
+# transient runtime state (local server pidfile)
+*.pid
+abc_out.txt

@@ -7,6 +7,21 @@ type (no paraphrase variety) so the model sees a uniform grammar — this is the
 single canonical format; the earlier space-separated "atomic-token" v1 format
 lives in git history.
 
+One statement type names an operand by STATE rather than by name: ``s7 swaps the
+values of g4's a0 and the a0 of the agent whose a0 is currently g11.`` Such a
+sentence encodes (named slot, referenced value); which slot the value belongs to
+is a property of the map at that point in the stream, so parsing recovers the
+pair and not the resolution.
+
+The mutual-reference family carries that further: its events name their second
+operand through the OTHER of the two structures the stream maintains, and a
+temporal phrase says which map resolves the description — ``s0 swaps the roles of
+g4 and the agent who holds o2 at this point.`` against the running holder map,
+``... at the start.`` against the stated one. The phrase is part of the record, so
+the four event kinds ``swap_roles_now`` / ``swap_roles_start`` / ``give_role_now``
+/ ``give_role_start`` round-trip it, and the two readings occupy the same number
+of whitespace tokens.
+
 Content tokens are still atomic IDs (``e17 a3 v42 o2 loc1 g4 r0 s5``); the step
 label ``sN`` is the event subject. The render <-> parse round-trip is a contract
 (the ground-truth re-parse check — every rendered document must parse back to the
@@ -56,6 +71,13 @@ class Renderer:
     _SWAP = ("swaps {a} and {b}.",)
     _CYCLE = ("cycles roles: {flows}.",)
     _SWAP_A0 = ("swaps the values of {a}'s a0 and {b}'s a0.",)
+    # The second operand is named by its CURRENT value rather than by name: {v} is a value
+    # the a0 map holds when the event fires, and the map is a bijection, so exactly one agent
+    # answers to the description. "currently" is what separates it from the stated initial
+    # facts — the referenced agent is the one whose a0 is {v} after every preceding event,
+    # not the one the fact block gives {v} to.
+    _SWAP_A0_REF = ("swaps the values of {a}'s a0 and the a0 of the agent "
+                    "whose a0 is currently {v}.",)
     # The three assignments are SIMULTANEOUS: "{c}'s a0 takes {a}'s old a0" reads against
     # a's pre-event value, not the value a was just assigned. The pre-2026-07-18 wording
     # ("{a}'s a0 becomes {b}'s a0, ...") admitted a sequential-assignment misreading in
@@ -66,6 +88,55 @@ class Renderer:
     _HOLDER = ("{h} holds {o}.",)
     _TURN = ("turns {g}'s dial {n} {clicks}.",)
     _DIAL = ("{g}'s dial is at {p}.",)
+
+    # --- the mutual-reference (s5_bind) surfaces --------------------------------------
+    # Two structures run over one event stream — agents->roles, permuted by the swaps, and
+    # objects->agents, rewritten by the gives — and every event names its SECOND operand
+    # through the other structure. A temporal phrase says which map resolves that
+    # description: ``at this point`` reads the map as it stands when the event fires,
+    # ``at the start`` reads the stated initial one. The two phrases are the same number of
+    # whitespace tokens, so the coupled and decoupled renderings of ONE item differ by two
+    # tokens per referenced event and never in length — the coupling can therefore be
+    # ablated without moving prompt length, which is what makes the paired comparison exact.
+    # The four event kinds are the two structural forms x the two temporal readings, so the
+    # reading is part of the record a sentence encodes and the render/parse round-trip
+    # recovers it.
+    AT_POINT = "at this point"
+    AT_START = "at the start"
+    AT_END = "at the end"
+
+    # --- the source-structure (s5_bind_v3) surfaces ------------------------------------
+    # Two maps INTO AGENTS run over one event stream — P: agents -> agents (a permutation,
+    # "g4 points to g9") and B: objects -> agents under last-write-wins ("o2 belongs to g7")
+    # — and every event names its second operand through ONE of them, LIVE. The ablation is
+    # the SOURCE STRUCTURE, not the time index: a swap writes P and reads either B (CROSS —
+    # composition) or P (SAME); a give writes B and reads either P (CROSS) or B (SAME). The
+    # two reference clauses are the same shape, "the agent {slot} {verb} to at this point",
+    # and the same number of whitespace tokens (8), so within an event kind the two classes
+    # differ in the source structure and in nothing else a token counter can see.
+    #
+    #   swap  "s0 swaps the pointers of g4 and the agent o2 belongs to at this point."  CROSS
+    #         "s0 swaps the pointers of g4 and the agent g7 points to at this point."   SAME
+    #   give  "s1 gives o3 to the agent g7 points to at this point."                    CROSS
+    #         "s1 gives o3 to the agent o7 belongs to at this point."                   SAME
+    #
+    # Both readings resolve against the RUNNING map, so neither is a header lookup and the
+    # class is not a read-history predicate — which is the whole reason the temporal pair it
+    # replaces could not identify composition (see factworld.tasks._ex_s5_bind_v3).
+    _PTR_AT = ("{g} points to {h} {when}.",)
+    _BELONG_AT = ("{o} belongs to {h} {when}.",)
+    _SWAP_PTR = ("swaps the pointers of {a} and {ref}.",)
+    _GIVE_PTR = ("gives {o} to {ref}.",)
+    _REF_BY_P = "the agent {x} points to {when}"     # reads P forward at a named agent
+    _REF_BY_B = "the agent {x} belongs to {when}"    # reads B at a named object
+    # The COMPONENT rendering: the second operand by NAME, so the event's identity is fixed on
+    # the surface and the arm admits a sparse backward carrier walk. The named give reuses the
+    # suite's plain ``give`` ("s1 gives o3 to g7."), which already means exactly this.
+    _SWAP_PTR_NAMED = ("swaps the pointers of {a} and {b}.",)
+    _ROLE_AT = ("{g} has role {r} {when}.",)
+    _HOLDER_AT = ("{h} holds {o} {when}.",)
+    _SWAP_BY_HOLDER = ("swaps the roles of {a} and the agent who holds {o} {when}.",)
+    _GIVE_BY_ROLE = ("gives {o} to the agent whose role {when} is {r}.",)
 
     # Role-flow arrow in the compact cycle notation: "g0 -> g1 -> g2" means g0's role
     # passes to g1, g1's to g2, and g2's back to g0 (the canonical cycle_roles args).
@@ -95,8 +166,24 @@ class Renderer:
             s = self._pick(self._CYCLE, k).format(flows=self._CYCLE_ARROW.join(event.args))
         elif event.kind == "swap_a0":
             s = self._pick(self._SWAP_A0, k).format(a=event.args[0], b=event.args[1])
+        elif event.kind == "swap_a0_ref":
+            s = self._pick(self._SWAP_A0_REF, k).format(a=event.args[0], v=event.args[1])
         elif event.kind == "cycle_a0":
             s = self._pick(self._CYCLE_A0, k).format(a=event.args[0], b=event.args[1], c=event.args[2])
+        elif event.kind in ("swap_roles_now", "swap_roles_start"):
+            when = self.AT_POINT if event.kind.endswith("now") else self.AT_START
+            s = self._pick(self._SWAP_BY_HOLDER, k).format(a=event.args[0], o=event.args[1], when=when)
+        elif event.kind in ("give_role_now", "give_role_start"):
+            when = self.AT_POINT if event.kind.endswith("now") else self.AT_START
+            s = self._pick(self._GIVE_BY_ROLE, k).format(o=event.args[0], r=event.args[1], when=when)
+        elif event.kind == "swap_ptr_named":
+            s = self._pick(self._SWAP_PTR_NAMED, k).format(a=event.args[0], b=event.args[1])
+        elif event.kind in ("swap_ptr_by_p", "swap_ptr_by_b", "give_ptr_by_p", "give_ptr_by_b"):
+            tmpl = self._REF_BY_P if event.kind.endswith("_p") else self._REF_BY_B
+            ref = tmpl.format(x=event.args[1], when=self.AT_POINT)
+            s = (self._pick(self._SWAP_PTR, k).format(a=event.args[0], ref=ref)
+                 if event.kind.startswith("swap")
+                 else self._pick(self._GIVE_PTR, k).format(o=event.args[0], ref=ref))
         elif event.kind == "turn_dial":
             clicks = "click" if event.args[1] == "1" else "clicks"
             s = self._pick(self._TURN, k).format(g=event.args[0], n=event.args[1], clicks=clicks)
@@ -119,19 +206,75 @@ class Renderer:
         to a fixed width for clean positional reading."""
         return "scn " + " ".join(f"#{c}" for c in str(idx).zfill(width))
 
-    def render_role(self, agent: str, role: str, step: str | None = None, key: str | None = None) -> str:
-        return self._pick(self._ROLE, key or f"role|{agent}").format(g=agent, r=role)
+    # The three assertion renderers take ``step`` and prefix it exactly as ``render_event`` does.
+    # They previously accepted the argument and discarded it, so a stepped assertion parsed back
+    # with step=None and the render/parse round-trip contract failed on every aux corpus document
+    # (issue #38). The scored task streams are unaffected: tasks.py calls render_role and
+    # render_dial without a step, and factworld.corpus is the only caller that passes one.
+    def render_role(self, agent: str, role: str, step: str | None = None, key: str | None = None,
+                    when: str | None = None) -> str:
+        """``g3 has role r1.`` — or, with ``when``, the temporally-anchored form the
+        mutual-reference family states its initial conditions in (``... r1 at the start.``).
+        Appended keyword defaulting to None, so every existing call renders as before."""
+        if when is None:
+            s = self._pick(self._ROLE, key or f"role|{agent}").format(g=agent, r=role)
+        else:
+            s = self._pick(self._ROLE_AT, key or f"role|{agent}|{when}").format(g=agent, r=role, when=when)
+        return f"{step} {s}" if step is not None else s
 
-    def render_holder(self, obj: str, holder: str, step: str | None = None, key: str | None = None) -> str:
-        return self._pick(self._HOLDER, key or f"holder|{obj}").format(o=obj, h=holder)
+    def render_holder(self, obj: str, holder: str, step: str | None = None, key: str | None = None,
+                      when: str | None = None) -> str:
+        """``g3 holds o0.`` — or, with ``when``, the temporally-anchored form (see
+        ``render_role``)."""
+        if when is None:
+            s = self._pick(self._HOLDER, key or f"holder|{obj}").format(o=obj, h=holder)
+        else:
+            s = self._pick(self._HOLDER_AT, key or f"holder|{obj}|{when}").format(o=obj, h=holder, when=when)
+        return f"{step} {s}" if step is not None else s
+
+    def render_pointer(self, agent: str, target: str, when: str | None = None,
+                       step: str | None = None, key: str | None = None) -> str:
+        """``g4 points to g9 at the start.`` — the P initial-condition line of the
+        source-structure family. ``when`` defaults to AT_START."""
+        s = self._pick(self._PTR_AT, key or f"ptr|{agent}").format(
+            g=agent, h=target, when=when or self.AT_START)
+        return f"{step} {s}" if step is not None else s
+
+    def render_belongs(self, obj: str, holder: str, when: str | None = None,
+                       step: str | None = None, key: str | None = None) -> str:
+        """``o2 belongs to g7 at the start.`` — the B initial-condition line, the same shape
+        and the same whitespace-token count as ``render_pointer``."""
+        s = self._pick(self._BELONG_AT, key or f"bel|{obj}").format(
+            o=obj, h=holder, when=when or self.AT_START)
+        return f"{step} {s}" if step is not None else s
 
     def render_dial(self, agent: str, position: str, step: str | None = None, key: str | None = None) -> str:
         """Commutative-state initial-condition line: ``g3's dial is at p2.``"""
-        return self._pick(self._DIAL, key or f"dial|{agent}").format(g=agent, p=position)
+        s = self._pick(self._DIAL, key or f"dial|{agent}").format(g=agent, p=position)
+        return f"{step} {s}" if step is not None else s
 
-    def render_query(self, family: str, *, entity=None, attribute=None, target=None, t=None) -> str:
+    def render_query(self, family: str, *, entity=None, attribute=None, target=None, t=None,
+                     targets=None) -> str:
         # as-of-t references the (t-1)-th event label; t=None means the final state
         step = None if t is None else f"s{t - 1}"
+        # The mutual-reference queries. All three end "at the end", which is what separates
+        # them from the single-structure families' queries and what the parser routes on;
+        # the whole-map readout names its slots explicitly so the answer's ORDER is stated
+        # in the prompt rather than conventional.
+        # The source-structure queries. Both single-slot forms are 10 whitespace tokens and
+        # differ only in which structure they read out, exactly as the event references do.
+        if family == "s5bind3_state":
+            return f"which agent does {target} point to {self.AT_END}?"
+        if family == "s5bind3_bind":
+            return f"which agent does {target} belong to {self.AT_END}?"
+        if family == "s5bind3_state_all":
+            return f"which agent does each of {', '.join(targets)} point to {self.AT_END}?"
+        if family == "s5bind_state":
+            return f"what role does {target} have {self.AT_END}?"
+        if family == "s5bind_bind":
+            return f"who is the holder of {target} {self.AT_END}?"
+        if family == "s5bind_state_all":
+            return f"what role does each of {', '.join(targets)} have {self.AT_END}?"
         if family == "recall":
             return f"what is {attribute} of {entity}?"
         if family == "state_easy":
@@ -180,11 +323,97 @@ class Renderer:
                 buckets[c].append(tk)
         return buckets, toks
 
+    # The tokens that route a statement to the source-structure grammar. Nothing else in the
+    # suite emits any of them: "point" alone is the tail of the temporal phrase "at this
+    # point", so the router keys on the inflected verbs and on the query's "which" instead.
+    _V3_ROUTE = frozenset({"pointers", "points", "belongs", "belong", "which"})
+
+    def _parse_s5_bind_v3(self, toks: list[str], typed: dict, step: str | None) -> dict | None:
+        """The seven source-structure surfaces, or None when the text is not one of them.
+
+        Tried before every other shape. The reference clause is recognised by its verb —
+        ``belongs`` reads the holder map B, ``points`` reads the pointer map P — and the event
+        by its own verb, so the four event kinds round-trip the (written structure, read
+        structure) pair the sentence encodes. That pair IS the ablation, so it has to survive
+        the render/parse contract.
+        """
+        if not (self._V3_ROUTE & set(toks)):
+            return None
+        if "?" in toks:
+            if "each" in toks:
+                return {"type": "query", "family": "s5bind3_state_all",
+                        "targets": tuple(typed["g"]), "step": step}
+            if "belong" in toks:
+                return {"type": "query", "family": "s5bind3_bind",
+                        "target": typed["o"][0], "step": step}
+            return {"type": "query", "family": "s5bind3_state",
+                    "target": typed["g"][0], "step": step}
+        by_b = "belongs" in toks
+        if "swaps" in toks and "agent" not in toks:      # the component's named-operand form
+            return {"type": "event",
+                    "event": Event("swap_ptr_named", (typed["g"][0], typed["g"][1])),
+                    "step": step}
+        if "swaps" in toks:
+            kind = "swap_ptr_by_b" if by_b else "swap_ptr_by_p"
+            ref = typed["o"][0] if by_b else typed["g"][1]
+            return {"type": "event", "event": Event(kind, (typed["g"][0], ref)), "step": step}
+        if "gives" in toks:
+            kind = "give_ptr_by_b" if by_b else "give_ptr_by_p"
+            ref = typed["o"][1] if by_b else typed["g"][0]
+            return {"type": "event", "event": Event(kind, (typed["o"][0], ref)), "step": step}
+        if by_b:                                        # "o2 belongs to g7 at the start."
+            return {"type": "belongs", "object": typed["o"][0], "holder": typed["g"][0],
+                    "step": step, "when": self.AT_START}
+        return {"type": "pointer", "agent": typed["g"][0], "target": typed["g"][1],
+                "step": step, "when": self.AT_START}
+
+    def _parse_s5_bind(self, toks: list[str], typed: dict, step: str | None) -> dict | None:
+        """The five mutual-reference surfaces, or None when the text is not one of them.
+
+        Tried before every other shape because two of the five would otherwise be swallowed
+        by an earlier branch: the referenced give carries ``whose`` (the pointer-map
+        reference clause) and the referenced swap carries ``swaps`` (the plain role swap).
+        Each shape is recognised by a token combination no other statement type in the suite
+        emits — ``at the end`` for the queries, ``swaps``+``holds`` and ``gives``+``whose``
+        for the two events, and a bare ``at the start`` for the two initial-condition lines
+        (checked last, since both events can also carry it).
+        """
+        if "end" in toks:
+            if "each" in toks:
+                return {"type": "query", "family": "s5bind_state_all",
+                        "targets": tuple(typed["g"]), "step": step}
+            if "holder" in toks:
+                return {"type": "query", "family": "s5bind_bind",
+                        "target": typed["o"][0], "step": step}
+            return {"type": "query", "family": "s5bind_state", "target": typed["g"][0], "step": step}
+        now = "point" in toks
+        if "swaps" in toks and "holds" in toks:
+            kind = "swap_roles_now" if now else "swap_roles_start"
+            return {"type": "event", "event": Event(kind, (typed["g"][0], typed["o"][0])),
+                    "step": step}
+        if "gives" in toks and "whose" in toks:
+            kind = "give_role_now" if now else "give_role_start"
+            return {"type": "event", "event": Event(kind, (typed["o"][0], typed["r"][0])),
+                    "step": step}
+        if "start" in toks:
+            if "holds" in toks:
+                return {"type": "holder", "object": typed["o"][0], "holder": typed["g"][0],
+                        "step": step, "when": self.AT_START}
+            if "role" in toks and typed["r"]:
+                return {"type": "role", "agent": typed["g"][0], "role": typed["r"][0],
+                        "step": step, "when": self.AT_START}
+        return None
+
     def parse(self, text: str) -> dict:
         # Normalize attached punctuation back to canonical whitespace tokens before parsing.
         text = self.normalize(text)
         typed, toks = self._typed(text)
         step = typed["s"][0] if typed["s"] else None
+        rec = self._parse_s5_bind_v3(toks, typed, step)
+        if rec is None:
+            rec = self._parse_s5_bind(toks, typed, step)
+        if rec is not None:
+            return rec
         if "?" in toks:
             # state_comm FIRST: the dial query ("what position is g3 's dial ?") contains no
             # where/who/role/e-token and would otherwise fall through to the recall fallback.
@@ -205,6 +434,12 @@ class Renderer:
             return {"type": "query", "family": "recall",
                     "entity": f"the holder of {obj}" if obj else None,
                     "attribute": typed["a"][0] if typed["a"] else None, "object": obj}
+        if "whose" in toks:
+            # a0 swap with a state-REFERENCED operand. The record the sentence encodes is
+            # (named slot, referenced value): the second slot is f^{-1}(value) under the map
+            # as it stands at this event, which no parse of the sentence alone can resolve.
+            return {"type": "event", "event": Event("swap_a0_ref", (typed["g"][0], typed["g"][1])),
+                    "step": step}
         if "swap" in toks or "swaps" in toks:
             return {"type": "event", "event": Event("swap_role", tuple(typed["g"])), "step": step}
         if "cycle" in toks or "cycles" in toks:

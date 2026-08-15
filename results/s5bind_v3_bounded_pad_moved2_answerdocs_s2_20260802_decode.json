@@ -1,0 +1,35 @@
+{
+ "composed@48": {
+  "floor": 0.234375,
+  "runs": {
+   "gdp_hybrid_s2": {
+    "match": 0.1328125,
+    "slot_acc": 0.851806640625,
+    "clears": false,
+    "z": -2.7125307609779656
+   }
+  }
+ },
+ "composed@64": {
+  "floor": 0.2265625,
+  "runs": {
+   "gdp_hybrid_s2": {
+    "match": 0.140625,
+    "slot_acc": 0.78643798828125,
+    "clears": false,
+    "z": -2.322635575230361
+   }
+  }
+ },
+ "composed@96": {
+  "floor": 0.2109375,
+  "runs": {
+   "gdp_hybrid_s2": {
+    "match": 0.1796875,
+    "slot_acc": 0.6485188802083334,
+    "clears": false,
+    "z": -0.8666074279492134
+   }
+  }
+ }
+}

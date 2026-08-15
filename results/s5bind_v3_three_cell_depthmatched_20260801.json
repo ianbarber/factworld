@@ -1,0 +1,5013 @@
+{
+  "cfg": {
+    "k": 6,
+    "archs": [
+      "gdp_hybrid",
+      "fprm",
+      "transformer"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "steps": 25000,
+    "batch": 16,
+    "d_model": 768,
+    "n_layers": 8,
+    "n_heads": 6,
+    "cell_costs": {
+      "state@16": [
+        39,
+        179
+      ],
+      "state@17": [
+        42,
+        187
+      ],
+      "state@23": [
+        56,
+        235
+      ],
+      "state@34": [
+        81,
+        323
+      ],
+      "state@48": [
+        114,
+        435
+      ],
+      "state@80": [
+        189,
+        691
+      ],
+      "state@108": [
+        254,
+        915
+      ],
+      "state@128": [
+        301,
+        1075
+      ],
+      "state@160": [
+        375,
+        1331
+      ],
+      "bind@16": [
+        21,
+        131
+      ],
+      "bind@31": [
+        29,
+        206
+      ],
+      "bind@41": [
+        35,
+        256
+      ],
+      "bind@62": [
+        45,
+        361
+      ],
+      "bind@132": [
+        79,
+        711
+      ],
+      "composed@16": [
+        79,
+        305
+      ],
+      "composed@48": [
+        208,
+        717
+      ],
+      "composed@64": [
+        274,
+        930
+      ],
+      "composed@96": [
+        403,
+        1348
+      ]
+    },
+    "lr": 0.001,
+    "train_n": 80000,
+    "eval_n": 1000,
+    "guided_n": 128,
+    "guided_lengths": [
+      48
+    ],
+    "guided_grid": {
+      "state": [
+        17,
+        80
+      ],
+      "bind": [
+        31,
+        132
+      ],
+      "composed": [
+        48
+      ]
+    },
+    "fmt": "mix",
+    "grid": {
+      "state": [
+        16,
+        17,
+        23,
+        34,
+        48,
+        80,
+        108,
+        128,
+        160
+      ],
+      "bind": [
+        16,
+        31,
+        41,
+        62,
+        132
+      ],
+      "composed": [
+        16,
+        48,
+        64,
+        96
+      ]
+    },
+    "matched_lengths": {
+      "48": {
+        "composed_L": 48,
+        "composed_steps": 208,
+        "composed_tokens": 717,
+        "axis": "tokens",
+        "target_cost": 717,
+        "state": {
+          "L": 80,
+          "cost": 691,
+          "target": 717,
+          "reachable": true,
+          "cap": 768,
+          "solved_candidate": 80
+        },
+        "bind": {
+          "L": 132,
+          "cost": 711,
+          "target": 717,
+          "reachable": true,
+          "cap": 144,
+          "solved_candidate": 132
+        }
+      },
+      "64": {
+        "composed_L": 64,
+        "composed_steps": 274,
+        "composed_tokens": 930,
+        "axis": "tokens",
+        "target_cost": 930,
+        "state": {
+          "L": 108,
+          "cost": 915,
+          "target": 930,
+          "reachable": true,
+          "cap": 1024,
+          "solved_candidate": 108
+        },
+        "bind": {
+          "L": null,
+          "cost": null,
+          "target": 930,
+          "reachable": false,
+          "cap": 144,
+          "solved_candidate": 144
+        }
+      },
+      "96": {
+        "composed_L": 96,
+        "composed_steps": 403,
+        "composed_tokens": 1348,
+        "axis": "tokens",
+        "target_cost": 1348,
+        "state": {
+          "L": 160,
+          "cost": 1331,
+          "target": 1348,
+          "reachable": true,
+          "cap": 1536,
+          "solved_candidate": 160
+        },
+        "bind": {
+          "L": null,
+          "cost": null,
+          "target": 1348,
+          "reachable": false,
+          "cap": 144,
+          "solved_candidate": 144
+        }
+      }
+    },
+    "schedule": [
+      [
+        "stage1_components",
+        0.35,
+        {
+          "state": 0.5,
+          "bind": 0.5
+        }
+      ],
+      [
+        "stage2_add_composed",
+        0.3,
+        {
+          "state": 0.25,
+          "bind": 0.25,
+          "composed": 0.5
+        }
+      ],
+      [
+        "stage3_composition",
+        0.35,
+        {
+          "state": 0.15,
+          "bind": 0.15,
+          "composed": 0.7
+        }
+      ]
+    ],
+    "sizes": {
+      "gdp_hybrid": [
+        101441352,
+        205668864
+      ],
+      "fprm": [
+        10295040,
+        165321216
+      ],
+      "transformer": [
+        76363776,
+        165284352
+      ]
+    },
+    "train_lengths": [
+      16,
+      32,
+      48,
+      64,
+      96
+    ],
+    "ckpt_dir": "results/s5bind_v3_three_cell_depthmatched_20260801_ckpt",
+    "decoded_from": null
+  },
+  "floors": {
+    "bind@16": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 16,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 192,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 11,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d3": 0.0
+      },
+      "charged_steps": 21,
+      "n_swap": 0,
+      "n_give": 16
+    },
+    "bind@31": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 31,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 372,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 19,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d7": 0.0
+      },
+      "charged_steps": 29,
+      "n_swap": 0,
+      "n_give": 31
+    },
+    "bind@41": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 41,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 492,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 25,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d10": 0.0
+      },
+      "charged_steps": 35,
+      "n_swap": 0,
+      "n_give": 41
+    },
+    "bind@62": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 62,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 744,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 35,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d15": 0.0
+      },
+      "charged_steps": 45,
+      "n_swap": 0,
+      "n_give": 62
+    },
+    "bind@132": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 132,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1584,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 69,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d16": 0.0,
+        "give_scan_d32": 0.0
+      },
+      "charged_steps": 79,
+      "n_swap": 0,
+      "n_give": 132
+    },
+    "composed@16": {
+      "cell": "s5_bind_local_v3",
+      "L": 16,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.52125,
+      "floor_disjoint": 0.52125,
+      "floor_on_scored_items": 0.516,
+      "surface_held_out": 0.227,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.002250000000000002,
+      "surface_blocks": [
+        0.2295,
+        0.22725
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 192,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 79,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "one_structure_P": 0.5212,
+        "stated_reference": 0.313,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1628,
+        "last_write_1hop": 0.157,
+        "initial_only": 0.0
+      },
+      "charged_steps": 79,
+      "n_swap": 6,
+      "n_give": 10
+    },
+    "composed@48": {
+      "cell": "s5_bind_local_v3",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.2045,
+      "floor_disjoint": 0.2045,
+      "floor_on_scored_items": 0.201,
+      "surface_held_out": 0.233,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.002250000000000002,
+      "surface_blocks": [
+        0.231,
+        0.23325
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 576,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 208,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.2045,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1975,
+        "last_write_1hop": 0.1718,
+        "stated_reference": 0.1685,
+        "uniform": 0.1667,
+        "initial_only": 0.0
+      },
+      "charged_steps": 208,
+      "n_swap": 17,
+      "n_give": 31
+    },
+    "composed@64": {
+      "cell": "s5_bind_local_v3",
+      "L": 64,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.20925,
+      "floor_disjoint": 0.20925,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.24075,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.0040000000000000036,
+      "surface_blocks": [
+        0.2465,
+        0.2425
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 768,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 274,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.2092,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1945,
+        "uniform": 0.1667,
+        "last_write_1hop": 0.1638,
+        "stated_reference": 0.158,
+        "initial_only": 0.0
+      },
+      "charged_steps": 274,
+      "n_swap": 23,
+      "n_give": 41
+    },
+    "composed@96": {
+      "cell": "s5_bind_local_v3",
+      "L": 96,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "chance": 0.2,
+      "floor": 0.209,
+      "floor_disjoint": 0.201,
+      "floor_on_scored_items": 0.209,
+      "surface_held_out": 0.23475,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.0024999999999999745,
+      "surface_blocks": [
+        0.2325,
+        0.235
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1152,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 403,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_swap_ref": 0.201,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1918,
+        "last_write_1hop": 0.1698,
+        "uniform": 0.1667,
+        "stated_reference": 0.1635,
+        "initial_only": 0.0
+      },
+      "charged_steps": 403,
+      "n_swap": 34,
+      "n_give": 62
+    },
+    "state@16": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 16,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.197,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.009000000000000008,
+      "surface_blocks": [
+        0.20125,
+        0.19225
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 192,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 34,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1867,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.144,
+        "trunc_walk_T1": 0.116,
+        "initial_only": 0.0
+      },
+      "charged_steps": 39,
+      "n_swap": 16,
+      "n_give": 0
+    },
+    "state@17": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 17,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.21125,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.006249999999999978,
+      "surface_blocks": [
+        0.20075,
+        0.207
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 204,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 36,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1708,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.158,
+        "trunc_walk_T1": 0.1075,
+        "initial_only": 0.0
+      },
+      "charged_steps": 42,
+      "n_swap": 17,
+      "n_give": 0
+    },
+    "state@23": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 23,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.1865,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.01175000000000001,
+      "surface_blocks": [
+        0.197,
+        0.18525
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 276,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 48,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1995,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1565,
+        "trunc_walk_T1": 0.1275,
+        "initial_only": 0.0
+      },
+      "charged_steps": 56,
+      "n_swap": 23,
+      "n_give": 0
+    },
+    "state@34": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 34,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.19075,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.017499999999999988,
+      "surface_blocks": [
+        0.20675,
+        0.18925
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 408,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 70,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.194,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.161,
+        "trunc_walk_T1": 0.0953,
+        "trunc_walk_drop33": 0.0953,
+        "initial_only": 0.0
+      },
+      "charged_steps": 81,
+      "n_swap": 34,
+      "n_give": 0
+    },
+    "state@48": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.208,
+      "floor_disjoint": 0.20125,
+      "floor_on_scored_items": 0.208,
+      "surface_held_out": 0.19175,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.008250000000000007,
+      "surface_blocks": [
+        0.19025,
+        0.1985
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 576,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 98,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2013,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.156,
+        "trunc_walk_T1": 0.074,
+        "initial_only": 0.0
+      },
+      "charged_steps": 114,
+      "n_swap": 48,
+      "n_give": 0
+    },
+    "state@80": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 80,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.207,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.207,
+      "surface_held_out": 0.20275,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.00874999999999998,
+      "surface_blocks": [
+        0.2095,
+        0.20075
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 960,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 162,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1978,
+        "last_swap_ref": 0.1668,
+        "uniform": 0.1667,
+        "trunc_walk_T1": 0.065,
+        "initial_only": 0.0
+      },
+      "charged_steps": 189,
+      "n_swap": 80,
+      "n_give": 0
+    },
+    "state@108": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 108,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.2015,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.006249999999999978,
+      "surface_blocks": [
+        0.19825,
+        0.2045
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1296,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 218,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.152,
+        "trunc_walk_T1": 0.068,
+        "initial_only": 0.0
+      },
+      "charged_steps": 254,
+      "n_swap": 108,
+      "n_give": 0
+    },
+    "state@128": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 128,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.216,
+      "floor_disjoint": 0.20425,
+      "floor_on_scored_items": 0.216,
+      "surface_held_out": 0.20175,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.005250000000000005,
+      "surface_blocks": [
+        0.19425,
+        0.1995
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1536,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 258,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2042,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1615,
+        "trunc_walk_T1": 0.065,
+        "initial_only": 0.0
+      },
+      "charged_steps": 301,
+      "n_swap": 128,
+      "n_give": 0
+    },
+    "state@160": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 160,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "chance": 0.2,
+      "floor": 0.2005,
+      "floor_disjoint": 0.2005,
+      "floor_on_scored_items": 0.2,
+      "surface_held_out": 0.193,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.003500000000000003,
+      "surface_blocks": [
+        0.19825,
+        0.19475
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 1920,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 322,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "last_write_1hop": 0.2005,
+        "uniform_non_initial": 0.2,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.159,
+        "trunc_walk_T1": 0.071,
+        "initial_only": 0.0
+      },
+      "charged_steps": 375,
+      "n_swap": 160,
+      "n_give": 0
+    }
+  },
+  "runs": [
+    {
+      "arch": "gdp_hybrid",
+      "seed": 0,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.8964844942092896,
+          "loss_curve": [
+            [
+              500,
+              0.9047223925590515
+            ],
+            [
+              1000,
+              0.23805272579193115
+            ],
+            [
+              1500,
+              0.8854987025260925
+            ],
+            [
+              2000,
+              0.23111149668693542
+            ],
+            [
+              2500,
+              0.9074709415435791
+            ],
+            [
+              3000,
+              0.21580198407173157
+            ],
+            [
+              3500,
+              0.8950197696685791
+            ],
+            [
+              4000,
+              0.21874570846557617
+            ],
+            [
+              4500,
+              0.20985431969165802
+            ],
+            [
+              5000,
+              0.20332369208335876
+            ],
+            [
+              5500,
+              0.8828126192092896
+            ],
+            [
+              6000,
+              0.18827566504478455
+            ],
+            [
+              6500,
+              0.9230958223342896
+            ],
+            [
+              7000,
+              0.00012370944023132324
+            ],
+            [
+              7500,
+              0.8994141817092896
+            ],
+            [
+              8000,
+              0.2058573067188263
+            ],
+            [
+              8500,
+              0.9077149629592896
+            ]
+          ],
+          "train_s": 845,
+          "eval": {
+            "state": {
+              "16": 0.14,
+              "17": 0.155
+            },
+            "bind": {
+              "16": 1.0,
+              "31": 1.0
+            },
+            "composed": {
+              "16": 0.215,
+              "48": 0.2
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.882568359375,
+          "loss_curve": [
+            [
+              500,
+              0.890380859375
+            ],
+            [
+              1000,
+              0.20146934688091278
+            ],
+            [
+              1500,
+              0.37297698855400085
+            ],
+            [
+              2000,
+              0.21614199876785278
+            ],
+            [
+              2500,
+              0.0006014108657836914
+            ],
+            [
+              3000,
+              0.22945816814899445
+            ],
+            [
+              3500,
+              0.18512773513793945
+            ],
+            [
+              4000,
+              0.21607080101966858
+            ],
+            [
+              4500,
+              0.1776573807001114
+            ],
+            [
+              5000,
+              0.0009744763374328613
+            ],
+            [
+              5500,
+              0.00015419721603393555
+            ],
+            [
+              6000,
+              0.21239528059959412
+            ],
+            [
+              6500,
+              0.21516920626163483
+            ],
+            [
+              7000,
+              0.8681640625
+            ],
+            [
+              7500,
+              0.882568359375
+            ]
+          ],
+          "train_s": 875,
+          "eval": {
+            "state": {
+              "16": 0.135,
+              "17": 0.165
+            },
+            "bind": {
+              "16": 1.0,
+              "31": 1.0
+            },
+            "composed": {
+              "16": 0.235,
+              "48": 0.21
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.19409741461277008,
+          "loss_curve": [
+            [
+              500,
+              0.2217230647802353
+            ],
+            [
+              1000,
+              0.2011258751153946
+            ],
+            [
+              1500,
+              0.92236328125
+            ],
+            [
+              2000,
+              0.20253106951713562
+            ],
+            [
+              2500,
+              0.20964010059833527
+            ],
+            [
+              3000,
+              0.17966236174106598
+            ],
+            [
+              3500,
+              0.1954217106103897
+            ],
+            [
+              4000,
+              0.19778144359588623
+            ],
+            [
+              4500,
+              0.1897420734167099
+            ],
+            [
+              5000,
+              0.21604545414447784
+            ],
+            [
+              5500,
+              0.869384765625
+            ],
+            [
+              6000,
+              0.884765625
+            ],
+            [
+              6500,
+              0.899658203125
+            ],
+            [
+              7000,
+              0.88671875
+            ],
+            [
+              7500,
+              0.18350979685783386
+            ],
+            [
+              8000,
+              0.18912078440189362
+            ],
+            [
+              8500,
+              0.9345703125
+            ]
+          ],
+          "train_s": 2797,
+          "eval": {
+            "state": {
+              "16": 0.183,
+              "17": 0.195,
+              "23": 0.213,
+              "34": 0.189,
+              "48": 0.188,
+              "80": 0.197,
+              "108": 0.2,
+              "128": 0.201,
+              "160": 0.205
+            },
+            "bind": {
+              "16": 1.0,
+              "31": 1.0,
+              "41": 1.0,
+              "62": 1.0,
+              "132": 1.0
+            },
+            "composed": {
+              "16": 0.244,
+              "48": 0.213,
+              "64": 0.223,
+              "96": 0.226
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 1.0,
+                "checkpoint_acc": 0.583984375
+              },
+              "80": {
+                "match": 0.9921875,
+                "checkpoint_acc": 0.5915852864583333
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 1.0,
+                "checkpoint_acc": 0.609375
+              },
+              "132": {
+                "match": 0.9921875,
+                "checkpoint_acc": 0.5983072916666666
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.8359375,
+                "checkpoint_acc": 0.8973931206597222
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "gdp_hybrid",
+      "seed": 1,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.23739059269428253,
+          "loss_curve": [
+            [
+              500,
+              0.9691377282142639
+            ],
+            [
+              1000,
+              0.24826619029045105
+            ],
+            [
+              1500,
+              0.8708517551422119
+            ],
+            [
+              2000,
+              0.2604604661464691
+            ],
+            [
+              2500,
+              0.19053718447685242
+            ],
+            [
+              3000,
+              0.18331247568130493
+            ],
+            [
+              3500,
+              0.9060065746307373
+            ],
+            [
+              4000,
+              0.18806244432926178
+            ],
+            [
+              4500,
+              0.24556882679462433
+            ],
+            [
+              5000,
+              0.8830578923225403
+            ],
+            [
+              5500,
+              0.8955082893371582
+            ],
+            [
+              6000,
+              0.19129469990730286
+            ],
+            [
+              6500,
+              0.8872073292732239
+            ],
+            [
+              7000,
+              0.22034457325935364
+            ],
+            [
+              7500,
+              0.9033206701278687
+            ],
+            [
+              8000,
+              0.1808643788099289
+            ],
+            [
+              8500,
+              0.17754384875297546
+            ]
+          ],
+          "train_s": 847,
+          "eval": {
+            "state": {
+              "16": 0.15,
+              "17": 0.175
+            },
+            "bind": {
+              "16": 0.16,
+              "31": 0.205
+            },
+            "composed": {
+              "16": 0.185,
+              "48": 0.185
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.9025880694389343,
+          "loss_curve": [
+            [
+              500,
+              0.2620631456375122
+            ],
+            [
+              1000,
+              0.1983756721019745
+            ],
+            [
+              1500,
+              0.9064942598342896
+            ],
+            [
+              2000,
+              0.18496905267238617
+            ],
+            [
+              2500,
+              0.9479981660842896
+            ],
+            [
+              3000,
+              0.23769818246364594
+            ],
+            [
+              3500,
+              0.9091805219650269
+            ],
+            [
+              4000,
+              0.20376816391944885
+            ],
+            [
+              4500,
+              0.8813482522964478
+            ],
+            [
+              5000,
+              0.9023444652557373
+            ],
+            [
+              5500,
+              0.0005809664726257324
+            ],
+            [
+              6000,
+              0.20958614349365234
+            ],
+            [
+              6500,
+              0.8989260196685791
+            ],
+            [
+              7000,
+              0.20832858979701996
+            ],
+            [
+              7500,
+              0.9025880694389343
+            ]
+          ],
+          "train_s": 874,
+          "eval": {
+            "state": {
+              "16": 0.155,
+              "17": 0.19
+            },
+            "bind": {
+              "16": 1.0,
+              "31": 1.0
+            },
+            "composed": {
+              "16": 0.2,
+              "48": 0.14
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.2028479278087616,
+          "loss_curve": [
+            [
+              500,
+              0.18081113696098328
+            ],
+            [
+              1000,
+              0.19808994233608246
+            ],
+            [
+              1500,
+              0.21347971260547638
+            ],
+            [
+              2000,
+              0.8769534826278687
+            ],
+            [
+              2500,
+              0.9455567002296448
+            ],
+            [
+              3000,
+              0.19981956481933594
+            ],
+            [
+              3500,
+              0.19881469011306763
+            ],
+            [
+              4000,
+              0.19423341751098633
+            ],
+            [
+              4500,
+              0.20748117566108704
+            ],
+            [
+              5000,
+              0.89794921875
+            ],
+            [
+              5500,
+              0.908935546875
+            ],
+            [
+              6000,
+              0.88525390625
+            ],
+            [
+              6500,
+              0.8974609375
+            ],
+            [
+              7000,
+              0.1944907158613205
+            ],
+            [
+              7500,
+              0.20811827480793
+            ],
+            [
+              8000,
+              0.19223971664905548
+            ],
+            [
+              8500,
+              0.1904822736978531
+            ]
+          ],
+          "train_s": 2790,
+          "eval": {
+            "state": {
+              "16": 0.189,
+              "17": 0.213,
+              "23": 0.197,
+              "34": 0.197,
+              "48": 0.182,
+              "80": 0.218,
+              "108": 0.189,
+              "128": 0.216,
+              "160": 0.187
+            },
+            "bind": {
+              "16": 1.0,
+              "31": 0.999,
+              "41": 1.0,
+              "62": 1.0,
+              "132": 1.0
+            },
+            "composed": {
+              "16": 0.32,
+              "48": 0.186,
+              "64": 0.201,
+              "96": 0.193
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.984375,
+                "checkpoint_acc": 0.5774739583333334
+              },
+              "80": {
+                "match": 0.9921875,
+                "checkpoint_acc": 0.5807535807291667
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 1.0,
+                "checkpoint_acc": 0.587890625
+              },
+              "132": {
+                "match": 0.984375,
+                "checkpoint_acc": 0.6028645833333334
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.953125,
+                "checkpoint_acc": 0.9726698133680556
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "gdp_hybrid",
+      "seed": 2,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.9042972326278687,
+          "loss_curve": [
+            [
+              500,
+              0.5003393292427063
+            ],
+            [
+              1000,
+              0.2146245688199997
+            ],
+            [
+              1500,
+              0.8974634408950806
+            ],
+            [
+              2000,
+              0.9584987163543701
+            ],
+            [
+              2500,
+              0.19355086982250214
+            ],
+            [
+              3000,
+              0.24066326022148132
+            ],
+            [
+              3500,
+              0.9101569652557373
+            ],
+            [
+              4000,
+              0.22387409210205078
+            ],
+            [
+              4500,
+              0.20717649161815643
+            ],
+            [
+              5000,
+              0.18467912077903748
+            ],
+            [
+              5500,
+              0.8884279727935791
+            ],
+            [
+              6000,
+              0.24553793668746948
+            ],
+            [
+              6500,
+              0.19063252210617065
+            ],
+            [
+              7000,
+              0.2449350208044052
+            ],
+            [
+              7500,
+              0.24058809876441956
+            ],
+            [
+              8000,
+              0.008380379527807236
+            ],
+            [
+              8500,
+              0.17769280076026917
+            ]
+          ],
+          "train_s": 842,
+          "eval": {
+            "state": {
+              "16": 0.13,
+              "17": 0.165
+            },
+            "bind": {
+              "16": 1.0,
+              "31": 1.0
+            },
+            "composed": {
+              "16": 0.15,
+              "48": 0.135
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.912353515625,
+          "loss_curve": [
+            [
+              500,
+              0.4025574326515198
+            ],
+            [
+              1000,
+              0.26141634583473206
+            ],
+            [
+              1500,
+              0.2600611448287964
+            ],
+            [
+              2000,
+              0.23128604888916016
+            ],
+            [
+              2500,
+              0.21999286115169525
+            ],
+            [
+              3000,
+              0.222910538315773
+            ],
+            [
+              3500,
+              0.9140625
+            ],
+            [
+              4000,
+              0.203190416097641
+            ],
+            [
+              4500,
+              0.902099609375
+            ],
+            [
+              5000,
+              0.20521442592144012
+            ],
+            [
+              5500,
+              0.911376953125
+            ],
+            [
+              6000,
+              0.21233385801315308
+            ],
+            [
+              6500,
+              0.20450322329998016
+            ],
+            [
+              7000,
+              0.89013671875
+            ],
+            [
+              7500,
+              0.912353515625
+            ]
+          ],
+          "train_s": 879,
+          "eval": {
+            "state": {
+              "16": 0.135,
+              "17": 0.165
+            },
+            "bind": {
+              "16": 1.0,
+              "31": 1.0
+            },
+            "composed": {
+              "16": 0.215,
+              "48": 0.195
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.19424667954444885,
+          "loss_curve": [
+            [
+              500,
+              0.902587890625
+            ],
+            [
+              1000,
+              0.904296875
+            ],
+            [
+              1500,
+              0.8950195908546448
+            ],
+            [
+              2000,
+              0.88916015625
+            ],
+            [
+              2500,
+              0.1990865021944046
+            ],
+            [
+              3000,
+              0.20197252929210663
+            ],
+            [
+              3500,
+              0.91455078125
+            ],
+            [
+              4000,
+              0.19625939428806305
+            ],
+            [
+              4500,
+              0.8955078125
+            ],
+            [
+              5000,
+              0.18387442827224731
+            ],
+            [
+              5500,
+              0.906982421875
+            ],
+            [
+              6000,
+              0.21024152636528015
+            ],
+            [
+              6500,
+              0.892333984375
+            ],
+            [
+              7000,
+              0.20256750285625458
+            ],
+            [
+              7500,
+              0.88623046875
+            ],
+            [
+              8000,
+              0.868896484375
+            ],
+            [
+              8500,
+              0.18841779232025146
+            ]
+          ],
+          "train_s": 2793,
+          "eval": {
+            "state": {
+              "16": 0.188,
+              "17": 0.198,
+              "23": 0.215,
+              "34": 0.199,
+              "48": 0.193,
+              "80": 0.204,
+              "108": 0.206,
+              "128": 0.208,
+              "160": 0.205
+            },
+            "bind": {
+              "16": 1.0,
+              "31": 1.0,
+              "41": 1.0,
+              "62": 1.0,
+              "132": 1.0
+            },
+            "composed": {
+              "16": 0.266,
+              "48": 0.218,
+              "64": 0.228,
+              "96": 0.229
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.21875,
+                "checkpoint_acc": 0.5748697916666666
+              },
+              "80": {
+                "match": 0.15625,
+                "checkpoint_acc": 0.5852864583333334
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 1.0,
+                "checkpoint_acc": 0.6022135416666666
+              },
+              "132": {
+                "match": 1.0,
+                "checkpoint_acc": 0.5826822916666666
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.2890625,
+                "checkpoint_acc": 0.9327392578125
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "fprm",
+      "seed": 0,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.9018563032150269,
+          "loss_curve": [
+            [
+              500,
+              0.8670932054519653
+            ],
+            [
+              1000,
+              0.4507485330104828
+            ],
+            [
+              1500,
+              0.8901435136795044
+            ],
+            [
+              2000,
+              0.34691235423088074
+            ],
+            [
+              2500,
+              0.8989430665969849
+            ],
+            [
+              3000,
+              0.23202472925186157
+            ],
+            [
+              3500,
+              0.8747596740722656
+            ],
+            [
+              4000,
+              0.24864447116851807
+            ],
+            [
+              4500,
+              0.23182547092437744
+            ],
+            [
+              5000,
+              0.23236863315105438
+            ],
+            [
+              5500,
+              0.8886727094650269
+            ],
+            [
+              6000,
+              0.2060345560312271
+            ],
+            [
+              6500,
+              0.9055185317993164
+            ],
+            [
+              7000,
+              0.9013685584068298
+            ],
+            [
+              7500,
+              0.8979499340057373
+            ],
+            [
+              8000,
+              0.2221270501613617
+            ],
+            [
+              8500,
+              0.8955085277557373
+            ]
+          ],
+          "train_s": 509,
+          "eval": {
+            "state": {
+              "16": 0.2,
+              "17": 0.175
+            },
+            "bind": {
+              "16": 0.24,
+              "31": 0.14
+            },
+            "composed": {
+              "16": 0.14,
+              "48": 0.16
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.8935549259185791,
+          "loss_curve": [
+            [
+              500,
+              0.901614785194397
+            ],
+            [
+              1000,
+              0.20210884511470795
+            ],
+            [
+              1500,
+              0.8898956775665283
+            ],
+            [
+              2000,
+              0.2630262076854706
+            ],
+            [
+              2500,
+              0.9091796875
+            ],
+            [
+              3000,
+              0.26574739813804626
+            ],
+            [
+              3500,
+              0.20218132436275482
+            ],
+            [
+              4000,
+              0.23901966214179993
+            ],
+            [
+              4500,
+              0.1844395399093628
+            ],
+            [
+              5000,
+              0.8771989941596985
+            ],
+            [
+              5500,
+              0.9016135334968567
+            ],
+            [
+              6000,
+              0.24815164506435394
+            ],
+            [
+              6500,
+              0.24111539125442505
+            ],
+            [
+              7000,
+              0.8842777013778687
+            ],
+            [
+              7500,
+              0.8935549259185791
+            ]
+          ],
+          "train_s": 547,
+          "eval": {
+            "state": {
+              "16": 0.15,
+              "17": 0.19
+            },
+            "bind": {
+              "16": 0.29,
+              "31": 0.175
+            },
+            "composed": {
+              "16": 0.145,
+              "48": 0.175
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.20653888583183289,
+          "loss_curve": [
+            [
+              500,
+              0.25915828347206116
+            ],
+            [
+              1000,
+              0.22591541707515717
+            ],
+            [
+              1500,
+              0.95751953125
+            ],
+            [
+              2000,
+              0.23040202260017395
+            ],
+            [
+              2500,
+              0.2530815005302429
+            ],
+            [
+              3000,
+              0.18656544387340546
+            ],
+            [
+              3500,
+              0.22349803149700165
+            ],
+            [
+              4000,
+              0.2187914252281189
+            ],
+            [
+              4500,
+              0.20598778128623962
+            ],
+            [
+              5000,
+              0.24046087265014648
+            ],
+            [
+              5500,
+              0.856689453125
+            ],
+            [
+              6000,
+              0.901123046875
+            ],
+            [
+              6500,
+              0.89794921875
+            ],
+            [
+              7000,
+              0.902587890625
+            ],
+            [
+              7500,
+              0.18688304722309113
+            ],
+            [
+              8000,
+              0.20096249878406525
+            ],
+            [
+              8500,
+              0.906005859375
+            ]
+          ],
+          "train_s": 1865,
+          "eval": {
+            "state": {
+              "16": 0.172,
+              "17": 0.154,
+              "23": 0.173,
+              "34": 0.172,
+              "48": 0.164,
+              "80": 0.154,
+              "108": 0.144,
+              "128": 0.179,
+              "160": 0.202
+            },
+            "bind": {
+              "16": 0.321,
+              "31": 0.176,
+              "41": 0.181,
+              "62": 0.201,
+              "132": 0.193
+            },
+            "composed": {
+              "16": 0.156,
+              "48": 0.157,
+              "64": 0.168,
+              "96": 0.196
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.1875,
+                "checkpoint_acc": 0.4876302083333333
+              },
+              "80": {
+                "match": 0.15625,
+                "checkpoint_acc": 0.4993896484375
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.1875,
+                "checkpoint_acc": 0.6189096102150538
+              },
+              "132": {
+                "match": 0.140625,
+                "checkpoint_acc": 0.5933751578282829
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.1328125,
+                "checkpoint_acc": 0.8344048394097222
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "fprm",
+      "seed": 1,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.2648387551307678,
+          "loss_curve": [
+            [
+              500,
+              1.761845588684082
+            ],
+            [
+              1000,
+              0.393831729888916
+            ],
+            [
+              1500,
+              0.8566997051239014
+            ],
+            [
+              2000,
+              0.2808305025100708
+            ],
+            [
+              2500,
+              0.41163912415504456
+            ],
+            [
+              3000,
+              0.19818656146526337
+            ],
+            [
+              3500,
+              0.9055197238922119
+            ],
+            [
+              4000,
+              0.40553340315818787
+            ],
+            [
+              4500,
+              0.271560937166214
+            ],
+            [
+              5000,
+              0.8833014965057373
+            ],
+            [
+              5500,
+              0.8933131098747253
+            ],
+            [
+              6000,
+              0.20949649810791016
+            ],
+            [
+              6500,
+              0.8847661018371582
+            ],
+            [
+              7000,
+              0.23285557329654694
+            ],
+            [
+              7500,
+              0.9013674259185791
+            ],
+            [
+              8000,
+              0.1943749487400055
+            ],
+            [
+              8500,
+              0.18935835361480713
+            ]
+          ],
+          "train_s": 505,
+          "eval": {
+            "state": {
+              "16": 0.185,
+              "17": 0.175
+            },
+            "bind": {
+              "16": 0.165,
+              "31": 0.2
+            },
+            "composed": {
+              "16": 0.14,
+              "48": 0.15
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.9001465439796448,
+          "loss_curve": [
+            [
+              500,
+              0.3852541744709015
+            ],
+            [
+              1000,
+              0.19515670835971832
+            ],
+            [
+              1500,
+              0.9067444801330566
+            ],
+            [
+              2000,
+              0.20034822821617126
+            ],
+            [
+              2500,
+              0.9399430751800537
+            ],
+            [
+              3000,
+              0.23863837122917175
+            ],
+            [
+              3500,
+              0.9157717227935791
+            ],
+            [
+              4000,
+              0.2365928739309311
+            ],
+            [
+              4500,
+              0.8889161348342896
+            ],
+            [
+              5000,
+              0.9018555879592896
+            ],
+            [
+              5500,
+              0.8920899629592896
+            ],
+            [
+              6000,
+              0.2421375811100006
+            ],
+            [
+              6500,
+              0.8981934785842896
+            ],
+            [
+              7000,
+              0.2212897539138794
+            ],
+            [
+              7500,
+              0.9001465439796448
+            ]
+          ],
+          "train_s": 545,
+          "eval": {
+            "state": {
+              "16": 0.16,
+              "17": 0.145
+            },
+            "bind": {
+              "16": 0.165,
+              "31": 0.225
+            },
+            "composed": {
+              "16": 0.17,
+              "48": 0.145
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.21503649652004242,
+          "loss_curve": [
+            [
+              500,
+              0.265438437461853
+            ],
+            [
+              1000,
+              0.22042493522167206
+            ],
+            [
+              1500,
+              0.22764873504638672
+            ],
+            [
+              2000,
+              0.8913576602935791
+            ],
+            [
+              2500,
+              0.9223637580871582
+            ],
+            [
+              3000,
+              0.22330893576145172
+            ],
+            [
+              3500,
+              0.22145967185497284
+            ],
+            [
+              4000,
+              0.2150813788175583
+            ],
+            [
+              4500,
+              0.23384638130664825
+            ],
+            [
+              5000,
+              0.8818359971046448
+            ],
+            [
+              5500,
+              0.91552734375
+            ],
+            [
+              6000,
+              0.8854981064796448
+            ],
+            [
+              6500,
+              0.88916015625
+            ],
+            [
+              7000,
+              0.20551562309265137
+            ],
+            [
+              7500,
+              0.2208327353000641
+            ],
+            [
+              8000,
+              0.20230869948863983
+            ],
+            [
+              8500,
+              0.20042383670806885
+            ]
+          ],
+          "train_s": 1864,
+          "eval": {
+            "state": {
+              "16": 0.166,
+              "17": 0.166,
+              "23": 0.161,
+              "34": 0.174,
+              "48": 0.156,
+              "80": 0.168,
+              "108": 0.158,
+              "128": 0.162,
+              "160": 0.192
+            },
+            "bind": {
+              "16": 0.162,
+              "31": 0.188,
+              "41": 0.171,
+              "62": 0.168,
+              "132": 0.177
+            },
+            "composed": {
+              "16": 0.191,
+              "48": 0.171,
+              "64": 0.171,
+              "96": 0.152
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.1484375,
+                "checkpoint_acc": 0.4270833333333333
+              },
+              "80": {
+                "match": 0.1796875,
+                "checkpoint_acc": 0.4231770833333333
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.1484375,
+                "checkpoint_acc": 0.6067708333333334
+              },
+              "132": {
+                "match": 0.21875,
+                "checkpoint_acc": 0.6053947679924242
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.203125,
+                "checkpoint_acc": 0.8380805121527778
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "fprm",
+      "seed": 2,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.8989263772964478,
+          "loss_curve": [
+            [
+              500,
+              0.8075143694877625
+            ],
+            [
+              1000,
+              0.44807928800582886
+            ],
+            [
+              1500,
+              0.8984746932983398
+            ],
+            [
+              2000,
+              0.9389818906784058
+            ],
+            [
+              2500,
+              0.23879948258399963
+            ],
+            [
+              3000,
+              0.2662568688392639
+            ],
+            [
+              3500,
+              0.9157768487930298
+            ],
+            [
+              4000,
+              0.2316354513168335
+            ],
+            [
+              4500,
+              0.25339794158935547
+            ],
+            [
+              5000,
+              0.19915618002414703
+            ],
+            [
+              5500,
+              0.8891611099243164
+            ],
+            [
+              6000,
+              0.2701548933982849
+            ],
+            [
+              6500,
+              0.20784640312194824
+            ],
+            [
+              7000,
+              0.26420271396636963
+            ],
+            [
+              7500,
+              0.8918465375900269
+            ],
+            [
+              8000,
+              0.8935555219650269
+            ],
+            [
+              8500,
+              0.18924640119075775
+            ]
+          ],
+          "train_s": 504,
+          "eval": {
+            "state": {
+              "16": 0.185,
+              "17": 0.175
+            },
+            "bind": {
+              "16": 0.2,
+              "31": 0.145
+            },
+            "composed": {
+              "16": 0.14,
+              "48": 0.17
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.8972171545028687,
+          "loss_curve": [
+            [
+              500,
+              0.4067334532737732
+            ],
+            [
+              1000,
+              0.394445538520813
+            ],
+            [
+              1500,
+              0.41062164306640625
+            ],
+            [
+              2000,
+              0.25222206115722656
+            ],
+            [
+              2500,
+              0.2739720344543457
+            ],
+            [
+              3000,
+              0.2345285564661026
+            ],
+            [
+              3500,
+              0.9084482192993164
+            ],
+            [
+              4000,
+              0.2683594226837158
+            ],
+            [
+              4500,
+              0.8950205445289612
+            ],
+            [
+              5000,
+              0.26748237013816833
+            ],
+            [
+              5500,
+              0.8925784826278687
+            ],
+            [
+              6000,
+              0.2854917347431183
+            ],
+            [
+              6500,
+              0.2677415609359741
+            ],
+            [
+              7000,
+              0.8940433263778687
+            ],
+            [
+              7500,
+              0.8972171545028687
+            ]
+          ],
+          "train_s": 548,
+          "eval": {
+            "state": {
+              "16": 0.185,
+              "17": 0.145
+            },
+            "bind": {
+              "16": 0.195,
+              "31": 0.16
+            },
+            "composed": {
+              "16": 0.175,
+              "48": 0.145
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.2159484326839447,
+          "loss_curve": [
+            [
+              500,
+              0.8957520723342896
+            ],
+            [
+              1000,
+              0.85595703125
+            ],
+            [
+              1500,
+              0.904052734375
+            ],
+            [
+              2000,
+              0.8830568194389343
+            ],
+            [
+              2500,
+              0.25537779927253723
+            ],
+            [
+              3000,
+              0.25751933455467224
+            ],
+            [
+              3500,
+              0.8928225636482239
+            ],
+            [
+              4000,
+              0.24152441322803497
+            ],
+            [
+              4500,
+              0.8957520723342896
+            ],
+            [
+              5000,
+              0.20670710504055023
+            ],
+            [
+              5500,
+              0.9013671875
+            ],
+            [
+              6000,
+              0.2505236268043518
+            ],
+            [
+              6500,
+              0.8974609375
+            ],
+            [
+              7000,
+              0.2344440519809723
+            ],
+            [
+              7500,
+              0.8984375
+            ],
+            [
+              8000,
+              0.893798828125
+            ],
+            [
+              8500,
+              0.20401817560195923
+            ]
+          ],
+          "train_s": 1862,
+          "eval": {
+            "state": {
+              "16": 0.173,
+              "17": 0.177,
+              "23": 0.19,
+              "34": 0.17,
+              "48": 0.175,
+              "80": 0.178,
+              "108": 0.184,
+              "128": 0.183,
+              "160": 0.175
+            },
+            "bind": {
+              "16": 0.169,
+              "31": 0.157,
+              "41": 0.173,
+              "62": 0.171,
+              "132": 0.18
+            },
+            "composed": {
+              "16": 0.198,
+              "48": 0.177,
+              "64": 0.195,
+              "96": 0.187
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.1796875,
+                "checkpoint_acc": 0.23567708333333334
+              },
+              "80": {
+                "match": 0.2109375,
+                "checkpoint_acc": 0.2127685546875
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.1484375,
+                "checkpoint_acc": 0.5510542674731183
+              },
+              "132": {
+                "match": 0.21875,
+                "checkpoint_acc": 0.5868450126262627
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.125,
+                "checkpoint_acc": 0.2568223741319444
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "transformer",
+      "seed": 0,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.8996589183807373,
+          "loss_curve": [
+            [
+              500,
+              0.9166382551193237
+            ],
+            [
+              1000,
+              0.6487666964530945
+            ],
+            [
+              1500,
+              0.903091311454773
+            ],
+            [
+              2000,
+              0.546360194683075
+            ],
+            [
+              2500,
+              0.8966771364212036
+            ],
+            [
+              3000,
+              0.4983188807964325
+            ],
+            [
+              3500,
+              0.8706056475639343
+            ],
+            [
+              4000,
+              0.44036734104156494
+            ],
+            [
+              4500,
+              0.43161872029304504
+            ],
+            [
+              5000,
+              0.39163607358932495
+            ],
+            [
+              5500,
+              0.8830568790435791
+            ],
+            [
+              6000,
+              0.3275635242462158
+            ],
+            [
+              6500,
+              0.9072273373603821
+            ],
+            [
+              7000,
+              0.9016129374504089
+            ],
+            [
+              7500,
+              0.9013677835464478
+            ],
+            [
+              8000,
+              0.32478415966033936
+            ],
+            [
+              8500,
+              0.8957524299621582
+            ]
+          ],
+          "train_s": 512,
+          "eval": {
+            "state": {
+              "16": 0.17,
+              "17": 0.16
+            },
+            "bind": {
+              "16": 0.145,
+              "31": 0.2
+            },
+            "composed": {
+              "16": 0.135,
+              "48": 0.185
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.89306640625,
+          "loss_curve": [
+            [
+              500,
+              0.9013678431510925
+            ],
+            [
+              1000,
+              0.4046289026737213
+            ],
+            [
+              1500,
+              0.9130929708480835
+            ],
+            [
+              2000,
+              0.7894189953804016
+            ],
+            [
+              2500,
+              0.9306904077529907
+            ],
+            [
+              3000,
+              0.41425690054893494
+            ],
+            [
+              3500,
+              0.36790183186531067
+            ],
+            [
+              4000,
+              0.3730517327785492
+            ],
+            [
+              4500,
+              0.34656134247779846
+            ],
+            [
+              5000,
+              0.8950197696685791
+            ],
+            [
+              5500,
+              0.8994140625
+            ],
+            [
+              6000,
+              0.36692407727241516
+            ],
+            [
+              6500,
+              0.31162241101264954
+            ],
+            [
+              7000,
+              0.896728515625
+            ],
+            [
+              7500,
+              0.89306640625
+            ]
+          ],
+          "train_s": 540,
+          "eval": {
+            "state": {
+              "16": 0.205,
+              "17": 0.165
+            },
+            "bind": {
+              "16": 0.175,
+              "31": 0.19
+            },
+            "composed": {
+              "16": 0.155,
+              "48": 0.19
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.3284805417060852,
+          "loss_curve": [
+            [
+              500,
+              0.36610540747642517
+            ],
+            [
+              1000,
+              0.4332885444164276
+            ],
+            [
+              1500,
+              0.9580080509185791
+            ],
+            [
+              2000,
+              0.3992617726325989
+            ],
+            [
+              2500,
+              0.3894276022911072
+            ],
+            [
+              3000,
+              1.1327157020568848
+            ],
+            [
+              3500,
+              0.3582509756088257
+            ],
+            [
+              4000,
+              0.341940313577652
+            ],
+            [
+              4500,
+              0.3314746916294098
+            ],
+            [
+              5000,
+              0.4255225658416748
+            ],
+            [
+              5500,
+              0.8583984375
+            ],
+            [
+              6000,
+              0.89794921875
+            ],
+            [
+              6500,
+              0.897216796875
+            ],
+            [
+              7000,
+              0.905029296875
+            ],
+            [
+              7500,
+              0.3056824803352356
+            ],
+            [
+              8000,
+              0.32186946272850037
+            ],
+            [
+              8500,
+              0.90380859375
+            ]
+          ],
+          "train_s": 1775,
+          "eval": {
+            "state": {
+              "16": 0.172,
+              "17": 0.154,
+              "23": 0.175,
+              "34": 0.159,
+              "48": 0.19,
+              "80": 0.166,
+              "108": 0.145,
+              "128": 0.183,
+              "160": 0.172
+            },
+            "bind": {
+              "16": 0.153,
+              "31": 0.154,
+              "41": 0.154,
+              "62": 0.184,
+              "132": 0.153
+            },
+            "composed": {
+              "16": 0.16,
+              "48": 0.16,
+              "64": 0.162,
+              "96": 0.195
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.171875,
+                "checkpoint_acc": 0.1685814950980392
+              },
+              "80": {
+                "match": 0.1640625,
+                "checkpoint_acc": 0.1670654296875
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.2109375,
+                "checkpoint_acc": 0.33749159946236557
+              },
+              "132": {
+                "match": 0.203125,
+                "checkpoint_acc": 0.35538983585858586
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.125,
+                "checkpoint_acc": 0.16029188368055555
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "transformer",
+      "seed": 1,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.3974122405052185,
+          "loss_curve": [
+            [
+              500,
+              0.9891628623008728
+            ],
+            [
+              1000,
+              0.5984330773353577
+            ],
+            [
+              1500,
+              0.8708667755126953
+            ],
+            [
+              2000,
+              0.47470346093177795
+            ],
+            [
+              2500,
+              0.5042077302932739
+            ],
+            [
+              3000,
+              0.46639102697372437
+            ],
+            [
+              3500,
+              0.9072270393371582
+            ],
+            [
+              4000,
+              0.43442249298095703
+            ],
+            [
+              4500,
+              0.5072346329689026
+            ],
+            [
+              5000,
+              0.8835460543632507
+            ],
+            [
+              5500,
+              0.8952641487121582
+            ],
+            [
+              6000,
+              0.3801884651184082
+            ],
+            [
+              6500,
+              0.8886719942092896
+            ],
+            [
+              7000,
+              0.3848612904548645
+            ],
+            [
+              7500,
+              0.9025880694389343
+            ],
+            [
+              8000,
+              0.3323771357536316
+            ],
+            [
+              8500,
+              0.32475852966308594
+            ]
+          ],
+          "train_s": 513,
+          "eval": {
+            "state": {
+              "16": 0.185,
+              "17": 0.175
+            },
+            "bind": {
+              "16": 0.165,
+              "31": 0.2
+            },
+            "composed": {
+              "16": 0.145,
+              "48": 0.155
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.901611328125,
+          "loss_curve": [
+            [
+              500,
+              0.9815401434898376
+            ],
+            [
+              1000,
+              1.0130064487457275
+            ],
+            [
+              1500,
+              0.912842333316803
+            ],
+            [
+              2000,
+              0.4852965772151947
+            ],
+            [
+              2500,
+              0.9694828987121582
+            ],
+            [
+              3000,
+              0.4273526072502136
+            ],
+            [
+              3500,
+              0.916015625
+            ],
+            [
+              4000,
+              0.4519856572151184
+            ],
+            [
+              4500,
+              0.8974616527557373
+            ],
+            [
+              5000,
+              0.898652195930481
+            ],
+            [
+              5500,
+              0.88525390625
+            ],
+            [
+              6000,
+              0.43276065587997437
+            ],
+            [
+              6500,
+              0.9006348848342896
+            ],
+            [
+              7000,
+              0.4158123731613159
+            ],
+            [
+              7500,
+              0.901611328125
+            ]
+          ],
+          "train_s": 754,
+          "eval": {
+            "state": {
+              "16": 0.145,
+              "17": 0.2
+            },
+            "bind": {
+              "16": 0.165,
+              "31": 0.22
+            },
+            "composed": {
+              "16": 0.175,
+              "48": 0.15
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.38397741317749023,
+          "loss_curve": [
+            [
+              500,
+              0.3800622224807739
+            ],
+            [
+              1000,
+              0.44971051812171936
+            ],
+            [
+              1500,
+              0.5027713179588318
+            ],
+            [
+              2000,
+              1.0146490335464478
+            ],
+            [
+              2500,
+              0.9155274629592896
+            ],
+            [
+              3000,
+              0.40227147936820984
+            ],
+            [
+              3500,
+              0.4086061418056488
+            ],
+            [
+              4000,
+              0.4006599187850952
+            ],
+            [
+              4500,
+              0.41748949885368347
+            ],
+            [
+              5000,
+              0.894775390625
+            ],
+            [
+              5500,
+              0.916259765625
+            ],
+            [
+              6000,
+              0.8791505098342896
+            ],
+            [
+              6500,
+              0.8847657442092896
+            ],
+            [
+              7000,
+              0.3718451261520386
+            ],
+            [
+              7500,
+              0.4663524031639099
+            ],
+            [
+              8000,
+              0.362874299287796
+            ],
+            [
+              8500,
+              0.36237940192222595
+            ]
+          ],
+          "train_s": 2166,
+          "eval": {
+            "state": {
+              "16": 0.161,
+              "17": 0.147,
+              "23": 0.152,
+              "34": 0.166,
+              "48": 0.161,
+              "80": 0.174,
+              "108": 0.176,
+              "128": 0.149,
+              "160": 0.161
+            },
+            "bind": {
+              "16": 0.166,
+              "31": 0.19,
+              "41": 0.172,
+              "62": 0.163,
+              "132": 0.183
+            },
+            "composed": {
+              "16": 0.174,
+              "48": 0.15,
+              "64": 0.162,
+              "96": 0.152
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.1328125,
+                "checkpoint_acc": 0.17417279411764705
+              },
+              "80": {
+                "match": 0.125,
+                "checkpoint_acc": 0.17477213541666667
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.1796875,
+                "checkpoint_acc": 0.19516549059139784
+              },
+              "132": {
+                "match": 0.125,
+                "checkpoint_acc": 0.18543343592171718
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.15625,
+                "checkpoint_acc": 0.1755642361111111
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "transformer",
+      "seed": 2,
+      "stages": [
+        {
+          "stage": "stage1_components",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.5,
+            "bind": 0.5
+          },
+          "final_loss": 0.8974611759185791,
+          "loss_curve": [
+            [
+              500,
+              0.5871160626411438
+            ],
+            [
+              1000,
+              0.5593998432159424
+            ],
+            [
+              1500,
+              0.8914159536361694
+            ],
+            [
+              2000,
+              0.9488928318023682
+            ],
+            [
+              2500,
+              1.5573930740356445
+            ],
+            [
+              3000,
+              0.409900426864624
+            ],
+            [
+              3500,
+              0.9133335947990417
+            ],
+            [
+              4000,
+              0.38289061188697815
+            ],
+            [
+              4500,
+              0.4043259918689728
+            ],
+            [
+              5000,
+              0.3200080394744873
+            ],
+            [
+              5500,
+              0.8901370167732239
+            ],
+            [
+              6000,
+              0.3299877345561981
+            ],
+            [
+              6500,
+              0.2814846634864807
+            ],
+            [
+              7000,
+              0.29588058590888977
+            ],
+            [
+              7500,
+              0.8913580179214478
+            ],
+            [
+              8000,
+              0.8930668830871582
+            ],
+            [
+              8500,
+              0.2449594885110855
+            ]
+          ],
+          "train_s": 510,
+          "eval": {
+            "state": {
+              "16": 0.185,
+              "17": 0.175
+            },
+            "bind": {
+              "16": 0.1,
+              "31": 0.15
+            },
+            "composed": {
+              "16": 0.155,
+              "48": 0.2
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage2_add_composed",
+          "steps": 7500,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.25,
+            "bind": 0.25,
+            "composed": 0.5
+          },
+          "final_loss": 0.893310546875,
+          "loss_curve": [
+            [
+              500,
+              0.9358039498329163
+            ],
+            [
+              1000,
+              0.7967292070388794
+            ],
+            [
+              1500,
+              0.8141814470291138
+            ],
+            [
+              2000,
+              0.35868340730667114
+            ],
+            [
+              2500,
+              0.3825584948062897
+            ],
+            [
+              3000,
+              0.3372463285923004
+            ],
+            [
+              3500,
+              0.9292224645614624
+            ],
+            [
+              4000,
+              0.3769433796405792
+            ],
+            [
+              4500,
+              0.90234375
+            ],
+            [
+              5000,
+              0.32133948802948
+            ],
+            [
+              5500,
+              0.8857421875
+            ],
+            [
+              6000,
+              0.3443555533885956
+            ],
+            [
+              6500,
+              0.31966355443000793
+            ],
+            [
+              7000,
+              0.895263671875
+            ],
+            [
+              7500,
+              0.893310546875
+            ]
+          ],
+          "train_s": 541,
+          "eval": {
+            "state": {
+              "16": 0.195,
+              "17": 0.2
+            },
+            "bind": {
+              "16": 0.18,
+              "31": 0.125
+            },
+            "composed": {
+              "16": 0.18,
+              "48": 0.18
+            }
+          },
+          "guided": {}
+        },
+        {
+          "stage": "stage3_composition",
+          "steps": 8750,
+          "n_docs": 160000,
+          "mix": {
+            "state": 0.15,
+            "bind": 0.15,
+            "composed": 0.7
+          },
+          "final_loss": 0.2877711057662964,
+          "loss_curve": [
+            [
+              500,
+              0.9045412540435791
+            ],
+            [
+              1000,
+              0.88525390625
+            ],
+            [
+              1500,
+              3.130861282348633
+            ],
+            [
+              2000,
+              0.8806154727935791
+            ],
+            [
+              2500,
+              0.30953627824783325
+            ],
+            [
+              3000,
+              0.31548771262168884
+            ],
+            [
+              3500,
+              0.9003908634185791
+            ],
+            [
+              4000,
+              0.2995372414588928
+            ],
+            [
+              4500,
+              0.8959963917732239
+            ],
+            [
+              5000,
+              0.28932902216911316
+            ],
+            [
+              5500,
+              0.906982421875
+            ],
+            [
+              6000,
+              0.3283773958683014
+            ],
+            [
+              6500,
+              0.895263671875
+            ],
+            [
+              7000,
+              0.316933274269104
+            ],
+            [
+              7500,
+              0.9018557071685791
+            ],
+            [
+              8000,
+              0.889892578125
+            ],
+            [
+              8500,
+              0.2695598900318146
+            ]
+          ],
+          "train_s": 1782,
+          "eval": {
+            "state": {
+              "16": 0.173,
+              "17": 0.176,
+              "23": 0.181,
+              "34": 0.159,
+              "48": 0.163,
+              "80": 0.177,
+              "108": 0.158,
+              "128": 0.186,
+              "160": 0.146
+            },
+            "bind": {
+              "16": 0.144,
+              "31": 0.159,
+              "41": 0.158,
+              "62": 0.162,
+              "132": 0.166
+            },
+            "composed": {
+              "16": 0.186,
+              "48": 0.172,
+              "64": 0.176,
+              "96": 0.168
+            }
+          },
+          "guided": {
+            "state": {
+              "17": {
+                "match": 0.2109375,
+                "checkpoint_acc": 0.1634497549019608
+              },
+              "80": {
+                "match": 0.1796875,
+                "checkpoint_acc": 0.18170572916666666
+              }
+            },
+            "bind": {
+              "31": {
+                "match": 0.140625,
+                "checkpoint_acc": 0.5450898857526881
+              },
+              "132": {
+                "match": 0.1796875,
+                "checkpoint_acc": 0.5704703282828283
+              }
+            },
+            "composed": {
+              "48": {
+                "match": 0.1328125,
+                "checkpoint_acc": 0.19041612413194445
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "verdicts": {
+    "fprm": {
+      "plain": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@16': 0, 'bind@16': 0} (0/2 seeds at best, on state@16). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@16",
+          "per_pair": {
+            "state@16": 0,
+            "bind@16": 0
+          },
+          "required": [
+            "state@16",
+            "bind@16"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": true,
+        "composed_pad_reach": null,
+        "lengths_read": {
+          "state": [
+            17,
+            23,
+            34
+          ],
+          "bind": [
+            31,
+            41,
+            62
+          ],
+          "composed": [
+            48,
+            64,
+            96
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0,
+            "23": 0,
+            "34": 0
+          },
+          "bind": {
+            "31": 0,
+            "41": 0,
+            "62": 0
+          },
+          "composed": {
+            "48": 0,
+            "64": 0,
+            "96": 0
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "16": 0.172,
+              "17": 0.154,
+              "23": 0.173,
+              "34": 0.172,
+              "48": 0.164,
+              "80": 0.154,
+              "108": 0.144,
+              "128": 0.179,
+              "160": 0.202
+            },
+            "1": {
+              "16": 0.166,
+              "17": 0.166,
+              "23": 0.161,
+              "34": 0.174,
+              "48": 0.156,
+              "80": 0.168,
+              "108": 0.158,
+              "128": 0.162,
+              "160": 0.192
+            },
+            "2": {
+              "16": 0.173,
+              "17": 0.177,
+              "23": 0.19,
+              "34": 0.17,
+              "48": 0.175,
+              "80": 0.178,
+              "108": 0.184,
+              "128": 0.183,
+              "160": 0.175
+            }
+          },
+          "bind": {
+            "0": {
+              "16": 0.321,
+              "31": 0.176,
+              "41": 0.181,
+              "62": 0.201,
+              "132": 0.193
+            },
+            "1": {
+              "16": 0.162,
+              "31": 0.188,
+              "41": 0.171,
+              "62": 0.168,
+              "132": 0.177
+            },
+            "2": {
+              "16": 0.169,
+              "31": 0.157,
+              "41": 0.173,
+              "62": 0.171,
+              "132": 0.18
+            }
+          },
+          "composed": {
+            "0": {
+              "16": 0.156,
+              "48": 0.157,
+              "64": 0.168,
+              "96": 0.196
+            },
+            "1": {
+              "16": 0.191,
+              "48": 0.171,
+              "64": 0.171,
+              "96": 0.152
+            },
+            "2": {
+              "16": 0.198,
+              "48": 0.177,
+              "64": 0.195,
+              "96": 0.187
+            }
+          }
+        }
+      },
+      "guided": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@17': 0, 'bind@31': 0} (0/2 seeds at best, on state@17). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@17",
+          "per_pair": {
+            "state@17": 0,
+            "bind@31": 0
+          },
+          "required": [
+            "state@17",
+            "bind@31"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
+        "lengths_read": {
+          "state": [
+            17
+          ],
+          "bind": [
+            31
+          ],
+          "composed": [
+            48
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0
+          },
+          "bind": {
+            "31": 0
+          },
+          "composed": {
+            "48": null
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "17": 0.1875,
+              "80": 0.15625
+            },
+            "1": {
+              "17": 0.1484375,
+              "80": 0.1796875
+            },
+            "2": {
+              "17": 0.1796875,
+              "80": 0.2109375
+            }
+          },
+          "bind": {
+            "0": {
+              "31": 0.1875,
+              "132": 0.140625
+            },
+            "1": {
+              "31": 0.1484375,
+              "132": 0.21875
+            },
+            "2": {
+              "31": 0.1484375,
+              "132": 0.21875
+            }
+          },
+          "composed": {
+            "0": {
+              "48": 0.1328125
+            },
+            "1": {
+              "48": 0.203125
+            },
+            "2": {
+              "48": 0.125
+            }
+          }
+        }
+      }
+    },
+    "gdp_hybrid": {
+      "plain": {
+        "verdict": "V4_COMPONENT_UNREADABLE",
+        "why": "component(s) ['state'] do not form at their own registered lengths {'state': {17: 0, 23: 0, 34: 0}}, while the other one does. A composed failure would be explained by the component that failed, so no composition claim is available \u2014 and the dissociation between the components is the result.",
+        "control": {
+          "seeds": 3,
+          "cleared_on": "bind@16",
+          "per_pair": {
+            "state@16": 0,
+            "bind@16": 3
+          },
+          "required": [
+            "state@16",
+            "bind@16"
+          ]
+        },
+        "control_seeds": 3,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": true,
+        "composed_pad_reach": null,
+        "lengths_read": {
+          "state": [
+            17,
+            23,
+            34
+          ],
+          "bind": [
+            31,
+            41,
+            62
+          ],
+          "composed": [
+            48,
+            64,
+            96
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": true,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0,
+            "23": 0,
+            "34": 0
+          },
+          "bind": {
+            "31": 3,
+            "41": 3,
+            "62": 3
+          },
+          "composed": {
+            "48": 0,
+            "64": 0,
+            "96": 0
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": true
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "16": 0.183,
+              "17": 0.195,
+              "23": 0.213,
+              "34": 0.189,
+              "48": 0.188,
+              "80": 0.197,
+              "108": 0.2,
+              "128": 0.201,
+              "160": 0.205
+            },
+            "1": {
+              "16": 0.189,
+              "17": 0.213,
+              "23": 0.197,
+              "34": 0.197,
+              "48": 0.182,
+              "80": 0.218,
+              "108": 0.189,
+              "128": 0.216,
+              "160": 0.187
+            },
+            "2": {
+              "16": 0.188,
+              "17": 0.198,
+              "23": 0.215,
+              "34": 0.199,
+              "48": 0.193,
+              "80": 0.204,
+              "108": 0.206,
+              "128": 0.208,
+              "160": 0.205
+            }
+          },
+          "bind": {
+            "0": {
+              "16": 1.0,
+              "31": 1.0,
+              "41": 1.0,
+              "62": 1.0,
+              "132": 1.0
+            },
+            "1": {
+              "16": 1.0,
+              "31": 0.999,
+              "41": 1.0,
+              "62": 1.0,
+              "132": 1.0
+            },
+            "2": {
+              "16": 1.0,
+              "31": 1.0,
+              "41": 1.0,
+              "62": 1.0,
+              "132": 1.0
+            }
+          },
+          "composed": {
+            "0": {
+              "16": 0.244,
+              "48": 0.213,
+              "64": 0.223,
+              "96": 0.226
+            },
+            "1": {
+              "16": 0.32,
+              "48": 0.186,
+              "64": 0.201,
+              "96": 0.193
+            },
+            "2": {
+              "16": 0.266,
+              "48": 0.218,
+              "64": 0.228,
+              "96": 0.229
+            }
+          }
+        }
+      },
+      "guided": {
+        "verdict": "V0_COMPOSED_UNFLOORABLE",
+        "why": "both components form at their own registered lengths, and the composed cell has NO FLOOR on this read's protocol: its floor argument is the one-structure bound W <= max(k, m) + 1, and this protocol's format requires the whole of P then B at every event, which hands those k + m slots to every policy including the task's own algorithm. Neither 'clears' nor 'does not clear' is available for the composed cell here, so no composition verdict is. What the excluded both-maps class reaches on the exact scored items is 0.719, and it is a lower bound on that class's max rather than a floor. The comparison this read does support is WITHIN-RUN and UNPAIRED \u2014 the composed cell against its work-matched component on the same seeds and the same item count, drawn from different specs and so never item by item.",
+        "control": {
+          "seeds": 3,
+          "cleared_on": "bind@31",
+          "per_pair": {
+            "state@17": 2,
+            "bind@31": 3
+          },
+          "required": [
+            "state@17",
+            "bind@31"
+          ]
+        },
+        "control_seeds": 3,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
+        "lengths_read": {
+          "state": [
+            17
+          ],
+          "bind": [
+            31
+          ],
+          "composed": [
+            48
+          ]
+        },
+        "forms": {
+          "state": true,
+          "bind": true,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 2
+          },
+          "bind": {
+            "31": 3
+          },
+          "composed": {
+            "48": null
+          }
+        },
+        "matched_forms": {
+          "state": true,
+          "bind": true
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "17": 1.0,
+              "80": 0.9921875
+            },
+            "1": {
+              "17": 0.984375,
+              "80": 0.9921875
+            },
+            "2": {
+              "17": 0.21875,
+              "80": 0.15625
+            }
+          },
+          "bind": {
+            "0": {
+              "31": 1.0,
+              "132": 0.9921875
+            },
+            "1": {
+              "31": 1.0,
+              "132": 0.984375
+            },
+            "2": {
+              "31": 1.0,
+              "132": 1.0
+            }
+          },
+          "composed": {
+            "0": {
+              "48": 0.8359375
+            },
+            "1": {
+              "48": 0.953125
+            },
+            "2": {
+              "48": 0.2890625
+            }
+          }
+        }
+      }
+    },
+    "transformer": {
+      "plain": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@16': 0, 'bind@16': 0} (0/2 seeds at best, on state@16). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@16",
+          "per_pair": {
+            "state@16": 0,
+            "bind@16": 0
+          },
+          "required": [
+            "state@16",
+            "bind@16"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": true,
+        "composed_pad_reach": null,
+        "lengths_read": {
+          "state": [
+            17,
+            23,
+            34
+          ],
+          "bind": [
+            31,
+            41,
+            62
+          ],
+          "composed": [
+            48,
+            64,
+            96
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0,
+            "23": 0,
+            "34": 0
+          },
+          "bind": {
+            "31": 0,
+            "41": 0,
+            "62": 0
+          },
+          "composed": {
+            "48": 0,
+            "64": 0,
+            "96": 0
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "16": 0.172,
+              "17": 0.154,
+              "23": 0.175,
+              "34": 0.159,
+              "48": 0.19,
+              "80": 0.166,
+              "108": 0.145,
+              "128": 0.183,
+              "160": 0.172
+            },
+            "1": {
+              "16": 0.161,
+              "17": 0.147,
+              "23": 0.152,
+              "34": 0.166,
+              "48": 0.161,
+              "80": 0.174,
+              "108": 0.176,
+              "128": 0.149,
+              "160": 0.161
+            },
+            "2": {
+              "16": 0.173,
+              "17": 0.176,
+              "23": 0.181,
+              "34": 0.159,
+              "48": 0.163,
+              "80": 0.177,
+              "108": 0.158,
+              "128": 0.186,
+              "160": 0.146
+            }
+          },
+          "bind": {
+            "0": {
+              "16": 0.153,
+              "31": 0.154,
+              "41": 0.154,
+              "62": 0.184,
+              "132": 0.153
+            },
+            "1": {
+              "16": 0.166,
+              "31": 0.19,
+              "41": 0.172,
+              "62": 0.163,
+              "132": 0.183
+            },
+            "2": {
+              "16": 0.144,
+              "31": 0.159,
+              "41": 0.158,
+              "62": 0.162,
+              "132": 0.166
+            }
+          },
+          "composed": {
+            "0": {
+              "16": 0.16,
+              "48": 0.16,
+              "64": 0.162,
+              "96": 0.195
+            },
+            "1": {
+              "16": 0.174,
+              "48": 0.15,
+              "64": 0.162,
+              "96": 0.152
+            },
+            "2": {
+              "16": 0.186,
+              "48": 0.172,
+              "64": 0.176,
+              "96": 0.168
+            }
+          }
+        }
+      },
+      "guided": {
+        "verdict": "V5_HARNESS_NULL",
+        "why": "no component clears on this read's control grid {'state@17': 0, 'bind@31': 0} (0/2 seeds at best, on state@17). Nothing downstream is interpretable; the next move is the training recipe, not the instrument.",
+        "control": {
+          "seeds": 0,
+          "cleared_on": "state@17",
+          "per_pair": {
+            "state@17": 0,
+            "bind@31": 0
+          },
+          "required": [
+            "state@17",
+            "bind@31"
+          ]
+        },
+        "control_seeds": 0,
+        "matched_measured": {
+          "state": true,
+          "bind": true
+        },
+        "composed_floored": false,
+        "composed_pad_reach": 0.71875,
+        "lengths_read": {
+          "state": [
+            17
+          ],
+          "bind": [
+            31
+          ],
+          "composed": [
+            48
+          ]
+        },
+        "forms": {
+          "state": false,
+          "bind": false,
+          "composed": false
+        },
+        "seed_counts": {
+          "state": {
+            "17": 0
+          },
+          "bind": {
+            "31": 0
+          },
+          "composed": {
+            "48": null
+          }
+        },
+        "matched_forms": {
+          "state": false,
+          "bind": false
+        },
+        "acc": {
+          "state": {
+            "0": {
+              "17": 0.171875,
+              "80": 0.1640625
+            },
+            "1": {
+              "17": 0.1328125,
+              "80": 0.125
+            },
+            "2": {
+              "17": 0.2109375,
+              "80": 0.1796875
+            }
+          },
+          "bind": {
+            "0": {
+              "31": 0.2109375,
+              "132": 0.203125
+            },
+            "1": {
+              "31": 0.1796875,
+              "132": 0.125
+            },
+            "2": {
+              "31": 0.140625,
+              "132": 0.1796875
+            }
+          },
+          "composed": {
+            "0": {
+              "48": 0.125
+            },
+            "1": {
+              "48": 0.15625
+            },
+            "2": {
+              "48": 0.1328125
+            }
+          }
+        }
+      }
+    }
+  },
+  "guided_floors": {
+    "state@17": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 17,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": 0.21875,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.21875,
+      "floor_plain": 0.2,
+      "pad_reach": null,
+      "surface_held_out": 0.2095,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.012999999999999984,
+      "surface_blocks": [
+        0.21075,
+        0.19775
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 204,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 36,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "ckpt_last_event_target": 0.185,
+        "ckpt_last_event_operand": 0.1725,
+        "last_write_1hop": 0.172,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1565,
+        "trunc_walk_T1": 0.1067,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
+      },
+      "charged_steps": 42,
+      "n_swap": 17,
+      "n_give": 0
+    },
+    "state@80": {
+      "cell": "s5_bind_local_v3_state",
+      "L": 80,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": true,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": 0.25,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.25,
+      "floor_plain": 0.25,
+      "pad_reach": null,
+      "surface_held_out": 0.1985,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.0020000000000000018,
+      "surface_blocks": [
+        0.19625,
+        0.19825
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 7,
+        "S": 960,
+        "A": 5,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 162,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "measured",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "last_write_1hop": 0.1975,
+        "ckpt_last_event_operand": 0.1747,
+        "uniform": 0.1667,
+        "last_swap_ref": 0.1665,
+        "ckpt_last_event_target": 0.1658,
+        "trunc_walk_T1": 0.0643,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
+      },
+      "charged_steps": 189,
+      "n_swap": 80,
+      "n_give": 0
+    },
+    "bind@31": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 31,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "floor_plain": 0.2,
+      "pad_reach": null,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 372,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 19,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "ckpt_last_event_operand": 0.1737,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d7": 0.0,
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_target": 0.0
+      },
+      "charged_steps": 29,
+      "n_swap": 0,
+      "n_give": 31
+    },
+    "bind@132": {
+      "cell": "s5_bind_local_v3_bind",
+      "L": 132,
+      "k": 6,
+      "m": 6,
+      "query": "bind",
+      "named": true,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": 0.2,
+      "floor_disjoint": 0.2,
+      "floor_on_scored_items": 0.2,
+      "floor_plain": 0.2,
+      "pad_reach": null,
+      "surface_held_out": null,
+      "surface_n_fit": null,
+      "surface_block_spread": null,
+      "surface_blocks": null,
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 1584,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 2,
+        "S_max": 69,
+        "depth_max": 1
+      },
+      "surface_in_floor": false,
+      "basis": "chance",
+      "admitted_rows": {
+        "uniform_non_initial": 0.2,
+        "ckpt_last_event_operand": 0.1705,
+        "uniform": 0.1667,
+        "initial_only": 0.0,
+        "give_scan_d1": 0.0,
+        "give_scan_d2": 0.0,
+        "give_scan_d4": 0.0,
+        "give_scan_d8": 0.0,
+        "give_scan_d16": 0.0,
+        "give_scan_d32": 0.0,
+        "ckpt_copy_prev": 0.0,
+        "ckpt_last_event_target": 0.0
+      },
+      "charged_steps": 79,
+      "n_swap": 0,
+      "n_give": 132
+    },
+    "composed@48": {
+      "cell": "s5_bind_local_v3",
+      "L": 48,
+      "k": 6,
+      "m": 6,
+      "query": "state",
+      "named": false,
+      "protocol": "guided",
+      "chance": 0.2,
+      "floor": null,
+      "floor_disjoint": null,
+      "floor_on_scored_items": null,
+      "floor_plain": 0.234375,
+      "pad_reach": 0.71875,
+      "surface_held_out": 0.239,
+      "surface_n_fit": 4000,
+      "surface_block_spread": 0.007499999999999979,
+      "surface_blocks": [
+        0.2415,
+        0.234
+      ],
+      "surface_price": {
+        "c": 1,
+        "W": 8,
+        "S": 576,
+        "A": 6,
+        "passes": 6,
+        "label": "1 candidate(s) per pass, 6 pass(es)",
+        "depth": 1,
+        "admitted": false,
+        "W_max": 7,
+        "S_max": 208,
+        "depth_max": null
+      },
+      "surface_in_floor": false,
+      "basis": "unfloorable",
+      "admitted_rows": {
+        "window_90": 0.2812,
+        "window_75": 0.21,
+        "last_swap_ref": 0.2035,
+        "uniform_non_initial": 0.2,
+        "one_structure_P": 0.1905,
+        "window_50": 0.179,
+        "one_structure_B": 0.1727,
+        "last_write_1hop": 0.1715,
+        "prefix_50": 0.1705,
+        "stated_reference": 0.1675,
+        "uniform": 0.1667,
+        "final_state": 0.1655,
+        "ckpt_last_event_operand": 0.1645,
+        "prefix_75": 0.1323,
+        "ckpt_last_event_target": 0.0703,
+        "prefix_90": 0.0563,
+        "initial_only": 0.0,
+        "ckpt_copy_prev": 0.0
+      },
+      "charged_steps": 208,
+      "n_swap": 17,
+      "n_give": 31
+    }
+  }
+}

@@ -19,11 +19,23 @@ text, and a validity gate certifies that no shallow baseline clears floor.
 | **Component: recall** | `recall_copy_v1` | single-query, deferred-readout MQAR variant; pool breadth = load axis |
 | — parametric variant | `recall_v1` / `conflict_v1` | retrieval from weights (local models); `conflict_v1` scores the in-context override |
 | **Component: state tracking** | `binding_v2` | last-write-wins (absorbing updates, not group ops) |
-| — commutative variant | `commutative_v1` | each event turns a named entity's dial a few clicks; the query asks where one dial ends up (every event matters, order does not); experimental: reads in the thinking regime only, so it stays off the headline |
-| — non-abelian variant | `s5_v1` | order-sensitive permutation streams; length = sequence stress |
 | **Composition: state × recall** | `composite_copy_v2` | the two-hop; the **gap** (binding − composed) is its derived statistic |
 | **Composition: recall ∘ recall** | `chain_v2` | follow a chain of "ask X" pointers hop by hop to the fact at the end; recall applied to its own output; depth = number of hops at fixed breadth |
-| **Composition: non-abelian state × serial dereference** | `s5_chain_v3` | the **FactWorldBench headline task**: track a k=16 pointer map through L order-sensitive swap/cycle events, then dereference it 8 hops deep; items gated so echo/fixed-hop heuristics score exactly 0 (chance 1/16) |
+
+The composition **instrument** is a separate family, and it is the one cell in the repo whose
+floor is closed by cost rather than by a list of shortcuts:
+
+| | task | notes |
+|---|---|---|
+| **Component: state tracking** | `s5_bind_v3_state` | non-abelian pointer permutation, second operand named: the S5 word problem |
+| **Component: binding** | `s5_bind_v3_bind` | last-write-wins retrieval, recipient named |
+| **Composition: state × binding** | `s5_bind_v3` | ONE event stream read through BOTH structures — every event resolves its second operand live through the map it does not write. The scored quantity is the single checkpoint token whose write is two dependent reads |
+
+The composed cell's floor is a max over the policies its class rule ADMITS — a row may hold at
+most one structure, may chain at most one hop per emitted token, and may not cost more than the
+cell's own algorithm — and within that rule the fixed-address family is swept exhaustively rather
+than listed. The two components are the controls: the protocol
+conjoins the composed reading with both components forming and reading out on the same seed.
 
 Each axis tests a different thing: solve rate; pool/breadth (working-set load); depth/length
 (iteration count); regime (**instant** = reasoning off + answer contract = in-weights, vs
@@ -125,41 +137,31 @@ print(result["overall"])
 
 See [`docs/USAGE.md`](docs/USAGE.md) for the full backend API reference, API
 cost tips, and a custom-backend example. Concrete prompts, gold answers, and real model
-mistakes for every task are in [`docs/tasks.md`](docs/tasks.md).
+mistakes per task family are in [`docs/tasks.md`](docs/tasks.md).
 
 ## 2. Benchmarking the frontier
 
-To give an easier view of performance we track one composed task, **s5_chain**: non-abelian
-pointer-map tracking composed with an 8-hop serial dereference in a single task. The table
-reports the match score at two lengths (96 and 128 permutation events), plus completion tokens
-per call on the matched L64 cell. Nearly every model solves that length, so token spend
-compares like for like.
+The published frontier surface is the five `REPORTED` tasks. **No composed headline is published.**
+The `s5_chain` family held that slot and is retired: on its published 52-cell `s5_chain_v3`
+battery the top eleven models have zero pairwise separations at n=25, so the ranked cell orders
+by noise. `s5_chain_v4` fixes v3's backward walk (the shallow adversary goes 1.000 → 0) and has
+three models at two lengths, three of those six cells censored on call failure; on the one model
+with clean cells at both versions it reads the same on each. Both are generable for reproduction.
+
+The composed cell of the instrument is scored on the **pad write** rather than the answer: the
+model emits a bounded per-event checkpoint and is scored on the one token whose write needs both
+structures. Measured on `gpt-5.6-sol` at k=12, n=24 items: 1.000 at L=128 and 0.758 (±0.114 over
+items, 12 of 24 items perfect) at L=256, against floors of 0.247 and 0.255 — about 3x informed
+chance, set by a row that reads its own previous cross-swap block. A cell costs $3–5 per model, because the reasoning is the scored output rather than an
+unscored overhead bought at an 8k–98k token budget and discarded.
 
 Models run at the recommended top reasoning level, `xhigh` (mapped down where the endpoint's
 ceiling is `high`).
 
-More details in [§4 of the report](reports/factworld.pdf); per-cell Wilson
-intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.md).
+Per-cell Wilson intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.md),
+generated by `scripts/render_benchmark.py`, which also carries the `s5_chain` cells.
 
 <!-- FRONTIER_TABLE_START -->
-**s5_chain**
-
-| Model | s5_chain @L96 | @L128 | ctok/call @L64 |
-|---|---|---|---|
-| anthropic/claude-fable-5 | 1.00 | 1.00 | 5014 |
-| openai/gpt-5.5 | 1.00 | 1.00 | 9343 |
-| x-ai/grok-4.5 | 1.00 | 0.96 | 7711 |
-| anthropic/claude-opus-4.8 | 0.96 | 0.96 | 9702 |
-| moonshotai/kimi-k3 | 0.96 | 0.96 | 10941 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.96ʳ | 0.96 | 17071 |
-| muse-spark-1.1 | 0.96 | 0.92 | 12484 |
-| google/gemini-3.6-flash | 0.92 | 0.96 | 8166 |
-| anthropic/claude-sonnet-5 | 0.92 | 0.96 | 12729 |
-| deepseek/deepseek-v4-pro | 0.92 | 0.96 | 17052 |
-| z-ai/glm-5.2 | 0.92 | 0.80 | 17982 |
-| qwen/qwen3.7-max | 0.72 | 0.44 | 12588 |
-| openai/gpt-5.6-sol | 0.60 | 0.80 | 2444 |
-
 **Component: instant composition (reasoning off, answer contract)**
 
 | Model | binding @L16 | composed @L16 | composed @L64 | gap |
@@ -179,48 +181,41 @@ intervals, marks, and figures are in the [rendered feed](docs/benchmark/results.
 
 **Components: thinking state stress (reasoning on)**
 
-| Model | chain d128 | s5 @L256 | s5@128 ctok |
-|---|---|---|---|
-| anthropic/claude-fable-5 | 1.00 | 1.00 | 6405 |
-| openai/gpt-5.5 | 1.00 | 1.00 | 6989 |
-| google/gemini-3.6-flash | 0.96 | 1.00 | 8234 |
-| muse-spark-1.1 | 1.00 | 1.00 | 9704 |
-| deepseek/deepseek-v4-pro | 1.00 | 1.00 | 10043 |
-| anthropic/claude-sonnet-5 | 1.00 | 1.00 | 11866 |
-| anthropic/claude-opus-4.8 | 1.00 | 1.00 | 12683 |
-| openai/gpt-5.6-sol | 0.88 | 0.92 | 2657 |
-| x-ai/grok-4.5 | 1.00 | 0.88 | 8069 |
-| qwen/qwen3.7-max | 0.96 | 0.80 | 7904 |
-| moonshotai/kimi-k3 | 1.00 | 0.80 | 11355 |
-| nvidia/nemotron-3-ultra-550b-a55b | 0.60 | 0.80 | 12250 |
-| z-ai/glm-5.2 | 0.92 | 0.76 | 6282 |
+| Model | chain d128 |
+|---|---|
+| anthropic/claude-fable-5 | 1.00 |
+| openai/gpt-5.5 | 1.00 |
+| google/gemini-3.6-flash | 0.96 |
+| muse-spark-1.1 | 1.00 |
+| deepseek/deepseek-v4-pro | 1.00 |
+| anthropic/claude-sonnet-5 | 1.00 |
+| anthropic/claude-opus-4.8 | 1.00 |
+| openai/gpt-5.6-sol | 0.88 |
+| x-ai/grok-4.5 | 1.00 |
+| qwen/qwen3.7-max | 0.96 |
+| moonshotai/kimi-k3 | 1.00 |
+| nvidia/nemotron-3-ultra-550b-a55b | 0.60 (trunc 0.32) |
+| z-ai/glm-5.2 | 0.92 (calls failed 0.04) (trunc 0.04) |
+
+**Marks**
+
+- `†` visible working or covert reasoning on the canonical attempt.
+- `(trunc 0.NN)` the fraction of the cell's calls that ran out of budget before an answer; those calls score 0, so the cell's score is a lower bound.
+- `(calls failed 0.NN)` the fraction of the cell's calls the API rejected; those calls score 0, so the cell's score is a lower bound.
+- `*` off-arm ran effort=minimal (the endpoint cannot disable reasoning).
+- `—ᶠ` gap not interpretable: the binding input sits at the object-filter floor.
+- `—` not applicable to this row.
 <!-- FRONTIER_TABLE_END -->
 
-![s5_chain scores with Wilson 95% intervals](docs/benchmark/fig_bench_headline.svg)
-
-n=25 per cell; bars are Wilson 95% intervals.
-
-Marks:
-- `†` visible working or covert reasoning on the canonical attempt.
-- `≤x†` an explicit upper bound (covert reasoning on most calls); neither `⊘` nor `≤x†` participates in orderings.
-- `*` off-arm ran effort=minimal (cannot disable reasoning).
-- `ʳ` single rerun at a raised 32,768-token budget.
-- `‡` provider ignored the token cap.
-- `⊘` not measurable at this budget (majority finish=length).
-- `—ᶠ` gap not interpretable (binding at the object-filter floor).
-- `n/a` cell not run; `—` not applicable to a floor row.
+n=25 per cell; intervals are Wilson 95%.
 
 Reading the component tables: **gap** = binding minus composed @L16, the accuracy lost when
 the model must chain the recall step onto the state it just tracked. The two floor rows are
 the shallow baselines every instant cell is read against: the *recency heuristic* answers the
 last event's recipient, and the *object-filter floor* filters events to the queried object but
 guesses among its writes. An instant score near 0.41 shows object filtering, not state
-tracking. In the thinking table, chain d128 is a 128-hop pointer chase over 257 agents and
-s5 @L256 is 256 role-permutation events (both described in [the tasks](#1-the-tasks) and
-[docs/tasks.md](docs/tasks.md)). Efficiency is priced at a lower length than the score in both
-tables for the same reason: token spend only compares like for like on a cell every model
-completes. At the scoring lengths some models truncate or run at different budgets, so spend
-there measures the budget, not the cost to solve. Three models (grok-4.5, muse-spark-1.1,
+tracking. In the thinking table, chain d128 is a 128-hop pointer chase over 257 agents
+([docs/tasks.md](docs/tasks.md)). Three models (grok-4.5, muse-spark-1.1,
 claude-fable-5) appear only in the thinking tables: their endpoints cannot disable reasoning,
 so they have no instant cells.
 
@@ -290,7 +285,7 @@ phases/                  prior work, archived (ran on the atomic-token format)
   01-instrument/           original FactWorld paper (.md + .pdf)
   02-non-abelian-state/    non-abelian state-tracking report + reproduction kit
 docs/
-  tasks.md                concrete prompts, gold answers, and real model mistakes for every task
+  tasks.md                concrete prompts, gold answers, and real model mistakes per family
   USAGE.md                backend API reference and custom-backend examples
   related-work.md         related work with verified citations
   results.md              4-arch reference baselines (match metric)
@@ -298,7 +293,7 @@ docs/
   benchmark/              the FactWorldBench feed: rendered tables, figures, results.csv
   openrouter/             external LLM API grid results
     results.md              benchmark tasks
-    s5-results.md           experimental `s5_v1` task
+    s5-results.md           retired `s5_v1` task
   recall/                 recall-capability results
     readout.md              attention-free recall readout
   composition/            composition-capability results
@@ -313,7 +308,7 @@ factworld/                the instrument (torch-free data/oracle/eval + the mode
   benchmark.py            the benchmark registry (models, facets, budgets)
   backends.py             ModelBackend interface + local/hf/api/function backends
   runner.py               task-agnostic evaluate_task() entry point
-  models.py, train.py     transformer / mamba2 / gdp_hybrid / gdn_hybrid / gru on one skeleton
+  models.py, train.py     transformer / mamba2 / gdp_hybrid / gdn_hybrid / gru / fprm on one skeleton
 scripts/                  the runnable suite (run_benchmark, eval_model, validate_suite, …)
 tests/                    oracle, renderer, tokenizer, model-parity, and validity tests
 phases/02-non-abelian-state/  archived reproduction scripts + per-claim tables (non-abelian report)

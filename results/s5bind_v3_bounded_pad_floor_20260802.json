@@ -1,0 +1,984 @@
+{
+ "generated": "2026-08-02T07:16:19.709759+00:00",
+ "widths": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  12
+ ],
+ "one_structure_bound_k6": 7,
+ "margin": 0.15,
+ "cells": {
+  "composed@48": {
+   "cell": "s5_bind_local_v3",
+   "L": 48,
+   "k": 6,
+   "m": 6,
+   "named": false,
+   "query": "state",
+   "chance": 0.2,
+   "n_scored": 128,
+   "n_disjoint": 4000,
+   "pad_max_width": 5,
+   "plain_floor": 0.234375,
+   "pad_reach": 0.71875,
+   "partial_carry_scored": [
+    0.21875,
+    0.171875,
+    0.2265625,
+    0.2890625,
+    0.390625,
+    0.609375,
+    1.0
+   ],
+   "partial_carry_disjoint": [
+    0.1965,
+    0.207,
+    0.209,
+    0.25825,
+    0.362,
+    0.61325,
+    1.0
+   ],
+   "widths": {
+    "1": {
+     "floor": 0.2344,
+     "row": "last_swap_ref[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.172,
+     "bar": 0.3844,
+     "buyable": true,
+     "top5": {
+      "last_swap_ref[scored]": 0.2344,
+      "one_structure_P[scored]": 0.2188,
+      "partial_carry_j0[scored]": 0.2188,
+      "partial_carry_j1[disjoint]": 0.207,
+      "uniform_non_initial[scored]": 0.2
+     }
+    },
+    "2": {
+     "floor": 0.2344,
+     "row": "last_swap_ref[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.172,
+     "bar": 0.3844,
+     "buyable": true,
+     "top5": {
+      "last_swap_ref[scored]": 0.2344,
+      "partial_carry_j2[scored]": 0.2266,
+      "one_structure_P[scored]": 0.2188,
+      "partial_carry_j0[scored]": 0.2188,
+      "partial_carry_j2[disjoint]": 0.209
+     }
+    },
+    "3": {
+     "floor": 0.2891,
+     "row": "partial_carry_j3[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.445,
+     "bar": 0.4391,
+     "buyable": true,
+     "top5": {
+      "partial_carry_j3[scored]": 0.2891,
+      "partial_carry_j3[disjoint]": 0.2582,
+      "last_swap_ref[scored]": 0.2344,
+      "partial_carry_j2[scored]": 0.2266,
+      "one_structure_P[scored]": 0.2188
+     }
+    },
+    "4": {
+     "floor": 0.3906,
+     "row": "partial_carry_j4[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.953,
+     "bar": 0.5406,
+     "buyable": true,
+     "top5": {
+      "partial_carry_j4[scored]": 0.3906,
+      "partial_carry_j4[disjoint]": 0.362,
+      "partial_carry_j3[scored]": 0.2891,
+      "partial_carry_j3[disjoint]": 0.2582,
+      "last_swap_ref[scored]": 0.2344
+     }
+    },
+    "5": {
+     "floor": 0.6132,
+     "row": "partial_carry_j5[disjoint]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 3.066,
+     "bar": 0.7632,
+     "buyable": true,
+     "top5": {
+      "partial_carry_j5[disjoint]": 0.6132,
+      "partial_carry_j5[scored]": 0.6094,
+      "partial_carry_j4[scored]": 0.3906,
+      "partial_carry_j4[disjoint]": 0.362,
+      "partial_carry_j3[scored]": 0.2891
+     }
+    },
+    "6": {
+     "floor": null,
+     "basis": "unfloorable",
+     "task_admitted": true,
+     "row": null,
+     "bar": null
+    },
+    "12": {
+     "floor": null,
+     "basis": "unfloorable",
+     "task_admitted": true,
+     "row": null,
+     "bar": null
+    }
+   }
+  },
+  "composed@64": {
+   "cell": "s5_bind_local_v3",
+   "L": 64,
+   "k": 6,
+   "m": 6,
+   "named": false,
+   "query": "state",
+   "chance": 0.2,
+   "n_scored": 128,
+   "n_disjoint": 4000,
+   "pad_max_width": 5,
+   "plain_floor": 0.2265625,
+   "pad_reach": 0.7578125,
+   "partial_carry_scored": [
+    0.1484375,
+    0.203125,
+    0.21875,
+    0.2578125,
+    0.2734375,
+    0.4609375,
+    1.0
+   ],
+   "partial_carry_disjoint": [
+    0.1885,
+    0.19025,
+    0.19725,
+    0.202,
+    0.2715,
+    0.45275,
+    1.0
+   ],
+   "widths": {
+    "1": {
+     "floor": 0.2266,
+     "row": "last_swap_ref[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.133,
+     "bar": 0.3766,
+     "buyable": true,
+     "top5": {
+      "last_swap_ref[scored]": 0.2266,
+      "last_swap_ref[disjoint]": 0.208,
+      "partial_carry_j1[scored]": 0.2031,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2
+     }
+    },
+    "2": {
+     "floor": 0.2266,
+     "row": "last_swap_ref[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.133,
+     "bar": 0.3766,
+     "buyable": true,
+     "top5": {
+      "last_swap_ref[scored]": 0.2266,
+      "partial_carry_j2[scored]": 0.2188,
+      "last_swap_ref[disjoint]": 0.208,
+      "partial_carry_j1[scored]": 0.2031,
+      "uniform_non_initial[scored]": 0.2
+     }
+    },
+    "3": {
+     "floor": 0.2578,
+     "row": "partial_carry_j3[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.289,
+     "bar": 0.4078,
+     "buyable": true,
+     "top5": {
+      "partial_carry_j3[scored]": 0.2578,
+      "last_swap_ref[scored]": 0.2266,
+      "partial_carry_j2[scored]": 0.2188,
+      "last_swap_ref[disjoint]": 0.208,
+      "partial_carry_j1[scored]": 0.2031
+     }
+    },
+    "4": {
+     "floor": 0.2734,
+     "row": "partial_carry_j4[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.367,
+     "bar": 0.4234,
+     "buyable": true,
+     "top5": {
+      "partial_carry_j4[scored]": 0.2734,
+      "partial_carry_j4[disjoint]": 0.2715,
+      "partial_carry_j3[scored]": 0.2578,
+      "last_swap_ref[scored]": 0.2266,
+      "partial_carry_j2[scored]": 0.2188
+     }
+    },
+    "5": {
+     "floor": 0.4609,
+     "row": "partial_carry_j5[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 2.305,
+     "bar": 0.6109,
+     "buyable": true,
+     "top5": {
+      "partial_carry_j5[scored]": 0.4609,
+      "partial_carry_j5[disjoint]": 0.4527,
+      "partial_carry_j4[scored]": 0.2734,
+      "partial_carry_j4[disjoint]": 0.2715,
+      "partial_carry_j3[scored]": 0.2578
+     }
+    },
+    "6": {
+     "floor": null,
+     "basis": "unfloorable",
+     "task_admitted": true,
+     "row": null,
+     "bar": null
+    },
+    "12": {
+     "floor": null,
+     "basis": "unfloorable",
+     "task_admitted": true,
+     "row": null,
+     "bar": null
+    }
+   }
+  },
+  "composed@96": {
+   "cell": "s5_bind_local_v3",
+   "L": 96,
+   "k": 6,
+   "m": 6,
+   "named": false,
+   "query": "state",
+   "chance": 0.2,
+   "n_scored": 128,
+   "n_disjoint": 4000,
+   "pad_max_width": 5,
+   "plain_floor": 0.2109375,
+   "pad_reach": 0.5625,
+   "partial_carry_scored": [
+    0.1484375,
+    0.171875,
+    0.1328125,
+    0.1484375,
+    0.15625,
+    0.296875,
+    1.0
+   ],
+   "partial_carry_disjoint": [
+    0.19675,
+    0.1865,
+    0.1905,
+    0.191,
+    0.208,
+    0.29425,
+    1.0
+   ],
+   "widths": {
+    "1": {
+     "floor": 0.2109,
+     "row": "stated_reference[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.055,
+     "bar": 0.3609,
+     "buyable": true,
+     "top5": {
+      "stated_reference[scored]": 0.2109,
+      "last_swap_ref[scored]": 0.2109,
+      "last_swap_ref[disjoint]": 0.2095,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2
+     }
+    },
+    "2": {
+     "floor": 0.2109,
+     "row": "stated_reference[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.055,
+     "bar": 0.3609,
+     "buyable": true,
+     "top5": {
+      "stated_reference[scored]": 0.2109,
+      "last_swap_ref[scored]": 0.2109,
+      "last_swap_ref[disjoint]": 0.2095,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2
+     }
+    },
+    "3": {
+     "floor": 0.2109,
+     "row": "stated_reference[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.055,
+     "bar": 0.3609,
+     "buyable": true,
+     "top5": {
+      "stated_reference[scored]": 0.2109,
+      "last_swap_ref[scored]": 0.2109,
+      "last_swap_ref[disjoint]": 0.2095,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2
+     }
+    },
+    "4": {
+     "floor": 0.2109,
+     "row": "stated_reference[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.055,
+     "bar": 0.3609,
+     "buyable": true,
+     "top5": {
+      "stated_reference[scored]": 0.2109,
+      "last_swap_ref[scored]": 0.2109,
+      "last_swap_ref[disjoint]": 0.2095,
+      "partial_carry_j4[disjoint]": 0.208,
+      "uniform_non_initial[scored]": 0.2
+     }
+    },
+    "5": {
+     "floor": 0.2969,
+     "row": "partial_carry_j5[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.484,
+     "bar": 0.4469,
+     "buyable": true,
+     "top5": {
+      "partial_carry_j5[scored]": 0.2969,
+      "partial_carry_j5[disjoint]": 0.2943,
+      "stated_reference[scored]": 0.2109,
+      "last_swap_ref[scored]": 0.2109,
+      "last_swap_ref[disjoint]": 0.2095
+     }
+    },
+    "6": {
+     "floor": null,
+     "basis": "unfloorable",
+     "task_admitted": true,
+     "row": null,
+     "bar": null
+    },
+    "12": {
+     "floor": null,
+     "basis": "unfloorable",
+     "task_admitted": true,
+     "row": null,
+     "bar": null
+    }
+   }
+  },
+  "state@17": {
+   "cell": "s5_bind_local_v3_state",
+   "L": 17,
+   "k": 6,
+   "m": 6,
+   "named": true,
+   "query": "state",
+   "chance": 0.2,
+   "n_scored": 128,
+   "n_disjoint": 4000,
+   "pad_max_width": 5,
+   "plain_floor": 0.21875,
+   "pad_reach": null,
+   "partial_carry_scored": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "partial_carry_disjoint": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "widths": {
+    "1": {
+     "floor": 0.2188,
+     "row": "ckpt_last_event_operand[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.094,
+     "bar": 0.3688,
+     "buyable": true,
+     "top5": {
+      "ckpt_last_event_operand[scored]": 0.2188,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1918,
+      "last_write_1hop[scored]": 0.1875
+     }
+    },
+    "2": {
+     "floor": 0.2188,
+     "row": "ckpt_last_event_operand[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.094,
+     "bar": 0.3688,
+     "buyable": true,
+     "top5": {
+      "ckpt_last_event_operand[scored]": 0.2188,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1918,
+      "last_write_1hop[scored]": 0.1875
+     }
+    },
+    "3": {
+     "floor": 0.2188,
+     "row": "ckpt_last_event_operand[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.094,
+     "bar": 0.3688,
+     "buyable": true,
+     "top5": {
+      "ckpt_last_event_operand[scored]": 0.2188,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1918,
+      "last_write_1hop[scored]": 0.1875
+     }
+    },
+    "4": {
+     "floor": 0.2188,
+     "row": "ckpt_last_event_operand[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.094,
+     "bar": 0.3688,
+     "buyable": true,
+     "top5": {
+      "ckpt_last_event_operand[scored]": 0.2188,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1918,
+      "last_write_1hop[scored]": 0.1875
+     }
+    },
+    "5": {
+     "floor": 0.2188,
+     "row": "ckpt_last_event_operand[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.094,
+     "bar": 0.3688,
+     "buyable": true,
+     "top5": {
+      "ckpt_last_event_operand[scored]": 0.2188,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1918,
+      "last_write_1hop[scored]": 0.1875
+     }
+    },
+    "6": {
+     "floor": 0.2188,
+     "row": "ckpt_last_event_operand[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.094,
+     "bar": 0.3688,
+     "buyable": true,
+     "top5": {
+      "ckpt_last_event_operand[scored]": 0.2188,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1918,
+      "last_write_1hop[scored]": 0.1875
+     }
+    },
+    "12": {
+     "floor": 0.2188,
+     "row": "ckpt_last_event_operand[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.094,
+     "bar": 0.3688,
+     "buyable": true,
+     "top5": {
+      "ckpt_last_event_operand[scored]": 0.2188,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1918,
+      "last_write_1hop[scored]": 0.1875
+     }
+    }
+   }
+  },
+  "state@80": {
+   "cell": "s5_bind_local_v3_state",
+   "L": 80,
+   "k": 6,
+   "m": 6,
+   "named": true,
+   "query": "state",
+   "chance": 0.2,
+   "n_scored": 128,
+   "n_disjoint": 4000,
+   "pad_max_width": 5,
+   "plain_floor": 0.25,
+   "pad_reach": null,
+   "partial_carry_scored": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "partial_carry_disjoint": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "widths": {
+    "1": {
+     "floor": 0.25,
+     "row": "last_write_1hop[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.25,
+     "bar": 0.4,
+     "buyable": true,
+     "top5": {
+      "last_write_1hop[scored]": 0.25,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1978,
+      "ckpt_last_event_target[scored]": 0.1875
+     }
+    },
+    "2": {
+     "floor": 0.25,
+     "row": "last_write_1hop[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.25,
+     "bar": 0.4,
+     "buyable": true,
+     "top5": {
+      "last_write_1hop[scored]": 0.25,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1978,
+      "ckpt_last_event_target[scored]": 0.1875
+     }
+    },
+    "3": {
+     "floor": 0.25,
+     "row": "last_write_1hop[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.25,
+     "bar": 0.4,
+     "buyable": true,
+     "top5": {
+      "last_write_1hop[scored]": 0.25,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1978,
+      "ckpt_last_event_target[scored]": 0.1875
+     }
+    },
+    "4": {
+     "floor": 0.25,
+     "row": "last_write_1hop[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.25,
+     "bar": 0.4,
+     "buyable": true,
+     "top5": {
+      "last_write_1hop[scored]": 0.25,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1978,
+      "ckpt_last_event_target[scored]": 0.1875
+     }
+    },
+    "5": {
+     "floor": 0.25,
+     "row": "last_write_1hop[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.25,
+     "bar": 0.4,
+     "buyable": true,
+     "top5": {
+      "last_write_1hop[scored]": 0.25,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1978,
+      "ckpt_last_event_target[scored]": 0.1875
+     }
+    },
+    "6": {
+     "floor": 0.25,
+     "row": "last_write_1hop[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.25,
+     "bar": 0.4,
+     "buyable": true,
+     "top5": {
+      "last_write_1hop[scored]": 0.25,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1978,
+      "ckpt_last_event_target[scored]": 0.1875
+     }
+    },
+    "12": {
+     "floor": 0.25,
+     "row": "last_write_1hop[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.25,
+     "bar": 0.4,
+     "buyable": true,
+     "top5": {
+      "last_write_1hop[scored]": 0.25,
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "last_write_1hop[disjoint]": 0.1978,
+      "ckpt_last_event_target[scored]": 0.1875
+     }
+    }
+   }
+  },
+  "bind@31": {
+   "cell": "s5_bind_local_v3_bind",
+   "L": 31,
+   "k": 6,
+   "m": 6,
+   "named": true,
+   "query": "bind",
+   "chance": 0.2,
+   "n_scored": 128,
+   "n_disjoint": 4000,
+   "pad_max_width": 5,
+   "plain_floor": 0.2,
+   "pad_reach": null,
+   "partial_carry_scored": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "partial_carry_disjoint": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "widths": {
+    "1": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[disjoint]": 0.1698,
+      "uniform[scored]": 0.1667,
+      "uniform[disjoint]": 0.1667
+     }
+    },
+    "2": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[disjoint]": 0.1698,
+      "uniform[scored]": 0.1667,
+      "uniform[disjoint]": 0.1667
+     }
+    },
+    "3": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[disjoint]": 0.1698,
+      "uniform[scored]": 0.1667,
+      "uniform[disjoint]": 0.1667
+     }
+    },
+    "4": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[disjoint]": 0.1698,
+      "uniform[scored]": 0.1667,
+      "uniform[disjoint]": 0.1667
+     }
+    },
+    "5": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[disjoint]": 0.1698,
+      "uniform[scored]": 0.1667,
+      "uniform[disjoint]": 0.1667
+     }
+    },
+    "6": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[disjoint]": 0.1698,
+      "uniform[scored]": 0.1667,
+      "uniform[disjoint]": 0.1667
+     }
+    },
+    "12": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[disjoint]": 0.1698,
+      "uniform[scored]": 0.1667,
+      "uniform[disjoint]": 0.1667
+     }
+    }
+   }
+  },
+  "bind@132": {
+   "cell": "s5_bind_local_v3_bind",
+   "L": 132,
+   "k": 6,
+   "m": 6,
+   "named": true,
+   "query": "bind",
+   "chance": 0.2,
+   "n_scored": 128,
+   "n_disjoint": 4000,
+   "pad_max_width": 5,
+   "plain_floor": 0.2,
+   "pad_reach": null,
+   "partial_carry_scored": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "partial_carry_disjoint": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "widths": {
+    "1": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[scored]": 0.1797,
+      "ckpt_last_event_operand[disjoint]": 0.1673,
+      "uniform[scored]": 0.1667
+     }
+    },
+    "2": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[scored]": 0.1797,
+      "ckpt_last_event_operand[disjoint]": 0.1673,
+      "uniform[scored]": 0.1667
+     }
+    },
+    "3": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[scored]": 0.1797,
+      "ckpt_last_event_operand[disjoint]": 0.1673,
+      "uniform[scored]": 0.1667
+     }
+    },
+    "4": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[scored]": 0.1797,
+      "ckpt_last_event_operand[disjoint]": 0.1673,
+      "uniform[scored]": 0.1667
+     }
+    },
+    "5": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[scored]": 0.1797,
+      "ckpt_last_event_operand[disjoint]": 0.1673,
+      "uniform[scored]": 0.1667
+     }
+    },
+    "6": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[scored]": 0.1797,
+      "ckpt_last_event_operand[disjoint]": 0.1673,
+      "uniform[scored]": 0.1667
+     }
+    },
+    "12": {
+     "floor": 0.2,
+     "row": "uniform_non_initial[scored]",
+     "basis": "measured",
+     "task_admitted": false,
+     "ratio_to_chance": 1.0,
+     "bar": 0.35,
+     "buyable": true,
+     "top5": {
+      "uniform_non_initial[scored]": 0.2,
+      "uniform_non_initial[disjoint]": 0.2,
+      "ckpt_last_event_operand[scored]": 0.1797,
+      "ckpt_last_event_operand[disjoint]": 0.1673,
+      "uniform[scored]": 0.1667
+     }
+    }
+   }
+  }
+ }
+}

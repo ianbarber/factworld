@@ -1,0 +1,1419 @@
+{
+ "generated": "2026-08-03T12:31:51.529618+00:00",
+ "probe": "teacher_forced",
+ "cfg": {
+  "counts": false,
+  "forced": true,
+  "decompose": false,
+  "overwrite": false,
+  "ckpt_dir": "results/20260802_s5bind_v3_bounded_pad_restart_grid_ckpt",
+  "arch": "gdp_hybrid",
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "cells": "state@34,bind@62,composed@16,composed@32,composed@48,composed@64,composed@96",
+  "format": "moved2",
+  "n": 512,
+  "n_count": 200,
+  "batch_read": 128,
+  "batch_forced": 16,
+  "mixes": null,
+  "steps": 600,
+  "warmup": 200,
+  "lr": 0.0003,
+  "batch": 16,
+  "train_n": 20000,
+  "device": "cuda",
+  "out": "results/20260803_composed_pad_forced_src.json"
+ },
+ "rows": [
+  {
+   "per_slot": 1.0,
+   "n_slots": 34816,
+   "n": 512,
+   "by_position": [
+    1.0,
+    1.0
+   ],
+   "by_operand": {
+    "named": 1.0,
+    "n_named": 34816,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": null,
+    "n_give": 0,
+    "swap": 1.0,
+    "n_swap": 34816
+   },
+   "by_kind_position": {
+    "give_p0": null,
+    "n_give_p0": 0,
+    "give_p1": null,
+    "n_give_p1": 0,
+    "swap_p0": 1.0,
+    "n_swap_p0": 17408,
+    "swap_p1": 1.0,
+    "n_swap_p1": 17408
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": null,
+    "n_give_p0|same": 0,
+    "give_p0|cross": null,
+    "n_give_p0|cross": 0,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": null,
+    "n_give_p1|same": 0,
+    "give_p1|cross": null,
+    "n_give_p1|cross": 0,
+    "swap_p0|named": 1.0,
+    "n_swap_p0|named": 17408,
+    "swap_p0|same": null,
+    "n_swap_p0|same": 0,
+    "swap_p0|cross": null,
+    "n_swap_p0|cross": 0,
+    "swap_p1|named": 1.0,
+    "n_swap_p1|named": 17408,
+    "swap_p1|same": null,
+    "n_swap_p1|same": 0,
+    "swap_p1|cross": null,
+    "n_swap_p1|cross": 0
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 0,
+   "cell": "state",
+   "L": 34
+  },
+  {
+   "per_slot": 1.0,
+   "n_slots": 63488,
+   "n": 512,
+   "by_position": [
+    1.0,
+    1.0
+   ],
+   "by_operand": {
+    "named": 1.0,
+    "n_named": 63488,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": 1.0,
+    "n_give": 63488,
+    "swap": null,
+    "n_swap": 0
+   },
+   "by_kind_position": {
+    "give_p0": 1.0,
+    "n_give_p0": 31744,
+    "give_p1": 1.0,
+    "n_give_p1": 31744,
+    "swap_p0": null,
+    "n_swap_p0": 0,
+    "swap_p1": null,
+    "n_swap_p1": 0
+   },
+   "by_kind_position_source": {
+    "give_p0|named": 1.0,
+    "n_give_p0|named": 31744,
+    "give_p0|same": null,
+    "n_give_p0|same": 0,
+    "give_p0|cross": null,
+    "n_give_p0|cross": 0,
+    "give_p1|named": 1.0,
+    "n_give_p1|named": 31744,
+    "give_p1|same": null,
+    "n_give_p1|same": 0,
+    "give_p1|cross": null,
+    "n_give_p1|cross": 0,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": null,
+    "n_swap_p0|same": 0,
+    "swap_p0|cross": null,
+    "n_swap_p0|cross": 0,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": null,
+    "n_swap_p1|same": 0,
+    "swap_p1|cross": null,
+    "n_swap_p1|cross": 0
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 0,
+   "cell": "bind",
+   "L": 62
+  },
+  {
+   "per_slot": 0.90228271484375,
+   "n_slots": 16384,
+   "n": 512,
+   "by_position": [
+    0.82470703125,
+    0.9798583984375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.90228271484375,
+    "n_resolved": 16384
+   },
+   "by_event": {
+    "give": 0.9919992097984986,
+    "n_give": 10124,
+    "swap": 0.7571884984025559,
+    "n_swap": 6260
+   },
+   "by_kind_position": {
+    "give_p0": 0.9839984195969972,
+    "n_give_p0": 5062,
+    "give_p1": 1.0,
+    "n_give_p1": 5062,
+    "swap_p0": 0.5670926517571885,
+    "n_swap_p0": 3130,
+    "swap_p1": 0.9472843450479234,
+    "n_swap_p1": 3130
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 1.0,
+    "n_give_p0|same": 2528,
+    "give_p0|cross": 0.968034727703236,
+    "n_give_p0|cross": 2534,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 1.0,
+    "n_give_p1|same": 2528,
+    "give_p1|cross": 1.0,
+    "n_give_p1|cross": 2534,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.6040480708412397,
+    "n_swap_p0|same": 1581,
+    "swap_p0|cross": 0.5293737895416397,
+    "n_swap_p0|cross": 1549,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9392789373814042,
+    "n_swap_p1|same": 1581,
+    "swap_p1|cross": 0.9554551323434474,
+    "n_swap_p1|cross": 1549
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 16
+  },
+  {
+   "per_slot": 0.9000244140625,
+   "n_slots": 32768,
+   "n": 512,
+   "by_position": [
+    0.82415771484375,
+    0.97589111328125
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.9000244140625,
+    "n_resolved": 32768
+   },
+   "by_event": {
+    "give": 0.9843898724538359,
+    "n_give": 21012,
+    "swap": 0.7492344334807758,
+    "n_swap": 11756
+   },
+   "by_kind_position": {
+    "give_p0": 0.9687797449076718,
+    "n_give_p0": 10506,
+    "give_p1": 1.0,
+    "n_give_p1": 10506,
+    "swap_p0": 0.5656685947601225,
+    "n_swap_p0": 5878,
+    "swap_p1": 0.932800272201429,
+    "n_swap_p1": 5878
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 1.0,
+    "n_give_p0|same": 5201,
+    "give_p0|cross": 0.9381715362865222,
+    "n_give_p0|cross": 5305,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 1.0,
+    "n_give_p1|same": 5201,
+    "give_p1|cross": 1.0,
+    "n_give_p1|cross": 5305,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.5998645903859174,
+    "n_swap_p0|same": 2954,
+    "swap_p0|cross": 0.5311217510259918,
+    "n_swap_p0|cross": 2924,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9245091401489506,
+    "n_swap_p1|same": 2954,
+    "swap_p1|cross": 0.9411764705882353,
+    "n_swap_p1|cross": 2924
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 32
+  },
+  {
+   "per_slot": 0.8971150716145834,
+   "n_slots": 49152,
+   "n": 512,
+   "by_position": [
+    0.8194986979166666,
+    0.9747314453125
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.8971150716145834,
+    "n_resolved": 49152
+   },
+   "by_event": {
+    "give": 0.9800907258064516,
+    "n_give": 31744,
+    "swap": 0.7458065257352942,
+    "n_swap": 17408
+   },
+   "by_kind_position": {
+    "give_p0": 0.9605594758064516,
+    "n_give_p0": 15872,
+    "give_p1": 0.9996219758064516,
+    "n_give_p1": 15872,
+    "swap_p0": 0.5622702205882353,
+    "n_swap_p0": 8704,
+    "swap_p1": 0.9293428308823529,
+    "n_swap_p1": 8704
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9998720900486058,
+    "n_give_p0|same": 7818,
+    "give_p0|cross": 0.9223988080456916,
+    "n_give_p0|cross": 8054,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9994883601944231,
+    "n_give_p1|same": 7818,
+    "give_p1|cross": 0.9997516761857462,
+    "n_give_p1|cross": 8054,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.5979147778785131,
+    "n_swap_p0|same": 4412,
+    "swap_p0|cross": 0.5256290773532153,
+    "n_swap_p0|cross": 4292,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9247506799637353,
+    "n_swap_p1|same": 4412,
+    "swap_p1|cross": 0.9340633737185461,
+    "n_swap_p1|cross": 4292
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 48
+  },
+  {
+   "per_slot": 0.8953094482421875,
+   "n_slots": 65536,
+   "n": 512,
+   "by_position": [
+    0.818206787109375,
+    0.972412109375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.8953094482421875,
+    "n_resolved": 65536
+   },
+   "by_event": {
+    "give": 0.9800018955549237,
+    "n_give": 42204,
+    "swap": 0.74211383507629,
+    "n_swap": 23332
+   },
+   "by_kind_position": {
+    "give_p0": 0.9606672353331438,
+    "n_give_p0": 21102,
+    "give_p1": 0.9993365557767037,
+    "n_give_p1": 21102,
+    "swap_p0": 0.5605177438710783,
+    "n_swap_p0": 11666,
+    "swap_p1": 0.9237099262815018,
+    "n_swap_p1": 11666
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9996173347364393,
+    "n_give_p0|same": 10453,
+    "give_p0|cross": 0.9224340313644473,
+    "n_give_p0|cross": 10649,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9991390031569884,
+    "n_give_p1|same": 10453,
+    "give_p1|cross": 0.9995304723448211,
+    "n_give_p1|cross": 10649,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.5982065873426453,
+    "n_swap_p0|same": 5799,
+    "swap_p0|cross": 0.5232657235384354,
+    "n_swap_p0|cross": 5867,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9191239868942921,
+    "n_swap_p1|same": 5799,
+    "swap_p1|cross": 0.9282427134821886,
+    "n_swap_p1|cross": 5867
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 64
+  },
+  {
+   "per_slot": 0.89105224609375,
+   "n_slots": 98304,
+   "n": 512,
+   "by_position": [
+    0.8118896484375,
+    0.97021484375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.89105224609375,
+    "n_resolved": 98304
+   },
+   "by_event": {
+    "give": 0.9783396345305608,
+    "n_give": 63480,
+    "swap": 0.7319377440845394,
+    "n_swap": 34824
+   },
+   "by_kind_position": {
+    "give_p0": 0.9578764965343415,
+    "n_give_p0": 31740,
+    "give_p1": 0.9988027725267801,
+    "n_give_p1": 31740,
+    "swap_p0": 0.5457730300941879,
+    "n_swap_p0": 17412,
+    "swap_p1": 0.9181024580748909,
+    "n_swap_p1": 17412
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9997435897435898,
+    "n_give_p0|same": 15600,
+    "give_p0|cross": 0.9174101610904585,
+    "n_give_p0|cross": 16140,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9991666666666666,
+    "n_give_p1|same": 15600,
+    "give_p1|cross": 0.998451053283767,
+    "n_give_p1|cross": 16140,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.5784212340572217,
+    "n_swap_p0|same": 8703,
+    "swap_p0|cross": 0.5131473188655414,
+    "n_swap_p0|cross": 8709,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9085372859933356,
+    "n_swap_p1|same": 8703,
+    "swap_p1|cross": 0.9276610403031347,
+    "n_swap_p1|cross": 8709
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 0,
+   "cell": "composed",
+   "L": 96
+  },
+  {
+   "per_slot": 1.0,
+   "n_slots": 34816,
+   "n": 512,
+   "by_position": [
+    1.0,
+    1.0
+   ],
+   "by_operand": {
+    "named": 1.0,
+    "n_named": 34816,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": null,
+    "n_give": 0,
+    "swap": 1.0,
+    "n_swap": 34816
+   },
+   "by_kind_position": {
+    "give_p0": null,
+    "n_give_p0": 0,
+    "give_p1": null,
+    "n_give_p1": 0,
+    "swap_p0": 1.0,
+    "n_swap_p0": 17408,
+    "swap_p1": 1.0,
+    "n_swap_p1": 17408
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": null,
+    "n_give_p0|same": 0,
+    "give_p0|cross": null,
+    "n_give_p0|cross": 0,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": null,
+    "n_give_p1|same": 0,
+    "give_p1|cross": null,
+    "n_give_p1|cross": 0,
+    "swap_p0|named": 1.0,
+    "n_swap_p0|named": 17408,
+    "swap_p0|same": null,
+    "n_swap_p0|same": 0,
+    "swap_p0|cross": null,
+    "n_swap_p0|cross": 0,
+    "swap_p1|named": 1.0,
+    "n_swap_p1|named": 17408,
+    "swap_p1|same": null,
+    "n_swap_p1|same": 0,
+    "swap_p1|cross": null,
+    "n_swap_p1|cross": 0
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 1,
+   "cell": "state",
+   "L": 34
+  },
+  {
+   "per_slot": 1.0,
+   "n_slots": 63488,
+   "n": 512,
+   "by_position": [
+    1.0,
+    1.0
+   ],
+   "by_operand": {
+    "named": 1.0,
+    "n_named": 63488,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": 1.0,
+    "n_give": 63488,
+    "swap": null,
+    "n_swap": 0
+   },
+   "by_kind_position": {
+    "give_p0": 1.0,
+    "n_give_p0": 31744,
+    "give_p1": 1.0,
+    "n_give_p1": 31744,
+    "swap_p0": null,
+    "n_swap_p0": 0,
+    "swap_p1": null,
+    "n_swap_p1": 0
+   },
+   "by_kind_position_source": {
+    "give_p0|named": 1.0,
+    "n_give_p0|named": 31744,
+    "give_p0|same": null,
+    "n_give_p0|same": 0,
+    "give_p0|cross": null,
+    "n_give_p0|cross": 0,
+    "give_p1|named": 1.0,
+    "n_give_p1|named": 31744,
+    "give_p1|same": null,
+    "n_give_p1|same": 0,
+    "give_p1|cross": null,
+    "n_give_p1|cross": 0,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": null,
+    "n_swap_p0|same": 0,
+    "swap_p0|cross": null,
+    "n_swap_p0|cross": 0,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": null,
+    "n_swap_p1|same": 0,
+    "swap_p1|cross": null,
+    "n_swap_p1|cross": 0
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 1,
+   "cell": "bind",
+   "L": 62
+  },
+  {
+   "per_slot": 0.88653564453125,
+   "n_slots": 16384,
+   "n": 512,
+   "by_position": [
+    0.7864990234375,
+    0.986572265625
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.88653564453125,
+    "n_resolved": 16384
+   },
+   "by_event": {
+    "give": 0.9949624654286843,
+    "n_give": 10124,
+    "swap": 0.7111821086261981,
+    "n_swap": 6260
+   },
+   "by_kind_position": {
+    "give_p0": 0.9899249308573687,
+    "n_give_p0": 5062,
+    "give_p1": 1.0,
+    "n_give_p1": 5062,
+    "swap_p0": 0.4575079872204473,
+    "n_swap_p0": 3130,
+    "swap_p1": 0.9648562300319489,
+    "n_swap_p1": 3130
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 1.0,
+    "n_give_p0|same": 2528,
+    "give_p0|cross": 0.9798737174427782,
+    "n_give_p0|cross": 2534,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 1.0,
+    "n_give_p1|same": 2528,
+    "give_p1|cross": 1.0,
+    "n_give_p1|cross": 2534,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.5161290322580645,
+    "n_swap_p0|same": 1581,
+    "swap_p0|cross": 0.3976759199483538,
+    "n_swap_p0|cross": 1549,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9607843137254902,
+    "n_swap_p1|same": 1581,
+    "swap_p1|cross": 0.9690122659780503,
+    "n_swap_p1|cross": 1549
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 16
+  },
+  {
+   "per_slot": 0.894622802734375,
+   "n_slots": 32768,
+   "n": 512,
+   "by_position": [
+    0.805419921875,
+    0.98382568359375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.894622802734375,
+    "n_resolved": 32768
+   },
+   "by_event": {
+    "give": 0.9914334665905197,
+    "n_give": 21012,
+    "swap": 0.7215889758421232,
+    "n_swap": 11756
+   },
+   "by_kind_position": {
+    "give_p0": 0.9829621168855892,
+    "n_give_p0": 10506,
+    "give_p1": 0.9999048162954502,
+    "n_give_p1": 10506,
+    "swap_p0": 0.48809118747873426,
+    "n_swap_p0": 5878,
+    "swap_p1": 0.9550867642055121,
+    "n_swap_p1": 5878
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9996154585656605,
+    "n_give_p0|same": 5201,
+    "give_p0|cross": 0.9666352497643732,
+    "n_give_p0|cross": 5305,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9998077292828302,
+    "n_give_p1|same": 5201,
+    "give_p1|cross": 1.0,
+    "n_give_p1|cross": 5305,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.504062288422478,
+    "n_swap_p0|same": 2954,
+    "swap_p0|cross": 0.4719562243502052,
+    "n_swap_p0|cross": 2924,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9485443466486121,
+    "n_swap_p1|same": 2954,
+    "swap_p1|cross": 0.9616963064295485,
+    "n_swap_p1|cross": 2924
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 32
+  },
+  {
+   "per_slot": 0.89617919921875,
+   "n_slots": 49152,
+   "n": 512,
+   "by_position": [
+    0.8088785807291666,
+    0.9834798177083334
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.89617919921875,
+    "n_resolved": 49152
+   },
+   "by_event": {
+    "give": 0.9885017641129032,
+    "n_give": 31744,
+    "swap": 0.7278262867647058,
+    "n_swap": 17408
+   },
+   "by_kind_position": {
+    "give_p0": 0.9773815524193549,
+    "n_give_p0": 15872,
+    "give_p1": 0.9996219758064516,
+    "n_give_p1": 15872,
+    "swap_p0": 0.5016084558823529,
+    "n_swap_p0": 8704,
+    "swap_p1": 0.9540441176470589,
+    "n_swap_p1": 8704
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9996162701458173,
+    "n_give_p0|same": 7818,
+    "give_p0|cross": 0.9557983610628259,
+    "n_give_p0|cross": 8054,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9994883601944231,
+    "n_give_p1|same": 7818,
+    "give_p1|cross": 0.9997516761857462,
+    "n_give_p1|cross": 8054,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.5172257479601088,
+    "n_swap_p0|same": 4412,
+    "swap_p0|cross": 0.48555452003727867,
+    "n_swap_p0|cross": 4292,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9471894832275612,
+    "n_swap_p1|same": 4412,
+    "swap_p1|cross": 0.9610904007455732,
+    "n_swap_p1|cross": 4292
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 48
+  },
+  {
+   "per_slot": 0.894866943359375,
+   "n_slots": 65536,
+   "n": 512,
+   "by_position": [
+    0.808380126953125,
+    0.981353759765625
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.894866943359375,
+    "n_resolved": 65536
+   },
+   "by_event": {
+    "give": 0.9874419486304615,
+    "n_give": 42204,
+    "swap": 0.7274129950282874,
+    "n_swap": 23332
+   },
+   "by_kind_position": {
+    "give_p0": 0.9755947303573121,
+    "n_give_p0": 21102,
+    "give_p1": 0.999289166903611,
+    "n_give_p1": 21102,
+    "swap_p0": 0.5059146236927824,
+    "n_swap_p0": 11666,
+    "swap_p1": 0.9489113663637923,
+    "n_swap_p1": 11666
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9995216684205491,
+    "n_give_p0|same": 10453,
+    "give_p0|cross": 0.9521081791717532,
+    "n_give_p0|cross": 10649,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9992346694728786,
+    "n_give_p1|same": 10453,
+    "give_p1|cross": 0.9993426612827495,
+    "n_give_p1|cross": 10649,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.5159510260389722,
+    "n_swap_p0|same": 5799,
+    "swap_p0|cross": 0.4959945457644452,
+    "n_swap_p0|cross": 5867,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9453354026556303,
+    "n_swap_p1|same": 5799,
+    "swap_p1|cross": 0.9524458837566048,
+    "n_swap_p1|cross": 5867
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 64
+  },
+  {
+   "per_slot": 0.89617919921875,
+   "n_slots": 98304,
+   "n": 512,
+   "by_position": [
+    0.8108113606770834,
+    0.9815470377604166
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.89617919921875,
+    "n_resolved": 98304
+   },
+   "by_event": {
+    "give": 0.9869880277252678,
+    "n_give": 63480,
+    "swap": 0.7306455318171377,
+    "n_swap": 34824
+   },
+   "by_kind_position": {
+    "give_p0": 0.9745116572148709,
+    "n_give_p0": 31740,
+    "give_p1": 0.9994643982356648,
+    "n_give_p1": 31740,
+    "swap_p0": 0.5124052377670572,
+    "n_swap_p0": 17412,
+    "swap_p1": 0.948885825867218,
+    "n_swap_p1": 17412
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9998076923076923,
+    "n_give_p0|same": 15600,
+    "give_p0|cross": 0.9500619578686493,
+    "n_give_p0|cross": 16140,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9995512820512821,
+    "n_give_p1|same": 15600,
+    "give_p1|cross": 0.9993804213135068,
+    "n_give_p1|cross": 16140,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.5113179363437895,
+    "n_swap_p0|same": 8703,
+    "swap_p0|cross": 0.5134917901021931,
+    "n_swap_p0|cross": 8709,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9413995174077904,
+    "n_swap_p1|same": 8703,
+    "swap_p1|cross": 0.9563669766907796,
+    "n_swap_p1|cross": 8709
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 1,
+   "cell": "composed",
+   "L": 96
+  },
+  {
+   "per_slot": 1.0,
+   "n_slots": 34816,
+   "n": 512,
+   "by_position": [
+    1.0,
+    1.0
+   ],
+   "by_operand": {
+    "named": 1.0,
+    "n_named": 34816,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": null,
+    "n_give": 0,
+    "swap": 1.0,
+    "n_swap": 34816
+   },
+   "by_kind_position": {
+    "give_p0": null,
+    "n_give_p0": 0,
+    "give_p1": null,
+    "n_give_p1": 0,
+    "swap_p0": 1.0,
+    "n_swap_p0": 17408,
+    "swap_p1": 1.0,
+    "n_swap_p1": 17408
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": null,
+    "n_give_p0|same": 0,
+    "give_p0|cross": null,
+    "n_give_p0|cross": 0,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": null,
+    "n_give_p1|same": 0,
+    "give_p1|cross": null,
+    "n_give_p1|cross": 0,
+    "swap_p0|named": 1.0,
+    "n_swap_p0|named": 17408,
+    "swap_p0|same": null,
+    "n_swap_p0|same": 0,
+    "swap_p0|cross": null,
+    "n_swap_p0|cross": 0,
+    "swap_p1|named": 1.0,
+    "n_swap_p1|named": 17408,
+    "swap_p1|same": null,
+    "n_swap_p1|same": 0,
+    "swap_p1|cross": null,
+    "n_swap_p1|cross": 0
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 2,
+   "cell": "state",
+   "L": 34
+  },
+  {
+   "per_slot": 1.0,
+   "n_slots": 63488,
+   "n": 512,
+   "by_position": [
+    1.0,
+    1.0
+   ],
+   "by_operand": {
+    "named": 1.0,
+    "n_named": 63488,
+    "resolved": null,
+    "n_resolved": 0
+   },
+   "by_event": {
+    "give": 1.0,
+    "n_give": 63488,
+    "swap": null,
+    "n_swap": 0
+   },
+   "by_kind_position": {
+    "give_p0": 1.0,
+    "n_give_p0": 31744,
+    "give_p1": 1.0,
+    "n_give_p1": 31744,
+    "swap_p0": null,
+    "n_swap_p0": 0,
+    "swap_p1": null,
+    "n_swap_p1": 0
+   },
+   "by_kind_position_source": {
+    "give_p0|named": 1.0,
+    "n_give_p0|named": 31744,
+    "give_p0|same": null,
+    "n_give_p0|same": 0,
+    "give_p0|cross": null,
+    "n_give_p0|cross": 0,
+    "give_p1|named": 1.0,
+    "n_give_p1|named": 31744,
+    "give_p1|same": null,
+    "n_give_p1|same": 0,
+    "give_p1|cross": null,
+    "n_give_p1|cross": 0,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": null,
+    "n_swap_p0|same": 0,
+    "swap_p0|cross": null,
+    "n_swap_p0|cross": 0,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": null,
+    "n_swap_p1|same": 0,
+    "swap_p1|cross": null,
+    "n_swap_p1|cross": 0
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 2,
+   "cell": "bind",
+   "L": 62
+  },
+  {
+   "per_slot": 0.99200439453125,
+   "n_slots": 16384,
+   "n": 512,
+   "by_position": [
+    0.9853515625,
+    0.9986572265625
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.99200439453125,
+    "n_resolved": 16384
+   },
+   "by_event": {
+    "give": 0.9987159225602529,
+    "n_give": 10124,
+    "swap": 0.981150159744409,
+    "n_swap": 6260
+   },
+   "by_kind_position": {
+    "give_p0": 0.9984195969972343,
+    "n_give_p0": 5062,
+    "give_p1": 0.9990122481232714,
+    "n_give_p1": 5062,
+    "swap_p0": 0.9642172523961662,
+    "n_swap_p0": 3130,
+    "swap_p1": 0.9980830670926517,
+    "n_swap_p1": 3130
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9984177215189873,
+    "n_give_p0|same": 2528,
+    "give_p0|cross": 0.9984214680347278,
+    "n_give_p0|cross": 2534,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9996044303797469,
+    "n_give_p1|same": 2528,
+    "give_p1|cross": 0.9984214680347278,
+    "n_give_p1|cross": 2534,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.9816571790006325,
+    "n_swap_p0|same": 1581,
+    "swap_p0|cross": 0.9464170432537121,
+    "n_swap_p0|cross": 1549,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9993674889310563,
+    "n_swap_p1|same": 1581,
+    "swap_p1|cross": 0.9967721110393802,
+    "n_swap_p1|cross": 1549
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 16
+  },
+  {
+   "per_slot": 0.98193359375,
+   "n_slots": 32768,
+   "n": 512,
+   "by_position": [
+    0.96826171875,
+    0.99560546875
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.98193359375,
+    "n_resolved": 32768
+   },
+   "by_event": {
+    "give": 0.9948124881020369,
+    "n_give": 21012,
+    "swap": 0.9589145968016332,
+    "n_swap": 11756
+   },
+   "by_kind_position": {
+    "give_p0": 0.9925756710451171,
+    "n_give_p0": 10506,
+    "give_p1": 0.9970493051589567,
+    "n_give_p1": 10506,
+    "swap_p0": 0.924804355222865,
+    "n_swap_p0": 5878,
+    "swap_p1": 0.9930248383804015,
+    "n_swap_p1": 5878
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9940396077677369,
+    "n_give_p0|same": 5201,
+    "give_p0|cross": 0.9911404335532517,
+    "n_give_p0|cross": 5305,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.998269563545472,
+    "n_give_p1|same": 5201,
+    "give_p1|cross": 0.9958529688972667,
+    "n_give_p1|cross": 5305,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.962762356127285,
+    "n_swap_p0|same": 2954,
+    "swap_p0|cross": 0.8864569083447332,
+    "n_swap_p0|cross": 2924,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.99322951929587,
+    "n_swap_p1|same": 2954,
+    "swap_p1|cross": 0.9928180574555403,
+    "n_swap_p1|cross": 2924
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 32
+  },
+  {
+   "per_slot": 0.9729207356770834,
+   "n_slots": 49152,
+   "n": 512,
+   "by_position": [
+    0.9544677734375,
+    0.9913736979166666
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.9729207356770834,
+    "n_resolved": 49152
+   },
+   "by_event": {
+    "give": 0.9901713709677419,
+    "n_give": 31744,
+    "swap": 0.9414636948529411,
+    "n_swap": 17408
+   },
+   "by_kind_position": {
+    "give_p0": 0.9865801411290323,
+    "n_give_p0": 15872,
+    "give_p1": 0.9937626008064516,
+    "n_give_p1": 15872,
+    "swap_p0": 0.8959099264705882,
+    "n_swap_p0": 8704,
+    "swap_p1": 0.9870174632352942,
+    "n_swap_p1": 8704
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9889997441800972,
+    "n_give_p0|same": 7818,
+    "give_p0|cross": 0.9842314377948845,
+    "n_give_p0|cross": 8054,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9962906114095677,
+    "n_give_p1|same": 7818,
+    "give_p1|cross": 0.9913086665011175,
+    "n_give_p1|cross": 8054,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.9372166817769719,
+    "n_swap_p0|same": 4412,
+    "swap_p0|cross": 0.853448275862069,
+    "n_swap_p0|cross": 4292,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9879873073436083,
+    "n_swap_p1|same": 4412,
+    "swap_p1|cross": 0.9860205032618826,
+    "n_swap_p1|cross": 4292
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 48
+  },
+  {
+   "per_slot": 0.9692840576171875,
+   "n_slots": 65536,
+   "n": 512,
+   "by_position": [
+    0.948577880859375,
+    0.989990234375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.9692840576171875,
+    "n_resolved": 65536
+   },
+   "by_event": {
+    "give": 0.9886503648943228,
+    "n_give": 42204,
+    "swap": 0.9342533859077662,
+    "n_swap": 23332
+   },
+   "by_kind_position": {
+    "give_p0": 0.9854516159605724,
+    "n_give_p0": 21102,
+    "give_p1": 0.9918491138280732,
+    "n_give_p1": 21102,
+    "swap_p0": 0.8818789645122579,
+    "n_swap_p0": 11666,
+    "swap_p1": 0.9866278073032745,
+    "n_swap_p1": 11666
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9881373768296183,
+    "n_give_p0|same": 10453,
+    "give_p0|cross": 0.9828152878204526,
+    "n_give_p0|cross": 10649,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.9937816894671386,
+    "n_give_p1|same": 10453,
+    "give_p1|cross": 0.9899521081791718,
+    "n_give_p1|cross": 10649,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.9222279703397137,
+    "n_swap_p0|same": 5799,
+    "swap_p0|cross": 0.8419976137719448,
+    "n_swap_p0|cross": 5867,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.988791170891533,
+    "n_swap_p1|same": 5799,
+    "swap_p1|cross": 0.9844895176410431,
+    "n_swap_p1|cross": 5867
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 64
+  },
+  {
+   "per_slot": 0.96490478515625,
+   "n_slots": 98304,
+   "n": 512,
+   "by_position": [
+    0.943115234375,
+    0.9866943359375
+   ],
+   "by_operand": {
+    "named": null,
+    "n_named": 0,
+    "resolved": 0.96490478515625,
+    "n_resolved": 98304
+   },
+   "by_event": {
+    "give": 0.9850976685570259,
+    "n_give": 63480,
+    "swap": 0.9280955662761314,
+    "n_swap": 34824
+   },
+   "by_kind_position": {
+    "give_p0": 0.9813799621928166,
+    "n_give_p0": 31740,
+    "give_p1": 0.9888153749212351,
+    "n_give_p1": 31740,
+    "swap_p0": 0.8733631977946243,
+    "n_swap_p0": 17412,
+    "swap_p1": 0.9828279347576384,
+    "n_swap_p1": 17412
+   },
+   "by_kind_position_source": {
+    "give_p0|named": null,
+    "n_give_p0|named": 0,
+    "give_p0|same": 0.9841666666666666,
+    "n_give_p0|same": 15600,
+    "give_p0|cross": 0.9786864931846344,
+    "n_give_p0|cross": 16140,
+    "give_p1|named": null,
+    "n_give_p1|named": 0,
+    "give_p1|same": 0.991474358974359,
+    "n_give_p1|same": 15600,
+    "give_p1|cross": 0.9862453531598513,
+    "n_give_p1|cross": 16140,
+    "swap_p0|named": null,
+    "n_swap_p0|named": 0,
+    "swap_p0|same": 0.9185338389061243,
+    "n_swap_p0|same": 8703,
+    "swap_p0|cross": 0.8282236766563326,
+    "n_swap_p0|cross": 8709,
+    "swap_p1|named": null,
+    "n_swap_p1|named": 0,
+    "swap_p1|same": 0.9818453406871194,
+    "n_swap_p1|same": 8703,
+    "swap_p1|cross": 0.9838098518773682,
+    "n_swap_p1|cross": 8709
+   },
+   "hops": {
+    "give_p0": 1,
+    "give_p1": 1,
+    "swap_p0": 2,
+    "swap_p1": 1
+   },
+   "seed": 2,
+   "cell": "composed",
+   "L": 96
+  }
+ ]
+}
